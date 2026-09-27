@@ -1,7 +1,7 @@
 === Nexora – School Management System ===
 Contributors: codeclove
 Tags: school management, student management, attendance, education, school erp
-Requires at least: 6.0
+Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
 Stable tag: 1.0.0
