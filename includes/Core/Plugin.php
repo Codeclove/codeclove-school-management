@@ -110,9 +110,6 @@ final class Plugin {
 		// Run migrations when the plugin's DB version is outdated.
 		add_action( 'plugins_loaded', [ $this, 'maybe_run_migrations' ] );
 
-		// Load plugin translation textdomain.
-		add_action( 'init', [ $this, 'load_textdomain' ] );
-
 		// Daily cron + license heartbeat listeners.
 		add_action( 'nexora_update_overdue_invoices', [ $this, 'update_overdue_invoices' ] );
 		if ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) {
@@ -312,16 +309,6 @@ final class Plugin {
 		// Seed default roles — delegated to a future Roles module.
 		// Roles\RolesService::seed_defaults();
 	}
-
-	/**
-	 * Loads the plugin translation textdomain.
-	 */
-	public function load_textdomain(): void {
-		$lang_dir = dirname( plugin_basename( defined( 'NEXORA_FILE' ) ? NEXORA_FILE : NEXORA_DIR . 'nexora.php' ) ) . '/languages';
-		// phpcs:ignore PluginCheck.CodeAnalysis.DiscouragedFunctions.load_plugin_textdomainFound
-		load_plugin_textdomain( 'nexora-school-management', false, $lang_dir );
-	}
-
 	/**
 	 * Handler for updating overdue invoices daily cron task.
 	 */

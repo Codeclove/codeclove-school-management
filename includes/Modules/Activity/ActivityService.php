@@ -91,9 +91,9 @@ final class ActivityService {
 		// Query total count
 		$count_query = "SELECT COUNT(*) FROM " . Schema::app_logs() . " WHERE {$where_clause}";
 		if ( ! empty( $values ) ) {
-			$count_query = $wpdb->prepare( $count_query, ...$values ); // phpcs:ignore
+		$count_query = $wpdb->prepare( $count_query, ...$values ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		}
-		$total = (int) $wpdb->get_var( $count_query ); // phpcs:ignore
+		$total = (int) $wpdb->get_var( $count_query ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 
 		// Query records
 		$query = "SELECT id, event_type, actor_type, actor_id, actor_label, created_at, metadata_json
@@ -102,9 +102,9 @@ final class ActivityService {
 				  ORDER BY created_at DESC
 				  LIMIT %d OFFSET %d";
 		$query_values   = array_merge( $values, [ $per_page, $offset ] );
-		$prepared_query = $wpdb->prepare( $query, ...$query_values ); // phpcs:ignore
+		$prepared_query = $wpdb->prepare( $query, ...$query_values ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
-		$rows = $wpdb->get_results( $prepared_query, ARRAY_A ); // phpcs:ignore
+		$rows = $wpdb->get_results( $prepared_query, ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 
 		$items = array_map(
 			function ( $r ) {

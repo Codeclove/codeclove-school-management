@@ -4,7 +4,7 @@
  * Plugin URI:        https://codeclove.com/plugins/nexora/
  * Description:       Modern, country-aware school management system for WordPress. Manage student admissions, classes, staff, and daily attendance.
  * Version:           1.0.0
- * Requires at least: 6.5
+ * Requires at least: 6.0
  * Requires PHP:      8.1
  * Author:            CodeClove
  * Author URI:        https://codeclove.com/plugins/nexora/

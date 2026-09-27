@@ -62,17 +62,19 @@ final class SettingsRepository {
 			if ( ! empty( $settings['notifications']['smtp_password'] ) ) {
 				$settings['notifications']['smtp_password'] = '********';
 			}
-			if ( ! empty( $settings['notifications']['twilio_auth_token'] ) ) {
-				$settings['notifications']['twilio_auth_token'] = '********';
-			}
-			if ( ! empty( $settings['notifications']['msg91_auth_key'] ) ) {
-				$settings['notifications']['msg91_auth_key'] = '********';
-			}
-			if ( ! empty( $settings['notifications']['fast2sms_api_key'] ) ) {
-				$settings['notifications']['fast2sms_api_key'] = '********';
-			}
-			if ( ! empty( $settings['notifications']['vonage_api_secret'] ) ) {
-				$settings['notifications']['vonage_api_secret'] = '********';
+		if ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) {
+				if ( ! empty( $settings['notifications']['twilio_auth_token'] ) ) {
+					$settings['notifications']['twilio_auth_token'] = '********';
+				}
+				if ( ! empty( $settings['notifications']['msg91_auth_key'] ) ) {
+					$settings['notifications']['msg91_auth_key'] = '********';
+				}
+				if ( ! empty( $settings['notifications']['fast2sms_api_key'] ) ) {
+					$settings['notifications']['fast2sms_api_key'] = '********';
+				}
+				if ( ! empty( $settings['notifications']['vonage_api_secret'] ) ) {
+					$settings['notifications']['vonage_api_secret'] = '********';
+				}
 			}
 		}
 
@@ -100,39 +102,14 @@ final class SettingsRepository {
 			}
 		}
 
-		// Handle Twilio auth token masking
-		if ( isset( $settings['notifications']['twilio_auth_token'] ) && '********' === $settings['notifications']['twilio_auth_token'] ) {
-			if ( ! empty( $current['notifications']['twilio_auth_token'] ) ) {
-				$settings['notifications']['twilio_auth_token'] = $current['notifications']['twilio_auth_token'];
-			} else {
-				$settings['notifications']['twilio_auth_token'] = '';
-			}
-		}
-
-		// Handle MSG91 auth key masking
-		if ( isset( $settings['notifications']['msg91_auth_key'] ) && '********' === $settings['notifications']['msg91_auth_key'] ) {
-			if ( ! empty( $current['notifications']['msg91_auth_key'] ) ) {
-				$settings['notifications']['msg91_auth_key'] = $current['notifications']['msg91_auth_key'];
-			} else {
-				$settings['notifications']['msg91_auth_key'] = '';
-			}
-		}
-
-		// Handle Fast2SMS api key masking
-		if ( isset( $settings['notifications']['fast2sms_api_key'] ) && '********' === $settings['notifications']['fast2sms_api_key'] ) {
-			if ( ! empty( $current['notifications']['fast2sms_api_key'] ) ) {
-				$settings['notifications']['fast2sms_api_key'] = $current['notifications']['fast2sms_api_key'];
-			} else {
-				$settings['notifications']['fast2sms_api_key'] = '';
-			}
-		}
-
-		// Handle Vonage api secret masking
-		if ( isset( $settings['notifications']['vonage_api_secret'] ) && '********' === $settings['notifications']['vonage_api_secret'] ) {
-			if ( ! empty( $current['notifications']['vonage_api_secret'] ) ) {
-				$settings['notifications']['vonage_api_secret'] = $current['notifications']['vonage_api_secret'];
-			} else {
-				$settings['notifications']['vonage_api_secret'] = '';
+		// Handle SMS provider credential masking (Pro-only keys).
+		if ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) {
+			foreach ( [ 'twilio_auth_token', 'msg91_auth_key', 'fast2sms_api_key', 'vonage_api_secret' ] as $key ) {
+				if ( isset( $settings['notifications'][ $key ] ) && '********' === $settings['notifications'][ $key ] ) {
+					$settings['notifications'][ $key ] = ! empty( $current['notifications'][ $key ] )
+						? $current['notifications'][ $key ]
+						: '';
+				}
 			}
 		}
 
