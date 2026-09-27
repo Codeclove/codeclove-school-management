@@ -501,36 +501,11 @@ final class PortalService {
 			}
 		}
 
-		// ─── 4. Recent Notifications (Pro only) ──────────────────────────────
-		$recent_notifications = [];
-		if ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) {
-			$table_notifs = Schema::notifications();
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$notifs       = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT id, title, content, event_type, is_read, url, created_at, read_at
-					 FROM {$table_notifs}
-					 WHERE audience IN ('portal', 'all') AND (student_id = %d OR student_id IS NULL)
-					 ORDER BY created_at DESC LIMIT 5",
-					$student_id
-				),
-				ARRAY_A
-			) ?: [];
-			// phpcs:enable
+		// ─── 4. Recent Notifications (Pro only) ────────────────────────────────
+		$recent_notifications = class_exists( PortalNotificationsPro::class )
+			? PortalNotificationsPro::get_recent_for_dashboard( $student_id )
+			: [];
 
-			foreach ( $notifs as $n ) {
-				$recent_notifications[] = [
-					'id'         => (int) $n['id'],
-					'title'      => (string) $n['title'],
-					'content'    => (string) $n['content'],
-					'event_type' => (string) $n['event_type'],
-					'is_read'    => (bool) $n['is_read'],
-					'url'        => $n['url'] ? (string) $n['url'] : null,
-					'created_at' => (string) $n['created_at'],
-					'read_at'    => $n['read_at'] ? (string) $n['read_at'] : null,
-				];
-			}
-		}
 
 		// ─── 5. Calendar Events ──────────────────────────────────────────────
 		$calendar_events = [];
@@ -1370,81 +1345,10 @@ final class PortalService {
 	 * @return array{notifications: array, unread_count: int, total: int}
 	 */
 	public function get_notifications( int $student_id, int $page = 1, int $per_page = 20 ): array {
-		if ( ! defined( 'NEXORA_IS_PRO' ) || ! NEXORA_IS_PRO ) {
-			return [
-				'notifications' => [],
-				'unread_count'  => 0,
-				'total'         => 0,
-			];
+		if ( ! class_exists( PortalNotificationsPro::class ) ) {
+			return [ 'notifications' => [], 'unread_count' => 0, 'total' => 0 ];
 		}
-		global $wpdb;
-		$table    = Schema::notifications();
-		$page     = max( 1, $page );
-		$per_page = min( 100, max( 1, $per_page ) );
-		$offset   = ( $page - 1 ) * $per_page;
-		// ponytail: wp_options array stores broadcast read IDs per student without a full pivot table.
-		// Ceiling: ~1,000 read broadcast IDs per student.
-		// Upgrade path: migrate to nexora_student_notifications junction table if school issues >1,000 broadcasts/year.
-		$read_broadcast_ids = (array) get_option( "nexora_student_read_notifs_{$student_id}", [] );
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT id, student_id, title, content, event_type, is_read, url, created_at, read_at
-				 FROM {$table}
-				 WHERE audience IN ('portal', 'all') AND (student_id = %d OR student_id IS NULL)
-				 ORDER BY created_at DESC
-				 LIMIT %d OFFSET %d",
-				$student_id,
-				$per_page,
-				$offset
-			),
-			ARRAY_A
-		) ?: [];
-		// phpcs:enable
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$all_notifs = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT id, student_id, is_read
-				 FROM {$table}
-				 WHERE audience IN ('portal', 'all') AND (student_id = %d OR student_id IS NULL)",
-				$student_id
-			),
-			ARRAY_A
-		) ?: [];
-		// phpcs:enable
-
-		$total        = count( $all_notifs );
-		$unread_count = 0;
-		foreach ( $all_notifs as $an ) {
-			$nid     = (int) $an['id'];
-			$is_read = $an['student_id'] !== null ? (bool) $an['is_read'] : in_array( $nid, $read_broadcast_ids, true );
-			if ( ! $is_read ) {
-				$unread_count++;
-			}
-		}
-
-		$notifications = [];
-		foreach ( $rows as $r ) {
-			$nid     = (int) $r['id'];
-			$is_read = $r['student_id'] !== null ? (bool) $r['is_read'] : in_array( $nid, $read_broadcast_ids, true );
-			$notifications[] = [
-				'id'         => $nid,
-				'title'      => (string) $r['title'],
-				'content'    => (string) $r['content'],
-				'event_type' => (string) $r['event_type'],
-				'is_read'    => $is_read,
-				'url'        => $r['url'] ? (string) $r['url'] : null,
-				'created_at' => (string) $r['created_at'],
-				'read_at'    => $r['read_at'] ? (string) $r['read_at'] : null,
-			];
-		}
-
-		return [
-			'notifications' => $notifications,
-			'unread_count'  => $unread_count,
-			'total'         => $total,
-		];
+		return PortalNotificationsPro::get_notifications( $student_id, $page, $per_page );
 	}
 
 	/**
@@ -1455,68 +1359,9 @@ final class PortalService {
 	 * @return bool True on success.
 	 */
 	public function mark_notification_read( int $student_id, int $notification_id = 0 ): bool {
-		if ( ! defined( 'NEXORA_IS_PRO' ) || ! NEXORA_IS_PRO ) {
+		if ( ! class_exists( PortalNotificationsPro::class ) ) {
 			return true;
 		}
-		global $wpdb;
-		$table              = Schema::notifications();
-		$now                = current_time( 'mysql' );
-		$read_broadcast_ids = (array) get_option( "nexora_student_read_notifs_{$student_id}", [] );
-
-		if ( $notification_id > 0 ) {
-			// Check if notification is direct or broadcast
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$notif = $wpdb->get_row(
-				$wpdb->prepare(
-					"SELECT id, student_id FROM {$table} WHERE id = %d",
-					$notification_id
-				),
-				ARRAY_A
-			);
-			// phpcs:enable
-			if ( $notif ) {
-				if ( null !== $notif['student_id'] && (int) $notif['student_id'] === $student_id ) {
-					// Direct student notification
-					// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
-					$wpdb->query(
-						$wpdb->prepare(
-							"UPDATE {$table} SET is_read = 1, read_at = %s WHERE id = %d AND student_id = %d",
-							$now,
-							$notification_id,
-							$student_id
-						)
-					);
-					// phpcs:enable
-				} elseif ( null === $notif['student_id'] ) {
-					// Broadcast notification
-					if ( ! in_array( $notification_id, $read_broadcast_ids, true ) ) {
-						$read_broadcast_ids[] = $notification_id;
-						update_option( "nexora_student_read_notifs_{$student_id}", array_values( array_unique( $read_broadcast_ids ) ), false );
-					}
-				}
-			}
-		} else {
-			// Mark all direct notifications as read
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query(
-				$wpdb->prepare(
-					"UPDATE {$table} SET is_read = 1, read_at = %s WHERE student_id = %d AND is_read = 0",
-					$now,
-					$student_id
-				)
-			);
-			// phpcs:enable
-
-			// Mark all broadcast notifications as read for this student
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$broadcasts = $wpdb->get_col( "SELECT id FROM {$table} WHERE student_id IS NULL AND audience IN ('portal', 'all')" );
-			// phpcs:enable
-			if ( ! empty( $broadcasts ) ) {
-				$merged = array_unique( array_merge( $read_broadcast_ids, array_map( 'intval', $broadcasts ) ) );
-				update_option( "nexora_student_read_notifs_{$student_id}", array_values( $merged ), false );
-			}
-		}
-
-		return true;
+		return PortalNotificationsPro::mark_notification_read( $student_id, $notification_id );
 	}
 }

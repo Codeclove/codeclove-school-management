@@ -661,20 +661,7 @@ final class SettingsValidator {
 			'smtp_username',
 			'smtp_password',
 			'templates',
-			...( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ? [
-				'sms_enabled',
-				'sms_provider',
-				'twilio_account_sid',
-				'twilio_auth_token',
-				'twilio_from_number',
-				'msg91_auth_key',
-				'msg91_sender_id',
-				'fast2sms_api_key',
-				'vonage_api_key',
-				'vonage_api_secret',
-				'vonage_from',
-				'sms_templates',
-			] : [] ),
+			...( class_exists( SmsSettingsPro::class ) ? SmsSettingsPro::get_allowed_keys() : [] ),
 		];
 		$error = $this->reject_unknown_keys( $values, $allowed_fields, 'notifications' );
 		if ( $error ) {
@@ -836,130 +823,12 @@ final class SettingsValidator {
 			}
 		}
 
-		if ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) {
-		if ( isset( $values['sms_enabled'] ) ) {
-			$sms_enabled = $this->to_bool( $values['sms_enabled'] );
-			if ( null === $sms_enabled ) {
-				return $this->invalid( 'notifications.sms_enabled', 'must be a boolean.' );
+		if ( class_exists( SmsSettingsPro::class ) ) {
+			$sms = SmsSettingsPro::validate( $values );
+			if ( $sms instanceof \WP_Error ) {
+				return $sms;
 			}
-			$result['sms_enabled'] = $sms_enabled;
-		}
-
-		if ( isset( $values['sms_provider'] ) ) {
-			if ( ! in_array( $values['sms_provider'], [ 'none', 'twilio', 'msg91', 'fast2sms', 'vonage' ], true ) ) {
-				return $this->invalid( 'notifications.sms_provider', 'must be none, twilio, msg91, fast2sms, or vonage.' );
-			}
-			$result['sms_provider'] = $values['sms_provider'];
-		}
-
-		if ( isset( $values['twilio_account_sid'] ) ) {
-			$result['twilio_account_sid'] = sanitize_text_field( (string) $values['twilio_account_sid'] );
-		}
-
-		if ( isset( $values['twilio_auth_token'] ) ) {
-			$result['twilio_auth_token'] = (string) $values['twilio_auth_token'];
-		}
-
-		if ( isset( $values['twilio_from_number'] ) ) {
-			$result['twilio_from_number'] = sanitize_text_field( (string) $values['twilio_from_number'] );
-		}
-
-		if ( isset( $values['msg91_auth_key'] ) ) {
-			$result['msg91_auth_key'] = (string) $values['msg91_auth_key'];
-		}
-
-		if ( isset( $values['msg91_sender_id'] ) ) {
-			$result['msg91_sender_id'] = sanitize_text_field( (string) $values['msg91_sender_id'] );
-		}
-
-		if ( isset( $values['fast2sms_api_key'] ) ) {
-			$result['fast2sms_api_key'] = (string) $values['fast2sms_api_key'];
-		}
-
-		if ( isset( $values['vonage_api_key'] ) ) {
-			$result['vonage_api_key'] = sanitize_text_field( (string) $values['vonage_api_key'] );
-		}
-
-		if ( isset( $values['vonage_api_secret'] ) ) {
-			$result['vonage_api_secret'] = (string) $values['vonage_api_secret'];
-		}
-
-		if ( isset( $values['vonage_from'] ) ) {
-			$result['vonage_from'] = sanitize_text_field( (string) $values['vonage_from'] );
-		}
-
-		if ( isset( $values['sms_templates'] ) ) {
-			if ( ! is_array( $values['sms_templates'] ) ) {
-				return $this->invalid( 'notifications.sms_templates', 'must be an object.' );
-			}
-
-			$allowed_templates = [
-				'admission_received',
-				'admission_status_changed',
-				'payment_recorded',
-				'attendance_alert',
-				'fee_reminder',
-				'invoice_issued',
-				'invoice_overdue',
-				'payment_reversed',
-			];
-
-			$tpl_error = $this->reject_unknown_keys( $values['sms_templates'], $allowed_templates, 'notifications.sms_templates' );
-			if ( $tpl_error ) {
-				return $tpl_error;
-			}
-
-			$result['sms_templates'] = [];
-
-			foreach ( $values['sms_templates'] as $tpl_key => $tpl_val ) {
-				if ( ! is_array( $tpl_val ) ) {
-					return $this->invalid( "notifications.sms_templates.{$tpl_key}", 'must be an object.' );
-				}
-
-				$tpl_field_error = $this->reject_unknown_keys( $tpl_val, [ 'enabled', 'body', 'send_to_student', 'send_to_guardian' ], "notifications.sms_templates.{$tpl_key}" );
-				if ( $tpl_field_error ) {
-					return $tpl_field_error;
-				}
-
-				$tpl_data = [];
-
-				if ( isset( $tpl_val['enabled'] ) ) {
-					$enabled = $this->to_bool( $tpl_val['enabled'] );
-					if ( null === $enabled ) {
-						return $this->invalid( "notifications.sms_templates.{$tpl_key}.enabled", 'must be a boolean.' );
-					}
-					$tpl_data['enabled'] = $enabled;
-				}
-
-				if ( isset( $tpl_val['body'] ) ) {
-					// SMS template body validation - strip tags and limit to 320 chars.
-					$body = sanitize_textarea_field( (string) $tpl_val['body'] );
-					$body = wp_strip_all_tags( $body );
-					if ( mb_strlen( $body ) > 320 ) {
-						return $this->invalid( "notifications.sms_templates.{$tpl_key}.body", 'cannot exceed 320 characters.' );
-					}
-					$tpl_data['body'] = $body;
-				}
-
-				if ( isset( $tpl_val['send_to_student'] ) ) {
-					$send_to_student = $this->to_bool( $tpl_val['send_to_student'] );
-					if ( null === $send_to_student ) {
-						return $this->invalid( "notifications.sms_templates.{$tpl_key}.send_to_student", 'must be a boolean.' );
-					}
-					$tpl_data['send_to_student'] = $send_to_student;
-				}
-
-				if ( isset( $tpl_val['send_to_guardian'] ) ) {
-					$send_to_guardian = $this->to_bool( $tpl_val['send_to_guardian'] );
-					if ( null === $send_to_guardian ) {
-						return $this->invalid( "notifications.sms_templates.{$tpl_key}.send_to_guardian", 'must be a boolean.' );
-					}
-					$tpl_data['send_to_guardian'] = $send_to_guardian;
-				}
-
-				$result['sms_templates'][ $tpl_key ] = $tpl_data;
-			}
-		}
+			$result = array_merge( $result, $sms );
 		}
 
 		return $result;

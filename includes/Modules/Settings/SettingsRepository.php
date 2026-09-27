@@ -62,20 +62,9 @@ final class SettingsRepository {
 			if ( ! empty( $settings['notifications']['smtp_password'] ) ) {
 				$settings['notifications']['smtp_password'] = '********';
 			}
-		if ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) {
-				if ( ! empty( $settings['notifications']['twilio_auth_token'] ) ) {
-					$settings['notifications']['twilio_auth_token'] = '********';
-				}
-				if ( ! empty( $settings['notifications']['msg91_auth_key'] ) ) {
-					$settings['notifications']['msg91_auth_key'] = '********';
-				}
-				if ( ! empty( $settings['notifications']['fast2sms_api_key'] ) ) {
-					$settings['notifications']['fast2sms_api_key'] = '********';
-				}
-				if ( ! empty( $settings['notifications']['vonage_api_secret'] ) ) {
-					$settings['notifications']['vonage_api_secret'] = '********';
-				}
-			}
+		if ( class_exists( SmsSettingsPro::class ) ) {
+			SmsSettingsPro::mask_settings( $settings );
+		}
 		}
 
 		return $settings;
@@ -103,14 +92,8 @@ final class SettingsRepository {
 		}
 
 		// Handle SMS provider credential masking (Pro-only keys).
-		if ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) {
-			foreach ( [ 'twilio_auth_token', 'msg91_auth_key', 'fast2sms_api_key', 'vonage_api_secret' ] as $key ) {
-				if ( isset( $settings['notifications'][ $key ] ) && '********' === $settings['notifications'][ $key ] ) {
-					$settings['notifications'][ $key ] = ! empty( $current['notifications'][ $key ] )
-						? $current['notifications'][ $key ]
-						: '';
-				}
-			}
+		if ( class_exists( SmsSettingsPro::class ) ) {
+			SmsSettingsPro::restore_masked_settings( $settings, $current );
 		}
 
 		$merged  = $this->deep_merge( $current, $settings );
@@ -308,20 +291,7 @@ final class SettingsRepository {
 						'send_to_guardian' => true,
 					],
 				],
-				...( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ? [
-					'sms_enabled'        => false,
-					'sms_provider'       => 'none',
-					'twilio_account_sid' => '',
-					'twilio_auth_token'  => '',
-					'twilio_from_number' => '',
-					'msg91_auth_key'     => '',
-					'msg91_sender_id'    => '',
-					'fast2sms_api_key'   => '',
-					'vonage_api_key'     => '',
-					'vonage_api_secret'  => '',
-					'vonage_from'        => '',
-					'sms_templates'      => [],
-				] : [] ),
+				...( class_exists( SmsSettingsPro::class ) ? SmsSettingsPro::get_defaults() : [] ),
 			],
 		];
 	}

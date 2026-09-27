@@ -59,9 +59,8 @@ final class Migrations {
 		self::migrate_staff_tables( $charset_collate );
 		self::migrate_attendance_tables( $charset_collate );
 		self::migrate_finance_tables( $charset_collate );
-		if ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) {
-			self::migrate_timetable_tables( $charset_collate );
-			self::migrate_notification_tables( $charset_collate );
+		if ( class_exists( ProMigrations::class ) ) {
+			ProMigrations::run( $charset_collate );
 		}
 
 
@@ -722,82 +721,6 @@ final class Migrations {
   KEY idx_unit (academic_unit_id)
 ) $cc;" );
 	}
-
-	private static function migrate_timetable_tables( string $cc ): void {
-		dbDelta( "CREATE TABLE " . Schema::timetable_periods() . " (
-  id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-  academic_session_id bigint(20) UNSIGNED NOT NULL,
-  academic_unit_id bigint(20) UNSIGNED NOT NULL,
-  name varchar(80) NOT NULL,
-  short_name varchar(20) NOT NULL,
-  type varchar(20) NOT NULL DEFAULT 'lesson',
-  start_time time NOT NULL,
-  end_time time NOT NULL,
-  sort_order int NOT NULL DEFAULT 0,
-  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY  (id),
-  KEY idx_session_unit (academic_session_id, academic_unit_id),
-  KEY idx_sort (sort_order)
-) $cc;" );
-
-		dbDelta( "CREATE TABLE " . Schema::timetable_slots() . " (
-  id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-  academic_session_id bigint(20) UNSIGNED NOT NULL,
-  academic_term_id bigint(20) UNSIGNED NOT NULL,
-  academic_unit_id bigint(20) UNSIGNED NOT NULL,
-  academic_group_id bigint(20) UNSIGNED NOT NULL,
-  period_id bigint(20) UNSIGNED NOT NULL,
-  day_of_week tinyint(3) UNSIGNED NOT NULL,
-  subject_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
-  staff_member_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
-  notes text NOT NULL,
-  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY  (id),
-  UNIQUE KEY uq_group_period_day_term (academic_group_id, period_id, day_of_week, academic_term_id),
-  KEY idx_session (academic_session_id),
-  KEY idx_term (academic_term_id),
-  KEY idx_staff (staff_member_id),
-  KEY idx_period (period_id),
-  KEY idx_unit_subject (academic_unit_id, subject_id)
-) $cc;" );
-
-		dbDelta( "CREATE TABLE " . Schema::timetable_substitutes() . " (
-  id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-  slot_id bigint(20) UNSIGNED NOT NULL,
-  date date NOT NULL,
-  substitute_staff_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
-  reason varchar(255) NOT NULL DEFAULT '',
-  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY  (id),
-  UNIQUE KEY uq_slot_date (slot_id, date),
-  KEY idx_date (date),
-  KEY idx_sub_staff (substitute_staff_id)
-) $cc;" );
-	}
-
-	private static function migrate_notification_tables( string $cc ): void {
-		dbDelta( "CREATE TABLE " . Schema::notifications() . " (
-  id  bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-  user_id  bigint(20) UNSIGNED NOT NULL DEFAULT 0,
-  student_id  bigint(20) UNSIGNED DEFAULT NULL,
-  audience  varchar(20) NOT NULL DEFAULT 'staff',
-  title  varchar(160) NOT NULL,
-  content  text NOT NULL,
-  event_type  varchar(60) NOT NULL,
-  is_read  tinyint(1) NOT NULL DEFAULT 0,
-  url  varchar(255) DEFAULT NULL,
-  created_at  datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  read_at  datetime DEFAULT NULL,
-  PRIMARY KEY  (id),
-  KEY idx_user_read (user_id, is_read),
-  KEY idx_portal_student (audience, student_id),
-  KEY idx_created_at (created_at)
-) $cc;" );
-	}
-
 
 	// ─── Private Helpers ─────────────────────────────────────────────────────
 
