@@ -661,18 +661,20 @@ final class SettingsValidator {
 			'smtp_username',
 			'smtp_password',
 			'templates',
-			'sms_enabled',
-			'sms_provider',
-			'twilio_account_sid',
-			'twilio_auth_token',
-			'twilio_from_number',
-			'msg91_auth_key',
-			'msg91_sender_id',
-			'fast2sms_api_key',
-			'vonage_api_key',
-			'vonage_api_secret',
-			'vonage_from',
-			'sms_templates',
+			...( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ? [
+				'sms_enabled',
+				'sms_provider',
+				'twilio_account_sid',
+				'twilio_auth_token',
+				'twilio_from_number',
+				'msg91_auth_key',
+				'msg91_sender_id',
+				'fast2sms_api_key',
+				'vonage_api_key',
+				'vonage_api_secret',
+				'vonage_from',
+				'sms_templates',
+			] : [] ),
 		];
 		$error = $this->reject_unknown_keys( $values, $allowed_fields, 'notifications' );
 		if ( $error ) {
@@ -834,6 +836,7 @@ final class SettingsValidator {
 			}
 		}
 
+		if ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) {
 		if ( isset( $values['sms_enabled'] ) ) {
 			$sms_enabled = $this->to_bool( $values['sms_enabled'] );
 			if ( null === $sms_enabled ) {
@@ -956,6 +959,7 @@ final class SettingsValidator {
 
 				$result['sms_templates'][ $tpl_key ] = $tpl_data;
 			}
+		}
 		}
 
 		return $result;
