@@ -20,8 +20,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 use Nexora\Api\RestApi;
 use Nexora\Database\Migrations;
 use Nexora\Database\Seeders\RolesSeeder;
-use Nexora\Licensing\License;
-use Nexora\Licensing\LicensePage;
 
 /**
  * Class Plugin
@@ -70,7 +68,7 @@ final class Plugin {
 
 		// Schedule license heartbeat.
 		if ( class_exists( '\Nexora\Licensing\License' ) ) {
-			License::schedule_heartbeat();
+			\Nexora\Licensing\License::schedule_heartbeat();
 		}
 		flush_rewrite_rules();
 	}
@@ -82,7 +80,7 @@ final class Plugin {
 	public function deactivate(): void {
 		wp_clear_scheduled_hook( 'nexora_update_overdue_invoices' );
 		if ( class_exists( '\Nexora\Licensing\License' ) ) {
-			License::clear_heartbeat();
+			\Nexora\Licensing\License::clear_heartbeat();
 		}
 		// Remove custom WordPress roles.
 		remove_role( 'nexora_staff' );
@@ -99,7 +97,7 @@ final class Plugin {
 
 		// License page + updater registration.
 		if ( class_exists( '\Nexora\Licensing\LicensePage' ) ) {
-			( new LicensePage() )->init();
+			( new \Nexora\Licensing\LicensePage() )->init();
 		}
 		// Register custom admin menu (single top-level page).
 		add_action( 'admin_menu', [ $this, 'register_admin_menu' ] );
@@ -115,7 +113,7 @@ final class Plugin {
 		if ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) {
 			add_action( 'admin_notices', [ $this, 'maybe_show_pro_welcome_notice' ] );
 			if ( class_exists( '\Nexora\Licensing\License' ) ) {
-				add_action( License::HEARTBEAT_HOOK, [ License::class, 'run_heartbeat' ] );
+				add_action( \Nexora\Licensing\License::HEARTBEAT_HOOK, [ \Nexora\Licensing\License::class, 'run_heartbeat' ] );
 				add_action( 'admin_notices', [ $this, 'maybe_show_license_notice' ] );
 			}
 		}
@@ -214,7 +212,7 @@ final class Plugin {
 		if ( 'nexora-license' === sanitize_key( wp_unslash( $_GET['page'] ?? '' ) ) ) {
 			return;
 		}
-		if ( ! class_exists( '\Nexora\Licensing\License' ) || License::verified() ) {
+		if ( ! class_exists( '\Nexora\Licensing\License' ) || \Nexora\Licensing\License::verified() ) {
 			return;
 		}
 		$url = admin_url( 'admin.php?page=nexora-license' );

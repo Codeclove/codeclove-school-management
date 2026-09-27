@@ -309,7 +309,7 @@ final class SettingsRepository {
 					],
 				],
 				'sms_enabled'        => false,
-				'sms_provider'       => 'none', // 'none' | 'twilio' | 'msg91' | 'fast2sms' | 'vonage'
+				'sms_provider'       => 'none',
 				'twilio_account_sid' => '',
 				'twilio_auth_token'  => '',
 				'twilio_from_number' => '',
@@ -319,56 +319,7 @@ final class SettingsRepository {
 				'vonage_api_key'     => '',
 				'vonage_api_secret'  => '',
 				'vonage_from'        => '',
-				'sms_templates'      => [
-					'admission_received'       => [
-						'enabled' => false,
-						'body'    => 'New admission application received for {student_name}. Ref: {reference_number}. — {school_name}',
-						'send_to_student' => false,
-						'send_to_guardian' => false,
-					],
-					'admission_status_changed' => [
-						'enabled' => true,
-						'body'    => 'Dear {guardian_name}, {student_name}\'s application status: {status}. Ref: {reference_number}. — {school_name}',
-						'send_to_student' => false,
-						'send_to_guardian' => true,
-					],
-					'payment_recorded'         => [
-						'enabled' => true,
-						'body'    => 'Payment of {amount} received for invoice {invoice_number}. Balance: {balance}. — {school_name}',
-						'send_to_student' => false,
-						'send_to_guardian' => true,
-					],
-					'attendance_alert'         => [
-						'enabled' => false,
-						'body'    => 'Attendance alert: {student_name} was marked {status} on {date}. — {school_name}',
-						'send_to_student' => false,
-						'send_to_guardian' => true,
-					],
-					'fee_reminder'             => [
-						'enabled' => true,
-						'body'    => 'Fee reminder: Invoice {invoice_number} for {amount} due on {due_date}. — {school_name}',
-						'send_to_student' => false,
-						'send_to_guardian' => true,
-					],
-					'invoice_issued'           => [
-						'enabled' => true,
-						'body'    => 'New invoice {invoice_number} of {amount} issued. Due: {due_date}. — {school_name}',
-						'send_to_student' => false,
-						'send_to_guardian' => true,
-					],
-					'invoice_overdue'          => [
-						'enabled' => true,
-						'body'    => 'URGENT: Invoice {invoice_number} is overdue. Balance: {balance}. Please pay immediately. — {school_name}',
-						'send_to_student' => false,
-						'send_to_guardian' => true,
-					],
-					'payment_reversed'         => [
-						'enabled' => true,
-						'body'    => 'Payment {payment_number} of {amount} has been reversed/cancelled. — {school_name}',
-						'send_to_student' => false,
-						'send_to_guardian' => true,
-					],
-				],
+				'sms_templates'      => [],
 			],
 		];
 	}

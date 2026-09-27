@@ -59,8 +59,10 @@ final class Migrations {
 		self::migrate_staff_tables( $charset_collate );
 		self::migrate_attendance_tables( $charset_collate );
 		self::migrate_finance_tables( $charset_collate );
-		self::migrate_timetable_tables( $charset_collate );
-		self::migrate_notification_tables( $charset_collate );
+		if ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) {
+			self::migrate_timetable_tables( $charset_collate );
+			self::migrate_notification_tables( $charset_collate );
+		}
 
 
 
