@@ -1,0 +1,116 @@
+{
+  "code": "GB",
+  "name": "United Kingdom",
+  "version": "1.0.0",
+  "education_system": {
+    "academic_year_start_month": 9,
+    "academic_year_end_month": 7,
+    "default_number_terms": 3,
+    "grading_default": "levels_marks",
+    "default_academic_units": [
+      "Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5",
+      "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11",
+      "Year 12", "Year 13"
+    ],
+    "default_groups_per_unit": ["Form A", "Form B"]
+  },
+  "labels": {
+    "academic_session": { "singular": "Academic Year", "plural": "Academic Years" },
+    "academic_term": { "singular": "Term", "plural": "Terms" },
+    "academic_unit": { "singular": "Year", "plural": "Years" },
+    "academic_group": { "singular": "Form", "plural": "Forms" },
+    "subject": { "singular": "Subject", "plural": "Subjects" },
+    "assessment": { "singular": "Assessment", "plural": "Assessments" },
+    "guardian": { "singular": "Parent / Guardian", "plural": "Parents / Guardians" },
+    "student_guardian": { "singular": "Student Guardian", "plural": "Student Guardians" },
+    "admission_application": { "singular": "Application", "plural": "Applications" },
+    "admission_status": { "singular": "Application Status", "plural": "Application Statuses" },
+    "staff_application": { "singular": "Staff Application", "plural": "Staff Applications" },
+    "staff_application_status": { "singular": "Staff Application Status", "plural": "Staff Application Statuses" },
+    "student": { "singular": "Student", "plural": "Students" },
+    "staff_member": { "singular": "Staff", "plural": "Staff" },
+    "fee_type": { "singular": "Fee Type", "plural": "Fee Types" },
+    "invoice_line_item": { "singular": "Invoice Line Item", "plural": "Invoice Line Items" },
+    "invoice": { "singular": "Invoice", "plural": "Invoices" },
+    "payment": { "singular": "Payment", "plural": "Payments" },
+    "attendance_record": { "singular": "Attendance Record", "plural": "Attendance Records" }
+  },
+  "localization": {
+    "language": "en",
+    "date_format": "d/m/Y",
+    "time_format": "H:i",
+    "week_start_day": 1,
+    "timezone": "Europe/London",
+    "currency": "GBP",
+    "currency_position": "left",
+    "decimal_precision": 2,
+    "number_format": "standard",
+    "rtl": false
+  },
+  "identifiers": {
+    "admission_application": {
+      "prefix": "APP",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": "-"
+    },
+    "staff_application": {
+      "prefix": "STF-APP",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": "-"
+    },
+    "admission_number": {
+      "prefix": "ADM",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": "-"
+    },
+    "student_number": {
+      "prefix": "STU",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": "-"
+    },
+    "staff_member": {
+      "prefix": "EMP",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": "-"
+    },
+    "roll_number": {
+      "prefix": "",
+      "year_token": "",
+      "sequence_padding": 3,
+      "next_number": 1,
+      "reset_rule": "none",
+      "separator": ""
+    },
+    "invoice_number": {
+      "prefix": "INV",
+      "year_token": "{YYYY}",
+      "sequence_padding": 5,
+      "next_number": 10001,
+      "reset_rule": "none",
+      "separator": "-"
+    },
+    "payment_number": {
+      "prefix": "PAY",
+      "year_token": "{YYYY}",
+      "sequence_padding": 5,
+      "next_number": 10001,
+      "reset_rule": "none",
+      "separator": "-"
+    }
+  }
+}

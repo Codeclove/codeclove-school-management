@@ -1,0 +1,2465 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-09-24T17:06:09+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: nexora-school-management\n"
+
+#. Plugin Name of the plugin
+#. Author of the plugin
+#: nexora.php
+#: includes/Core/Assets.php:114
+#: includes/Core/Plugin.php:145
+#: includes/Core/Plugin.php:146
+msgid "Nexora"
+msgstr "نيكسورا"
+
+#. Plugin URI of the plugin
+#. Author URI of the plugin
+#: nexora.php
+msgid "https://codeclove.com/plugins/nexora/"
+msgstr ""
+
+#. Description of the plugin
+#: nexora.php
+msgid "A comprehensive, country-aware school management system for educational institutions. Covers academics, admissions, students, staff, attendance, finance, and more."
+msgstr ""
+
+#: includes/Core/Assets.php:47
+msgid "Nexora is currently disabled. No valid license is active. Please contact your site administrator."
+msgstr ""
+
+#: includes/Core/Assets.php:48
+msgid "License Required"
+msgstr ""
+
+#: includes/Core/Assets.php:61
+msgid "You do not have permission to access the Nexora administration panel."
+msgstr ""
+
+#: includes/Core/Assets.php:62
+msgid "Access Denied"
+msgstr ""
+
+#: includes/Core/Assets.php:88
+msgid "Nexora admin bundle not found. Please run \"npm run build\" in the admin directory."
+msgstr ""
+
+#: includes/Core/Plugin.php:61
+msgid "Nexora Staff"
+msgstr ""
+
+#: includes/Core/Plugin.php:62
+msgid "Nexora Guardian"
+msgstr ""
+
+#: includes/Core/Plugin.php:63
+msgid "Nexora Student"
+msgstr ""
+
+#: includes/Core/Plugin.php:178
+msgid "No active license found. Nexora is fully disabled until a license is activated."
+msgstr ""
+
+#: includes/Core/Plugin.php:180
+msgid "Activate your license"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:37
+#: includes/Licensing/LicensePage.php:38
+msgid "License"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:79
+msgid "Security check failed."
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:83
+msgid "Insufficient permissions."
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:115
+#: src/modules/staff/StaffDirectoryPage.js:123
+#: src/modules/staff/StaffDirectoryPage.js:151
+#: src/modules/students/StudentDirectoryPage.js:246
+#: src/modules/students/StudentDirectoryPage.js:263
+msgid "Active"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:116
+msgid "Expired"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:117
+msgid "Disabled"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:118
+msgid "Invalid"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:119
+msgid "Not activated for this site"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:120
+msgid "License does not match this product"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:121
+msgid "Could not reach the license server"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:124
+msgid "Not activated"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:127
+msgid "Nexora License"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:136
+msgid "License Key"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:153
+#: src/modules/finance/FinanceDashboard.js:123
+#: src/modules/staff/StaffDirectoryPage.js:142
+#: src/modules/students/AdmissionsPage.js:218
+#: src/modules/students/AdmissionsPage.js:244
+#: src/modules/students/AdmissionsPage.js:283
+#: src/modules/students/StudentDirectoryPage.js:261
+#: src/modules/students/StudentDirectoryPage.js:294
+msgid "Status"
+msgstr ""
+
+#. translators: %s: expiry date
+#: includes/Licensing/LicensePage.php:163
+#, php-format
+msgid "Expires %s"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:168
+msgid "Lifetime"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:181
+msgid "Deactivate License"
+msgstr ""
+
+#: includes/Licensing/LicensePage.php:188
+msgid "Activate License"
+msgstr ""
+
+#. translators: %s: store URL
+#: includes/Licensing/LicensePage.php:198
+#, php-format
+msgid "Your license key is available on your %s account page."
+msgstr ""
+
+#: includes/Modules/Academics/Sessions/SessionsService.php:282
+msgid "Invalid start or end date format."
+msgstr ""
+
+#: includes/Modules/Academics/Sessions/SessionsService.php:289
+#, php-format
+msgid "Session start date must fall in the designated start month: %s."
+msgstr ""
+
+#: includes/Modules/Academics/Sessions/SessionsService.php:298
+#, php-format
+msgid "Session end date must fall in the designated end month: %s."
+msgstr ""
+
+#: includes/Modules/Admissions/AdmissionsController.php:324
+#: includes/Modules/Staff/StaffController.php:347
+msgid "Too many lookup requests. Please try again in a few minutes."
+msgstr ""
+
+#: includes/Modules/Admissions/AdmissionsController.php:331
+msgid "Both reference number and student date of birth are required."
+msgstr ""
+
+#: includes/Modules/Admissions/AdmissionsService.php:223
+msgid "Both reference number and date of birth are required."
+msgstr ""
+
+#: includes/Modules/Admissions/AdmissionsService.php:236
+msgid "No matching application found with those credentials."
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:164
+msgid "Public admissions submissions are currently closed."
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:179
+msgid "Admission Inquiry"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:179
+msgid "Admission Application"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:180
+msgid "Have questions about admissions? Submit your inquiry below and our team will get in touch."
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:180
+msgid "Please complete the application form below to submit your admission request."
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:187
+msgid "1. Student Details"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:190
+msgid "Student First Name"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:191
+#: includes/Modules/Admissions/Shortcodes.php:335
+msgid "First name"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:194
+msgid "Student Last Name"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:195
+#: includes/Modules/Admissions/Shortcodes.php:339
+msgid "Last name"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:198
+msgid "Date of Birth"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:203
+msgid "Gender"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:205
+msgid "Male"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:206
+msgid "Female"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:207
+msgid "Non-binary"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:208
+msgid "Prefer not to say"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:213
+msgid "Class / Grade Applying For"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:215
+msgid "Select Grade / Class"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:223
+msgid "Previous School Attended"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:224
+msgid "School name"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:227
+msgid "Last Grade Completed"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:228
+msgid "e.g. Grade 4"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:233
+msgid "2. Parent & Contact Details"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:236
+msgid "Parent / Guardian Full Name"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:236
+msgid "Father Full Name"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:237
+msgid "Full name"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:240
+msgid "Mobile Phone"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:244
+#: includes/Modules/Admissions/Shortcodes.php:342
+#: includes/Modules/Admissions/Shortcodes.php:443
+msgid "Email Address"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:249
+msgid "Father Occupation"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:250
+msgid "Occupation"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:253
+msgid "Mother Full Name"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:254
+msgid "Mother name"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:257
+msgid "Mother Mobile Number"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:261
+msgid "Mother Email Address"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:268
+msgid "3. Address & Remarks"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:271
+msgid "Street Address"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:272
+msgid "House / Building / Street"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:275
+#: includes/Modules/Admissions/Shortcodes.php:276
+#: includes/Modules/Admissions/Shortcodes.php:355
+msgid "City"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:279
+msgid "State / Province"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:280
+msgid "State"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:286
+msgid "Inquiry Message / Questions"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:286
+msgid "Additional Notes / Message"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:287
+msgid "Ask about curriculum, fees, tours, or enrollment..."
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:287
+msgid "Special requirements, medical notes, or questions..."
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:290
+msgid "Send Inquiry"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:290
+msgid "Submit Application"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:301
+msgid "Inquiry Sent!"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:301
+#: includes/Modules/Admissions/Shortcodes.php:398
+msgid "Application Received!"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:301
+#: includes/Modules/Admissions/Shortcodes.php:398
+msgid "Your reference number is"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:326
+msgid "Careers & Staff Application"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:327
+msgid "Join our team of educators and administrative professionals. Submit your employment application below."
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:331
+msgid "1. Applicant Details"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:334
+msgid "First Name"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:338
+msgid "Last Name"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:346
+msgid "Phone Number"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:350
+msgid "Date of Birth (Optional)"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:354
+msgid "City / Location"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:359
+msgid "2. Position & Qualifications"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:362
+msgid "Position / Role Applied For"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:363
+msgid "e.g. Science Teacher, Counselor"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:366
+msgid "Department / Subject"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:367
+msgid "e.g. Science, Mathematics"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:370
+msgid "Highest Qualification"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:371
+msgid "e.g. M.Sc. Physics, B.Ed"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:374
+msgid "Years of Relevant Experience"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:375
+msgid "e.g. 5 Years"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:378
+msgid "Work History & Previous Schools"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:379
+msgid "Summary of previous positions held..."
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:382
+msgid "Cover Letter & Teaching Philosophy"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:383
+msgid "Tell us about your background and methodology..."
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:387
+msgid "Submit Staff Application"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:418
+msgid "Status lookup service is currently unavailable."
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:432
+msgid "Staff Application Status Lookup"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:432
+msgid "Admission Status Lookup"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:433
+msgid "Track your employment application with your reference number and email address."
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:433
+msgid "Enter your application reference number to track your admission status."
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:438
+msgid "Reference Number"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:446
+msgid "Student Date of Birth"
+msgstr ""
+
+#: includes/Modules/Admissions/Shortcodes.php:450
+msgid "Check Status"
+msgstr ""
+
+#: includes/Modules/Attendance/AttendanceController.php:118
+msgid "Missing academic_session_id, academic_unit_id, or attendance_date."
+msgstr ""
+
+#: includes/Modules/Attendance/AttendanceController.php:144
+#: includes/Modules/Attendance/AttendanceController.php:205
+msgid "Invalid or incomplete attendance payload."
+msgstr ""
+
+#: includes/Modules/Attendance/AttendanceController.php:187
+msgid "Missing attendance_date query parameter."
+msgstr ""
+
+#: includes/Modules/Attendance/AttendanceController.php:240
+msgid "Missing academic_session_id, academic_unit_id, year, or month."
+msgstr ""
+
+#: includes/Modules/Attendance/AttendanceController.php:264
+msgid "Missing year or month query parameter."
+msgstr ""
+
+#: includes/Modules/Attendance/AttendanceService.php:285
+#, php-format
+msgid "Auto-marked: absent on timetable (%s)"
+msgstr ""
+
+#: includes/Modules/Attendance/AttendanceService.php:285
+msgid "Auto-marked: absent on timetable"
+msgstr ""
+
+#: includes/Modules/Finance/FinanceController.php:311
+msgid "No academic session specified and no active session configured."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceController.php:390
+#: includes/Modules/Finance/FinanceService.php:229
+#: includes/Modules/Finance/FinanceService.php:296
+msgid "Fee type not found."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceController.php:513
+#: includes/Modules/Finance/FinanceService.php:950
+#: includes/Modules/Finance/FinanceService.php:1014
+#: includes/Modules/Finance/FinanceService.php:1255
+#: includes/Modules/Finance/FinanceService.php:1936
+#: includes/Modules/Finance/FinanceService.php:1995
+#: includes/Modules/Finance/FinanceService.php:2061
+#: includes/Modules/Finance/FinanceService.php:2095
+msgid "Invoice not found."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceController.php:640
+msgid "Payment not found."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceController.php:710
+msgid "academic_unit_id is required."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:151
+msgid "Fee type name is required."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:156
+#: includes/Modules/Finance/FinanceService.php:260
+#, php-format
+msgid "Invalid frequency. Allowed: %s."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:161
+#: includes/Modules/Finance/FinanceService.php:274
+#, php-format
+msgid "Invalid status. Allowed: %s."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:166
+#: includes/Modules/Finance/FinanceService.php:267
+#, php-format
+msgid "Invalid scope. Allowed: %s."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:188
+#: includes/Modules/Finance/FinanceService.php:243
+msgid "A fee type with this code already exists."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:196
+msgid "Failed to create fee type."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:376
+msgid "Amount cannot be negative."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:731
+msgid "Student ID is required."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:734
+msgid "Academic Session ID is required."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:737
+msgid "Invoice must contain at least one line item."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:799
+msgid "Line item description is required."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:911
+msgid "Failed to save student invoice record."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:921
+msgid "Failed to save invoice line items."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1021
+msgid "Cancel all payments before voiding or cancelling this invoice."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1231
+msgid "Invoice ID is required."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1234
+msgid "Payment amount must be greater than zero."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1241
+msgid "paid_on must be a valid date in YYYY-MM-DD format."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1248
+#, php-format
+msgid "Invalid method. Allowed: %s."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1262
+#, php-format
+msgid "Payments cannot be recorded against a %s invoice."
+msgstr ""
+
+#. translators: 1: currency code, 2: payment amount, 3: currency code, 4: remaining balance
+#: includes/Modules/Finance/FinanceService.php:1299
+#, php-format
+msgid "Payment amount (%1$s %2$s) exceeds remaining invoice balance (%3$s %4$s)."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1331
+msgid "Failed to record payment."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1376
+msgid "Payment record not found."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1384
+msgid "Gateway payments cannot be manually cancelled. Process a refund through the payment gateway."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1493
+msgid "This Week"
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1543
+msgid "No Active Term Found"
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1559
+#, php-format
+msgid "Academic Year %s"
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1563
+msgid "Current Session"
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1681
+#, php-format
+msgid "W%d"
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1685
+#, php-format
+msgid "Week %d (%s - %s)"
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1940
+#: includes/Modules/Finance/FinanceService.php:1999
+#: includes/Modules/Finance/FinanceService.php:2065
+msgid "Cannot modify line items on an invoice with existing payments."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1944
+msgid "Description is required."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:1976
+msgid "Failed to insert line item."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:2006
+#: includes/Modules/Finance/FinanceService.php:2072
+msgid "Line item not found."
+msgstr ""
+
+#: includes/Modules/Finance/FinanceService.php:2101
+#, php-format
+msgid "Only draft invoices can be issued. Current status: %s."
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsController.php:334
+msgid "Announcement not found or already deleted."
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:515
+msgid "Attendance Alert"
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:516
+#, php-format
+msgid "You were marked %s on %s."
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:1055
+msgid "New Fee Invoice Issued"
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:1056
+#, php-format
+msgid "Invoice %s for %s has been issued."
+msgstr ""
+
+#. translators: %s: invoice number
+#: includes/Modules/Notifications/NotificationsService.php:1084
+#, php-format
+msgid " against Invoice %s"
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:1098
+msgid "Payment Received"
+msgstr ""
+
+#. translators: 1: formatted amount, 2: invoice suffix
+#: includes/Modules/Notifications/NotificationsService.php:1101
+#, php-format
+msgid "Payment of %1$s recorded%2$s."
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:1138
+msgid "Invoice Overdue"
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:1139
+#, php-format
+msgid "Invoice %s has passed its due date with balance %s."
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:1256
+msgid "Announcement title is required."
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:1259
+msgid "Title must be 160 characters or less."
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:1264
+msgid "Announcement content is required."
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:1283
+msgid "Failed to save announcement."
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:1301
+msgid "Title cannot be empty."
+msgstr ""
+
+#: includes/Modules/Notifications/NotificationsService.php:1309
+msgid "Content cannot be empty."
+msgstr ""
+
+#: includes/Modules/Portal/PortalController.php:311
+msgid "No student profile found for this account."
+msgstr ""
+
+#: includes/Modules/Portal/PortalController.php:315
+msgid "You do not have access to this student."
+msgstr ""
+
+#: includes/Modules/Portal/PortalService.php:466
+msgid "Activity"
+msgstr ""
+
+#. translators: %s: invoice number
+#: includes/Modules/Portal/PortalService.php:522
+#, php-format
+msgid "Invoice %s Due"
+msgstr ""
+
+#. translators: 1: currency symbol/code, 2: balance amount
+#: includes/Modules/Portal/PortalService.php:533
+#, php-format
+msgid "Payment due: %1$s %2$s"
+msgstr ""
+
+#. translators: %s: term name
+#: includes/Modules/Portal/PortalService.php:564
+#, php-format
+msgid "%s Begins"
+msgstr ""
+
+#. translators: %s: term name
+#: includes/Modules/Portal/PortalService.php:573
+#, php-format
+msgid "Start of academic term: %s"
+msgstr ""
+
+#. translators: %s: term name
+#: includes/Modules/Portal/PortalService.php:583
+#, php-format
+msgid "%s Ends"
+msgstr ""
+
+#. translators: %s: term name
+#: includes/Modules/Portal/PortalService.php:592
+#, php-format
+msgid "Conclusion of academic term: %s"
+msgstr ""
+
+#: includes/Modules/Portal/PortalService.php:924
+msgid "Break / Free"
+msgstr ""
+
+#: includes/Modules/Portal/PortalService.php:1246
+msgid "You do not have permission to edit this profile."
+msgstr ""
+
+#: includes/Modules/Portal/PortalService.php:1258
+msgid "Please provide a valid email address."
+msgstr ""
+
+#: includes/Modules/Portal/PortalShortcode.php:113
+msgid "The student & guardian portal is currently unavailable. Please contact the school administration."
+msgstr ""
+
+#: includes/Modules/Portal/PortalShortcode.php:385
+msgid "Student & Guardian Portal Sign In"
+msgstr ""
+
+#: includes/Modules/Portal/PortalShortcode.php:391
+msgid "Invalid username or password. Please try again."
+msgstr ""
+
+#: includes/Modules/Portal/PortalShortcode.php:400
+msgid "Username or Email"
+msgstr ""
+
+#: includes/Modules/Portal/PortalShortcode.php:401
+msgid "Enter your username or email"
+msgstr ""
+
+#: includes/Modules/Portal/PortalShortcode.php:405
+msgid "Password"
+msgstr ""
+
+#: includes/Modules/Portal/PortalShortcode.php:406
+msgid "••••••••"
+msgstr ""
+
+#: includes/Modules/Portal/PortalShortcode.php:412
+msgid "Remember me"
+msgstr ""
+
+#: includes/Modules/Portal/PortalShortcode.php:415
+msgid "Forgot password?"
+msgstr ""
+
+#: includes/Modules/Portal/PortalShortcode.php:420
+msgid "Sign In to Portal"
+msgstr ""
+
+#: includes/Modules/Portal/PortalShortcode.php:425
+msgid "Protected by Nexora School Management"
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionController.php:90
+msgid "Session ID parameter is required."
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionController.php:113
+#: includes/Modules/Promotion/PromotionController.php:152
+msgid "Source and target session IDs are required."
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionService.php:107
+msgid "Source and target sessions must be different."
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionService.php:150
+msgid "Failed to clone academic class."
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionService.php:189
+msgid "Failed to clone section."
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionService.php:225
+msgid "Failed to clone unit subjects mapping."
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionService.php:256
+msgid "No promotions provided."
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionService.php:272
+msgid "Target session not found."
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionService.php:314
+#, php-format
+msgid "Failed to update old enrollment for student ID %d."
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionService.php:324
+#, php-format
+msgid "Target class is required for promotion/detention of student ID %d."
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionService.php:345
+#, php-format
+msgid "Failed to create new enrollment for student ID %d."
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionService.php:362
+#, php-format
+msgid "Failed to graduate student ID %d."
+msgstr ""
+
+#: includes/Modules/Promotion/PromotionService.php:379
+#, php-format
+msgid "Failed to withdraw student ID %d."
+msgstr ""
+
+#: includes/Modules/Staff/StaffController.php:355
+msgid "Reference number and either email address or date of birth are required."
+msgstr ""
+
+#: includes/Modules/Staff/StaffService.php:294
+msgid "Cannot remove the Owner role from the last remaining Owner user."
+msgstr ""
+
+#: includes/Modules/Staff/StaffService.php:299
+#: includes/Modules/Staff/StaffService.php:529
+msgid "Cannot deactivate or suspend the last remaining Owner user."
+msgstr ""
+
+#: includes/Modules/Staff/StaffService.php:486
+#: includes/Modules/Staff/StaffService.php:548
+msgid "Cannot delete the last remaining Owner user."
+msgstr ""
+
+#: includes/Modules/Staff/StaffService.php:688
+msgid "No staff rows provided for import."
+msgstr ""
+
+#: includes/Modules/Staff/StaffService.php:933
+msgid "Reference number and verification details (email or date of birth) are required."
+msgstr ""
+
+#: includes/Modules/Staff/StaffService.php:952
+msgid "No application found matching the reference number and verification details."
+msgstr ""
+
+#: includes/Modules/Students/StudentsService.php:1590
+msgid "Target class is required."
+msgstr ""
+
+#: includes/Modules/Students/StudentsService.php:1605
+msgid "Student has no active enrollment to transfer."
+msgstr ""
+
+#: includes/Modules/Students/StudentsService.php:1619
+msgid "Target class must belong to the same academic session as the current enrollment."
+msgstr ""
+
+#: includes/Modules/Students/StudentsService.php:1641
+msgid "Failed to update enrollment record."
+msgstr ""
+
+#: includes/Modules/Students/StudentsService.php:1690
+msgid "Academic Session and Class Unit are required for bulk import."
+msgstr ""
+
+#: includes/Modules/Students/StudentsService.php:1695
+msgid "No student rows provided for import."
+msgstr ""
+
+#: includes/Modules/Timetable/Periods/PeriodsService.php:57
+#: includes/Modules/Timetable/Slots/SlotsService.php:150
+msgid "Required fields are missing."
+msgstr ""
+
+#: includes/Modules/Timetable/Periods/PeriodsService.php:88
+msgid "Failed to create period."
+msgstr ""
+
+#: includes/Modules/Timetable/Periods/PeriodsService.php:107
+#: includes/Modules/Timetable/Periods/PeriodsService.php:147
+msgid "Period not found."
+msgstr ""
+
+#: includes/Modules/Timetable/Periods/PeriodsService.php:127
+msgid "Failed to update period."
+msgstr ""
+
+#. translators: %1$s: Class name, %2$s: Section/group name
+#: includes/Modules/Timetable/Slots/SlotsService.php:178
+#, php-format
+msgid "Teacher is already scheduled for %1$s - %2$s during this period."
+msgstr ""
+
+#: includes/Modules/Timetable/Slots/SlotsService.php:218
+msgid "Failed to save schedule slot."
+msgstr ""
+
+#: includes/Modules/Timetable/Substitutes/SubstitutesService.php:111
+msgid "Slot ID and Date are required."
+msgstr ""
+
+#: includes/Modules/Timetable/Substitutes/SubstitutesService.php:120
+msgid "Timetable slot not found."
+msgstr ""
+
+#. translators: %1$s: Class name, %2$s: Section/group name
+#: includes/Modules/Timetable/Substitutes/SubstitutesService.php:175
+#, php-format
+msgid "Substitute teacher is already occupied for %1$s - %2$s during this period."
+msgstr ""
+
+#: includes/Modules/Timetable/Substitutes/SubstitutesService.php:209
+msgid "Failed to save substitute assignment."
+msgstr ""
+
+#: includes/Modules/Timetable/TimetableController.php:172
+msgid "Session ID and Unit ID are required."
+msgstr ""
+
+#: includes/Modules/Timetable/TimetableController.php:232
+msgid "Required parameter ids is missing."
+msgstr ""
+
+#: src/components/CommandPalette.js:417
+msgid "Search pages, actions, settings..."
+msgstr ""
+
+#: src/components/CommandPalette.js:417
+#, js-format
+msgid "No results found for \"%s\""
+msgstr ""
+
+#: src/components/CommandPalette.js:417
+msgid "Try searching for Classes, Admissions, Invoices, or Settings"
+msgstr ""
+
+#: src/components/CommandPalette.js:422
+msgid "Navigation"
+msgstr ""
+
+#: src/components/CommandPalette.js:424
+#: src/layouts/Header.js:185
+#: src/layouts/Sidebar.js:126
+msgid "Settings"
+msgstr "الإعدادات"
+
+#: src/components/CommandPalette.js:426
+msgid "Quick Actions"
+msgstr ""
+
+#: src/components/CommandPalette.js:436
+msgid "to navigate"
+msgstr ""
+
+#: src/components/CommandPalette.js:436
+msgid "to select"
+msgstr ""
+
+#: src/components/CommandPalette.js:436
+msgid "to close"
+msgstr ""
+
+#: src/components/ui/DatePicker.js:225
+msgid "Clear date"
+msgstr ""
+
+#: src/components/ui/DatePicker.js:225
+msgid "Open Calendar"
+msgstr ""
+
+#: src/components/ui/Select.js:18
+msgid "Select..."
+msgstr ""
+
+#: src/components/ui/Spinner.js:19
+msgid "Loading"
+msgstr ""
+
+#: src/components/ui/TablePagination.js:18
+#: src/__tests__/i18n.test.js:30
+#, js-format
+msgid "Showing %1$d to %2$d of %3$d records"
+msgstr ""
+
+#: src/components/ui/TablePagination.js:18
+msgid "Rows:"
+msgstr ""
+
+#: src/components/ui/TablePagination.js:18
+msgid "Rows per page"
+msgstr ""
+
+#: src/components/ui/TablePagination.js:22
+msgid "All"
+msgstr ""
+
+#: src/components/ui/TablePagination.js:22
+msgid "Previous"
+msgstr ""
+
+#: src/components/ui/TablePagination.js:22
+msgid "Next"
+msgstr ""
+
+#: src/layouts/AppShell.js:27
+msgid "Skip to main content"
+msgstr "انتقل إلى المحتوى الرئيسي"
+
+#: src/layouts/Header.js:72
+#: src/modules/finance/FinanceDashboard.js:33
+msgid "Session"
+msgstr "الجلسة"
+
+#: src/layouts/Header.js:83
+msgid "Manage Sessions"
+msgstr "إدارة الجلسات"
+
+#: src/layouts/Header.js:91
+msgid "Search..."
+msgstr "بحث..."
+
+#: src/layouts/Header.js:121
+msgid "Notifications"
+msgstr "الإشعارات"
+
+#: src/layouts/Header.js:128
+msgid "View all announcements"
+msgstr "عرض جميع الإعلانات"
+
+#: src/layouts/Header.js:149
+msgid "Quick create menu"
+msgstr "قائمة الإنشاء السريع"
+
+#: src/layouts/Header.js:185
+msgid "User menu"
+msgstr "قائمة المستخدم"
+
+#: src/layouts/Header.js:185
+msgid "My Profile"
+msgstr "ملفي الشخصي"
+
+#: src/layouts/Header.js:185
+msgid "Sign Out"
+msgstr "تسجيل الخروج"
+
+#: src/layouts/Sidebar.js:78
+msgid "Academics"
+msgstr "الشؤون الأكاديمية"
+
+#: src/layouts/Sidebar.js:80
+msgid "Sessions"
+msgstr "الجلسات الأكاديمية"
+
+#: src/layouts/Sidebar.js:81
+msgid "Classes"
+msgstr "الصفوف"
+
+#: src/layouts/Sidebar.js:82
+#: src/modules/students/StudentDirectoryPage.js:38
+msgid "Sections"
+msgstr "الشعب"
+
+#: src/layouts/Sidebar.js:83
+msgid "Subjects"
+msgstr "المواد الدراسية"
+
+#: src/layouts/Sidebar.js:84
+msgid "Timetable"
+msgstr "الجدول الزمني"
+
+#: src/layouts/Sidebar.js:88
+#: src/modules/students/AdmissionsPage.js:28
+msgid "Students"
+msgstr "الطلاب"
+
+#: src/layouts/Sidebar.js:90
+#: src/modules/finance/FinanceDashboard.js:48
+#: src/modules/finance/FinanceDashboard.js:61
+#: src/modules/students/AdmissionsPage.js:27
+msgid "Student"
+msgstr "طالب"
+
+#: src/layouts/Sidebar.js:90
+#: src/layouts/Sidebar.js:99
+msgid "Directory"
+msgstr "دليل"
+
+#: src/layouts/Sidebar.js:91
+msgid "Admissions"
+msgstr "القبول والتسجيل"
+
+#: src/layouts/Sidebar.js:92
+msgid "Student Attendance"
+msgstr "حضور الطلاب"
+
+#: src/layouts/Sidebar.js:93
+msgid "Promotion & Rollover"
+msgstr "الترقية والترحيل"
+
+#: src/layouts/Sidebar.js:97
+#: src/modules/staff/StaffDirectoryPage.js:121
+msgid "Staff & HR"
+msgstr "الموظفون والموارد البشرية"
+
+#: src/layouts/Sidebar.js:99
+msgid "Staff"
+msgstr "الموظفون"
+
+#: src/layouts/Sidebar.js:100
+msgid "Staff Attendance"
+msgstr "حضور الموظفين"
+
+#: src/layouts/Sidebar.js:101
+msgid "Roles & Permissions"
+msgstr "الأدوار والصلاحيات"
+
+#: src/layouts/Sidebar.js:105
+#: src/modules/finance/FinanceDashboard.js:76
+#: src/modules/finance/FinanceDashboard.js:103
+msgid "Finance"
+msgstr "الشؤون المالية"
+
+#: src/layouts/Sidebar.js:107
+msgid "Overview"
+msgstr "نظرة عامة"
+
+#: src/layouts/Sidebar.js:108
+#: src/modules/finance/FinanceDashboard.js:27
+msgid "Invoices"
+msgstr "الفواتير"
+
+#: src/layouts/Sidebar.js:109
+#: src/modules/finance/FinanceDashboard.js:28
+msgid "Payments"
+msgstr "المدفوعات"
+
+#: src/layouts/Sidebar.js:110
+msgid "Fee Types"
+msgstr "أنواع الرسوم"
+
+#: src/layouts/Sidebar.js:111
+#: src/modules/finance/FinanceDashboard.js:25
+msgid "Defaulters Report"
+msgstr "تقرير المتأخرات"
+
+#: src/layouts/Sidebar.js:122
+#: src/modules/finance/FinanceDashboard.js:76
+#: src/modules/finance/FinanceDashboard.js:103
+#: src/__tests__/i18n.test.js:22
+msgid "Dashboard"
+msgstr "لوحة القيادة"
+
+#: src/layouts/Sidebar.js:126
+msgid "Noticeboard"
+msgstr "لوحة الإعلانات"
+
+#: src/layouts/Sidebar.js:126
+msgid "WordPress Admin"
+msgstr "لوحة تحكم ووردبريس"
+
+#: src/layouts/Sidebar.js:126
+msgid "Activity Log"
+msgstr "سجل النشاط"
+
+#: src/layouts/Sidebar.js:126
+#: src/layouts/Sidebar.js:129
+msgid "Expand Sidebar (⌘B)"
+msgstr "توسيع الشريط الجانبي (⌘B)"
+
+#: src/layouts/Sidebar.js:126
+msgid "Expand Sidebar"
+msgstr "توسيع الشريط الجانبي"
+
+#: src/layouts/Sidebar.js:129
+msgid "School Management"
+msgstr "إدارة المدرسة"
+
+#: src/layouts/Sidebar.js:129
+msgid "Collapse Sidebar (⌘B)"
+msgstr "طي الشريط الجانبي (⌘B)"
+
+#: src/layouts/Sidebar.js:129
+msgid "Collapse Sidebar"
+msgstr "طي الشريط الجانبي"
+
+#: src/modules/dashboard/DashboardPage.js:43
+#: src/modules/dashboard/DashboardPage.js:44
+#, js-format
+msgid "This %s"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:45
+#: src/modules/students/AdmissionsPage.js:254
+msgid "Last 30 days"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:48
+msgid "Failed to load dashboard statistics"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:48
+#: src/modules/staff/StaffDirectoryPage.js:142
+#: src/modules/students/StudentDirectoryPage.js:294
+msgid "An error occurred while communicating with the database."
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:48
+msgid "Retry"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:48
+msgid "Analytics"
+msgstr "التحليلات"
+
+#: src/modules/dashboard/DashboardPage.js:58
+msgid "Admin"
+msgstr "المدير"
+
+#: src/modules/dashboard/DashboardPage.js:66
+msgid "Choose an education system preset"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:67
+#, js-format
+msgid "Create your first %s"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:68
+#, js-format
+msgid "Set up %s"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:69
+msgid "Configure staff roles and permissions"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:70
+msgid "Open admissions for enrolment"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:78
+#, js-format
+msgid "%1$d of %2$d setup steps complete"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:78
+#, js-format
+msgid "Next: %s"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:78
+msgid "Continue setup"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:81
+msgid "Dismiss setup banner"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:100
+msgid "Today's Attendance"
+msgstr "حضور اليوم"
+
+#: src/modules/dashboard/DashboardPage.js:100
+msgid "Students:"
+msgstr "الطلاب:"
+
+#: src/modules/dashboard/DashboardPage.js:100
+msgid "Staff:"
+msgstr "الموظفون:"
+
+#: src/modules/dashboard/DashboardPage.js:100
+msgid "Action Items Pending"
+msgstr "العناصر المعلقة"
+
+#: src/modules/dashboard/DashboardPage.js:100
+msgid "Admissions:"
+msgstr "طلبات القبول:"
+
+#: src/modules/dashboard/DashboardPage.js:100
+#, js-format
+msgid "%d Reviews"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:100
+#, js-format
+msgid "%d Profiles"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:110
+msgid "Enrolled Students"
+msgstr "الطلاب المسجلون"
+
+#: src/modules/dashboard/DashboardPage.js:110
+msgid "Open Applications"
+msgstr "الطلبات المفتوحة"
+
+#: src/modules/dashboard/DashboardPage.js:110
+msgid "Active Staff"
+msgstr "الموظفون النشطون"
+
+#: src/modules/dashboard/DashboardPage.js:110
+msgid "Outstanding Fees"
+msgstr "الرسوم المعلقة"
+
+#: src/modules/dashboard/DashboardPage.js:110
+msgid "Overdue Invoices"
+msgstr "الفواتير المتأخرة"
+
+#: src/modules/dashboard/DashboardPage.js:110
+#: src/modules/students/StudentDirectoryPage.js:306
+msgid "Action"
+msgstr "إجراء"
+
+#: src/modules/dashboard/DashboardPage.js:164
+msgid "Fee Collection"
+msgstr "تحصيل الرسوم"
+
+#: src/modules/dashboard/DashboardPage.js:164
+#, js-format
+msgid "%1$s collected of %2$s billed"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:166
+#, js-format
+msgid "%d%% collected"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:176
+#: src/modules/finance/FinanceDashboard.js:107
+#: src/modules/finance/FinanceDashboard.js:116
+msgid "Billed"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:176
+#: src/modules/finance/FinanceDashboard.js:107
+#: src/modules/finance/FinanceDashboard.js:116
+msgid "Collected"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:180
+#, js-format
+msgid "%s Trend"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:180
+#, js-format
+msgid "%d total applications in selected period"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:180
+msgid "Applications"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:221
+#, js-format
+msgid "Today, %s"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:223
+#, js-format
+msgid "Yesterday, %s"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:229
+msgid "Recent Activity"
+msgstr "النشاط الأخير"
+
+#: src/modules/dashboard/DashboardPage.js:229
+msgid "View all"
+msgstr "عرض الكل"
+
+#: src/modules/dashboard/DashboardPage.js:229
+#, js-format
+msgid "%d events"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:229
+msgid "No activity yet"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:229
+msgid "Admissions, attendance records, payments, and staff events will appear here."
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:229
+msgid "Create first admission"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:245
+msgid "Administrator"
+msgstr ""
+
+#: src/modules/dashboard/DashboardPage.js:252
+msgid "Good morning"
+msgstr "صباح الخير"
+
+#: src/modules/dashboard/DashboardPage.js:254
+msgid "Good afternoon"
+msgstr "مساء الخير"
+
+#: src/modules/dashboard/DashboardPage.js:255
+msgid "Good evening"
+msgstr "مساء الخير"
+
+#: src/modules/finance/FinanceDashboard.js:25
+msgid "Past Due Report"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:26
+msgid "Invoice"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:30
+msgid "Week"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:31
+msgid "Month"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:32
+msgid "Term"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:76
+#: src/modules/finance/FinanceDashboard.js:103
+msgid "School fee billings, collections, and student account balances."
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:79
+msgid "Error loading finance summary"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:79
+msgid "Could not retrieve financial metrics for this session. Check your connection or try again."
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:79
+#: src/modules/staff/StaffDirectoryPage.js:142
+#: src/modules/students/AdmissionsPage.js:283
+#: src/modules/students/StudentDirectoryPage.js:294
+msgid "Try again"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+#, js-format
+msgid "New %s"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+msgid "Total Collected"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+#, js-format
+msgid "of %s"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+msgid "Active academic session revenue"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+msgid "Total Invoiced"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+msgid "Total Billed"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+msgid "Full session charges issued"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+msgid "Cumulative student fee billings"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+msgid "Outstanding Balance"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+#, js-format
+msgid "%s%% unpaid"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+msgid "Remaining session balance"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+msgid "Pending student payments"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:105
+msgid "All accounts settled"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:107
+msgid "Past Due Invoices"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:107
+msgid "Action needed"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:107
+msgid "On schedule"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:107
+msgid "Accounts past due deadline"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:107
+msgid "No overdue accounts"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:107
+msgid "Review overdue accounts"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:107
+msgid "Clean collection record"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:107
+msgid "Inflow & Collections"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:107
+#, js-format
+msgid "Billing volume compared with cash collections (%s)"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:107
+#: src/modules/finance/FinanceDashboard.js:116
+msgid "Invoiced"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:107
+msgid "No transactions recorded in this period."
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:117
+msgid "Cycle Performance"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:117
+msgid "Today's Inflow"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:117
+msgid "30-Day Collections"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:117
+msgid "Period Recovery"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:117
+#, js-format
+msgid "%1$s collected of %2$s billed in this period."
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:117
+#, js-format
+msgid "View %s"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:117
+msgid "Activity Ledger"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:117
+msgid "Recent student billings and settlement receipts."
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:119
+msgid "All Activity"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:123
+msgid "Manage payments"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:123
+msgid "Manage invoices"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:123
+#: src/modules/students/AdmissionsPage.js:213
+#: src/modules/students/AdmissionsPage.js:283
+msgid "Reference"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:123
+msgid "Student / Account"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:123
+msgid "Timeline"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:123
+msgid "Channel"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:123
+msgid "Amount"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:123
+msgid "No transactions found"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:123
+msgid "No billing or payment activity recorded for this period."
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:123
+msgid "Payment"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:123
+#, js-format
+msgid "Due %s"
+msgstr ""
+
+#: src/modules/finance/FinanceDashboard.js:123
+msgid "Direct billing"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:74
+#: src/modules/students/AdmissionsPage.js:157
+#: src/modules/students/StudentDirectoryPage.js:195
+#, js-format
+msgid "Successfully updated status for selected %s!"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:77
+#: src/modules/students/AdmissionsPage.js:160
+#: src/modules/students/StudentDirectoryPage.js:198
+msgid "Failed to perform bulk status update."
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:83
+#: src/modules/students/AdmissionsPage.js:166
+#: src/modules/students/StudentDirectoryPage.js:204
+#, js-format
+msgid "Delete Selected %s"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:84
+#: src/modules/students/AdmissionsPage.js:167
+#: src/modules/students/StudentDirectoryPage.js:205
+#, js-format
+msgid "Are you sure you want to delete the %1$d selected %2$s?"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:91
+#: src/modules/students/AdmissionsPage.js:174
+#: src/modules/students/StudentDirectoryPage.js:212
+#, js-format
+msgid "Successfully deleted %1$d %2$s!"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:95
+#: src/modules/students/AdmissionsPage.js:180
+#: src/modules/students/StudentDirectoryPage.js:218
+#, js-format
+msgid "Failed to bulk delete %s."
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:106
+#, js-format
+msgid "Delete %s Record"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:107
+#, js-format
+msgid "Are you absolutely sure you want to remove %1$s %2$s (%3$s)? This will hide them from active view."
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:113
+#, js-format
+msgid "Successfully removed %1$s %2$s from records."
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:117
+#, js-format
+msgid "Failed to delete %s."
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:121
+#: src/modules/students/StudentDirectoryPage.js:252
+#, js-format
+msgid "%s Directory"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:121
+msgid "Manage faculty details, departments, and roles in one dashboard."
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:121
+#: src/modules/students/StudentDirectoryPage.js:252
+msgid "Bulk Import"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:121
+#: src/modules/staff/StaffDirectoryPage.js:146
+#, js-format
+msgid "Add %s"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:121
+msgid "Search staff members"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:121
+msgid "Search by name, email, designation..."
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:121
+msgid "Filter by status"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:121
+#: src/modules/staff/StaffDirectoryPage.js:122
+msgid "All Statuses"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:124
+#: src/modules/staff/StaffDirectoryPage.js:153
+#: src/modules/students/StudentDirectoryPage.js:247
+#: src/modules/students/StudentDirectoryPage.js:264
+msgid "Inactive"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:125
+#: src/modules/staff/StaffDirectoryPage.js:155
+#: src/modules/students/StudentDirectoryPage.js:250
+msgid "Suspended"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:126
+msgid "Filter by system role"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:126
+#: src/modules/staff/StaffDirectoryPage.js:127
+msgid "All System Roles"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:129
+#: src/modules/students/AdmissionsPage.js:261
+#: src/modules/students/StudentDirectoryPage.js:272
+#, js-format
+msgid "%1$d %2$s(s) selected"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:129
+msgid "Print ID Badges"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:136
+#: src/modules/staff/StaffDirectoryPage.js:137
+#: src/modules/students/AdmissionsPage.js:274
+#: src/modules/students/AdmissionsPage.js:275
+#: src/modules/students/StudentDirectoryPage.js:285
+#: src/modules/students/StudentDirectoryPage.js:286
+msgid "Bulk Actions"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:138
+#: src/modules/students/StudentDirectoryPage.js:287
+msgid "Mark Active"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:139
+#: src/modules/students/StudentDirectoryPage.js:288
+msgid "Mark Inactive"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:140
+msgid "Mark Suspended"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:141
+#: src/modules/students/AdmissionsPage.js:282
+#: src/modules/students/StudentDirectoryPage.js:293
+msgid "Delete Selected"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:142
+#, js-format
+msgid "Failed to fetch %s directory."
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:142
+msgid "Designation & Dept"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:142
+msgid "Contact Details"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:142
+msgid "System Role"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:142
+msgid "Joined On"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:142
+#: src/modules/students/AdmissionsPage.js:283
+#: src/modules/students/StudentDirectoryPage.js:294
+msgid "Actions"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:143
+msgid "No Staff Match Filters"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:144
+#: src/modules/students/AdmissionsPage.js:285
+#: src/modules/students/StudentDirectoryPage.js:296
+#, js-format
+msgid "No %s Found"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:145
+msgid "Try adjusting your search query, status, or role filter."
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:146
+msgid "Add your first school staff member to configure roles and permissions."
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:156
+#: src/modules/students/StudentDirectoryPage.js:305
+msgid "View Profile"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:156
+#: src/modules/students/StudentDirectoryPage.js:305
+msgid "Edit Profile"
+msgstr ""
+
+#: src/modules/staff/StaffDirectoryPage.js:156
+#: src/modules/students/AdmissionsPage.js:297
+#: src/modules/students/StudentDirectoryPage.js:305
+msgid "Delete Record"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:29
+#: src/modules/students/StudentDirectoryPage.js:35
+msgid "Class Level"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:30
+#: src/modules/students/StudentDirectoryPage.js:36
+msgid "Class Levels"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:31
+#: src/modules/students/StudentDirectoryPage.js:37
+msgid "Section"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:32
+#: src/modules/students/StudentDirectoryPage.js:39
+msgid "Guardian"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:33
+msgid "Academic Session"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:45
+msgid "Inquiry"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:46
+msgid "Submitted"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:47
+msgid "Under Review"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:48
+msgid "More Info Needed"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:49
+msgid "Interview Scheduled"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:50
+msgid "Accepted"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:51
+msgid "Waitlisted"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:52
+msgid "Rejected"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:53
+msgid "Admitted"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:54
+#: src/modules/students/StudentDirectoryPage.js:249
+#: src/modules/students/StudentDirectoryPage.js:266
+msgid "Withdrawn"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:128
+msgid "Academic Session and Class Level are required."
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:143
+msgid "Successfully batch enrolled selected applicants!"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:145
+#, js-format
+msgid "Some applications could not be converted: %s"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:149
+msgid "Failed to bulk convert applications."
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:176
+#: src/modules/students/StudentDirectoryPage.js:214
+#, js-format
+msgid "Some %1$s could not be deleted: %2$s"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:186
+#: src/modules/students/StudentDirectoryPage.js:224
+#, js-format
+msgid "Delete %s"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:187
+#, js-format
+msgid "Are you sure you want to delete the admission application for %s?"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:193
+#, js-format
+msgid "Successfully deleted application for %s!"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:195
+#, js-format
+msgid "Could not delete application: %s"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:199
+msgid "Failed to delete application."
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:214
+#: src/modules/students/AdmissionsPage.js:283
+msgid "Applicant Name"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:216
+#: src/modules/students/AdmissionsPage.js:283
+#: src/modules/students/StudentDirectoryPage.js:294
+#, js-format
+msgid "Primary %s"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:217
+#: src/modules/students/AdmissionsPage.js:250
+#: src/modules/students/AdmissionsPage.js:283
+msgid "Submission Date"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:241
+#, js-format
+msgid "%s Dashboard"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:241
+#, js-format
+msgid "Review incoming %1$s applications, manage document checks, and convert accepted applicants to registered %2$s."
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:241
+msgid "Search Applicants"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:241
+msgid "Search by name, reference..."
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:241
+#: src/modules/students/AdmissionsPage.js:242
+#: src/modules/students/StudentDirectoryPage.js:255
+#: src/modules/students/StudentDirectoryPage.js:256
+#: src/modules/students/StudentDirectoryPage.js:258
+#: src/modules/students/StudentDirectoryPage.js:259
+#, js-format
+msgid "All %s"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:244
+#: src/modules/students/AdmissionsPage.js:245
+#: src/modules/students/StudentDirectoryPage.js:261
+#: src/modules/students/StudentDirectoryPage.js:262
+msgid "All statuses"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:250
+#: src/modules/students/AdmissionsPage.js:251
+msgid "All time"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:252
+msgid "Today"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:253
+msgid "Last 7 days"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:261
+#: src/modules/students/AdmissionsPage.js:293
+#: src/modules/students/StudentDirectoryPage.js:272
+msgid "Clear Filters"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:261
+msgid "Export CSV"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:278
+#, js-format
+msgid "Mark %s"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:280
+msgid "Convert to Students"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:281
+msgid "Export Selected to CSV"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:283
+#, js-format
+msgid "Could not load %s"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:283
+#, js-format
+msgid "An error occurred while loading the %s logs."
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:284
+msgid "No Applications Match Filters"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:286
+msgid "Try adjusting your search query, class level, or status filter."
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:287
+msgid "No admission applications are currently registered in the database."
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:297
+msgid "View Details"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:297
+msgid "Edit Application"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:298
+#, js-format
+msgid "Batch Convert to %s"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:298
+#, js-format
+msgid "Batch enroll the %1$d selected applicants as registered %2$s. This will create student records, link guardians, and assign class level enrollments."
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:298
+#: src/modules/students/StudentDirectoryPage.js:314
+#, js-format
+msgid "Select %s"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:298
+#: src/modules/students/StudentDirectoryPage.js:314
+#, js-format
+msgid "%s (Optional)"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:298
+#: src/modules/students/StudentDirectoryPage.js:311
+#: src/modules/students/StudentDirectoryPage.js:314
+msgid "Cancel"
+msgstr ""
+
+#: src/modules/students/AdmissionsPage.js:298
+msgid "Convert & Enroll"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:133
+#, js-format
+msgid "Academic Session and Target %s are required."
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:156
+#, js-format
+msgid "Successfully promoted/detained selected %s!"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:160
+msgid "Failed to execute bulk promotions."
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:166
+msgid "Class Level is required."
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:180
+#, js-format
+msgid "Successfully assigned sections to selected %s!"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:182
+#, js-format
+msgid "Some assignments failed: %s"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:187
+msgid "Failed to update section assignments."
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:225
+#, js-format
+msgid "Are you sure you want to delete student %s?"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:231
+#, js-format
+msgid "Successfully deleted student %s!"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:233
+#, js-format
+msgid "Could not delete student: %s"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:237
+msgid "Failed to delete student."
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:248
+#: src/modules/students/StudentDirectoryPage.js:265
+msgid "Graduated"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:252
+#, js-format
+msgid "View registered %1$s directories, %2$s details, primary emergency contacts, and enroll manual %3$s records."
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:252
+#: src/modules/students/StudentDirectoryPage.js:298
+#, js-format
+msgid "Admit %s"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:252
+#, js-format
+msgid "Search %s"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:252
+msgid "Search by name, ID number..."
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:272
+msgid "Print ID Cards"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:289
+msgid "Mark Graduated"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:290
+msgid "Mark Withdrawn"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:291
+msgid "Promote Selected"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:292
+msgid "Assign Class & Section"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:294
+#, js-format
+msgid "Could not load %s list"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:294
+msgid "Admission No."
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:295
+msgid "No Students Match Filters"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:297
+msgid "Try adjusting your search query, class level, or section filter."
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:298
+#, js-format
+msgid "Admit your first %s to configure their academic record."
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:306
+msgid "Promote Selected Students"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:306
+#, js-format
+msgid "Execute batch promotions or status roll-overs for the %d selected students."
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:306
+msgid "Target Academic Session"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:306
+msgid "Select target session"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:307
+msgid "Promote to Class Level"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:308
+msgid "Detain in Class Level"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:309
+msgid "Graduate Students"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:310
+msgid "Withdraw Students"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:311
+msgid "Select action"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:311
+#, js-format
+msgid "Target %s"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:311
+#, js-format
+msgid "Select target %s"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:311
+#, js-format
+msgid "Target %s (Optional)"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:311
+msgid "Execute Rollover"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:311
+#, js-format
+msgid "Assign %1$s & %2$s"
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:311
+#, js-format
+msgid "Batch assign the %1$d selected students to a %2$s and %3$s. This will update their active enrollment records for the current session."
+msgstr ""
+
+#: src/modules/students/StudentDirectoryPage.js:314
+msgid "Assign Section"
+msgstr ""
+
+#: src/__tests__/i18n.test.js:26
+msgid "Nonexistent string"
+msgstr ""

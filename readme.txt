@@ -1,0 +1,96 @@
+=== Nexora – School Management System ===
+Contributors: codeclove
+Tags: school management, student management, attendance, education, school erp
+Requires at least: 6.5
+Tested up to: 7.1
+Requires PHP: 8.1
+Stable tag: 1.0.0
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+
+Multi-country school management system for WordPress. Manage student admissions, classes, staff, and daily attendance. Free forever.
+
+== Description ==
+
+**Nexora** is a modern, country-aware school management system built natively for WordPress. Designed for K-12 schools, coaching institutes, and colleges, Nexora simplifies student record-keeping, staff directories, academic session structuring, and daily student attendance tracking.
+
+Nexora is built from the ground up with built-in multi-country presets (India, United States, and United Kingdom), allowing you to immediately configure grading conventions, phone formats, currency symbols, and academic terms with a single click.
+
+= Free Features =
+
+* **Unlimited Student Records** — Create and manage detailed student profiles, guardian information, contact records, and enrollment dates with no artificial caps.
+* **Bulk CSV Spreadsheet Import** — Fast spreadsheet onboarding for students and faculty with custom column mapping.
+* **Online Admissions & Inquiries** — Public embeddable shortcode application form, application review stages, and one-click applicant-to-student conversion.
+* **Fee Types & Manual Invoicing** — Configure fee heads/types with class rates, generate student invoices, and record manual payments with receipts.
+* **Staff & Faculty Directory** — Maintain comprehensive teacher and administrative staff records with roles, contact info, and assignments.
+* **Academic Structure** — Organize your school year into Academic Sessions, Terms/Units, Classes/Groups, and Subjects.
+* **Daily Attendance Tracking** — Mark student daily attendance (Present, Absent, Late, Excused) with instant daily summary reports.
+* **Multi-Country Presets** — One-click configuration for India (CBSE/ICSE), United States, and United Kingdom presets (terms, date formats, currencies, and identifiers).
+* **Modern Single-Page Dashboard** — Clean, responsive React administrative interface designed for speed and clarity.
+* **Privacy & GDPR Compliant** — All scripts and stylesheets are hosted 100% locally. Zero external fonts (no Google Fonts tracking) and zero third-party telemetry.
+
+Nexora adheres strictly to WordPress security and coding standards:
+* Custom `$wpdb` database tables prefixed with your WordPress installation table prefix.
+* Full REST API security with permission callbacks (`permission_callback`) and nonce authentication.
+* Role-based access control protecting all student and academic data.
+
+= Need Advanced ERP Capabilities? Upgrade to Nexora Pro =
+
+Take your institution to the next level with [Nexora Pro](https://codeclove.com/plugins/nexora/):
+
+* **Financial Analytics & Revenue Charts** — Real-time fee collection graphs, revenue forecasting, and payment mode breakdowns.
+* **Defaulters Report & Overdue Tracking** — Automated tracking of overdue invoices and uncollected dues.
+* **Online Payment Gateways & UPI** — Direct checkout support for Stripe, PayPal, Razorpay, and Indian UPI.
+* **Student & Guardian Web Portal** — Self-service frontend portal where students and parents can view timetables, invoices, and attendance logs.
+* **Weekly Timetable Matrix & Substitutions** — Conflict-free timetable builder with automatic teacher substitution assignment.
+* **Automated SMS Notifications** — Integrated alerts via Twilio, Vonage, Fast2SMS, and MSG91.
+* **Digital Noticeboard & Announcements** — Publish school-wide or targeted circulars and notices.
+* **Batch Student Promotion Engine** — One-click end-of-year batch promotion between academic sessions.
+* **Granular Role Permission Matrix** — Fine-grained capability control across teachers, accountants, and staff members.
+* **Priority Email & Ticket Support** — Dedicated technical assistance and onboarding help.
+
+== Installation ==
+
+1. Upload the `nexora-school-management` folder to your `/wp-content/plugins/` directory (or install via *Plugins → Add New* in WordPress).
+2. Activate the plugin through the **Plugins** menu in WordPress.
+3. Navigate to **Nexora** in your WordPress admin sidebar.
+4. Run the initial setup wizard to select your country preset (India, US, or UK) and configure your academic sessions.
+
+== Frequently Asked Questions ==
+
+= Is the free version limited in student or staff numbers? =
+No. Nexora Free allows unlimited students, guardians, classes, and staff members. There are no artificial quotas, trial periods, or disabled features.
+
+= Does Nexora make external network calls or track usage? =
+No. Nexora does not load remote fonts from Google Fonts or external CDNs, does not track usage data, and makes zero background network requests. All assets are self-hosted locally.
+
+= Can I upgrade to Nexora Pro without losing my existing data? =
+Yes. When you install and activate Nexora Pro, it seamlessly utilizes your existing database tables and settings. All student records, attendance logs, and academic structures are fully preserved.
+
+= Where can I review the unminified source code for the admin app? =
+In compliance with WordPress.org Guideline 4, the full source code and Vite build configuration for the React administrative interface is available at:
+https://github.com/codeclove/nexora-school-management
+
+== Screenshots ==
+
+1. Dashboard overview — Key operational metrics, attendance summaries, and recent activity.
+2. Student directory — Manage student profiles, parent details, and academic enrollments.
+3. Daily attendance register — Fast, one-click attendance marking for classes and groups.
+4. Academic management — Setup sessions, classes, units, and subjects with localized presets.
+5. Invoicing and fee types — Define school fees, issue invoices, and record offline payments.
+
+== Changelog ==
+
+= 1.0.0 =
+* Initial public release on WordPress.org.
+* Core academic structure (Sessions, Units, Groups, Subjects).
+* Student directory and guardian profile management.
+* Staff and faculty directory with native role assignments.
+* Daily student attendance marking and daily reports.
+* Country presets for India, United States, and United Kingdom.
+* Localized typography and zero-telemetry architecture.
+
+== Upgrade Notice ==
+
+= 1.0.0 =
+Initial release of Nexora School Management System.

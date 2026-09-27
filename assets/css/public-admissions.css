@@ -1,0 +1,432 @@
+/**
+ * Nexora Public Admissions & Careers Form Styles
+ *
+ * @package Nexora\Modules\Admissions
+ */
+
+:root {
+	--nexora-brand: #4f46e5;
+	--nexora-brand-hover: color-mix(in srgb, var(--nexora-brand) 85%, #000);
+	--nexora-brand-light: color-mix(in srgb, var(--nexora-brand) 8%, #fff);
+	--nexora-brand-ring: color-mix(in srgb, var(--nexora-brand) 18%, transparent);
+}
+
+.nexora-public-wrap,
+.nexora-public-wrap * {
+	box-sizing: border-box;
+}
+
+.nexora-public-wrap {
+	width: 680px;
+	max-width: 100%;
+	margin: 28px auto;
+	padding: 32px;
+	background: #ffffff;
+	border-radius: 14px;
+	border: 1px solid #e2e8f0;
+	box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+	color: #0f172a;
+	line-height: 1.5;
+}
+
+.nexora-header {
+	text-align: center;
+	margin-bottom: 26px;
+	border-bottom: 1px solid #e2e8f0;
+	padding-bottom: 20px;
+}
+
+.nexora-header h3 {
+	margin: 0 0 8px;
+	font-size: 1.35rem;
+	font-weight: 700;
+	color: #0f172a;
+	letter-spacing: -0.02em;
+	line-height: 1.3;
+}
+
+.nexora-header p.desc {
+	margin: 0 auto;
+	max-width: 540px;
+	font-size: 0.875rem;
+	color: #64748b;
+	line-height: 1.5;
+}
+
+.nexora-section-title {
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: #0f172a;
+	margin: 28px 0 16px;
+	line-height: 1.3;
+	letter-spacing: -0.01em;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.nexora-section-title::before {
+	content: "";
+	width: 9px;
+	height: 9px;
+	background: var(--nexora-brand);
+	border-radius: 50%;
+	box-shadow: 0 0 0 3.5px var(--nexora-brand-light), 0 0 0 4.5px rgba(0, 0, 0, 0.04);
+	margin-left: 2px;
+	flex-shrink: 0;
+}
+
+.nexora-section-title::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: #e2e8f0;
+}
+
+.nexora-section-title:first-of-type {
+	margin-top: 0;
+}
+
+.nexora-sub-title {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: #334155;
+	margin: 16px 0 10px;
+}
+
+.nexora-form-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
+}
+
+.nexora-field {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.nexora-field.full {
+	grid-column: 1 / -1;
+}
+
+.nexora-field label {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	margin-bottom: 6px;
+	color: #334155;
+	line-height: 1.3;
+	display: flex;
+	align-items: center;
+}
+
+.nexora-field label span.req {
+	color: #dc2626;
+	margin-left: 3px;
+	font-weight: 700;
+}
+
+.nexora-field input,
+.nexora-field select {
+	width: 100%;
+	height: 42px;
+	min-height: 42px;
+	padding: 0 14px;
+	border: 1px solid #cbd5e1;
+	border-radius: 8px;
+	font-size: 0.925rem;
+	outline: none;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+	background: #ffffff;
+	color: #0f172a;
+	font-family: inherit;
+	line-height: 40px;
+}
+
+.nexora-field select {
+	appearance: none;
+	-webkit-appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 14px center;
+	padding-right: 38px;
+	cursor: pointer;
+}
+
+.nexora-field textarea {
+	width: 100%;
+	padding: 10px 14px;
+	border: 1px solid #cbd5e1;
+	border-radius: 8px;
+	font-size: 0.925rem;
+	outline: none;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+	background: #ffffff;
+	color: #0f172a;
+	font-family: inherit;
+	line-height: 1.45;
+	resize: vertical;
+	min-height: 84px;
+}
+
+.nexora-field input:focus,
+.nexora-field select:focus,
+.nexora-field textarea:focus {
+	border-color: var(--nexora-brand);
+	box-shadow: 0 0 0 3px var(--nexora-brand-ring);
+}
+
+.nexora-field input::placeholder,
+.nexora-field textarea::placeholder {
+	color: #64748b;
+}
+
+.nexora-submit-btn {
+	width: 100%;
+	height: 44px;
+	min-height: 44px;
+	padding: 0 20px;
+	background: var(--nexora-brand);
+	color: #ffffff;
+	font-weight: 600;
+	font-size: 0.925rem;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: background-color 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
+	margin-top: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.nexora-submit-btn:hover {
+	background: var(--nexora-brand-hover);
+	box-shadow: 0 4px 12px -2px var(--nexora-brand-ring);
+}
+
+.nexora-submit-btn:active {
+	transform: scale(0.99);
+}
+
+.nexora-submit-btn:focus-visible {
+	outline: 2px solid var(--nexora-brand);
+	outline-offset: 2px;
+}
+
+.nexora-submit-btn:disabled {
+	opacity: 0.65;
+	cursor: not-allowed;
+	transform: none;
+	box-shadow: none;
+}
+
+.nexora-response-msg {
+	margin-top: 18px;
+	padding: 14px 18px;
+	border-radius: 8px;
+	font-size: 0.875rem;
+	display: none;
+	line-height: 1.5;
+}
+
+.nexora-response-msg.success {
+	background: #f0fdf4;
+	border: 1px solid #bbf7d0;
+	color: #166534;
+}
+
+.nexora-response-msg.error {
+	background: #fef2f2;
+	border: 1px solid #fecaca;
+	color: #991b1b;
+}
+
+.nexora-tracker-card {
+	margin-top: 24px;
+	padding: 24px;
+	border-radius: 12px;
+	border: 1px solid #e2e8f0;
+	background: #f8fafc;
+	display: none;
+}
+
+.nexora-tracker-card.notfound {
+	background: #fef2f2;
+	border-color: #fecaca;
+	color: #991b1b;
+	padding: 16px;
+	text-align: center;
+	font-size: 0.875rem;
+	border-radius: 8px;
+}
+
+.nexora-tracker-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	padding-bottom: 14px;
+	margin-bottom: 18px;
+	border-bottom: 1px solid #e2e8f0;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.nexora-tracker-title {
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: #0f172a;
+	line-height: 1.3;
+}
+
+.nexora-tracker-meta {
+	font-size: 0.8125rem;
+	color: #64748b;
+	margin-top: 3px;
+}
+
+.nexora-tracker-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 12px;
+	border-radius: 9999px;
+	font-size: 0.775rem;
+	font-weight: 600;
+	background: var(--nexora-brand-light);
+	color: var(--nexora-brand);
+	border: 1px solid var(--nexora-brand-ring);
+	text-transform: capitalize;
+}
+
+.nexora-stepper {
+	display: flex;
+	justify-content: space-between;
+	position: relative;
+	margin: 24px 0 18px;
+}
+
+.nexora-stepper::before {
+	content: "";
+	position: absolute;
+	top: 15px;
+	left: 12%;
+	right: 12%;
+	height: 2px;
+	background: #e2e8f0;
+	z-index: 1;
+}
+
+.nexora-step {
+	position: relative;
+	z-index: 2;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 25%;
+	text-align: center;
+}
+
+.nexora-step-num {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: #ffffff;
+	border: 2px solid #cbd5e1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: #64748b;
+	margin-bottom: 8px;
+	transition: all 0.15s ease;
+}
+
+.nexora-step-lbl {
+	font-size: 0.775rem;
+	font-weight: 500;
+	color: #64748b;
+	line-height: 1.25;
+}
+
+.nexora-step.completed .nexora-step-num {
+	background: var(--nexora-brand);
+	border-color: var(--nexora-brand);
+	color: #ffffff;
+}
+
+.nexora-step.completed .nexora-step-lbl {
+	color: #0f172a;
+	font-weight: 600;
+}
+
+.nexora-step.active .nexora-step-num {
+	background: #ffffff;
+	border-color: var(--nexora-brand);
+	color: var(--nexora-brand);
+	box-shadow: 0 0 0 3px var(--nexora-brand-ring);
+}
+
+.nexora-step.active .nexora-step-lbl {
+	color: var(--nexora-brand);
+	font-weight: 600;
+}
+
+.nexora-guidance-box {
+	background: #ffffff;
+	padding: 14px 18px;
+	border-radius: 8px;
+	border: 1px solid #e2e8f0;
+	font-size: 0.875rem;
+	color: #334155;
+	line-height: 1.5;
+	margin-top: 18px;
+}
+
+@media (max-width: 680px) {
+	.nexora-public-wrap {
+		padding: 24px 18px;
+		margin: 16px auto;
+		border-radius: 12px;
+	}
+
+	.nexora-header {
+		margin-bottom: 20px;
+		padding-bottom: 16px;
+	}
+
+	.nexora-header h3 {
+		font-size: 1.25rem;
+	}
+
+	.nexora-section-title {
+		margin: 22px 0 14px;
+		font-size: 0.9rem;
+	}
+
+	.nexora-form-grid {
+		grid-template-columns: 1fr;
+		gap: 12px;
+	}
+
+	.nexora-stepper {
+		margin: 18px 0 14px;
+	}
+
+	.nexora-step-num {
+		width: 28px;
+		height: 28px;
+		font-size: 0.75rem;
+	}
+
+	.nexora-stepper::before {
+		top: 13px;
+	}
+
+	.nexora-step-lbl {
+		font-size: 0.7rem;
+	}
+}

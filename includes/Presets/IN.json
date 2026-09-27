@@ -1,0 +1,116 @@
+{
+  "code": "IN",
+  "name": "India",
+  "version": "1.0.0",
+  "education_system": {
+    "academic_year_start_month": 4,
+    "academic_year_end_month": 3,
+    "default_number_terms": 3,
+    "grading_default": "marks_percentage",
+    "default_academic_units": [
+      "Nursery", "LKG", "UKG", "Class 1", "Class 2", "Class 3", "Class 4",
+      "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10",
+      "Class 11", "Class 12"
+    ],
+    "default_groups_per_unit": ["A", "B", "C", "D"]
+  },
+  "labels": {
+    "academic_session": { "singular": "Academic Year", "plural": "Academic Years" },
+    "academic_term": { "singular": "Term", "plural": "Terms" },
+    "academic_unit": { "singular": "Class", "plural": "Classes" },
+    "academic_group": { "singular": "Section", "plural": "Sections" },
+    "subject": { "singular": "Subject", "plural": "Subjects" },
+    "assessment": { "singular": "Exam", "plural": "Exams" },
+    "guardian": { "singular": "Parent / Guardian", "plural": "Parents / Guardians" },
+    "student_guardian": { "singular": "Student Guardian", "plural": "Student Guardians" },
+    "admission_application": { "singular": "Admission Application", "plural": "Admission Applications" },
+    "admission_status": { "singular": "Admission Status", "plural": "Admission Statuses" },
+    "staff_application": { "singular": "Staff Application", "plural": "Staff Applications" },
+    "staff_application_status": { "singular": "Staff Application Status", "plural": "Staff Application Statuses" },
+    "student": { "singular": "Student", "plural": "Students" },
+    "staff_member": { "singular": "Staff", "plural": "Staff" },
+    "fee_type": { "singular": "Fee Type", "plural": "Fee Types" },
+    "invoice_line_item": { "singular": "Invoice Line Item", "plural": "Invoice Line Items" },
+    "invoice": { "singular": "Invoice", "plural": "Invoices" },
+    "payment": { "singular": "Payment", "plural": "Payments" },
+    "attendance_record": { "singular": "Attendance Record", "plural": "Attendance Records" }
+  },
+  "localization": {
+    "language": "en",
+    "date_format": "d/m/Y",
+    "time_format": "H:i",
+    "week_start_day": 1,
+    "timezone": "Asia/Kolkata",
+    "currency": "INR",
+    "currency_position": "left",
+    "decimal_precision": 2,
+    "number_format": "indian",
+    "rtl": false
+  },
+  "identifiers": {
+    "admission_application": {
+      "prefix": "APP",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": ""
+    },
+    "staff_application": {
+      "prefix": "STFAPP",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": ""
+    },
+    "admission_number": {
+      "prefix": "ADM",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": ""
+    },
+    "student_number": {
+      "prefix": "STU",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": ""
+    },
+    "staff_member": {
+      "prefix": "EMP",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": ""
+    },
+    "roll_number": {
+      "prefix": "",
+      "year_token": "",
+      "sequence_padding": 3,
+      "next_number": 1,
+      "reset_rule": "none",
+      "separator": ""
+    },
+    "invoice_number": {
+      "prefix": "INV",
+      "year_token": "{YYYY}",
+      "sequence_padding": 5,
+      "next_number": 10001,
+      "reset_rule": "none",
+      "separator": ""
+    },
+    "payment_number": {
+      "prefix": "PAY",
+      "year_token": "{YYYY}",
+      "sequence_padding": 5,
+      "next_number": 10001,
+      "reset_rule": "none",
+      "separator": ""
+    }
+  }
+}

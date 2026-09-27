@@ -1,0 +1,116 @@
+{
+  "code": "US",
+  "name": "United States",
+  "version": "1.0.0",
+  "education_system": {
+    "academic_year_start_month": 9,
+    "academic_year_end_month": 6,
+    "default_number_terms": 2,
+    "grading_default": "letter_gpa",
+    "default_academic_units": [
+      "Pre-K", "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4",
+      "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10",
+      "Grade 11", "Grade 12"
+    ],
+    "default_groups_per_unit": ["Homeroom A", "Homeroom B"]
+  },
+  "labels": {
+    "academic_session": { "singular": "School Year", "plural": "School Years" },
+    "academic_term": { "singular": "Semester", "plural": "Semesters" },
+    "academic_unit": { "singular": "Grade", "plural": "Grades" },
+    "academic_group": { "singular": "Homeroom", "plural": "Homerooms" },
+    "subject": { "singular": "Course", "plural": "Courses" },
+    "assessment": { "singular": "Assessment", "plural": "Assessments" },
+    "guardian": { "singular": "Parent / Guardian", "plural": "Parents / Guardians" },
+    "student_guardian": { "singular": "Student Guardian", "plural": "Student Guardians" },
+    "admission_application": { "singular": "Application", "plural": "Applications" },
+    "admission_status": { "singular": "Application Status", "plural": "Application Statuses" },
+    "staff_application": { "singular": "Staff Application", "plural": "Staff Applications" },
+    "staff_application_status": { "singular": "Staff Application Status", "plural": "Staff Application Statuses" },
+    "student": { "singular": "Student", "plural": "Students" },
+    "staff_member": { "singular": "Staff / Faculty", "plural": "Staff / Faculty" },
+    "fee_type": { "singular": "Fee Type", "plural": "Fee Types" },
+    "invoice_line_item": { "singular": "Invoice Line Item", "plural": "Invoice Line Items" },
+    "invoice": { "singular": "Invoice / Bill", "plural": "Invoices / Bills" },
+    "payment": { "singular": "Payment", "plural": "Payments" },
+    "attendance_record": { "singular": "Attendance Record", "plural": "Attendance Records" }
+  },
+  "localization": {
+    "language": "en",
+    "date_format": "m/d/Y",
+    "time_format": "g:i A",
+    "week_start_day": 0,
+    "timezone": "America/New_York",
+    "currency": "USD",
+    "currency_position": "left",
+    "decimal_precision": 2,
+    "number_format": "standard",
+    "rtl": false
+  },
+  "identifiers": {
+    "admission_application": {
+      "prefix": "APP",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": "-"
+    },
+    "staff_application": {
+      "prefix": "STF-APP",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": "-"
+    },
+    "admission_number": {
+      "prefix": "ADM",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": "-"
+    },
+    "student_number": {
+      "prefix": "STU",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": "-"
+    },
+    "staff_member": {
+      "prefix": "EMP",
+      "year_token": "{YYYY}",
+      "sequence_padding": 4,
+      "next_number": 1,
+      "reset_rule": "yearly",
+      "separator": "-"
+    },
+    "roll_number": {
+      "prefix": "",
+      "year_token": "",
+      "sequence_padding": 3,
+      "next_number": 1,
+      "reset_rule": "none",
+      "separator": ""
+    },
+    "invoice_number": {
+      "prefix": "INV",
+      "year_token": "{YYYY}",
+      "sequence_padding": 5,
+      "next_number": 10001,
+      "reset_rule": "none",
+      "separator": "-"
+    },
+    "payment_number": {
+      "prefix": "PAY",
+      "year_token": "{YYYY}",
+      "sequence_padding": 5,
+      "next_number": 10001,
+      "reset_rule": "none",
+      "separator": "-"
+    }
+  }
+}
