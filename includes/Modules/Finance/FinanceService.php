@@ -5,23 +5,23 @@
  * Implements business logic, raw SQL queries, and transaction management
  * for fee types, invoices, line items, and manual payments.
  *
- * @package Nexora\Modules\Finance
+ * @package CodeClove\Modules\Finance
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Finance;
+namespace CodeClove\Modules\Finance;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Core\Logger;
-use Nexora\Database\Schema;
-use Nexora\Database\Transaction;
-use Nexora\Modules\Settings\SettingsRepository;
-use Nexora\Shared\IdentifierService;
+use CodeClove\Core\Logger;
+use CodeClove\Database\Schema;
+use CodeClove\Database\Transaction;
+use CodeClove\Modules\Settings\SettingsRepository;
+use CodeClove\Shared\IdentifierService;
 use WP_Error;
 
 /**
@@ -153,25 +153,25 @@ final class FinanceService {
 		global $wpdb;
 
 		if ( empty( $data['name'] ) ) {
-			return new WP_Error( 'missing_field', __( 'Fee type name is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'missing_field', __( 'Fee type name is required.', 'codeclove-school-management' ), 400 );
 		}
 
 		$frequency = ! empty( $data['frequency'] ) ? sanitize_text_field( $data['frequency'] ) : 'one_time';
 		if ( ! in_array( $frequency, self::VALID_FREQUENCIES, true ) ) {
 			/* translators: %s: allowed frequency values */
-			return new WP_Error( 'invalid_field', sprintf( __( 'Invalid frequency. Allowed: %s.', 'nexora-school-management' ), implode( ', ', self::VALID_FREQUENCIES ) ), 400 );
+			return new WP_Error( 'invalid_field', sprintf( __( 'Invalid frequency. Allowed: %s.', 'codeclove-school-management' ), implode( ', ', self::VALID_FREQUENCIES ) ), 400 );
 		}
 
 		$status = ! empty( $data['status'] ) ? sanitize_text_field( $data['status'] ) : 'active';
 		if ( ! in_array( $status, self::VALID_FEE_STATUSES, true ) ) {
 			/* translators: %s: allowed status values */
-			return new WP_Error( 'invalid_field', sprintf( __( 'Invalid status. Allowed: %s.', 'nexora-school-management' ), implode( ', ', self::VALID_FEE_STATUSES ) ), 400 );
+			return new WP_Error( 'invalid_field', sprintf( __( 'Invalid status. Allowed: %s.', 'codeclove-school-management' ), implode( ', ', self::VALID_FEE_STATUSES ) ), 400 );
 		}
 
 		$scope = ! empty( $data['scope'] ) ? sanitize_text_field( $data['scope'] ) : 'global';
 		if ( ! in_array( $scope, self::VALID_SCOPES, true ) ) {
 			/* translators: %s: allowed scope values */
-			return new WP_Error( 'invalid_field', sprintf( __( 'Invalid scope. Allowed: %s.', 'nexora-school-management' ), implode( ', ', self::VALID_SCOPES ) ), 400 );
+			return new WP_Error( 'invalid_field', sprintf( __( 'Invalid scope. Allowed: %s.', 'codeclove-school-management' ), implode( ', ', self::VALID_SCOPES ) ), 400 );
 		}
 
 		$insert = [
@@ -198,7 +198,7 @@ final class FinanceService {
 			);
 			// phpcs:enable
 			if ( $existing_id ) {
-				return new WP_Error( 'duplicate_code', __( 'A fee type with this code already exists.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'duplicate_code', __( 'A fee type with this code already exists.', 'codeclove-school-management' ), 400 );
 			}
 		}
 
@@ -207,7 +207,7 @@ final class FinanceService {
 		// phpcs:enable
 
 		if ( ! $result ) {
-			return new WP_Error( 'db_error', __( 'Failed to create fee type.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'db_error', __( 'Failed to create fee type.', 'codeclove-school-management' ), 500 );
 		}
 
 		return $this->get_fee_type_by_id( (int) $wpdb->insert_id );
@@ -250,7 +250,7 @@ final class FinanceService {
 		);
 		// phpcs:enable
 		if ( ! $existing ) {
-			return new WP_Error( 'not_found', __( 'Fee type not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'not_found', __( 'Fee type not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		$update = [ 'updated_at' => current_time( 'mysql', true ) ];
@@ -271,7 +271,7 @@ final class FinanceService {
 				);
 				// phpcs:enable
 				if ( $dup ) {
-					return new WP_Error( 'duplicate_code', __( 'A fee type with this code already exists.', 'nexora-school-management' ), 400 );
+					return new WP_Error( 'duplicate_code', __( 'A fee type with this code already exists.', 'codeclove-school-management' ), 400 );
 				}
 			}
 			$update['code'] = $code;
@@ -289,7 +289,7 @@ final class FinanceService {
 			$frequency = sanitize_text_field( $data['frequency'] );
 			if ( ! in_array( $frequency, self::VALID_FREQUENCIES, true ) ) {
 				/* translators: %s: allowed frequency values */
-				return new WP_Error( 'invalid_field', sprintf( __( 'Invalid frequency. Allowed: %s.', 'nexora-school-management' ), implode( ', ', self::VALID_FREQUENCIES ) ), 400 );
+				return new WP_Error( 'invalid_field', sprintf( __( 'Invalid frequency. Allowed: %s.', 'codeclove-school-management' ), implode( ', ', self::VALID_FREQUENCIES ) ), 400 );
 			}
 			$update['frequency'] = $frequency;
 		}
@@ -297,7 +297,7 @@ final class FinanceService {
 			$scope = sanitize_text_field( $data['scope'] );
 			if ( ! in_array( $scope, self::VALID_SCOPES, true ) ) {
 				/* translators: %s: allowed scope values */
-				return new WP_Error( 'invalid_field', sprintf( __( 'Invalid scope. Allowed: %s.', 'nexora-school-management' ), implode( ', ', self::VALID_SCOPES ) ), 400 );
+				return new WP_Error( 'invalid_field', sprintf( __( 'Invalid scope. Allowed: %s.', 'codeclove-school-management' ), implode( ', ', self::VALID_SCOPES ) ), 400 );
 			}
 			$update['scope'] = $scope;
 		}
@@ -305,7 +305,7 @@ final class FinanceService {
 			$status = sanitize_text_field( $data['status'] );
 			if ( ! in_array( $status, self::VALID_FEE_STATUSES, true ) ) {
 				/* translators: %s: allowed status values */
-				return new WP_Error( 'invalid_field', sprintf( __( 'Invalid status. Allowed: %s.', 'nexora-school-management' ), implode( ', ', self::VALID_FEE_STATUSES ) ), 400 );
+				return new WP_Error( 'invalid_field', sprintf( __( 'Invalid status. Allowed: %s.', 'codeclove-school-management' ), implode( ', ', self::VALID_FEE_STATUSES ) ), 400 );
 			}
 			$update['status'] = $status;
 		}
@@ -333,7 +333,7 @@ final class FinanceService {
 		);
 		// phpcs:enable
 		if ( ! $exists ) {
-			return new WP_Error( 'not_found', __( 'Fee type not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'not_found', __( 'Fee type not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		// Count active invoices referencing this fee type (for UI warning).
@@ -413,7 +413,7 @@ final class FinanceService {
 		global $wpdb;
 
 		if ( $amount_minor < 0 ) {
-			return new WP_Error( 'invalid_amount', __( 'Amount cannot be negative.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'invalid_amount', __( 'Amount cannot be negative.', 'codeclove-school-management' ), 400 );
 		}
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
@@ -768,13 +768,13 @@ final class FinanceService {
 		global $wpdb;
 
 		if ( empty( $payload['student_id'] ) ) {
-			return new WP_Error( 'missing_field', __( 'Student ID is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'missing_field', __( 'Student ID is required.', 'codeclove-school-management' ), 400 );
 		}
 		if ( empty( $payload['academic_session_id'] ) ) {
-			return new WP_Error( 'missing_field', __( 'Academic Session ID is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'missing_field', __( 'Academic Session ID is required.', 'codeclove-school-management' ), 400 );
 		}
 		if ( empty( $payload['line_items'] ) || ! is_array( $payload['line_items'] ) ) {
-			return new WP_Error( 'missing_field', __( 'Invoice must contain at least one line item.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'missing_field', __( 'Invoice must contain at least one line item.', 'codeclove-school-management' ), 400 );
 		}
 
 		// Check for duplicates.
@@ -836,7 +836,7 @@ final class FinanceService {
 
 			foreach ( $payload['line_items'] as $li ) {
 				if ( empty( $li['description'] ) ) {
-					throw new \Exception( esc_html__( 'Line item description is required.', 'nexora-school-management' ) );
+					throw new \Exception( esc_html__( 'Line item description is required.', 'codeclove-school-management' ) );
 				}
 				$quantity      = isset( $li['quantity'] ) ? (float) $li['quantity'] : 1.0;
 				$unit_amount   = isset( $li['unit_amount_minor'] ) ? (int) $li['unit_amount_minor'] : 0;
@@ -948,7 +948,7 @@ final class FinanceService {
 			// phpcs:enable
 			if ( ! $inserted ) {
 				Logger::error( 'Failed to insert invoice record', $wpdb->last_error );
-				throw new \Exception( esc_html__( 'Failed to save student invoice record.', 'nexora-school-management' ) );
+				throw new \Exception( esc_html__( 'Failed to save student invoice record.', 'codeclove-school-management' ) );
 			}
 
 			$invoice_id = (int) $wpdb->insert_id;
@@ -958,7 +958,7 @@ final class FinanceService {
 				// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				if ( ! $wpdb->insert( Schema::line_items(), $li ) ) {
 					Logger::error( sprintf( 'Failed to insert line item for invoice [ID %d]', $invoice_id ), $wpdb->last_error );
-					throw new \Exception( esc_html__( 'Failed to save invoice line items.', 'nexora-school-management' ) );
+					throw new \Exception( esc_html__( 'Failed to save invoice line items.', 'codeclove-school-management' ) );
 				}
 				// phpcs:enable
 			}
@@ -970,7 +970,7 @@ final class FinanceService {
 			return $result;
 		}
 
-		do_action( 'nexora_invoice_issued', $result );
+		do_action( 'codeclove_invoice_issued', $result );
 
 		return $result;
 	}
@@ -1060,7 +1060,7 @@ final class FinanceService {
 			)
 		);
 		if ( ! $exists ) {
-			return new WP_Error( 'not_found', __( 'Invoice not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'not_found', __( 'Invoice not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		$paid = (int) $wpdb->get_var(
@@ -1072,7 +1072,7 @@ final class FinanceService {
 		if ( $paid > 0 ) {
 			return new WP_Error(
 				'invoice_has_payments',
-				__( 'Cancel all payments before voiding or cancelling this invoice.', 'nexora-school-management' ),
+				__( 'Cancel all payments before voiding or cancelling this invoice.', 'codeclove-school-management' ),
 				422
 			);
 		}
@@ -1284,17 +1284,17 @@ final class FinanceService {
 		global $wpdb;
 
 		if ( empty( $payload['invoice_id'] ) ) {
-			return new WP_Error( 'missing_field', __( 'Invoice ID is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'missing_field', __( 'Invoice ID is required.', 'codeclove-school-management' ), 400 );
 		}
 		if ( empty( $payload['amount_minor'] ) || (int) $payload['amount_minor'] <= 0 ) {
-			return new WP_Error( 'invalid_amount', __( 'Payment amount must be greater than zero.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'invalid_amount', __( 'Payment amount must be greater than zero.', 'codeclove-school-management' ), 400 );
 		}
 
 		// Validate paid_on date format.
 		if ( ! empty( $payload['paid_on'] ) ) {
 			$parsed = \DateTime::createFromFormat( 'Y-m-d', $payload['paid_on'] );
 			if ( ! $parsed || $parsed->format( 'Y-m-d' ) !== $payload['paid_on'] ) {
-				return new WP_Error( 'invalid_date', __( 'paid_on must be a valid date in YYYY-MM-DD format.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'invalid_date', __( 'paid_on must be a valid date in YYYY-MM-DD format.', 'codeclove-school-management' ), 400 );
 			}
 		}
 
@@ -1302,7 +1302,7 @@ final class FinanceService {
 		$method = ! empty( $payload['method'] ) ? sanitize_text_field( $payload['method'] ) : 'cash';
 		if ( ! in_array( $method, self::VALID_METHODS, true ) ) {
 			/* translators: %s: allowed payment methods */
-			return new WP_Error( 'invalid_field', sprintf( __( 'Invalid method. Allowed: %s.', 'nexora-school-management' ), implode( ', ', self::VALID_METHODS ) ), 400 );
+			return new WP_Error( 'invalid_field', sprintf( __( 'Invalid method. Allowed: %s.', 'codeclove-school-management' ), implode( ', ', self::VALID_METHODS ) ), 400 );
 		}
 
 		$invoices_table = Schema::invoices();
@@ -1321,7 +1321,7 @@ final class FinanceService {
 			return new WP_Error(
 				'invoice_not_payable',
 				/* translators: %s: invoice status */
-				sprintf( __( 'Payments cannot be recorded against a %s invoice.', 'nexora-school-management' ), $invoice['status'] ),
+				sprintf( __( 'Payments cannot be recorded against a %s invoice.', 'codeclove-school-management' ), $invoice['status'] ),
 				422
 			);
 		}
@@ -1359,7 +1359,7 @@ final class FinanceService {
 					'payment_failed',
 					sprintf(
 						/* translators: 1: currency code, 2: payment amount, 3: currency code, 4: remaining balance */
-						__( 'Payment amount (%1$s %2$s) exceeds remaining invoice balance (%3$s %4$s).', 'nexora-school-management' ),
+						__( 'Payment amount (%1$s %2$s) exceeds remaining invoice balance (%3$s %4$s).', 'codeclove-school-management' ),
 						$currency_code,
 						$formatted_amount,
 						$currency_code,
@@ -1392,7 +1392,7 @@ final class FinanceService {
 			$inserted = $wpdb->insert( Schema::payments(), $insert );
 			// phpcs:enable
 			if ( ! $inserted ) {
-				throw new \Exception( esc_html__( 'Failed to record payment.', 'nexora-school-management' ) );
+				throw new \Exception( esc_html__( 'Failed to record payment.', 'codeclove-school-management' ) );
 			}
 
 			$payment_id = (int) $wpdb->insert_id;
@@ -1408,7 +1408,7 @@ final class FinanceService {
 		}
 
 		// W2: fire action so email/PDF listeners can hook in (V2).
-		do_action( 'nexora_payment_recorded', $result );
+		do_action( 'codeclove_payment_recorded', $result );
 
 		return $result;
 	}
@@ -1451,7 +1451,7 @@ final class FinanceService {
 		);
 		// phpcs:enable
 		if ( ! $payment ) {
-			return new WP_Error( 'not_found', __( 'Payment record not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'not_found', __( 'Payment record not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		// Only manual payments can be cancelled from the UI.
@@ -1459,7 +1459,7 @@ final class FinanceService {
 		if ( ( $payment['payment_source'] ?? 'manual' ) !== 'manual' ) {
 			return new WP_Error(
 				'gateway_payment',
-				__( 'Gateway payments cannot be manually cancelled. Process a refund through the payment gateway.', 'nexora-school-management' ),
+				__( 'Gateway payments cannot be manually cancelled. Process a refund through the payment gateway.', 'codeclove-school-management' ),
 				403
 			);
 		}
@@ -1489,7 +1489,7 @@ final class FinanceService {
 			return $result;
 		}
 
-		do_action( 'nexora_payment_cancelled', $id );
+		do_action( 'codeclove_payment_cancelled', $id );
 
 		return true;
 	}
@@ -1569,7 +1569,7 @@ final class FinanceService {
 			// Current week: Monday to Sunday
 			$start_date  = gmdate( 'Y-m-d', strtotime( 'monday this week' ) );
 			$end_date    = gmdate( 'Y-m-d', strtotime( 'sunday this week' ) );
-			$period_name = __( 'This Week', 'nexora-school-management' );
+			$period_name = __( 'This Week', 'codeclove-school-management' );
 		} elseif ( $range === 'month' ) {
 			// Current calendar month: 1st to last day
 			$start_date  = gmdate( 'Y-m-01' );
@@ -1619,7 +1619,7 @@ final class FinanceService {
 			} else {
 				$start_date  = gmdate( 'Y-m-01' );
 				$end_date    = gmdate( 'Y-m-t' );
-				$period_name = __( 'No Active Term Found', 'nexora-school-management' );
+				$period_name = __( 'No Active Term Found', 'codeclove-school-management' );
 			}
 		} elseif ( $range === 'year' ) {
 			// Current academic session (Year)
@@ -1636,11 +1636,11 @@ final class FinanceService {
 				$start_date  = $session['starts_on'];
 				$end_date    = $session['ends_on'];
 				/* translators: %s: academic session name */
-				$period_name = sprintf( __( 'Academic Year %s', 'nexora-school-management' ), $session['name'] );
+				$period_name = sprintf( __( 'Academic Year %s', 'codeclove-school-management' ), $session['name'] );
 			} else {
 				$start_date  = gmdate( 'Y-01-01' );
 				$end_date    = gmdate( 'Y-12-31' );
-				$period_name = __( 'Current Session', 'nexora-school-management' );
+				$period_name = __( 'Current Session', 'codeclove-school-management' );
 			}
 		}
 
@@ -1759,11 +1759,11 @@ final class FinanceService {
 
 				$chart_data[] = [
 					/* translators: %d: week number */
-					'label'     => sprintf( __( 'W%d', 'nexora-school-management' ), $week_idx ),
+					'label'     => sprintf( __( 'W%d', 'codeclove-school-management' ), $week_idx ),
 					'startDate' => $curr->format( 'Y-m-d' ),
 					'endDate'   => $next_week->format( 'Y-m-d' ),
 					/* translators: 1: week number, 2: start date formatted, 3: end date formatted */
-					'fullLabel' => sprintf( __( 'Week %1$d (%2$s - %3$s)', 'nexora-school-management' ), $week_idx, $curr->format( 'd M' ), $next_week->format( 'd M' ) ),
+					'fullLabel' => sprintf( __( 'Week %1$d (%2$s - %3$s)', 'codeclove-school-management' ), $week_idx, $curr->format( 'd M' ), $next_week->format( 'd M' ) ),
 					'billed'    => $billed_sum,
 					'collected' => $collected_sum,
 				];
@@ -1921,7 +1921,7 @@ final class FinanceService {
 		// phpcs:enable
 
 		if ( $status === 'overdue' && $old_status !== 'overdue' ) {
-			do_action( 'nexora_invoice_overdue', $invoice_id );
+			do_action( 'codeclove_invoice_overdue', $invoice_id );
 		}
 	}
 
@@ -2019,11 +2019,11 @@ final class FinanceService {
 		// phpcs:enable
 
 		if ( (int) $invoice['paid_minor'] > 0 ) {
-			return new WP_Error( 'invoice_has_payments', __( 'Cannot modify line items on an invoice with existing payments.', 'nexora-school-management' ), 422 );
+			return new WP_Error( 'invoice_has_payments', __( 'Cannot modify line items on an invoice with existing payments.', 'codeclove-school-management' ), 422 );
 		}
 
 		if ( empty( $payload['description'] ) ) {
-			return new WP_Error( 'missing_field', __( 'Description is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'missing_field', __( 'Description is required.', 'codeclove-school-management' ), 400 );
 		}
 
 		$quantity      = isset( $payload['quantity'] ) ? (float) $payload['quantity'] : 1.0;
@@ -2062,7 +2062,7 @@ final class FinanceService {
 			$inserted = $wpdb->insert( $line_items_table, $insert );
 			// phpcs:enable
 			if ( ! $inserted ) {
-				throw new \Exception( esc_html__( 'Failed to insert line item.', 'nexora-school-management' ) );
+				throw new \Exception( esc_html__( 'Failed to insert line item.', 'codeclove-school-management' ) );
 			}
 
 			$this->recalculate_invoice_totals( $invoice_id );
@@ -2089,7 +2089,7 @@ final class FinanceService {
 		// phpcs:enable
 
 		if ( (int) $invoice['paid_minor'] > 0 ) {
-			return new WP_Error( 'invoice_has_payments', __( 'Cannot modify line items on an invoice with existing payments.', 'nexora-school-management' ), 422 );
+			return new WP_Error( 'invoice_has_payments', __( 'Cannot modify line items on an invoice with existing payments.', 'codeclove-school-management' ), 422 );
 		}
 
 		$line_items_table = Schema::line_items();
@@ -2169,7 +2169,7 @@ final class FinanceService {
 		// phpcs:enable
 
 		if ( (int) $invoice['paid_minor'] > 0 ) {
-			return new WP_Error( 'invoice_has_payments', __( 'Cannot modify line items on an invoice with existing payments.', 'nexora-school-management' ), 422 );
+			return new WP_Error( 'invoice_has_payments', __( 'Cannot modify line items on an invoice with existing payments.', 'codeclove-school-management' ), 422 );
 		}
 
 		$line_items_table = Schema::line_items();
@@ -2215,7 +2215,7 @@ final class FinanceService {
 			return new WP_Error(
 				'invalid_status',
 				/* translators: %s: invoice status */
-				sprintf( __( 'Only draft invoices can be issued. Current status: %s.', 'nexora-school-management' ), $invoice['status'] ),
+				sprintf( __( 'Only draft invoices can be issued. Current status: %s.', 'codeclove-school-management' ), $invoice['status'] ),
 				422
 			);
 		}
@@ -2238,7 +2238,7 @@ final class FinanceService {
 		// phpcs:enable
 		$updated_invoice = $this->get_invoice( $id ) ?: [];
 
-		do_action( 'nexora_invoice_issued', $updated_invoice );
+		do_action( 'codeclove_invoice_issued', $updated_invoice );
 
 		return $updated_invoice;
 	}
@@ -2375,7 +2375,7 @@ final class FinanceService {
 					],
 					[ 'id' => $id ]
 				);
-				do_action( 'nexora_invoice_overdue', $id );
+				do_action( 'codeclove_invoice_overdue', $id );
 			}
 		}
 		// phpcs:enable
@@ -2390,13 +2390,13 @@ final class FinanceService {
 		$ids    = $payload['ids'] ?? [];
 
 		if ( empty( $ids ) || ! is_array( $ids ) ) {
-			return new WP_Error( 'nexora_invalid_ids', __( 'No IDs provided.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_invalid_ids', __( 'No IDs provided.', 'codeclove-school-management' ), 400 );
 		}
 
 		$ids = array_map( 'intval', $ids );
 
 		if ( 'send_reminders' === $action ) {
-			$notif_service = new \Nexora\Modules\Notifications\NotificationsService();
+			$notif_service = new \CodeClove\Modules\Notifications\NotificationsService();
 			$sent_count = 0;
 			$errors = [];
 			foreach ( $ids as $id ) {
@@ -2488,6 +2488,6 @@ final class FinanceService {
 			return [ 'success' => true, 'updated_count' => $success_count, 'errors' => $errors ];
 		}
 
-		return new WP_Error( 'nexora_invalid_action', __( 'Invalid bulk action.', 'nexora-school-management' ), 400 );
+		return new WP_Error( 'codeclove_invalid_action', __( 'Invalid bulk action.', 'codeclove-school-management' ), 400 );
 	}
 }

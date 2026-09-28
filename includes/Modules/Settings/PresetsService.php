@@ -5,12 +5,12 @@
  * Handles loading education system configuration presets from JSON files
  * and merging them into the active settings.
  *
- * @package Nexora\Modules\Settings
+ * @package CodeClove\Modules\Settings
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Settings;
+namespace CodeClove\Modules\Settings;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -52,7 +52,7 @@ final class PresetsService {
 	 */
 	public function get_preset_data( string $code ): ?array {
 		$code = strtoupper( sanitize_key( $code ) );
-		$file = NEXORA_DIR . "includes/Presets/{$code}.json";
+		$file = CODECLOVE_DIR . "includes/Presets/{$code}.json";
 
 		if ( ! file_exists( $file ) ) {
 			return null;

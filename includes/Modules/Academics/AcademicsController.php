@@ -8,20 +8,20 @@
  *   - Academic Groups
  *   - Subjects
  *
- * @package Nexora\Modules\Academics
+ * @package CodeClove\Modules\Academics
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Academics;
+namespace CodeClove\Modules\Academics;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\BaseController;
-use Nexora\Shared\AuditLogger;
+use CodeClove\Api\BaseController;
+use CodeClove\Shared\AuditLogger;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -58,12 +58,12 @@ final class AcademicsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_sessions' ],
-					'permission_callback' => $this->permission( 'academic_sessions.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_sessions.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'create_session' ],
-					'permission_callback' => $this->permission( 'academic_sessions.add' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_sessions.add', $request ); },
 				],
 			]
 		);
@@ -75,17 +75,17 @@ final class AcademicsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_session' ],
-					'permission_callback' => $this->permission( 'academic_sessions.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_sessions.view', $request ); },
 				],
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'update_session' ],
-					'permission_callback' => $this->permission( 'academic_sessions.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_sessions.edit', $request ); },
 				],
 				[
 					'methods'             => 'DELETE',
 					'callback'            => [ $this, 'delete_session' ],
-					'permission_callback' => $this->any_permission( 'academic_sessions.delete', 'academic_sessions.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_sessions.delete', $request ) || $this->can( 'academic_sessions.manage', $request ); },
 				],
 			]
 		);
@@ -98,12 +98,12 @@ final class AcademicsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_units' ],
-					'permission_callback' => $this->permission( 'academic_units.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_units.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'create_unit' ],
-					'permission_callback' => $this->permission( 'academic_units.add' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_units.add', $request ); },
 				],
 			]
 		);
@@ -117,17 +117,17 @@ final class AcademicsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_unit' ],
-					'permission_callback' => $this->permission( 'academic_units.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_units.view', $request ); },
 				],
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'update_unit' ],
-					'permission_callback' => $this->permission( 'academic_units.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_units.edit', $request ); },
 				],
 				[
 					'methods'             => 'DELETE',
 					'callback'            => [ $this, 'delete_unit' ],
-					'permission_callback' => $this->permission( 'academic_units.delete' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_units.delete', $request ); },
 				],
 			]
 		);
@@ -140,12 +140,12 @@ final class AcademicsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_groups' ],
-					'permission_callback' => $this->permission( 'academic_groups.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_groups.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'create_group' ],
-					'permission_callback' => $this->permission( 'academic_groups.add' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_groups.add', $request ); },
 				],
 			]
 		);
@@ -159,17 +159,17 @@ final class AcademicsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_group' ],
-					'permission_callback' => $this->permission( 'academic_groups.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_groups.view', $request ); },
 				],
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'update_group' ],
-					'permission_callback' => $this->permission( 'academic_groups.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_groups.edit', $request ); },
 				],
 				[
 					'methods'             => 'DELETE',
 					'callback'            => [ $this, 'delete_group' ],
-					'permission_callback' => $this->permission( 'academic_groups.delete' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_groups.delete', $request ); },
 				],
 			]
 		);
@@ -182,12 +182,12 @@ final class AcademicsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_subjects' ],
-					'permission_callback' => $this->permission( 'subjects.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'subjects.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'create_subject' ],
-					'permission_callback' => $this->permission( 'subjects.add' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'subjects.add', $request ); },
 				],
 			]
 		);
@@ -201,17 +201,17 @@ final class AcademicsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_subject' ],
-					'permission_callback' => $this->permission( 'subjects.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'subjects.view', $request ); },
 				],
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'update_subject' ],
-					'permission_callback' => $this->permission( 'subjects.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'subjects.edit', $request ); },
 				],
 				[
 					'methods'             => 'DELETE',
 					'callback'            => [ $this, 'delete_subject' ],
-					'permission_callback' => $this->permission( 'subjects.delete' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'subjects.delete', $request ); },
 				],
 			]
 		);
@@ -224,12 +224,12 @@ final class AcademicsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_terms' ],
-					'permission_callback' => $this->permission( 'academic_terms.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_terms.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'create_term' ],
-					'permission_callback' => $this->permission( 'academic_terms.add' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_terms.add', $request ); },
 				],
 			]
 		);
@@ -241,12 +241,12 @@ final class AcademicsController extends BaseController {
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'update_term' ],
-					'permission_callback' => $this->permission( 'academic_terms.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_terms.edit', $request ); },
 				],
 				[
 					'methods'             => 'DELETE',
 					'callback'            => [ $this, 'delete_term' ],
-					'permission_callback' => $this->permission( 'academic_terms.delete' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_terms.delete', $request ); },
 				],
 			]
 		);
@@ -259,12 +259,12 @@ final class AcademicsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_unit_subjects' ],
-					'permission_callback' => $this->permission( 'academic_units.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_units.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'assign_subject_to_unit' ],
-					'permission_callback' => $this->permission( 'academic_units.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_units.edit', $request ); },
 				],
 			]
 		);
@@ -276,7 +276,7 @@ final class AcademicsController extends BaseController {
 				[
 					'methods'             => 'DELETE',
 					'callback'            => [ $this, 'unassign_subject_from_unit' ],
-					'permission_callback' => $this->permission( 'academic_units.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'academic_units.edit', $request ); },
 				],
 			]
 		);
@@ -320,7 +320,7 @@ final class AcademicsController extends BaseController {
 		$session = $this->sessions_service->get_session( $id );
 
 		if ( null === $session ) {
-			return $this->error( 'not_found', __( 'Academic session not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'Academic session not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $session );
@@ -446,7 +446,7 @@ final class AcademicsController extends BaseController {
 		$unit = $this->units_service->get_unit( $id );
 
 		if ( null === $unit ) {
-			return $this->error( 'not_found', __( 'Academic unit not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'Academic unit not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $unit );
@@ -574,7 +574,7 @@ final class AcademicsController extends BaseController {
 		$group = $this->groups_service->get_group( $id );
 
 		if ( null === $group ) {
-			return $this->error( 'not_found', __( 'Academic group not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'Academic group not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $group );
@@ -702,7 +702,7 @@ final class AcademicsController extends BaseController {
 		$subject = $this->subjects_service->get_subject( $id );
 
 		if ( null === $subject ) {
-			return $this->error( 'not_found', __( 'Subject not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'Subject not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $subject );

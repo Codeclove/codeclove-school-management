@@ -2,21 +2,21 @@
 /**
  * Daily Attendance REST API controller.
  *
- * @package Nexora\Modules\Attendance
+ * @package CodeClove\Modules\Attendance
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Attendance;
+namespace CodeClove\Modules\Attendance;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\BaseController;
-use Nexora\Database\Schema;
-use Nexora\Shared\AuditLogger;
+use CodeClove\Api\BaseController;
+use CodeClove\Database\Schema;
+use CodeClove\Shared\AuditLogger;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -47,12 +47,12 @@ final class AttendanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_student_attendance' ],
-					'permission_callback' => $this->permission( 'attendance.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'attendance.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'save_student_attendance' ],
-					'permission_callback' => $this->any_permission( 'attendance.add', 'attendance.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'attendance.add', $request ) || $this->can( 'attendance.edit', $request ); },
 				],
 			]
 		);
@@ -65,12 +65,12 @@ final class AttendanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_staff_attendance' ],
-					'permission_callback' => $this->permission( 'staff_attendance.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff_attendance.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'save_staff_attendance' ],
-					'permission_callback' => $this->any_permission( 'staff_attendance.add', 'staff_attendance.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff_attendance.add', $request ) || $this->can( 'staff_attendance.edit', $request ); },
 				],
 			]
 		);
@@ -83,7 +83,7 @@ final class AttendanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_monthly_student_attendance' ],
-					'permission_callback' => $this->permission( 'attendance.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'attendance.view', $request ); },
 				],
 			]
 		);
@@ -95,7 +95,7 @@ final class AttendanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_monthly_staff_attendance' ],
-					'permission_callback' => $this->permission( 'staff_attendance.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff_attendance.view', $request ); },
 				],
 			]
 		);
@@ -120,7 +120,7 @@ final class AttendanceController extends BaseController {
 		$date       = $this->get_date_param( $request );
 
 		if ( empty( $session_id ) || empty( $unit_id ) || ! $date ) {
-			return $this->error( 'missing_params', __( 'Missing or invalid academic_session_id, academic_unit_id, or attendance_date (YYYY-MM-DD).', 'nexora-school-management' ), 400 );
+			return $this->error( 'missing_params', __( 'Missing or invalid academic_session_id, academic_unit_id, or attendance_date (YYYY-MM-DD).', 'codeclove-school-management' ), 400 );
 		}
 
 		$results = $this->service->get_student_attendance( [
@@ -146,7 +146,7 @@ final class AttendanceController extends BaseController {
 		$records    = $request->get_param( 'records' );
 
 		if ( empty( $session_id ) || empty( $unit_id ) || empty( $date ) || ! is_array( $records ) ) {
-			return $this->error( 'invalid_data', __( 'Invalid or incomplete attendance payload.', 'nexora-school-management' ), 400 );
+			return $this->error( 'invalid_data', __( 'Invalid or incomplete attendance payload.', 'codeclove-school-management' ), 400 );
 		}
 
 		$user_id = get_current_user_id();
@@ -189,7 +189,7 @@ final class AttendanceController extends BaseController {
 
 		$date = $this->get_date_param( $request );
 		if ( ! $date ) {
-			return $this->error( 'invalid_date', __( 'Missing or invalid attendance_date query parameter (YYYY-MM-DD).', 'nexora-school-management' ), 400 );
+			return $this->error( 'invalid_date', __( 'Missing or invalid attendance_date query parameter (YYYY-MM-DD).', 'codeclove-school-management' ), 400 );
 		}
 
 		$results = $this->service->get_staff_attendance( [ 'attendance_date' => $date ] );
@@ -207,7 +207,7 @@ final class AttendanceController extends BaseController {
 		$records = $request->get_param( 'records' );
 
 		if ( ! $date || ! is_array( $records ) ) {
-			return $this->error( 'invalid_data', __( 'Invalid or incomplete attendance payload.', 'nexora-school-management' ), 400 );
+			return $this->error( 'invalid_data', __( 'Invalid or incomplete attendance payload.', 'codeclove-school-management' ), 400 );
 		}
 
 		$user_id = get_current_user_id();
@@ -242,7 +242,7 @@ final class AttendanceController extends BaseController {
 		$month      = $request->get_param( 'month' );
 
 		if ( empty( $session_id ) || empty( $unit_id ) || empty( $year ) || empty( $month ) ) {
-			return $this->error( 'missing_params', __( 'Missing academic_session_id, academic_unit_id, year, or month.', 'nexora-school-management' ), 400 );
+			return $this->error( 'missing_params', __( 'Missing academic_session_id, academic_unit_id, year, or month.', 'codeclove-school-management' ), 400 );
 		}
 
 		$result = $this->service->get_monthly_student_attendance( [
@@ -266,7 +266,7 @@ final class AttendanceController extends BaseController {
 		$month = $request->get_param( 'month' );
 
 		if ( empty( $year ) || empty( $month ) ) {
-			return $this->error( 'missing_params', __( 'Missing year or month query parameter.', 'nexora-school-management' ), 400 );
+			return $this->error( 'missing_params', __( 'Missing year or month query parameter.', 'codeclove-school-management' ), 400 );
 		}
 
 		$result = $this->service->get_monthly_staff_attendance( [

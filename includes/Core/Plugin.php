@@ -1,39 +1,51 @@
 <?php
 /**
- * Core plugin orchestrator.
+ * Main CodeClove plugin orchestrator class.
  *
- * Single responsibility: wire everything together at the right time.
- * All heavy logic lives in dedicated service/module classes.
+ * Handles activation, deactivation, singleton instantiation,
+ * and boots core subsystems.
  *
- * @package Nexora\Core
+ * @package CodeClove\Core
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Core;
+namespace CodeClove\Core;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\RestApi;
-use Nexora\Database\Migrations;
-use Nexora\Database\Seeders\RolesSeeder;
+use CodeClove\Api\RestApi;
+use CodeClove\Database\Migrations;
+use CodeClove\Database\Seeders\RolesSeeder;
 
 /**
  * Class Plugin
- *
- * Bootstraps Nexora by registering WordPress hooks and initialising modules.
- * Use the singleton pattern so that hooks are only registered once.
  */
 final class Plugin {
 
-	// ─── Singleton ───────────────────────────────────────────────────────────
-
+	/**
+	 * The single instance of the class.
+	 */
 	private static ?self $instance = null;
 
-	private function __construct() {
+	/**
+	 * Private constructor to enforce singleton pattern.
+	 */
+	private function __construct() {}
+
+	/**
+	 * Prevent cloning.
+	 */
+	private function __clone() {}
+
+	/**
+	 * Prevent unserializing.
+	 */
+	public function __wakeup(): void {
+		throw new \RuntimeException( 'Cannot unserialize singleton' );
 	}
 
 	/**
@@ -50,26 +62,31 @@ final class Plugin {
 	// ─── Lifecycle ───────────────────────────────────────────────────────────
 
 	public function activate(): void {
-		// Load nexora_settings once and pass it down — avoids a double get_option
-		// (seed_defaults and maybe_run_migrations both read the same option).
-		$settings = (array) get_option( 'nexora_settings', [] );
-		$this->seed_defaults( $settings );
-		RolesSeeder::run();
+		// Migrations must run first — RolesSeeder reads codeclove_roles which doesn't
+		// exist until the schema is created.
+		if ( class_exists( Migrations::class ) ) {
+			Migrations::run();
+		}
 
-		// Register custom WordPress roles for Nexora user classes.
-		add_role( 'nexora_staff', __( 'Nexora Staff', 'nexora-school-management' ), [ 'read' => true ] );
-		add_role( 'nexora_guardian', __( 'Nexora Guardian', 'nexora-school-management' ), [] );
-		add_role( 'nexora_student', __( 'Nexora Student', 'nexora-school-management' ), [] );
+		// Load codeclove_settings once and pass it down — avoids a double get_option
+		// (seed_defaults and maybe_run_migrations both read the same option).
+		$settings = (array) get_option( 'codeclove_settings', [] );
+		$this->seed_defaults( $settings );
+
+		if ( class_exists( RolesSeeder::class ) ) {
+			RolesSeeder::run();
+		}
+
+		// Register custom WordPress roles for school user classes.
+		add_role( 'codeclove_staff', __( 'School Staff', 'codeclove-school-management' ), [ 'read' => true ] );
+		add_role( 'codeclove_guardian', __( 'School Guardian', 'codeclove-school-management' ), [] );
+		add_role( 'codeclove_student', __( 'School Student', 'codeclove-school-management' ), [] );
 
 		// Schedule daily cron event to update overdue invoices.
-		if ( ! wp_next_scheduled( 'nexora_update_overdue_invoices' ) ) {
-			wp_schedule_event( time(), 'daily', 'nexora_update_overdue_invoices' );
+		if ( ! wp_next_scheduled( 'codeclove_update_overdue_invoices' ) ) {
+			wp_schedule_event( time(), 'daily', 'codeclove_update_overdue_invoices' );
 		}
 
-		// Schedule license heartbeat.
-		if ( class_exists( '\Nexora\Licensing\License' ) ) {
-			\Nexora\Licensing\License::schedule_heartbeat();
-		}
 		flush_rewrite_rules();
 	}
 
@@ -78,14 +95,11 @@ final class Plugin {
 	 * Does NOT drop tables — use uninstall.php for cleanup.
 	 */
 	public function deactivate(): void {
-		wp_clear_scheduled_hook( 'nexora_update_overdue_invoices' );
-		if ( class_exists( '\Nexora\Licensing\License' ) ) {
-			\Nexora\Licensing\License::clear_heartbeat();
-		}
+		wp_clear_scheduled_hook( 'codeclove_update_overdue_invoices' );
 		// Remove custom WordPress roles.
-		remove_role( 'nexora_staff' );
-		remove_role( 'nexora_guardian' );
-		remove_role( 'nexora_student' );
+		remove_role( 'codeclove_staff' );
+		remove_role( 'codeclove_guardian' );
+		remove_role( 'codeclove_student' );
 
 		flush_rewrite_rules();
 	}
@@ -95,10 +109,6 @@ final class Plugin {
 	public function run(): void {
 		$rest = new RestApi();
 
-		// License page + updater registration.
-		if ( class_exists( '\Nexora\Licensing\LicensePage' ) ) {
-			( new \Nexora\Licensing\LicensePage() )->init();
-		}
 		// Register custom admin menu (single top-level page).
 		add_action( 'admin_menu', [ $this, 'register_admin_menu' ] );
 
@@ -109,22 +119,26 @@ final class Plugin {
 		add_action( 'plugins_loaded', [ $this, 'maybe_run_migrations' ] );
 
 		// Daily cron + license heartbeat listeners.
-		add_action( 'nexora_update_overdue_invoices', [ $this, 'update_overdue_invoices' ] );
-		if ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) {
+		add_action( 'codeclove_update_overdue_invoices', [ $this, 'update_overdue_invoices' ] );
+
+		$is_pro = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
+		if ( $is_pro ) {
 			add_action( 'admin_notices', [ $this, 'maybe_show_pro_welcome_notice' ] );
-			if ( class_exists( '\Nexora\Licensing\License' ) ) {
-				add_action( \Nexora\Licensing\License::HEARTBEAT_HOOK, [ \Nexora\Licensing\License::class, 'run_heartbeat' ] );
-				add_action( 'admin_notices', [ $this, 'maybe_show_license_notice' ] );
-			}
 		}
-		if ( class_exists( '\Nexora\Modules\Notifications\NotificationsService' ) ) {
-			( new \Nexora\Modules\Notifications\NotificationsService() )->init();
+
+		if ( class_exists( '\CodeClove\Modules\Notifications\NotificationsService' ) ) {
+			( new \CodeClove\Modules\Notifications\NotificationsService() )->init();
 		}
 		// Register Admissions Public Shortcodes.
-		\Nexora\Modules\Admissions\Shortcodes::register();
+		if ( class_exists( '\CodeClove\Modules\Admissions\Shortcodes' ) ) {
+			\CodeClove\Modules\Admissions\Shortcodes::register();
+		}
 
 		// Register Student & Guardian Portal Public Shortcode.
-		\Nexora\Modules\Portal\PortalShortcode::register();
+		if ( class_exists( '\CodeClove\Modules\Portal\PortalShortcode' ) ) {
+			\CodeClove\Modules\Portal\PortalShortcode::register();
+		}
+
 		// Redirect on login based on user roles.
 		add_filter( 'login_redirect', [ $this, 'handle_login_redirect' ], 10, 3 );
 
@@ -133,33 +147,32 @@ final class Plugin {
 
 		// Restrict student and guardian portal accounts from accessing wp-admin.
 		add_action( 'admin_init', [ $this, 'restrict_admin_access_for_portal_users' ] );
-
 	}
 
 	// ─── Admin Menu ──────────────────────────────────────────────────────────
 
 	/**
-	 * Registers the Nexora top-level admin menu entry and hooks the fullscreen renderer.
+	 * Registers the CodeClove top-level admin menu entry and hooks the fullscreen renderer.
 	 */
 	public function register_admin_menu(): void {
-		$is_pro    = defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO;
-		$menu_slug = $is_pro ? 'nexora' : 'nexora-school-management';
+		$is_pro    = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
+		$menu_slug = 'codeclove-school-management';
 		$page_hook = add_menu_page(
-			__( 'Nexora', 'nexora-school-management' ),
-			__( 'Nexora', 'nexora-school-management' ),
-			'read',                          // Nexora RBAC controls real access.
+			__( 'School Management', 'codeclove-school-management' ),
+			__( 'School Management', 'codeclove-school-management' ),
+			'read',                          // CodeClove RBAC controls real access.
 			$menu_slug,
 			static fn() => null,             // Unreachable: load-{page} hook exits first.
 			'dashicons-welcome-learn-more',  // Replaced by React icon in the app.
-			3
+			30
 		);
 
 		// In Free version only: register submenu items highlighting the Pro upgrade.
 		if ( ! $is_pro ) {
 			add_submenu_page(
 				$menu_slug,
-				__( 'Nexora Dashboard', 'nexora-school-management' ),
-				__( 'Dashboard', 'nexora-school-management' ),
+				__( 'School Management Dashboard', 'codeclove-school-management' ),
+				__( 'Dashboard', 'codeclove-school-management' ),
 				'read',
 				$menu_slug,
 				static fn() => null
@@ -167,8 +180,8 @@ final class Plugin {
 
 			add_submenu_page(
 				$menu_slug,
-				__( 'Upgrade to Pro', 'nexora-school-management' ),
-				'<span style="color:#f59e0b;font-weight:600;">' . esc_html__( 'Upgrade to Pro ↗', 'nexora-school-management' ) . '</span>',
+				__( 'Upgrade to Pro', 'codeclove-school-management' ),
+				'<span style="color:#f59e0b;font-weight:600;">' . esc_html__( 'Upgrade to Pro ↗', 'codeclove-school-management' ) . '</span>',
 				'read',
 				$menu_slug . '#/pro-upgrade',
 				static fn() => null
@@ -182,46 +195,17 @@ final class Plugin {
 	// ─── License Notice ──────────────────────────────────────────────────────
 
 	/**
-	 * Shows a dismissible admin notice when no valid license is active.
-	 * Only shown to users who can manage options (WP admins).
-	 */
-	/**
 	 * Shows a reassuring welcome notice when Pro is active alongside Free.
 	 */
 	public function maybe_show_pro_welcome_notice(): void {
-		if ( ! current_user_can( 'activate_plugins' ) || ! in_array( 'nexora-school-management/nexora-school-management.php', (array) get_option( 'active_plugins', [] ), true ) ) {
+		if ( ! current_user_can( 'activate_plugins' ) || ! in_array( 'codeclove-school-management/codeclove-school-management.php', (array) get_option( 'active_plugins', [] ), true ) ) {
 			return;
 		}
 
 		printf(
 			'<div class="notice notice-success is-dismissible"><p><strong>%s:</strong> %s</p></div>',
-			esc_html__( 'Nexora Pro Activated', 'nexora-school-management' ),
-			esc_html__( 'All your existing school data, students, and settings are active in Pro. You may safely deactivate and remove the Free version at your convenience.', 'nexora-school-management' )
-		);
-	}
-
-	public function maybe_show_license_notice(): void {
-		if ( ! defined( 'NEXORA_IS_PRO' ) || ! NEXORA_IS_PRO ) {
-			return;
-		}
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
-		// Don't clutter the activation form with a redundant notice.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( 'nexora-license' === sanitize_key( wp_unslash( $_GET['page'] ?? '' ) ) ) {
-			return;
-		}
-		if ( ! class_exists( '\Nexora\Licensing\License' ) || \Nexora\Licensing\License::verified() ) {
-			return;
-		}
-		$url = admin_url( 'admin.php?page=nexora-license' );
-		printf(
-			'<div class="notice notice-warning is-dismissible"><p><strong>%s:</strong> %s <a href="%s">%s</a></p></div>',
-			esc_html__( 'Nexora Pro', 'nexora-school-management' ),
-			esc_html__( 'No active license found. Nexora is fully disabled until a license is activated.', 'nexora-school-management' ),
-			esc_url( $url ),
-			esc_html__( 'Activate your license', 'nexora-school-management' )
+			esc_html__( 'School Management Pro Activated', 'codeclove-school-management' ),
+			esc_html__( 'All your existing school data, students, and settings are active in Pro. You may safely deactivate and remove the Free version at your convenience.', 'codeclove-school-management' )
 		);
 	}
 
@@ -231,11 +215,13 @@ final class Plugin {
 	 * Runs DB migrations when the stored schema version is outdated.
 	 */
 	public function maybe_run_migrations(): void {
-		$settings       = get_option( 'nexora_settings', [] );
+		$settings       = get_option( 'codeclove_settings', [] );
 		$stored_version = $settings['schema_version'] ?? '0.0.0';
 
+		$db_version = defined( 'CODECLOVE_DB_VERSION' ) ? CODECLOVE_DB_VERSION : '1.0.0';
+
 		if (
-			version_compare( $stored_version, NEXORA_DB_VERSION, '<' )
+			version_compare( $stored_version, $db_version, '<' )
 			|| ! Migrations::is_schema_installed()
 		) {
 			Migrations::run();
@@ -257,7 +243,7 @@ final class Plugin {
 		}
 		// Caller may pass pre-loaded settings to avoid a redundant get_option().
 		if ( empty( $settings ) ) {
-			$settings = get_option( 'nexora_settings', [] );
+			$settings = get_option( 'codeclove_settings', [] );
 			if ( ! is_array( $settings ) ) {
 				$settings = [];
 			}
@@ -298,45 +284,47 @@ final class Plugin {
 			];
 		}
 
-		// Always stamp current versions and persist.
-		// This runs on both fresh installs and upgrades.
-		$settings['schema_version'] = NEXORA_DB_VERSION;
-		$settings['plugin_version'] = NEXORA_VERSION;
-		update_option( 'nexora_settings', $settings, false );
+		$db_version      = defined( 'CODECLOVE_DB_VERSION' ) ? CODECLOVE_DB_VERSION : '1.0.0';
+		$plugin_version  = defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0';
 
-		// Seed default roles — delegated to a future Roles module.
-		// Roles\RolesService::seed_defaults();
+		// Always stamp current versions and persist.
+		$settings['schema_version'] = $db_version;
+		$settings['plugin_version'] = $plugin_version;
+		update_option( 'codeclove_settings', $settings, false );
 	}
+
 	/**
 	 * Handler for updating overdue invoices daily cron task.
 	 */
 	public function update_overdue_invoices(): void {
-		$finance_service = new \Nexora\Modules\Finance\FinanceService();
-		$finance_service->update_overdue_invoices();
+		if ( class_exists( '\CodeClove\Modules\Finance\FinanceService' ) ) {
+			$finance_service = new \CodeClove\Modules\Finance\FinanceService();
+			$finance_service->update_overdue_invoices();
+		}
 
-		// ponytail: delete old logs based on retention settings.
-		$settings = get_option( 'nexora_settings', [] );
+		// Delete old logs based on retention settings.
+		$settings = get_option( 'codeclove_settings', [] );
 		$retention_days = (int) ( $settings['system']['log_retention_days'] ?? 0 );
 		if ( $retention_days > 0 ) {
 			global $wpdb;
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query(
-				$wpdb->prepare(
-					"DELETE FROM " . \Nexora\Database\Schema::app_logs() . " WHERE created_at < DATE_SUB( UTC_TIMESTAMP(), INTERVAL %d DAY )",
-					$retention_days
-				)
-			);
-			// phpcs:enable
+			if ( class_exists( '\CodeClove\Database\Schema' ) ) {
+				// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+				$wpdb->query(
+					$wpdb->prepare(
+						"DELETE FROM " . \CodeClove\Database\Schema::app_logs() . " WHERE created_at < DATE_SUB( UTC_TIMESTAMP(), INTERVAL %d DAY )",
+						$retention_days
+					)
+				);
+				// phpcs:enable
+			}
 		}
 	}
 
 	/**
-	 * Handle login redirects for Nexora user roles.
+	 * Handle login redirects for CodeClove user roles.
 	 *
 	 * The third param is WP_User|WP_Error (not nullable) — widen the hint to
 	 * mixed so strict_types=1 doesn't throw a TypeError on failed logins.
-	 *
-	 * ponytail: redirect based on capability shell.
 	 */
 	public function handle_login_redirect( string $redirect_to, string $request, mixed $user ): string {
 		if ( ! $user instanceof \WP_User ) {
@@ -348,14 +336,16 @@ final class Plugin {
 			return $redirect_to;
 		}
 
-		$is_pro    = defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO;
-		$menu_slug = $is_pro ? 'nexora' : 'nexora-school-management';
+		$menu_slug = 'codeclove-school-management';
 
-		if ( $user->has_cap( 'nexora_staff' ) ) {
+		if ( $user->has_cap( 'codeclove_staff' ) ) {
 			return admin_url( 'admin.php?page=' . $menu_slug );
 		}
 
-		if ( $user->has_cap( 'nexora_guardian' ) || $user->has_cap( 'nexora_student' ) ) {
+		if (
+			$user->has_cap( 'codeclove_guardian' )
+			|| $user->has_cap( 'codeclove_student' )
+		) {
 			return home_url( '/portal' );
 		}
 
@@ -370,7 +360,10 @@ final class Plugin {
 			return $show;
 		}
 
-		if ( current_user_can( 'nexora_guardian' ) || current_user_can( 'nexora_student' ) ) {
+		if (
+			current_user_can( 'codeclove_guardian' )
+			|| current_user_can( 'codeclove_student' )
+		) {
 			return false;
 		}
 		return $show;
@@ -388,7 +381,10 @@ final class Plugin {
 			return;
 		}
 
-		if ( current_user_can( 'nexora_guardian' ) || current_user_can( 'nexora_student' ) ) {
+		if (
+			current_user_can( 'codeclove_guardian' )
+			|| current_user_can( 'codeclove_student' )
+		) {
 			wp_safe_redirect( home_url( '/portal' ) );
 			exit;
 		}

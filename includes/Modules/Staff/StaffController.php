@@ -2,20 +2,20 @@
 /**
  * Staff Directory REST API controller.
  *
- * @package Nexora\Modules\Staff
+ * @package CodeClove\Modules\Staff
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Staff;
+namespace CodeClove\Modules\Staff;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\BaseController;
-use Nexora\Shared\AuditLogger;
+use CodeClove\Api\BaseController;
+use CodeClove\Shared\AuditLogger;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -50,12 +50,12 @@ final class StaffController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_staff_members' ],
-					'permission_callback' => $this->permission( 'staff.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'create_staff_member' ],
-					'permission_callback' => $this->permission( 'staff.add' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff.add', $request ); },
 				],
 			]
 		);
@@ -67,7 +67,7 @@ final class StaffController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'bulk_staff_action' ],
-					'permission_callback' => $this->permission( 'staff.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff.edit', $request ); },
 				],
 			]
 		);
@@ -79,7 +79,7 @@ final class StaffController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'bulk_import' ],
-					'permission_callback' => $this->permission( 'staff.add' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff.add', $request ); },
 				],
 			]
 		);
@@ -115,7 +115,7 @@ final class StaffController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_import_template' ],
-					'permission_callback' => $this->permission( 'staff.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff.view', $request ); },
 				],
 			]
 		);
@@ -127,17 +127,17 @@ final class StaffController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_staff_member' ],
-					'permission_callback' => $this->permission( 'staff.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff.view', $request ); },
 				],
 				[
 					'methods'             => 'PUT',
 					'callback'            => [ $this, 'update_staff_member' ],
-					'permission_callback' => $this->permission( 'staff.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff.edit', $request ); },
 				],
 				[
 					'methods'             => 'DELETE',
 					'callback'            => [ $this, 'delete_staff_member' ],
-					'permission_callback' => $this->permission( 'staff.delete' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff.delete', $request ); },
 				],
 			]
 		);
@@ -175,7 +175,7 @@ final class StaffController extends BaseController {
 		$item = $this->service->get_staff_member( $id );
 
 		if ( ! $item ) {
-			return $this->error( 'not_found', __( 'Staff member not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'Staff member not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $item );
@@ -329,13 +329,13 @@ final class StaffController extends BaseController {
 	 */
 	public function public_submit_application( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		if ( ! $this->check_rate_limit( 'staff_public_submit', 15, 600 ) ) {
-			return $this->error( 'rate_limit_exceeded', __( 'Too many submission requests. Please try again later.', 'nexora-school-management' ), 429 );
+			return $this->error( 'rate_limit_exceeded', __( 'Too many submission requests. Please try again later.', 'codeclove-school-management' ), 429 );
 		}
 
-		$settings = get_option( 'nexora_settings', [] );
+		$settings = get_option( 'codeclove_settings', [] );
 		$enabled  = ! isset( $settings['staff_onboarding']['enable_form'] ) || ! empty( $settings['staff_onboarding']['enable_form'] );
 		if ( ! $enabled ) {
-			return $this->error( 'recruitment_closed', __( 'Staff applications are currently closed.', 'nexora-school-management' ), 403 );
+			return $this->error( 'recruitment_closed', __( 'Staff applications are currently closed.', 'codeclove-school-management' ), 403 );
 		}
 
 		$params = $request->get_json_params();
@@ -359,7 +359,7 @@ final class StaffController extends BaseController {
 	 */
 	public function public_lookup_status( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		if ( ! $this->check_rate_limit( 'staff_status_lookup', 20, 600 ) ) {
-			return $this->error( 'rate_limit_exceeded', __( 'Too many lookup requests. Please try again in a few minutes.', 'nexora-school-management' ), 429 );
+			return $this->error( 'rate_limit_exceeded', __( 'Too many lookup requests. Please try again in a few minutes.', 'codeclove-school-management' ), 429 );
 		}
 
 		$ref   = $request->get_param( 'reference_number' ) ? sanitize_text_field( $request->get_param( 'reference_number' ) ) : '';
@@ -367,7 +367,7 @@ final class StaffController extends BaseController {
 		$dob   = $request->get_param( 'date_of_birth' ) ? sanitize_text_field( $request->get_param( 'date_of_birth' ) ) : '';
 
 		if ( empty( $ref ) || ( empty( $email ) && empty( $dob ) ) ) {
-			return $this->error( 'validation_failed', __( 'Reference number and either email address or date of birth are required.', 'nexora-school-management' ), 400 );
+			return $this->error( 'validation_failed', __( 'Reference number and either email address or date of birth are required.', 'codeclove-school-management' ), 400 );
 		}
 
 		$result = $this->service->lookup_public_status( $ref, $email, $dob );

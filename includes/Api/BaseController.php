@@ -2,26 +2,25 @@
 /**
  * Base REST controller.
  *
- * All Nexora module controllers extend this class to get:
+ * All CodeClove module controllers extend this class to get:
  *   - Consistent response formatting (success/error envelopes)
- *   - RBAC permission checking (Nexora roles or WP admin fallback)
+ *   - RBAC permission checking (CodeClove roles or WP admin fallback)
  *   - Pagination helpers
  *   - Validated request data helpers
  *
- * @package Nexora\Api
+ * @package CodeClove\Api
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Api;
+namespace CodeClove\Api;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Core\Logger;
-use Nexora\Licensing\License;
+use CodeClove\Core\Logger;
 use WP_Error;
 use WP_REST_Controller;
 use WP_REST_Request;
@@ -33,7 +32,7 @@ use WP_REST_Response;
 abstract class BaseController extends WP_REST_Controller {
 
 	/**
-	 * REST API namespace shared by all Nexora routes.
+	 * REST API namespace shared by all CodeClove routes.
 	 *
 	 * @var string
 	 */
@@ -52,34 +51,28 @@ abstract class BaseController extends WP_REST_Controller {
 	// ─── Permission Helpers ───────────────────────────────────────────────────
 
 	/**
-	 * Checks whether the current user has a given Nexora permission key.
+	 * Checks whether the current user has a given CodeClove permission key.
 	 *
-	 * WordPress administrators bypass Nexora RBAC and always have access.
+	 * WordPress administrators bypass CodeClove RBAC and always have access.
 	 * This is the standard WP admin recovery mechanism documented in PERMISSIONS.md.
 	 *
 	 * @param string $permission Dot-notation key, e.g. 'students.view'.
 	 */
-	protected function can( string $permission, ?WP_REST_Request $request = null ): bool {
+	public function can( string $permission, ?WP_REST_Request $request = null ): bool {
 		if ( ! is_user_logged_in() ) {
 			return false;
 		}
-
-		// License gate — applies to everyone, including WP admins (Pro only).
-		if ( class_exists( '\Nexora\Licensing\License' ) && ( ! \Nexora\Licensing\License::verified() || ! \Nexora\Licensing\License::verify_integrity() ) ) {
-			return false;
-		}
-
 		// CSRF nonce verification for cookie-authenticated requests.
 		if ( ! $this->verify_nonce( $request ) ) {
 			return false;
 		}
 
-		// WP admins bypass Nexora RBAC.
+		// WP admins bypass CodeClove RBAC.
 		if ( current_user_can( 'manage_options' ) ) {
 			return true;
 		}
 
-		return \Nexora\Core\Permissions::check( get_current_user_id(), $permission );
+		return \CodeClove\Core\Permissions::check( get_current_user_id(), $permission );
 	}
 
 	/**
@@ -91,7 +84,7 @@ abstract class BaseController extends WP_REST_Controller {
 	protected function verify_nonce( ?WP_REST_Request $request = null ): bool {
 		// ponytail: bypass CLI contexts and requests where LOGGED_IN_COOKIE is absent.
 		$is_cli = defined( 'WP_CLI' ) && WP_CLI;
-		if ( $is_cli && defined( 'NEXORA_TEST_NONCE' ) ) {
+		if ( $is_cli && defined( 'CODECLOVE_TEST_NONCE' ) ) {
 			$is_cli = false;
 		}
 		if ( ! $is_cli && defined( 'LOGGED_IN_COOKIE' ) && isset( $_COOKIE[ LOGGED_IN_COOKIE ] ) ) {
@@ -146,9 +139,7 @@ abstract class BaseController extends WP_REST_Controller {
 	 */
 	protected function authenticated(): callable {
 		return function ( ?WP_REST_Request $request = null ): bool {
-			$license_ok = ! class_exists( '\Nexora\Licensing\License' ) || ( \Nexora\Licensing\License::verified() && \Nexora\Licensing\License::verify_integrity() );
 			return is_user_logged_in()
-				&& $license_ok
 				&& $this->verify_nonce( $request );
 		};
 	}
@@ -217,7 +208,7 @@ abstract class BaseController extends WP_REST_Controller {
 		}
 
 		return new WP_Error(
-			'nexora_' . $code,
+			'codeclove_' . $code,
 			$message,
 			[ 'status' => $status ]
 		);
@@ -253,7 +244,7 @@ abstract class BaseController extends WP_REST_Controller {
 	protected function json_body( WP_REST_Request $request ): array|WP_Error {
 		$params = $request->get_json_params();
 		if ( ! is_array( $params ) ) {
-			return $this->error( 'invalid_body', __( 'Request body must be a JSON object.', 'nexora-school-management' ), 400 );
+			return $this->error( 'invalid_body', __( 'Request body must be a JSON object.', 'codeclove-school-management' ), 400 );
 		}
 		return $params;
 	}
@@ -268,7 +259,7 @@ abstract class BaseController extends WP_REST_Controller {
 	 */
 	protected function check_rate_limit( string $action, int $limit = 20, int $window = 600 ): bool {
 		// ponytail: transient-based rate limiter, single-server cache ceiling.
-		$key   = 'nexora_rl_' . md5( $action . '_' . sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1' ) ) );
+		$key   = 'codeclove_rl_' . md5( $action . '_' . sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1' ) ) );
 		$count = (int) get_transient( $key );
 		if ( $count >= $limit ) {
 			return false;

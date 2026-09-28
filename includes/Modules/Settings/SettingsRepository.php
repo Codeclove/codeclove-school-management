@@ -2,16 +2,16 @@
 /**
  * Settings repository.
  *
- * Handles reading and writing consolidated Nexora settings stored in a single
+ * Handles reading and writing consolidated CodeClove settings stored in a single
  * WordPress option. Implements deep merging with default values to guarantee
  * that all configuration keys are always defined.
  *
- * @package Nexora\Modules\Settings
+ * @package CodeClove\Modules\Settings
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Settings;
+namespace CodeClove\Modules\Settings;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -24,9 +24,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class SettingsRepository {
 
 	/**
-	 * WordPress option name for Nexora settings.
+	 * WordPress option name for CodeClove settings.
 	 */
-	private const OPTION_NAME = 'nexora_settings';
+	private const OPTION_NAME = 'codeclove_settings';
 
 	/**
 	 * Gets the complete consolidated settings array, merged with defaults.
@@ -105,8 +105,8 @@ final class SettingsRepository {
 		$merged['education_system']['customized'] = $this->detect_customizations( $merged );
 
 		// Always update the stored schema and plugin versions just in case.
-		$merged['schema_version'] = NEXORA_DB_VERSION;
-		$merged['plugin_version'] = NEXORA_VERSION;
+		$merged['schema_version'] = CODECLOVE_DB_VERSION;
+		$merged['plugin_version'] = CODECLOVE_VERSION;
 
 		update_option( self::OPTION_NAME, $merged, false );
 
@@ -114,19 +114,19 @@ final class SettingsRepository {
 	}
 
 	/**
-	 * Returns the comprehensive set of default values for Nexora.
+	 * Returns the comprehensive set of default values for CodeClove.
 	 *
 	 * @return array
 	 */
 	public function get_defaults(): array {
 		return [
-			'schema_version'   => NEXORA_DB_VERSION,
-			'plugin_version'   => NEXORA_VERSION,
+			'schema_version'   => CODECLOVE_DB_VERSION,
+			'plugin_version'   => CODECLOVE_VERSION,
 			'school'           => [
 				'name'      => get_bloginfo( 'name' ),
 				'code'      => '',
-				'logo'      => NEXORA_URL . 'assets/defaults/logo.svg',
-				'signature' => NEXORA_URL . 'assets/defaults/signature.svg',
+				'logo'      => CODECLOVE_URL . 'assets/defaults/logo.svg',
+				'signature' => CODECLOVE_URL . 'assets/defaults/signature.svg',
 				'email'     => get_bloginfo( 'admin_email' ),
 				'phone'     => '',
 				'website'   => get_bloginfo( 'url' ),

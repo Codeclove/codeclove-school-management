@@ -2,22 +2,22 @@
 /**
  * Activity log REST API controller.
  *
- * Exposes GET /nexora/v1/activity-log to retrieve school audit trail.
+ * Exposes GET /codeclove/v1/activity-log to retrieve school audit trail.
  * Gated by 'settings.manage' (which WP admins bypass).
  *
- * @package Nexora\Modules\Activity
+ * @package CodeClove\Modules\Activity
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Activity;
+namespace CodeClove\Modules\Activity;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\BaseController;
+use CodeClove\Api\BaseController;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_Error;
@@ -44,7 +44,7 @@ final class ActivityController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_log' ],
-					'permission_callback' => $this->permission( 'settings.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'settings.manage', $request ); },
 				],
 			]
 		);

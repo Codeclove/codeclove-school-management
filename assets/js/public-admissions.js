@@ -1,7 +1,7 @@
 /**
- * Nexora Public Admissions & Careers Form Scripts
+ * CodeClove Public Admissions & Careers Form Scripts
  *
- * @package Nexora\Modules\Admissions
+ * @package CodeClove\Modules\Admissions
  */
 
 (function () {
@@ -14,7 +14,7 @@
 		return div.innerHTML;
 	}
 
-	window.nexoraSubmitForm = window.nexoraSubmitForm || function (formId, btnId, msgId, url, successTpl, i18n) {
+	window.codecloveSubmitForm = window.codecloveSubmitForm || function (formId, btnId, msgId, url, successTpl, i18n) {
 		var form = document.getElementById(formId);
 		if (!form) return;
 
@@ -49,12 +49,12 @@
 					btn.innerText = orig;
 					msg.style.display = 'block';
 					if (d.success) {
-						msg.className = 'nexora-response-msg success';
+						msg.className = 'codeclove-response-msg success';
 						var ref = (d.data && d.data.reference_number) ? escHtml(d.data.reference_number) : '';
 						msg.innerHTML = successTpl.replace('{ref}', ref);
 						form.reset();
 					} else {
-						msg.className = 'nexora-response-msg error';
+						msg.className = 'codeclove-response-msg error';
 						msg.textContent = d.message || strings.failed;
 					}
 				})
@@ -62,13 +62,13 @@
 					btn.disabled = false;
 					btn.innerText = orig;
 					msg.style.display = 'block';
-					msg.className = 'nexora-response-msg error';
+					msg.className = 'codeclove-response-msg error';
 					msg.textContent = strings.networkError;
 				});
 		});
 	};
 
-	window.nexoraInitStatusTracker = window.nexoraInitStatusTracker || function (opts) {
+	window.codecloveInitStatusTracker = window.codecloveInitStatusTracker || function (opts) {
 		var form = document.getElementById(opts.formId);
 		if (!form) return;
 
@@ -95,7 +95,7 @@
 					out.style.display = 'block';
 
 					if (data.success) {
-						out.className = 'nexora-tracker-card';
+						out.className = 'codeclove-tracker-card';
 						var d = data.data;
 						var st = d.status || 'submitted';
 						var step1 = 'completed', step2 = '', step3 = '', step4 = '';
@@ -171,19 +171,19 @@
 							}
 						}
 
-						out.innerHTML = '<div class="nexora-tracker-header">' +
-							'<div><div class="nexora-tracker-title">' + name + '</div><div class="nexora-tracker-meta">' + meta + '</div></div>' +
-							'<div class="nexora-tracker-badge">' + escHtml(statusText) + '</div>' +
+						out.innerHTML = '<div class="codeclove-tracker-header">' +
+							'<div><div class="codeclove-tracker-title">' + name + '</div><div class="codeclove-tracker-meta">' + meta + '</div></div>' +
+							'<div class="codeclove-tracker-badge">' + escHtml(statusText) + '</div>' +
 							'</div>' +
-							'<div class="nexora-stepper">' +
-							'<div class="nexora-step ' + step1 + '"><div class="nexora-step-num">1</div><div class="nexora-step-lbl">' + l1 + '</div></div>' +
-							'<div class="nexora-step ' + step2 + '"><div class="nexora-step-num">2</div><div class="nexora-step-lbl">' + l2 + '</div></div>' +
-							'<div class="nexora-step ' + step3 + '"><div class="nexora-step-num">3</div><div class="nexora-step-lbl">' + l3 + '</div></div>' +
-							'<div class="nexora-step ' + step4 + '"><div class="nexora-step-num">4</div><div class="nexora-step-lbl">' + l4 + '</div></div>' +
+							'<div class="codeclove-stepper">' +
+							'<div class="codeclove-step ' + step1 + '"><div class="codeclove-step-num">1</div><div class="codeclove-step-lbl">' + l1 + '</div></div>' +
+							'<div class="codeclove-step ' + step2 + '"><div class="codeclove-step-num">2</div><div class="codeclove-step-lbl">' + l2 + '</div></div>' +
+							'<div class="codeclove-step ' + step3 + '"><div class="codeclove-step-num">3</div><div class="codeclove-step-lbl">' + l3 + '</div></div>' +
+							'<div class="codeclove-step ' + step4 + '"><div class="codeclove-step-num">4</div><div class="codeclove-step-lbl">' + l4 + '</div></div>' +
 							'</div>' +
-							'<div class="nexora-guidance-box"><strong>' + escHtml(opts.i18n.current_status) + '</strong> ' + escHtml(note) + '</div>';
+							'<div class="codeclove-guidance-box"><strong>' + escHtml(opts.i18n.current_status) + '</strong> ' + escHtml(note) + '</div>';
 					} else {
-						out.className = 'nexora-tracker-card notfound';
+						out.className = 'codeclove-tracker-card notfound';
 						out.textContent = data.message || opts.i18n.not_found;
 					}
 				})
@@ -191,7 +191,7 @@
 					btn.disabled = false;
 					btn.innerText = opts.i18n.check_status;
 					out.style.display = 'block';
-					out.className = 'nexora-tracker-card notfound';
+					out.className = 'codeclove-tracker-card notfound';
 					out.textContent = opts.i18n.lookup_error;
 				});
 		});

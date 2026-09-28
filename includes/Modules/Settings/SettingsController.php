@@ -5,20 +5,20 @@
  * Exposes REST routes to read/patch settings, load country presets,
  * and clear option cache. Secured via 'settings.manage' permission.
  *
- * @package Nexora\Modules\Settings
+ * @package CodeClove\Modules\Settings
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Settings;
+namespace CodeClove\Modules\Settings;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\BaseController;
-use Nexora\Shared\AuditLogger;
+use CodeClove\Api\BaseController;
+use CodeClove\Shared\AuditLogger;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -57,7 +57,7 @@ final class SettingsController extends BaseController {
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'update_settings' ],
-					'permission_callback' => $this->permission( 'settings.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'settings.manage', $request ); },
 				],
 			]
 		);
@@ -69,7 +69,7 @@ final class SettingsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_presets' ],
-					'permission_callback' => $this->permission( 'settings.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'settings.manage', $request ); },
 				],
 			]
 		);
@@ -81,7 +81,7 @@ final class SettingsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_preset' ],
-					'permission_callback' => $this->permission( 'settings.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'settings.manage', $request ); },
 				],
 			]
 		);
@@ -93,7 +93,7 @@ final class SettingsController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'apply_preset' ],
-					'permission_callback' => $this->permission( 'settings.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'settings.manage', $request ); },
 					'args'                => [
 						'mode' => [
 							'required'          => true,
@@ -113,7 +113,7 @@ final class SettingsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_diagnostics' ],
-					'permission_callback' => $this->permission( 'settings.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'settings.manage', $request ); },
 				],
 			]
 		);
@@ -125,7 +125,7 @@ final class SettingsController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'clear_cache' ],
-					'permission_callback' => $this->permission( 'settings.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'settings.manage', $request ); },
 				],
 			]
 		);
@@ -137,7 +137,7 @@ final class SettingsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_health' ],
-					'permission_callback' => $this->permission( 'settings.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'settings.manage', $request ); },
 				],
 			]
 		);
@@ -151,7 +151,7 @@ final class SettingsController extends BaseController {
 	 */
 	public function get_settings( WP_REST_Request $request ): WP_REST_Response {
 		$user_id    = get_current_user_id();
-		$can_manage = user_can( $user_id, 'manage_options' ) || \Nexora\Core\Permissions::user_can( $user_id, 'settings.manage' );
+		$can_manage = user_can( $user_id, 'manage_options' ) || \CodeClove\Core\Permissions::user_can( $user_id, 'settings.manage' );
 
 		$settings = $this->repository->get_settings( true );
 
@@ -178,7 +178,7 @@ final class SettingsController extends BaseController {
 		$params = $request->get_json_params();
 
 		if ( ! is_array( $params ) ) {
-			return $this->error( 'invalid_body', __( 'Request body must be a JSON object.', 'nexora-school-management' ), 400 );
+			return $this->error( 'invalid_body', __( 'Request body must be a JSON object.', 'codeclove-school-management' ), 400 );
 		}
 
 		$validated = $this->validator->validate_patch( $params );
@@ -223,7 +223,7 @@ final class SettingsController extends BaseController {
 	public function get_preset( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$preset = $this->presets->get_preset_data( (string) $request->get_param( 'code' ) );
 		if ( null === $preset ) {
-			return $this->error( 'preset_not_found', __( 'Preset not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'preset_not_found', __( 'Preset not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $preset );
@@ -270,12 +270,12 @@ final class SettingsController extends BaseController {
 		return $this->success(
 			[
 				'generated_at'       => gmdate( 'c' ),
-				'plugin_version'     => NEXORA_VERSION,
-				'schema_version'     => NEXORA_DB_VERSION,
+				'plugin_version'     => CODECLOVE_VERSION,
+				'schema_version'     => CODECLOVE_DB_VERSION,
 				'wordpress_version'  => $wp_version,
 				'php_version'        => PHP_VERSION,
 				'site_url'           => site_url(),
-				'rest_url'           => rest_url( 'nexora/v1/' ),
+				'rest_url'           => rest_url( 'codeclove/v1/' ),
 				'debug_logging'      => (bool) ( $settings['system']['debug_logging'] ?? false ),
 				'active_preset'      => $settings['education_system']['preset'] ?? null,
 				'active_preset_name' => $settings['education_system']['preset_name'] ?? null,
@@ -290,7 +290,7 @@ final class SettingsController extends BaseController {
 	 * @return WP_REST_Response
 	 */
 	public function clear_cache( WP_REST_Request $request ): WP_REST_Response {
-		wp_cache_delete( 'nexora_settings', 'options' );
+		wp_cache_delete( 'codeclove_settings', 'options' );
 		AuditLogger::log( 'settings.cache_cleared' );
 		return $this->success( [ 'message' => 'Cache cleared successfully.' ] );
 	}
@@ -351,7 +351,7 @@ final class SettingsController extends BaseController {
 		if ( ! is_user_logged_in() ) {
 			return false;
 		}
-		if ( class_exists( '\Nexora\Licensing\License' ) && ! \Nexora\Licensing\License::verified() ) {
+		if ( class_exists( '\CodeClove\Licensing\License' ) && ! \CodeClove\Licensing\License::verified() ) {
 			return false;
 		}
 		// Security: CSRF Nonce Verification for Cookie-Authenticated Requests (Defense-in-depth).

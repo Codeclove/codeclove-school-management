@@ -5,12 +5,12 @@
  * Keeps the REST boundary authoritative by rejecting unknown keys and
  * normalizing all accepted values before they reach persistence.
  *
- * @package Nexora\Modules\Settings
+ * @package CodeClove\Modules\Settings
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Settings;
+namespace CodeClove\Modules\Settings;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -958,7 +958,7 @@ final class SettingsValidator {
 	 */
 	private function invalid( string $path, string $message ): WP_Error {
 		return new WP_Error(
-			'nexora_invalid_settings',
+			'codeclove_invalid_settings',
 			sprintf( 'Invalid setting "%s": %s', $path, $message ),
 			[
 				'status' => 400,

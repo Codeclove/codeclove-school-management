@@ -7,20 +7,20 @@
  *   - Linked Guardian profiles
  *   - Section capacity enrollment counts
  *
- * @package Nexora\Modules\Students
+ * @package CodeClove\Modules\Students
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Students;
+namespace CodeClove\Modules\Students;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\BaseController;
-use Nexora\Shared\AuditLogger;
+use CodeClove\Api\BaseController;
+use CodeClove\Shared\AuditLogger;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -50,12 +50,12 @@ final class StudentsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_students' ],
-					'permission_callback' => $this->permission( 'students.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'create_student' ],
-					'permission_callback' => $this->permission( 'students.add' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.add', $request ); },
 				],
 			]
 		);
@@ -67,7 +67,7 @@ final class StudentsController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'bulk_students_action' ],
-					'permission_callback' => $this->permission( 'students.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.edit', $request ); },
 				],
 			]
 		);
@@ -79,7 +79,7 @@ final class StudentsController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'bulk_import' ],
-					'permission_callback' => $this->permission( 'students.add' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.add', $request ); },
 				],
 			]
 		);
@@ -91,7 +91,7 @@ final class StudentsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_import_template' ],
-					'permission_callback' => $this->permission( 'students.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.view', $request ); },
 				],
 			]
 		);
@@ -103,7 +103,7 @@ final class StudentsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_enrollment_counts' ],
-					'permission_callback' => $this->permission( 'students.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.view', $request ); },
 				],
 			]
 		);
@@ -115,7 +115,7 @@ final class StudentsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_guardians' ],
-					'permission_callback' => $this->permission( 'guardians.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'guardians.view', $request ); },
 				],
 			]
 		);
@@ -127,12 +127,12 @@ final class StudentsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_student' ],
-					'permission_callback' => $this->permission( 'students.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.view', $request ); },
 				],
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'update_student' ],
-					'permission_callback' => $this->permission( 'students.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.edit', $request ); },
 				],
 			]
 		);
@@ -144,7 +144,7 @@ final class StudentsController extends BaseController {
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'transfer_student' ],
-					'permission_callback' => $this->permission( 'students.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.edit', $request ); },
 				],
 			]
 		);
@@ -156,12 +156,12 @@ final class StudentsController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'create_portal_account' ],
-					'permission_callback' => $this->permission( 'students.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.edit', $request ); },
 				],
 				[
 					'methods'             => 'DELETE',
 					'callback'            => [ $this, 'unlink_portal_account' ],
-					'permission_callback' => $this->permission( 'students.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.edit', $request ); },
 				],
 			]
 		);
@@ -208,7 +208,7 @@ final class StudentsController extends BaseController {
 		$student = $this->service->get_student( $id );
 
 		if ( null === $student ) {
-			return $this->error( 'not_found', __( 'Student not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'Student not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $student );
@@ -228,7 +228,7 @@ final class StudentsController extends BaseController {
 
 		$result = $this->service->create_student( $params );
 		if ( is_wp_error( $result ) ) {
-			$code = str_replace( 'nexora_', '', $result->get_error_code() );
+			$code = str_replace( 'codeclove_', '', $result->get_error_code() );
 			return $this->error( $code, $result->get_error_message(), 400 );
 		}
 
@@ -259,7 +259,7 @@ final class StudentsController extends BaseController {
 
 		$result = $this->service->update_student( $id, $params );
 		if ( is_wp_error( $result ) ) {
-			$code = str_replace( 'nexora_', '', $result->get_error_code() );
+			$code = str_replace( 'codeclove_', '', $result->get_error_code() );
 			return $this->error( $code, $result->get_error_message(), 400 );
 		}
 
@@ -311,7 +311,7 @@ final class StudentsController extends BaseController {
 
 		$result = $this->service->transfer_student( $id, $params );
 		if ( is_wp_error( $result ) ) {
-			$code = str_replace( 'nexora_', '', $result->get_error_code() );
+			$code = str_replace( 'codeclove_', '', $result->get_error_code() );
 			return $this->error( $code, $result->get_error_message(), (int) ( $result->get_error_data() ?? 400 ) );
 		}
 
@@ -435,7 +435,7 @@ final class StudentsController extends BaseController {
 
 		$type = isset( $params['type'] ) ? sanitize_key( (string) $params['type'] ) : 'student';
 		if ( ! in_array( $type, [ 'student', 'guardian' ], true ) ) {
-			return new WP_Error( 'invalid_type', __( 'Entity type must be "student" or "guardian".', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'invalid_type', __( 'Entity type must be "student" or "guardian".', 'codeclove-school-management' ), 400 );
 		}
 
 		if ( 'student' === $type ) {
@@ -443,7 +443,7 @@ final class StudentsController extends BaseController {
 		} else {
 			$entity_id = ! empty( $params['guardian_id'] ) ? (int) $params['guardian_id'] : 0;
 			if ( $entity_id <= 0 ) {
-				return new WP_Error( 'missing_guardian_id', __( 'guardian_id is required when creating a guardian portal account.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'missing_guardian_id', __( 'guardian_id is required when creating a guardian portal account.', 'codeclove-school-management' ), 400 );
 			}
 		}
 
@@ -491,7 +491,7 @@ final class StudentsController extends BaseController {
 
 		$type = $type ? sanitize_key( (string) $type ) : 'student';
 		if ( ! in_array( $type, [ 'student', 'guardian' ], true ) ) {
-			return new WP_Error( 'invalid_type', __( 'Entity type must be "student" or "guardian".', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'invalid_type', __( 'Entity type must be "student" or "guardian".', 'codeclove-school-management' ), 400 );
 		}
 
 		if ( 'student' === $type ) {
@@ -499,7 +499,7 @@ final class StudentsController extends BaseController {
 		} else {
 			$entity_id = ! empty( $guardian_id ) ? (int) $guardian_id : 0;
 			if ( $entity_id <= 0 ) {
-				return new WP_Error( 'missing_guardian_id', __( 'guardian_id is required when unlinking a guardian portal account.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'missing_guardian_id', __( 'guardian_id is required when unlinking a guardian portal account.', 'codeclove-school-management' ), 400 );
 			}
 		}
 

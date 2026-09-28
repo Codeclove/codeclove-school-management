@@ -4,21 +4,21 @@
  *
  * Implements business logic and validation rules for academic sessions and terms.
  *
- * @package Nexora\Modules\Academics\Sessions
+ * @package CodeClove\Modules\Academics\Sessions
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Academics\Sessions;
+namespace CodeClove\Modules\Academics\Sessions;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Database\Schema;
-use Nexora\Database\Transaction;
-use Nexora\Core\Logger;
+use CodeClove\Database\Schema;
+use CodeClove\Database\Transaction;
+use CodeClove\Core\Logger;
 use WP_Error;
 
 /**
@@ -89,11 +89,11 @@ final class SessionsService {
 
 			$id = $this->db_create_session( $validated );
 			if ( null === $id ) {
-				return new WP_Error( 'nexora_create_failed', __( 'Failed to create academic session.', 'nexora-school-management' ), 500 );
+				return new WP_Error( 'codeclove_create_failed', __( 'Failed to create academic session.', 'codeclove-school-management' ), 500 );
 			}
 
 			// Bootstrapping starts here!
-			$settings_repo = new \Nexora\Modules\Settings\SettingsRepository();
+			$settings_repo = new \CodeClove\Modules\Settings\SettingsRepository();
 			$settings = $settings_repo->get_settings();
 			$edu_settings = $settings['education_system'] ?? [];
 
@@ -109,13 +109,13 @@ final class SessionsService {
 				// Clone active units and groups.
 				$cloned = $this->db_clone_units_and_groups( (int) $latest_session['id'], $id );
 				if ( ! $cloned ) {
-					return new WP_Error( 'nexora_bootstrap_failed', __( 'Failed to clone units and groups from the previous session.', 'nexora-school-management' ), 500 );
+					return new WP_Error( 'codeclove_bootstrap_failed', __( 'Failed to clone units and groups from the previous session.', 'codeclove-school-management' ), 500 );
 				}
 			} else {
 				// Seed default units and groups.
 				$seeded = $this->db_bulk_create_units( $id, $default_units, $default_groups );
 				if ( ! $seeded ) {
-					return new WP_Error( 'nexora_bootstrap_failed', __( 'Failed to seed default academic units and groups.', 'nexora-school-management' ), 500 );
+					return new WP_Error( 'codeclove_bootstrap_failed', __( 'Failed to seed default academic units and groups.', 'codeclove-school-management' ), 500 );
 				}
 			}
 
@@ -158,12 +158,12 @@ final class SessionsService {
 					}
 				} catch ( \Throwable $e ) {
 					Logger::error( 'Failed to partition session date range for terms: ' . $e->getMessage(), $e );
-					return new WP_Error( 'nexora_bootstrap_failed', __( 'Failed to partition session date range for terms.', 'nexora-school-management' ), 500 );
+					return new WP_Error( 'codeclove_bootstrap_failed', __( 'Failed to partition session date range for terms.', 'codeclove-school-management' ), 500 );
 				}
 
 				$terms_created = $this->db_bulk_create_terms( $id, $terms );
 				if ( ! $terms_created ) {
-					return new WP_Error( 'nexora_bootstrap_failed', __( 'Failed to create academic terms.', 'nexora-school-management' ), 500 );
+					return new WP_Error( 'codeclove_bootstrap_failed', __( 'Failed to create academic terms.', 'codeclove-school-management' ), 500 );
 				}
 			}
 
@@ -181,7 +181,7 @@ final class SessionsService {
 	public function update_session( int $id, array $payload ): array|WP_Error {
 		$current = $this->db_get_session( $id );
 		if ( null === $current ) {
-			return new WP_Error( 'nexora_not_found', __( 'Academic session not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Academic session not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		$validated = $this->validate_session_payload( $payload, $id );
@@ -192,10 +192,10 @@ final class SessionsService {
 		// Implement "Archived Dependencies Check" rule if session is being archived.
 		if ( isset( $validated['status'] ) && 'archived' === $validated['status'] ) {
 			if ( $this->db_has_enrolled_students( $id ) ) {
-				return new WP_Error( 'nexora_archive_failed', __( 'Cannot archive session: there are active student enrollments in this session.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_archive_failed', __( 'Cannot archive session: there are active student enrollments in this session.', 'codeclove-school-management' ), 400 );
 			}
 			if ( $this->db_has_active_transactions( $id ) ) {
-				return new WP_Error( 'nexora_archive_failed', __( 'Cannot archive session: there are active financial transactions/unpaid invoices in this session.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_archive_failed', __( 'Cannot archive session: there are active financial transactions/unpaid invoices in this session.', 'codeclove-school-management' ), 400 );
 			}
 		}
 
@@ -209,7 +209,7 @@ final class SessionsService {
 
 			$updated = $this->db_update_session( $id, $validated );
 			if ( ! $updated ) {
-				return new WP_Error( 'nexora_update_failed', __( 'Failed to update academic session.', 'nexora-school-management' ), 500 );
+				return new WP_Error( 'codeclove_update_failed', __( 'Failed to update academic session.', 'codeclove-school-management' ), 500 );
 			}
 
 			return $this->get_session( $id );
@@ -225,17 +225,17 @@ final class SessionsService {
 	public function delete_session( int $id ): bool|WP_Error {
 		$session = $this->db_get_session( $id );
 		if ( null === $session ) {
-			return new WP_Error( 'nexora_not_found', __( 'Academic session not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Academic session not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		// Disallow deletion if it has associated enrolled students.
 		if ( $this->db_has_enrolled_students( $id ) ) {
-			return new WP_Error( 'nexora_has_students', __( 'Cannot delete session: it has enrolled students.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_has_students', __( 'Cannot delete session: it has enrolled students.', 'codeclove-school-management' ), 400 );
 		}
 
 		// Disallow deletion if it has active transactions.
 		if ( $this->db_has_active_transactions( $id ) ) {
-			return new WP_Error( 'nexora_has_transactions', __( 'Cannot delete session: it has active transactions.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_has_transactions', __( 'Cannot delete session: it has active transactions.', 'codeclove-school-management' ), 400 );
 		}
 
 		return $this->db_delete_session( $id );
@@ -255,11 +255,11 @@ final class SessionsService {
 		if ( isset( $payload['name'] ) ) {
 			$name = sanitize_text_field( trim( (string) $payload['name'] ) );
 			if ( strlen( $name ) < 2 ) {
-				return new WP_Error( 'nexora_invalid_name', __( 'Name must be at least 2 characters.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_invalid_name', __( 'Name must be at least 2 characters.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 			$db_data['name'] = $name;
 		} elseif ( null === $id ) {
-			return new WP_Error( 'nexora_missing_field', __( 'Session name is required.', 'nexora-school-management' ), [ 'status' => 400 ] );
+			return new WP_Error( 'codeclove_missing_field', __( 'Session name is required.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
 
 		// Map dates
@@ -267,7 +267,7 @@ final class SessionsService {
 		$end_date   = isset( $payload['end_date'] ) ? sanitize_text_field( $payload['end_date'] ) : null;
 
 		if ( null === $id && ( ! $start_date || ! $end_date ) ) {
-			return new WP_Error( 'nexora_missing_field', __( 'Start date and end date are required.', 'nexora-school-management' ), [ 'status' => 400 ] );
+			return new WP_Error( 'codeclove_missing_field', __( 'Start date and end date are required.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
 
 		// Fetch existing to do comparisons on partial updates.
@@ -277,12 +277,12 @@ final class SessionsService {
 
 		if ( ! empty( $final_start ) && ! empty( $final_end ) ) {
 			if ( $final_start >= $final_end ) {
-				return new WP_Error( 'nexora_invalid_dates', __( 'End date must be after start date.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_invalid_dates', __( 'End date must be after start date.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 
 			// Validate against academic cycle start and end months in settings (only on create or explicit date update)
 			if ( null === $id || $start_date || $end_date ) {
-				$settings_repo = new \Nexora\Modules\Settings\SettingsRepository();
+				$settings_repo = new \CodeClove\Modules\Settings\SettingsRepository();
 				$settings      = $settings_repo->get_settings();
 				$start_month   = (int) ( $settings['education_system']['academic_year_start_month'] ?? 1 );
 				$end_month     = (int) ( $settings['education_system']['academic_year_end_month'] ?? 12 );
@@ -291,27 +291,27 @@ final class SessionsService {
 					$start_datetime = new \DateTime( $final_start );
 					$end_datetime   = new \DateTime( $final_end );
 				} catch ( \Throwable $e ) {
-					return new WP_Error( 'nexora_invalid_dates', __( 'Invalid start or end date format.', 'nexora-school-management' ), [ 'status' => 400 ] );
+					return new WP_Error( 'codeclove_invalid_dates', __( 'Invalid start or end date format.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 				}
 
 				if ( (int) $start_datetime->format( 'n' ) !== $start_month ) {
 					$start_month_name = date_i18n( 'F', mktime( 0, 0, 0, $start_month, 10 ) );
 					$msg = sprintf(
 						/* translators: %s: start month name */
-						__( 'Session start date must fall in the designated start month: %s.', 'nexora-school-management' ),
+						__( 'Session start date must fall in the designated start month: %s.', 'codeclove-school-management' ),
 						$start_month_name
 					);
-					return new WP_Error( 'nexora_invalid_start_month', $msg, [ 'status' => 400 ] );
+					return new WP_Error( 'codeclove_invalid_start_month', $msg, [ 'status' => 400 ] );
 				}
 
 				if ( (int) $end_datetime->format( 'n' ) !== $end_month ) {
 					$end_month_name = date_i18n( 'F', mktime( 0, 0, 0, $end_month, 10 ) );
 					$msg = sprintf(
 						/* translators: %s: end month name */
-						__( 'Session end date must fall in the designated end month: %s.', 'nexora-school-management' ),
+						__( 'Session end date must fall in the designated end month: %s.', 'codeclove-school-management' ),
 						$end_month_name
 					);
-					return new WP_Error( 'nexora_invalid_end_month', $msg, [ 'status' => 400 ] );
+					return new WP_Error( 'codeclove_invalid_end_month', $msg, [ 'status' => 400 ] );
 				}
 			}
 		}
@@ -326,7 +326,7 @@ final class SessionsService {
 		if ( isset( $payload['status'] ) ) {
 			$status = sanitize_text_field( $payload['status'] );
 			if ( ! in_array( $status, [ 'draft', 'active', 'archived' ], true ) ) {
-				return new WP_Error( 'nexora_invalid_status', __( 'Status must be draft, active, or archived.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_invalid_status', __( 'Status must be draft, active, or archived.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 			$db_data['status'] = $status;
 		}
@@ -395,7 +395,7 @@ final class SessionsService {
 
 		$id = $this->db_create_term( $validated );
 		if ( null === $id ) {
-			return new WP_Error( 'nexora_create_failed', __( 'Failed to create academic term.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_create_failed', __( 'Failed to create academic term.', 'codeclove-school-management' ), 500 );
 		}
 
 		return $this->get_term( $id );
@@ -411,7 +411,7 @@ final class SessionsService {
 	public function update_term( int $id, array $payload ): array|WP_Error {
 		$current = $this->db_get_term( $id );
 		if ( null === $current ) {
-			return new WP_Error( 'nexora_not_found', __( 'Academic term not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Academic term not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		$validated = $this->validate_term_payload( $payload, $id );
@@ -421,7 +421,7 @@ final class SessionsService {
 
 		$updated = $this->db_update_term( $id, $validated );
 		if ( ! $updated ) {
-			return new WP_Error( 'nexora_update_failed', __( 'Failed to update academic term.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_update_failed', __( 'Failed to update academic term.', 'codeclove-school-management' ), 500 );
 		}
 
 		return $this->get_term( $id );
@@ -436,7 +436,7 @@ final class SessionsService {
 	public function delete_term( int $id ): bool|WP_Error {
 		$term = $this->db_get_term( $id );
 		if ( null === $term ) {
-			return new WP_Error( 'nexora_not_found', __( 'Academic term not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Academic term not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->db_delete_term( $id );
@@ -458,24 +458,24 @@ final class SessionsService {
 			$session_id = (int) $payload['session_id'];
 			$db_data['academic_session_id'] = $session_id;
 		} elseif ( null === $id ) {
-			return new WP_Error( 'nexora_missing_field', __( 'Session ID (session_id) is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_missing_field', __( 'Session ID (session_id) is required.', 'codeclove-school-management' ), 400 );
 		} else {
 			$session_id = (int) $existing['academic_session_id'];
 		}
 
 		$session = $this->db_get_session( $session_id );
 		if ( null === $session ) {
-			return new WP_Error( 'nexora_invalid_session', __( 'Academic session not found.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_invalid_session', __( 'Academic session not found.', 'codeclove-school-management' ), 400 );
 		}
 
 		if ( isset( $payload['name'] ) ) {
 			$name = sanitize_text_field( trim( (string) $payload['name'] ) );
 			if ( strlen( $name ) < 2 ) {
-				return new WP_Error( 'nexora_invalid_name', __( 'Name must be at least 2 characters.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_invalid_name', __( 'Name must be at least 2 characters.', 'codeclove-school-management' ), 400 );
 			}
 			$db_data['name'] = $name;
 		} elseif ( null === $id ) {
-			return new WP_Error( 'nexora_missing_field', __( 'Name is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_missing_field', __( 'Name is required.', 'codeclove-school-management' ), 400 );
 		}
 
 		if ( isset( $payload['code'] ) ) {
@@ -489,7 +489,7 @@ final class SessionsService {
 		if ( isset( $payload['status'] ) ) {
 			$status = sanitize_text_field( $payload['status'] );
 			if ( ! in_array( $status, [ 'active', 'inactive', 'archived' ], true ) ) {
-				return new WP_Error( 'nexora_invalid_status', __( 'Status must be active, inactive, or archived.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_invalid_status', __( 'Status must be active, inactive, or archived.', 'codeclove-school-management' ), 400 );
 			}
 			$db_data['status'] = $status;
 		}
@@ -499,7 +499,7 @@ final class SessionsService {
 		$ends_on   = isset( $payload['end_date'] ) ? sanitize_text_field( $payload['end_date'] ) : null;
 
 		if ( null === $id && ( ! $starts_on || ! $ends_on ) ) {
-			return new WP_Error( 'nexora_missing_field', __( 'Start date and end date are required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_missing_field', __( 'Start date and end date are required.', 'codeclove-school-management' ), 400 );
 		}
 
 		$final_start = $starts_on ?: ( $existing['starts_on'] ?? '' );
@@ -507,11 +507,11 @@ final class SessionsService {
 
 		if ( ! empty( $final_start ) && ! empty( $final_end ) ) {
 			if ( $final_start >= $final_end ) {
-				return new WP_Error( 'nexora_invalid_dates', __( 'End date must be after start date.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_invalid_dates', __( 'End date must be after start date.', 'codeclove-school-management' ), 400 );
 			}
 			// Must fall within session limits
 			if ( $final_start < $session['starts_on'] || $final_end > $session['ends_on'] ) {
-				return new WP_Error( 'nexora_out_of_bounds', __( 'Term dates must fall within the session dates.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_out_of_bounds', __( 'Term dates must fall within the session dates.', 'codeclove-school-management' ), 400 );
 			}
 		}
 

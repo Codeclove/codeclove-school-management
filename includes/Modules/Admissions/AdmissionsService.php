@@ -4,22 +4,22 @@
  *
  * Implements business logic and validation rules for admissions applications.
  *
- * @package Nexora\Modules\Admissions
+ * @package CodeClove\Modules\Admissions
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Admissions;
+namespace CodeClove\Modules\Admissions;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Core\Logger;
-use Nexora\Database\Schema;
-use Nexora\Database\Transaction;
-use Nexora\Shared\IdentifierService;
+use CodeClove\Core\Logger;
+use CodeClove\Database\Schema;
+use CodeClove\Database\Transaction;
+use CodeClove\Shared\IdentifierService;
 use WP_Error;
 /**
  * Class AdmissionsService
@@ -76,7 +76,7 @@ final class AdmissionsService {
 		$active_session_id = $active_session ? (int) $active_session['id'] : 0;
 
 		if ( empty( $payload['student_first_name'] ) || empty( $payload['student_last_name'] ) ) {
-			return new WP_Error( 'nexora_validation_failed', __( 'Student first name and last name are required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_validation_failed', __( 'Student first name and last name are required.', 'codeclove-school-management' ), 400 );
 		}
 
 		$father_name       = ! empty( $payload['father_name'] ) ? sanitize_text_field( $payload['father_name'] ) : '';
@@ -130,7 +130,7 @@ final class AdmissionsService {
 		}
 
 		if ( empty( $guardian_name ) ) {
-			return new WP_Error( 'nexora_validation_failed', __( 'Parent or guardian name is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_validation_failed', __( 'Parent or guardian name is required.', 'codeclove-school-management' ), 400 );
 		}
 
 		$ref_number = IdentifierService::generate( 'admission_application' );
@@ -195,7 +195,7 @@ final class AdmissionsService {
 
 		if ( ! $result ) {
 			Logger::error( 'Failed to submit public admission application', $wpdb->last_error );
-			return new WP_Error( 'nexora_db_error', __( 'Failed to save application to database.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_db_error', __( 'Failed to save application to database.', 'codeclove-school-management' ), 500 );
 		}
 
 		$app_id = (int) $wpdb->insert_id;
@@ -213,7 +213,7 @@ final class AdmissionsService {
 		$app    = $this->db_get_application( $app_id );
 		$mapped = $this->map_application( $app );
 
-		do_action( 'nexora_admission_received', $app_id, $mapped );
+		do_action( 'codeclove_admission_received', $app_id, $mapped );
 
 		return $mapped;
 	}
@@ -234,7 +234,7 @@ final class AdmissionsService {
 		$dob_clean = sanitize_text_field( $dob );
 
 		if ( empty( $ref_clean ) || empty( $dob_clean ) ) {
-			return new WP_Error( 'nexora_validation_failed', __( 'Both reference number and date of birth are required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_validation_failed', __( 'Both reference number and date of birth are required.', 'codeclove-school-management' ), 400 );
 		}
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
@@ -252,7 +252,7 @@ final class AdmissionsService {
 		// phpcs:enable
 
 		if ( ! is_array( $row ) ) {
-			return new WP_Error( 'nexora_not_found', __( 'No matching application found with those credentials.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'No matching application found with those credentials.', 'codeclove-school-management' ), 404 );
 		}
 
 		$all_events = $this->db_get_status_events( (int) $row['id'] );
@@ -294,7 +294,7 @@ final class AdmissionsService {
 	public function update_application( int $id, array $payload ): array|WP_Error {
 		$app = $this->db_get_application( $id );
 		if ( null === $app ) {
-			return new WP_Error( 'nexora_not_found', __( 'Application not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Application not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		$validated = $this->validate_application_payload( $payload );
@@ -304,7 +304,7 @@ final class AdmissionsService {
 
 		$updated = $this->db_update_application( $id, $validated );
 		if ( ! $updated ) {
-			return new WP_Error( 'nexora_update_failed', __( 'Failed to update application.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_update_failed', __( 'Failed to update application.', 'codeclove-school-management' ), 500 );
 		}
 
 		$new_app = $this->db_get_application( $id );
@@ -330,7 +330,7 @@ final class AdmissionsService {
 	): array|WP_Error {
 		$app = $this->db_get_application( $id );
 		if ( null === $app ) {
-			return new WP_Error( 'nexora_not_found', __( 'Application not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Application not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		$from_status = $app['status'];
@@ -354,7 +354,7 @@ final class AdmissionsService {
 
 		$updated = $this->db_update_application( $id, $data );
 		if ( ! $updated ) {
-			return new WP_Error( 'nexora_status_failed', __( 'Failed to update status.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_status_failed', __( 'Failed to update status.', 'codeclove-school-management' ), 500 );
 		}
 
 		// Log status audit event
@@ -374,7 +374,7 @@ final class AdmissionsService {
 		$new_app = $this->db_get_application( $id );
 		$mapped_app = $this->map_application( $new_app );
 
-		do_action( 'nexora_admission_status_changed', $id, $to_status, $from_status, $mapped_app );
+		do_action( 'codeclove_admission_status_changed', $id, $to_status, $from_status, $mapped_app );
 
 		return $mapped_app;
 	}
@@ -406,7 +406,7 @@ final class AdmissionsService {
 			'address_json'            => $app['address_json'] ?: '',
 			'custom_fields_json'      => $app['custom_fields_json'] ?: '',
 			'student_photo_id'        => $app['student_photo_id'] !== null ? (int) $app['student_photo_id'] : null,
-			'student_photo_url'       => ( $app['student_photo_id'] !== null ? wp_get_attachment_image_url( (int) $app['student_photo_id'], 'medium' ) : null ) ?: NEXORA_URL . 'assets/defaults/avatar.svg',
+			'student_photo_url'       => ( $app['student_photo_id'] !== null ? wp_get_attachment_image_url( (int) $app['student_photo_id'], 'medium' ) : null ) ?: CODECLOVE_URL . 'assets/defaults/avatar.svg',
 			'submitted_at'            => $app['submitted_at'] ?: $app['created_at'], // ponytail: fallback to creation timestamp if unpopulated
 			'reviewed_at'             => $app['reviewed_at'] ?: '',
 			'decision_at'             => $app['decision_at'] ?: '',
@@ -431,7 +431,7 @@ final class AdmissionsService {
 		if ( isset( $payload['student_first_name'] ) ) {
 			$clean['student_first_name'] = sanitize_text_field( $payload['student_first_name'] );
 			if ( empty( $clean['student_first_name'] ) ) {
-				return new WP_Error( 'validation_failed', __( 'First name is required.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'validation_failed', __( 'First name is required.', 'codeclove-school-management' ), 400 );
 			}
 		}
 
@@ -442,7 +442,7 @@ final class AdmissionsService {
 		if ( isset( $payload['student_last_name'] ) ) {
 			$clean['student_last_name'] = sanitize_text_field( $payload['student_last_name'] );
 			if ( empty( $clean['student_last_name'] ) ) {
-				return new WP_Error( 'validation_failed', __( 'Last name is required.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'validation_failed', __( 'Last name is required.', 'codeclove-school-management' ), 400 );
 			}
 		}
 
@@ -465,14 +465,14 @@ final class AdmissionsService {
 		if ( isset( $payload['guardian_name'] ) ) {
 			$clean['guardian_name'] = sanitize_text_field( $payload['guardian_name'] );
 			if ( empty( $clean['guardian_name'] ) ) {
-				return new WP_Error( 'validation_failed', __( 'Guardian name is required.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'validation_failed', __( 'Guardian name is required.', 'codeclove-school-management' ), 400 );
 			}
 		}
 
 		if ( isset( $payload['guardian_email'] ) ) {
 			$clean['guardian_email'] = sanitize_email( $payload['guardian_email'] );
 			if ( empty( $clean['guardian_email'] ) || ! is_email( $clean['guardian_email'] ) ) {
-				return new WP_Error( 'validation_failed', __( 'A valid email address is required.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'validation_failed', __( 'A valid email address is required.', 'codeclove-school-management' ), 400 );
 			}
 		}
 
@@ -507,11 +507,11 @@ final class AdmissionsService {
 	public function convert_application( int $id, array $params ): array|WP_Error {
 		$app = $this->db_get_application( $id );
 		if ( null === $app ) {
-			return new WP_Error( 'nexora_not_found', __( 'Application not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Application not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		if ( ! empty( $app['converted_student_id'] ) ) {
-			return new WP_Error( 'already_converted', __( 'This application has already been converted to a student.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'already_converted', __( 'This application has already been converted to a student.', 'codeclove-school-management' ), 400 );
 		}
 
 		$session_id  = (int) ( $params['session_id'] ?? 0 );
@@ -520,12 +520,12 @@ final class AdmissionsService {
 		$guardian_id = ! empty( $params['guardian_id'] ) ? (int) $params['guardian_id'] : null;
 
 		if ( ! $session_id || ! $unit_id ) {
-			return new WP_Error( 'validation_failed', __( 'Session ID and Class Level ID are required for conversion.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'validation_failed', __( 'Session ID and Class Level ID are required for conversion.', 'codeclove-school-management' ), 400 );
 		}
 
 		// Validation check: ensure essential applicant and parent details exist before converting
 		if ( empty( $app['student_first_name'] ) || empty( $app['student_last_name'] ) || empty( $app['guardian_name'] ) ) {
-			return new WP_Error( 'incomplete_inquiry', __( 'Application is missing required student or contact details. Please edit and complete all application details first before converting to student.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'incomplete_inquiry', __( 'Application is missing required student or contact details. Please edit and complete all application details first before converting to student.', 'codeclove-school-management' ), 400 );
 		}
 
 		$student_number = IdentifierService::generate( 'student_number' );
@@ -539,7 +539,7 @@ final class AdmissionsService {
 		}
 
 		return Transaction::run( function( $wpdb ) use ( $id, $app, $session_id, $unit_id, $group_id, $guardian_id, $student_number, $admission_number ) {
-			$students_service = new \Nexora\Modules\Students\StudentsService();
+			$students_service = new \CodeClove\Modules\Students\StudentsService();
 
 			$admission_date = ! empty( $app['submitted_at'] ) ? substr( (string) $app['submitted_at'], 0, 10 ) : substr( (string) $app['created_at'], 0, 10 );
 
@@ -560,7 +560,7 @@ final class AdmissionsService {
 			] );
 
 			if ( ! $student_id ) {
-				throw new \Exception( esc_html__( 'Failed to create student record during conversion.', 'nexora-school-management' ) );
+				throw new \Exception( esc_html__( 'Failed to create student record during conversion.', 'codeclove-school-management' ) );
 			}
 
 			// 2. Extract and transfer comprehensive parent & guardian details (Father, Mother, Legal Guardian)
@@ -602,7 +602,7 @@ final class AdmissionsService {
 				'relationship'           => $custom['guardian_other_rel'] ?? ( $custom['guardian_other_relationship'] ?? 'guardian' ),
 			];
 
-			// Call student parents saver to populate nexora_guardians & nexora_student_guardians
+			// Call student parents saver to populate codeclove_guardians & codeclove_student_guardians
 			$students_service->save_student_parents( $student_id, $parent_payload );
 
 			// Retrieve primary guardian ID for application reference linking
@@ -629,7 +629,7 @@ final class AdmissionsService {
 			] );
 
 			if ( ! $enrollment_id ) {
-				throw new \Exception( esc_html__( 'Failed to create student enrollment during conversion.', 'nexora-school-management' ) );
+				throw new \Exception( esc_html__( 'Failed to create student enrollment during conversion.', 'codeclove-school-management' ) );
 			}
 
 			// 4. Update the Admissions application with status 'admitted' and links
@@ -643,7 +643,7 @@ final class AdmissionsService {
 			] );
 
 			if ( ! $updated ) {
-				throw new \Exception( esc_html__( 'Failed to update admissions application reference columns.', 'nexora-school-management' ) );
+				throw new \Exception( esc_html__( 'Failed to update admissions application reference columns.', 'codeclove-school-management' ) );
 			}
 
 			// 5. Log status event
@@ -674,7 +674,7 @@ final class AdmissionsService {
 		$ids    = $payload['ids'] ?? [];
 
 		if ( empty( $ids ) || ! is_array( $ids ) ) {
-			return new WP_Error( 'nexora_invalid_ids', __( 'No IDs provided.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_invalid_ids', __( 'No IDs provided.', 'codeclove-school-management' ), 400 );
 		}
 
 		$ids = array_map( 'intval', $ids );
@@ -682,7 +682,7 @@ final class AdmissionsService {
 		if ( 'status' === $action ) {
 			$status = $payload['status'] ?? '';
 			if ( ! in_array( $status, [ 'inquiry', 'submitted', 'under_review', 'more_info_needed', 'interview_scheduled', 'accepted', 'waitlisted', 'rejected', 'admitted', 'withdrawn' ], true ) ) {
-				return new WP_Error( 'nexora_invalid_status', __( 'Invalid status provided.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_invalid_status', __( 'Invalid status provided.', 'codeclove-school-management' ), 400 );
 			}
 			$table = Schema::applications();
 			$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
@@ -705,7 +705,7 @@ final class AdmissionsService {
 			$group_id   = ! empty( $payload['group_id'] ) ? (int) $payload['group_id'] : null;
 
 			if ( ! $session_id || ! $unit_id ) {
-				return new WP_Error( 'validation_failed', __( 'Session ID and Class Level ID are required for conversion.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'validation_failed', __( 'Session ID and Class Level ID are required for conversion.', 'codeclove-school-management' ), 400 );
 			}
 
 			$success_count = 0;
@@ -741,7 +741,7 @@ final class AdmissionsService {
 				}
 			}
 			if ( ! empty( $errors ) && 0 === $deleted_count ) {
-				return new WP_Error( 'nexora_bulk_delete_failed', implode( '; ', $errors ), 400 );
+				return new WP_Error( 'codeclove_bulk_delete_failed', implode( '; ', $errors ), 400 );
 			}
 			return [
 				'success'       => true,
@@ -750,7 +750,7 @@ final class AdmissionsService {
 			];
 		}
 
-		return new WP_Error( 'nexora_invalid_action', __( 'Invalid bulk action.', 'nexora-school-management' ), 400 );
+		return new WP_Error( 'codeclove_invalid_action', __( 'Invalid bulk action.', 'codeclove-school-management' ), 400 );
 	}
 
 	// ─── Database Operations ─────────────────────────────────────────────────

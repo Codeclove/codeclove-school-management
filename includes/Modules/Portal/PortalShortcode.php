@@ -2,24 +2,24 @@
 /**
  * Portal Public Shortcode handler.
  *
- * Provides the [nexora_portal] shortcode:
+ * Provides the [codeclove_portal] shortcode:
  * - When guest: displays an elegant, responsive portal login form
- * - When logged in: mounts the portal SPA root (<div id="nexora-portal-root"></div>),
- *   passes window.NexoraPortalConfig, and enqueues Vite dev or production bundle.
+ * - When logged in: mounts the portal SPA root (<div id="codeclove-portal-root"></div>),
+ *   passes window.CodeClovePortalConfig, and enqueues Vite dev or production bundle.
  *
- * @package Nexora\Modules\Portal
+ * @package CodeClove\Modules\Portal
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Portal;
+namespace CodeClove\Modules\Portal;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Modules\Settings\SettingsRepository;
+use CodeClove\Modules\Settings\SettingsRepository;
 
 /**
  * Class PortalShortcode
@@ -30,8 +30,8 @@ final class PortalShortcode {
 	 * Registers the shortcode and asset hooks.
 	 */
 	public static function register(): void {
-		add_shortcode( 'nexora_portal', [ __CLASS__, 'render_portal' ] );
-
+		add_shortcode( 'codeclove_portal', [ __CLASS__, 'render_portal' ] );
+		add_shortcode( 'codeclove_portal', [ __CLASS__, 'render_portal' ] ); // backwards-compat alias
 		// Hide WP admin bar for portal-only roles (guardians/students don't need it)
 		add_filter( 'show_admin_bar', [ __CLASS__, 'maybe_hide_admin_bar' ] );
 
@@ -41,7 +41,7 @@ final class PortalShortcode {
 	}
 
 	/**
-	 * Hides the WP admin bar for nexora_guardian and nexora_student roles.
+	 * Hides the WP admin bar for codeclove_guardian and codeclove_student roles.
 	 *
 	 * @param bool $show Current visibility.
 	 * @return bool
@@ -51,7 +51,7 @@ final class PortalShortcode {
 			return $show;
 		}
 		$user = wp_get_current_user();
-		$portal_roles = [ 'nexora_guardian', 'nexora_student' ];
+		$portal_roles = [ 'codeclove_guardian', 'codeclove_student' ];
 		if ( array_intersect( $portal_roles, (array) $user->roles ) ) {
 			return false;
 		}
@@ -62,7 +62,7 @@ final class PortalShortcode {
 	 */
 	public static function handle_login_failed(): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		if ( ! empty( $_POST['nexora_portal_login'] ) ) {
+		if ( ! empty( $_POST['codeclove_portal_login'] ) ) {
 			$referrer = wp_get_referer();
 			if ( $referrer ) {
 				$redirect = add_query_arg( 'login', 'failed', $referrer );
@@ -87,27 +87,6 @@ final class PortalShortcode {
 		return $user;
 	}
 
-	/**
-	 * Checks if Vite dev server is running on portal ports (5175 or 5174).
-	 *
-	 * @return int|null Port number if active, null otherwise.
-	 */
-	private static function get_active_vite_port(): ?int {
-		if ( ! defined( 'NEXORA_DEV' ) || ! NEXORA_DEV ) {
-			return null;
-		}
-		$candidate_ports = [ 5174, 5175, 5173 ];
-		foreach ( $candidate_ports as $port ) {
-			$response = wp_remote_get( 'http://127.0.0.1:' . $port . '/@vite/client', [
-				'timeout'   => 0.05,
-				'sslverify' => false,
-			] );
-			if ( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ) ) {
-				return $port;
-			}
-		}
-		return null;
-	}
 
 	/**
 	 * Main shortcode rendering handler.
@@ -115,8 +94,8 @@ final class PortalShortcode {
 	 * @return string HTML output.
 	 */
 	public static function render_portal(): string {
-		if ( class_exists( '\Nexora\Licensing\License' ) && ( ! \Nexora\Licensing\License::verified() || ! \Nexora\Licensing\License::verify_integrity() ) ) {
-			return '<div class="nexora-portal-notice"><p>' . esc_html__( 'The student & guardian portal is currently unavailable. Please contact the school administration.', 'nexora-school-management' ) . '</p></div>';
+		if ( class_exists( '\CodeClove\Licensing\License' ) && ( ! \CodeClove\Licensing\License::verified() || ! \CodeClove\Licensing\License::verify_integrity() ) ) {
+			return '<div class="codeclove-portal-notice"><p>' . esc_html__( 'The student & guardian portal is currently unavailable. Please contact the school administration.', 'codeclove-school-management' ) . '</p></div>';
 		}
 
 		if ( ! is_user_logged_in() ) {
@@ -138,18 +117,18 @@ final class PortalShortcode {
 		$settings_repo = new SettingsRepository();
 		$settings      = $settings_repo->get_settings();
 		$site_name     = ! empty( $settings['school']['name'] ) ? $settings['school']['name'] : get_bloginfo( 'name' );
-		$logo_url      = ! empty( $settings['school']['logo'] ) ? $settings['school']['logo'] : ( NEXORA_URL . 'assets/defaults/logo.svg' );
+		$logo_url      = ! empty( $settings['school']['logo'] ) ? $settings['school']['logo'] : ( CODECLOVE_URL . 'assets/defaults/logo.svg' );
 
 		// Resolve student service context
 		$portal_service = new PortalService();
 		$portal_context = $portal_service->get_portal_user_context( $user_id );
 
 		$config = [
-			'restUrl'     => esc_url_raw( rest_url( 'nexora/v1/' ) ),
+			'restUrl'     => esc_url_raw( rest_url( 'codeclove/v1/' ) ),
 			'nonce'       => wp_create_nonce( 'wp_rest' ),
-			'locale'      => determine_locale(),
+			'locale'      => str_replace( '_', '-', determine_locale() ),
 			'rtl'         => (bool) ( is_rtl() || ! empty( $settings['localization']['rtl'] ?? false ) ),
-			'i18n'        => \Nexora\Core\Assets::get_jed_data(),
+			'i18n'        => \CodeClove\Core\Assets::get_jed_data(),
 			'currentUser' => [
 				'id'       => $user_id,
 				'name'     => $current_user->display_name,
@@ -163,8 +142,8 @@ final class PortalShortcode {
 			'logoutUrl'   => wp_logout_url( get_permalink() ?: home_url() ),
 			'siteName'    => $site_name,
 			'logoUrl'     => esc_url( $logo_url ),
-			'version'     => NEXORA_VERSION,
-			'isPro'       => (bool) ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ),
+			'version'     => CODECLOVE_VERSION,
+			'isPro'       => (bool) ( defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO ),
 			'settings'    => [
 				'school'       => $settings['school'] ?? [],
 				'appearance'   => $settings['appearance'] ?? [],
@@ -174,40 +153,22 @@ final class PortalShortcode {
 		];
 		$config_json = wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
 
-		$vite_port = self::get_active_vite_port();
-		if ( null !== $vite_port ) {
-			// ponytail: live Vite dev server connection for instant hot-reload
-			// phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedScript
-			$html  = '<script type="text/javascript">window.NexoraPortalConfig = ' . $config_json . ';</script>';
-			$html .= '<script type="module">
-				import RefreshRuntime from "http://localhost:' . (int) $vite_port . '/@react-refresh";
-				RefreshRuntime.injectIntoGlobalHook(window);
-				window.$RefreshReg$ = () => {};
-				window.$RefreshSig$ = () => (type) => type;
-				window.__vite_plugin_react_preamble_installed__ = true;
-			</script>';
-			$html .= '<script type="module" src="http://localhost:' . (int) $vite_port . '/@vite/client"></script>';
-			$html .= '<script type="module" src="http://localhost:' . (int) $vite_port . '/src/portal/main.tsx"></script>';
-			$html .= '<div id="nexora-portal-root" class="nexora-portal-app"></div>';
-			// phpcs:enable
-			return $html;
-		}
-		$build_dir = NEXORA_DIR . 'assets/build/portal/';
-		$build_url = NEXORA_URL . 'assets/build/portal/';
+		$build_dir = CODECLOVE_DIR . 'assets/build/portal/';
+		$build_url = CODECLOVE_URL . 'assets/build/portal/';
 
 		if ( file_exists( $build_dir . 'index.css' ) ) {
-			wp_enqueue_style( 'nexora-portal-css', $build_url . 'index.css', [], NEXORA_VERSION );
+			wp_enqueue_style( 'codeclove-portal-css', $build_url . 'index.css', [], CODECLOVE_VERSION );
 		}
 		if ( file_exists( $build_dir . 'index.js' ) ) {
-			wp_enqueue_script( 'nexora-portal-js', $build_url . 'index.js', [], NEXORA_VERSION, true );
+			wp_enqueue_script( 'codeclove-portal-js', $build_url . 'index.js', [], CODECLOVE_VERSION, true );
 			wp_add_inline_script(
-				'nexora-portal-js',
-				'window.NexoraPortalConfig = ' . $config_json . ';',
+				'codeclove-portal-js',
+				'window.CodeClovePortalConfig = ' . $config_json . ';',
 				'before'
 			);
 		}
 
-		return '<div id="nexora-portal-root" class="nexora-portal-app"></div>';
+		return '<div id="codeclove-portal-root" class="codeclove-portal-app"></div>';
 	}
 
 	/**
@@ -223,7 +184,7 @@ final class PortalShortcode {
 		$settings_repo = new SettingsRepository();
 		$settings      = $settings_repo->get_settings();
 		$school_name   = ! empty( $settings['school']['name'] ) ? $settings['school']['name'] : get_bloginfo( 'name' );
-		$logo_url      = ! empty( $settings['school']['logo'] ) ? $settings['school']['logo'] : ( NEXORA_URL . 'assets/defaults/logo.svg' );
+		$logo_url      = ! empty( $settings['school']['logo'] ) ? $settings['school']['logo'] : ( CODECLOVE_URL . 'assets/defaults/logo.svg' );
 
 		// Resolve brand color for login card styling
 		$theme_color   = $settings['appearance']['theme_color'] ?? 'classic_indigo';
@@ -242,68 +203,68 @@ final class PortalShortcode {
 		$login_error = isset( $_GET['login'] ) && 'failed' === sanitize_key( wp_unslash( $_GET['login'] ) );
 
 		wp_enqueue_style(
-			'nexora-portal-login',
-			NEXORA_URL . 'assets/css/portal-login.css',
+			'codeclove-portal-login',
+			CODECLOVE_URL . 'assets/css/portal-login.css',
 			[],
-			NEXORA_VERSION
+			CODECLOVE_VERSION
 		);
 		$custom_css = sprintf(
-			':root { --nexora-brand: %s; --nexora-brand-hover: %s; --nexora-brand-light: %s; }',
+			':root { --codeclove-brand: %s; --codeclove-brand-hover: %s; --codeclove-brand-light: %s; }',
 			esc_attr( $brand_colors['brand'] ),
 			esc_attr( $brand_colors['hover'] ),
 			esc_attr( $brand_colors['light'] )
 		);
-		wp_add_inline_style( 'nexora-portal-login', $custom_css );
+		wp_add_inline_style( 'codeclove-portal-login', $custom_css );
 
 		ob_start();
 		?>
-		<div class="nexora-portal-login-wrap">
-			<div class="nexora-portal-brand">
-				<div class="nexora-portal-logo">
+		<div class="codeclove-portal-login-wrap">
+			<div class="codeclove-portal-brand">
+				<div class="codeclove-portal-logo">
 					<img src="<?php echo esc_url( $logo_url ); ?>" alt="<?php echo esc_attr( $school_name ); ?>" />
 				</div>
-				<h2 class="nexora-portal-title"><?php echo esc_html( $school_name ); ?></h2>
-				<p class="nexora-portal-subtitle"><?php esc_html_e( 'Student & Guardian Portal Sign In', 'nexora-school-management' ); ?></p>
+				<h2 class="codeclove-portal-title"><?php echo esc_html( $school_name ); ?></h2>
+				<p class="codeclove-portal-subtitle"><?php esc_html_e( 'Student & Guardian Portal Sign In', 'codeclove-school-management' ); ?></p>
 			</div>
 
 			<?php if ( $login_error ) : ?>
-				<div class="nexora-portal-alert">
+				<div class="codeclove-portal-alert">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-					<span><?php esc_html_e( 'Invalid username or password. Please try again.', 'nexora-school-management' ); ?></span>
+					<span><?php esc_html_e( 'Invalid username or password. Please try again.', 'codeclove-school-management' ); ?></span>
 				</div>
 			<?php endif; ?>
 
 			<form method="post" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>">
-				<input type="hidden" name="nexora_portal_login" value="1" />
+				<input type="hidden" name="codeclove_portal_login" value="1" />
 				<input type="hidden" name="redirect_to" value="<?php echo esc_url( $current_url ); ?>" />
 
-				<div class="nexora-login-field">
-					<label class="nexora-login-label" for="nexora_user_login"><?php esc_html_e( 'Username or Email', 'nexora-school-management' ); ?></label>
-					<input type="text" name="log" id="nexora_user_login" class="nexora-login-input" required autocomplete="username" placeholder="<?php esc_attr_e( 'Enter your username or email', 'nexora-school-management' ); ?>" />
+				<div class="codeclove-login-field">
+					<label class="codeclove-login-label" for="codeclove_user_login"><?php esc_html_e( 'Username or Email', 'codeclove-school-management' ); ?></label>
+					<input type="text" name="log" id="codeclove_user_login" class="codeclove-login-input" required autocomplete="username" placeholder="<?php esc_attr_e( 'Enter your username or email', 'codeclove-school-management' ); ?>" />
 				</div>
 
-				<div class="nexora-login-field">
-					<label class="nexora-login-label" for="nexora_user_pass"><?php esc_html_e( 'Password', 'nexora-school-management' ); ?></label>
-					<input type="password" name="pwd" id="nexora_user_pass" class="nexora-login-input" required autocomplete="current-password" placeholder="<?php esc_attr_e( '••••••••', 'nexora-school-management' ); ?>" />
+				<div class="codeclove-login-field">
+					<label class="codeclove-login-label" for="codeclove_user_pass"><?php esc_html_e( 'Password', 'codeclove-school-management' ); ?></label>
+					<input type="password" name="pwd" id="codeclove_user_pass" class="codeclove-login-input" required autocomplete="current-password" placeholder="<?php esc_attr_e( '••••••••', 'codeclove-school-management' ); ?>" />
 				</div>
 
-				<div class="nexora-login-row">
-					<label class="nexora-login-remember">
+				<div class="codeclove-login-row">
+					<label class="codeclove-login-remember">
 						<input type="checkbox" name="rememberme" value="forever" />
-						<span><?php esc_html_e( 'Remember me', 'nexora-school-management' ); ?></span>
+						<span><?php esc_html_e( 'Remember me', 'codeclove-school-management' ); ?></span>
 					</label>
-					<a href="<?php echo esc_url( wp_lostpassword_url( $current_url ) ); ?>" class="nexora-login-forgot">
-						<?php esc_html_e( 'Forgot password?', 'nexora-school-management' ); ?>
+					<a href="<?php echo esc_url( wp_lostpassword_url( $current_url ) ); ?>" class="codeclove-login-forgot">
+						<?php esc_html_e( 'Forgot password?', 'codeclove-school-management' ); ?>
 					</a>
 				</div>
 
-				<button type="submit" class="nexora-portal-submit-btn">
-					<?php esc_html_e( 'Sign In to Portal', 'nexora-school-management' ); ?>
+				<button type="submit" class="codeclove-portal-submit-btn">
+					<?php esc_html_e( 'Sign In to Portal', 'codeclove-school-management' ); ?>
 				</button>
 			</form>
 
-			<div class="nexora-portal-footer">
-				<span><?php esc_html_e( 'Protected by Nexora School Management', 'nexora-school-management' ); ?></span>
+			<div class="codeclove-portal-footer">
+				<span><?php esc_html_e( 'Protected by CodeClove School Management', 'codeclove-school-management' ); ?></span>
 			</div>
 		</div>
 		<?php

@@ -2,19 +2,19 @@
 /**
  * Roles & Permissions REST API controller.
  *
- * @package Nexora\Modules\Roles
+ * @package CodeClove\Modules\Roles
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Roles;
+namespace CodeClove\Modules\Roles;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\BaseController;
+use CodeClove\Api\BaseController;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -156,12 +156,12 @@ final class RolesController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_roles' ],
-					'permission_callback' => $this->permission( 'roles_permissions.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'roles_permissions.manage', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'create_role' ],
-					'permission_callback' => $this->permission( 'roles_permissions.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'roles_permissions.manage', $request ); },
 				],
 			]
 		);
@@ -173,7 +173,7 @@ final class RolesController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_system_permissions' ],
-					'permission_callback' => $this->permission( 'roles_permissions.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'roles_permissions.manage', $request ); },
 				],
 			]
 		);
@@ -185,17 +185,17 @@ final class RolesController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_role' ],
-					'permission_callback' => $this->permission( 'roles_permissions.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'roles_permissions.manage', $request ); },
 				],
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'update_role' ],
-					'permission_callback' => $this->permission( 'roles_permissions.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'roles_permissions.manage', $request ); },
 				],
 				[
 					'methods'             => 'DELETE',
 					'callback'            => [ $this, 'delete_role' ],
-					'permission_callback' => $this->permission( 'roles_permissions.manage' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'roles_permissions.manage', $request ); },
 				],
 			]
 		);
@@ -231,7 +231,7 @@ final class RolesController extends BaseController {
 		$role = $this->service->get_role( $id );
 
 		if ( ! $role ) {
-			return $this->error( 'not_found', __( 'Role not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'Role not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $role );

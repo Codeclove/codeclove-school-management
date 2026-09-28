@@ -2,20 +2,20 @@
 /**
  * Roles and Permissions Seeder.
  *
- * @package Nexora\Database\Seeders
+ * @package CodeClove\Database\Seeders
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Database\Seeders;
+namespace CodeClove\Database\Seeders;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Database\Schema;
-use Nexora\Database\SeederInterface;
+use CodeClove\Database\Schema;
+use CodeClove\Database\SeederInterface;
 
 /**
  * Class RolesSeeder

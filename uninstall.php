@@ -4,9 +4,9 @@
  *
  * Runs when the plugin is deleted from the WordPress admin. Drops custom
  * database tables and options ONLY if the user has explicitly enabled
- * data deletion in Nexora settings, per WordPress.org guidelines.
+ * data deletion in CodeClove settings, per WordPress.org guidelines.
  *
- * @package Nexora
+ * @package CodeClove
  */
 
 declare( strict_types=1 );
@@ -21,14 +21,14 @@ if ( ! current_user_can( 'activate_plugins' ) ) {
 	return;
 }
 
-// If Nexora Pro is active or installed, preserve all shared database tables and settings.
-if ( ( defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ) || in_array( 'nexora/nexora.php', (array) get_option( 'active_plugins', [] ), true ) ) {
+// If Pro is active or installed, preserve all shared database tables and settings.
+if ( ( defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO ) || in_array( 'codeclove-school-management-pro/codeclove-school-management-pro.php', (array) get_option( 'active_plugins', [] ), true ) ) {
 	return;
 }
 
 // Retrieve settings to check whether the administrator explicitly opted-in to wipe data on uninstall.
-$nexora_settings = get_option( 'nexora_settings', [] );
-if ( empty( $nexora_settings['system']['delete_data_on_uninstall'] ) ) {
+$codeclove_settings = get_option( 'codeclove_settings', [] );
+if ( empty( $codeclove_settings['system']['delete_data_on_uninstall'] ) ) {
 	// Per WordPress.org guidelines, do not destroy institutional data unless explicitly requested.
 	return;
 }
@@ -36,7 +36,7 @@ if ( empty( $nexora_settings['system']['delete_data_on_uninstall'] ) ) {
 global $wpdb;
 
 // List of custom tables to drop upon explicit deletion opt-in.
-$nexora_tables = [
+$codeclove_tables = [
 	'academic_sessions',
 	'academic_terms',
 	'academic_units',
@@ -75,12 +75,13 @@ $nexora_tables = [
 ];
 
 // Drop each custom table safely using identifier placeholders.
-foreach ( $nexora_tables as $nexora_table ) {
-	$nexora_table_name = $wpdb->prefix . 'nexora_' . $nexora_table;
+foreach ( $codeclove_tables as $codeclove_table ) {
+	$codeclove_table_name = $wpdb->prefix . 'codeclove_' . $codeclove_table;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-	$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $nexora_table_name ) );
+	$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $codeclove_table_name ) );
 }
 
 // Delete all options.
-delete_option( 'nexora_settings' );
-delete_option( 'nexora_db_version' );
+delete_option( 'codeclove_settings' );
+delete_option( 'codeclove_db_version' );
+delete_option( 'codeclove_license' );

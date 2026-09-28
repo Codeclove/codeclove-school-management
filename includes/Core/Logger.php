@@ -2,22 +2,22 @@
 /**
  * Development Error Logger utility.
  *
- * Provides ultra-lightweight, zero-dependency logging for Nexora.
- * Bridges native error_log() with WP_DEBUG and Nexora system.debug_logging settings.
+ * Provides ultra-lightweight, zero-dependency logging for CodeClove.
+ * Bridges native error_log() with WP_DEBUG and CodeClove system.debug_logging settings.
  *
- * @package Nexora\Core
+ * @package CodeClove\Core
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Core;
+namespace CodeClove\Core;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Modules\Settings\SettingsRepository;
+use CodeClove\Modules\Settings\SettingsRepository;
 
 /**
  * Class Logger
@@ -62,7 +62,7 @@ final class Logger {
 			return;
 		}
 
-		$output = sprintf( '[Nexora] [%s] %s', $level, $message );
+		$output = sprintf( '[CodeClove] [%s] %s', $level, $message );
 
 		if ( null !== $context ) {
 			if ( $context instanceof \Throwable ) {
@@ -95,7 +95,7 @@ final class Logger {
 				self::$debug_enabled = false;
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-					error_log( '[Nexora] [ERROR] Failed to read debug logging setting: ' . $e->getMessage() );
+					error_log( '[CodeClove] [ERROR] Failed to read debug logging setting: ' . $e->getMessage() );
 				}
 			}
 		}

@@ -2,7 +2,7 @@
 /**
  * Database migrations.
  *
- * Creates and upgrades all Nexora custom tables using WordPress's dbDelta().
+ * Creates and upgrades all CodeClove custom tables using WordPress's dbDelta().
  * dbDelta() is additive — it adds missing tables/columns but never removes
  * existing ones, making it safe to re-run on every upgrade.
  *
@@ -11,12 +11,12 @@
  *   - PRIMARY KEY must be uppercase.
  *   - Index definitions must use KEY, not INDEX.
  *
- * @package Nexora\Database
+ * @package CodeClove\Database
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Database;
+namespace CodeClove\Database;
 
 /**
  * Class Migrations
@@ -33,7 +33,7 @@ final class Migrations {
 		global $wpdb;
 
 		$required_tables = Schema::all();
-		$pattern         = $wpdb->esc_like( $wpdb->prefix . 'nexora_' ) . '%';
+		$pattern         = $wpdb->esc_like( $wpdb->prefix . 'codeclove_' ) . '%';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$installed_tables = $wpdb->get_col(
@@ -66,9 +66,9 @@ final class Migrations {
 
 
 		// Store the new schema version.
-		$settings                   = get_option( 'nexora_settings', [] );
-		$settings['schema_version'] = NEXORA_DB_VERSION;
-		update_option( 'nexora_settings', $settings, false );
+		$settings                   = get_option( 'codeclove_settings', [] );
+		$settings['schema_version'] = CODECLOVE_DB_VERSION;
+		update_option( 'codeclove_settings', $settings, false );
 	}
 
 	// ─── Academic Tables ─────────────────────────────────────────────────────

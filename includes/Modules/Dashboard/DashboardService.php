@@ -12,19 +12,19 @@
  *   session — full academic session start→end dates
  *   30days  — rolling 30-day window
  *
- * @package Nexora\Modules\Dashboard
+ * @package CodeClove\Modules\Dashboard
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Dashboard;
+namespace CodeClove\Modules\Dashboard;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Database\Schema;
+use CodeClove\Database\Schema;
 
 /**
  * Class DashboardService
@@ -56,7 +56,7 @@ final class DashboardService {
 		// ── KPI Counts ──────────────────────────────────────────────────────────
 		$thirty_days_ago = gmdate( 'Y-m-d H:i:s', strtotime( '-30 days' ) );
 
-		if ( $is_admin || nexora_user_can( $user_id, 'students.view' ) ) {
+		if ( $is_admin || codeclove_user_can( $user_id, 'students.view' ) ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			if ( $session_id ) {
 				$row = $wpdb->get_row(
@@ -95,7 +95,7 @@ final class DashboardService {
 			$stats['student_delta_label']    = 'vs last month';
 		}
 
-		if ( $is_admin || nexora_user_can( $user_id, 'admissions.view' ) ) {
+		if ( $is_admin || codeclove_user_can( $user_id, 'admissions.view' ) ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$query_total      = 'SELECT COUNT(*) FROM ' . Schema::applications() . " WHERE status NOT IN ('admitted','rejected','withdrawn') AND deleted_at IS NULL";
 			$total_admissions = (int) ( $session_id ? $wpdb->get_var( $wpdb->prepare( $query_total . ' AND academic_session_id = %d', $session_id ) ) : $wpdb->get_var( $query_total ) );
@@ -117,7 +117,7 @@ final class DashboardService {
 			$stats['admissions_delta_label']    = 'new this month';
 		}
 
-		if ( $is_admin || nexora_user_can( $user_id, 'staff.view' ) ) {
+		if ( $is_admin || codeclove_user_can( $user_id, 'staff.view' ) ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$total_staff = (int) $wpdb->get_var(
 				'SELECT COUNT(*) FROM ' . Schema::staff_members() . " WHERE status = 'active' AND deleted_at IS NULL"
@@ -137,7 +137,7 @@ final class DashboardService {
 			$stats['staff_delta_label']      = 'joined this month';
 		}
 
-		if ( $is_admin || nexora_user_can( $user_id, 'finance.view' ) ) {
+		if ( $is_admin || codeclove_user_can( $user_id, 'finance.view' ) ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$query_out                       = 'SELECT COALESCE(SUM(balance_minor),0) FROM ' . Schema::invoices() . " WHERE status IN ('issued','partially_paid','overdue') AND deleted_at IS NULL";
 			$stats['outstanding_fees_minor'] = (int) ( $session_id ? $wpdb->get_var( $wpdb->prepare( $query_out . ' AND academic_session_id = %d', $session_id ) ) : $wpdb->get_var( $query_out ) );
@@ -181,14 +181,14 @@ final class DashboardService {
 
 		$pa_adm   = 0;
 		$pa_staff = 0;
-		if ( $is_admin || nexora_user_can( $user_id, 'admissions.approve' ) ) {
+		if ( $is_admin || codeclove_user_can( $user_id, 'admissions.approve' ) ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$pa_adm = (int) $wpdb->get_var(
 				'SELECT COUNT(*) FROM ' . Schema::applications() . " WHERE status = 'under_review' AND deleted_at IS NULL"
 			);
 			// phpcs:enable
 		}
-		if ( $is_admin || nexora_user_can( $user_id, 'staff_applications.approve' ) ) {
+		if ( $is_admin || codeclove_user_can( $user_id, 'staff_applications.approve' ) ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$pa_staff = (int) $wpdb->get_var(
 				'SELECT COUNT(*) FROM ' . Schema::staff_apps() . " WHERE status = 'under_review' AND deleted_at IS NULL"
@@ -198,7 +198,7 @@ final class DashboardService {
 
 		// ── Today at a Glance ──────────────────────────────────────────────────
 
-		if ( $is_admin || nexora_user_can( $user_id, 'attendance.view' ) ) {
+		if ( $is_admin || codeclove_user_can( $user_id, 'attendance.view' ) ) {
 			$today = current_time( 'Y-m-d' );
 
 			$query_att  = 'SELECT COUNT(*) AS total, SUM(CASE WHEN status IN (\'present\',\'late\',\'half_day\') THEN 1 ELSE 0 END) AS present FROM ' . Schema::attendance() . ' WHERE attendance_date = %s AND deleted_at IS NULL';
@@ -230,7 +230,7 @@ final class DashboardService {
 
 		// Staff attendance for today — separate permission gate.
 		// ponytail: staff_attendance has no academic_session_id column — no session filter here.
-		if ( $is_admin || nexora_user_can( $user_id, 'staff_attendance.view' ) ) {
+		if ( $is_admin || codeclove_user_can( $user_id, 'staff_attendance.view' ) ) {
 			$today = $today ?? current_time( 'Y-m-d' );
 
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
@@ -259,7 +259,7 @@ final class DashboardService {
 		}
 		// ── Pending Approvals breakdown (for non-attendance users) ─────────────
 
-		if ( $is_admin || nexora_user_can( $user_id, 'admissions.approve' ) || nexora_user_can( $user_id, 'staff_applications.approve' ) ) {
+		if ( $is_admin || codeclove_user_can( $user_id, 'admissions.approve' ) || codeclove_user_can( $user_id, 'staff_applications.approve' ) ) {
 			$stats['pending_approvals'] = [
 				'admissions' => $pa_adm,
 				'staff_apps' => $pa_staff,
@@ -269,24 +269,24 @@ final class DashboardService {
 
 		// ── Trend Charts ───────────────────────────────────────────────────────
 
-		if ( $is_admin || nexora_user_can( $user_id, 'admissions.view' ) ) {
+		if ( $is_admin || codeclove_user_can( $user_id, 'admissions.view' ) ) {
 			$stats['admissions_trend'] = $this->admissions_trend( $session_id, $date_from, $date_to, $range );
 		}
 
-		if ( ( $is_admin || nexora_user_can( $user_id, 'finance.view' ) ) && $session_id ) {
+		if ( ( $is_admin || codeclove_user_can( $user_id, 'finance.view' ) ) && $session_id ) {
 			$stats['finance_trend'] = $this->finance_trend( $session_id, $date_from, $date_to, $range );
 		}
 
-		if ( $is_admin || nexora_user_can( $user_id, 'attendance.view' ) ) {
+		if ( $is_admin || codeclove_user_can( $user_id, 'attendance.view' ) ) {
 			$stats['attendance_trend'] = $this->attendance_trend( $session_id, $date_from, $date_to );
 		}
 
 		// ── Recent Audit Events ────────────────────────────────────────────────
 
 		if ( $is_admin
-			|| nexora_user_can( $user_id, 'students.view' )
-			|| nexora_user_can( $user_id, 'admissions.view' )
-			|| nexora_user_can( $user_id, 'finance.view' ) ) {
+			|| codeclove_user_can( $user_id, 'students.view' )
+			|| codeclove_user_can( $user_id, 'admissions.view' )
+			|| codeclove_user_can( $user_id, 'finance.view' ) ) {
 			$stats['recent_events'] = $this->recent_events( $user_id, $is_admin );
 		}
 
@@ -296,7 +296,7 @@ final class DashboardService {
 			$stats['setup_checklist'] = $this->setup_checklist( $session_id );
 		}
 
-		// ── Current user's Nexora role name ───────────────────────────────────
+		// ── Current user's CodeClove role name ───────────────────────────────────
 
 		$stats['user_role'] = $this->user_role_name( $user_id );
 
@@ -601,7 +601,7 @@ final class DashboardService {
 	 * Formats minor currency units according to school localization settings.
 	 */
 	private function format_currency_amount( int $minor ): string {
-		$settings = get_option( 'nexora_settings', [] );
+		$settings = get_option( 'codeclove_settings', [] );
 		$loc      = $settings['localization'] ?? [];
 		$code     = strtoupper( (string) ( $loc['currency'] ?? 'INR' ) );
 		$symbol   = match ( $code ) {
@@ -856,7 +856,7 @@ final class DashboardService {
 		$has_admission   = (bool) $wpdb->get_var( 'SELECT id FROM ' . Schema::applications() . ' WHERE deleted_at IS NULL LIMIT 1' );
 		// phpcs:enable
 
-		$settings   = get_option( 'nexora_settings', [] );
+		$settings   = get_option( 'codeclove_settings', [] );
 		$has_preset = ! empty( $settings['education_system']['preset'] );
 
 		return [
@@ -869,7 +869,7 @@ final class DashboardService {
 	}
 
 	/**
-	 * Returns the display name of the user's first Nexora role.
+	 * Returns the display name of the user's first CodeClove role.
 	 *
 	 * @param int $user_id WordPress user ID.
 	 * @return string|null

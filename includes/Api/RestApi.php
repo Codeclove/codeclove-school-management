@@ -2,15 +2,15 @@
 /**
  * REST API registration.
  *
- * Registers the Nexora REST API namespace and discovers all module controllers.
+ * Registers the CodeClove REST API namespace and discovers all module controllers.
  * Each module controller is responsible for registering its own routes.
  *
- * @package Nexora\Api
+ * @package CodeClove\Api
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Api;
+namespace CodeClove\Api;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -23,9 +23,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class RestApi {
 
 	/**
-	 * The Nexora REST API namespace and version.
+	 * The CodeClove REST API namespace and version.
 	 */
-	public const NAMESPACE = 'nexora/v1';
+	public const NAMESPACE = 'codeclove/v1';
 
 	/**
 	 * Registers all module REST routes.
@@ -43,56 +43,57 @@ final class RestApi {
 	 * Adding a new module = instantiate its controller here.
 	 * Order is not significant for REST registration.
 	 *
-	 * @return BaseController[]
+	 * @return object[]
 	 */
 	private function get_controllers(): array {
-		$controllers = [
+		$candidates = [
 			// Dashboard
-			new \Nexora\Modules\Dashboard\DashboardController(),
+			'\CodeClove\Modules\Dashboard\DashboardController',
 
 			// Activity Logs
-			new \Nexora\Modules\Activity\ActivityController(),
+			'\CodeClove\Modules\Activity\ActivityController',
 
 			// Media Uploads
-			new \Nexora\Modules\Media\MediaController(),
+			'\CodeClove\Modules\Media\MediaController',
 
 			// Settings
-			new \Nexora\Modules\Settings\SettingsController(),
+			'\CodeClove\Modules\Settings\SettingsController',
 
 			// Academics
-			new \Nexora\Modules\Academics\AcademicsController(),
+			'\CodeClove\Modules\Academics\AcademicsController',
 
 			// Roles
-			new \Nexora\Modules\Roles\RolesController(),
+			'\CodeClove\Modules\Roles\RolesController',
 
 			// Admissions
-			new \Nexora\Modules\Admissions\AdmissionsController(),
+			'\CodeClove\Modules\Admissions\AdmissionsController',
 
 			// Students
-			new \Nexora\Modules\Students\StudentsController(),
+			'\CodeClove\Modules\Students\StudentsController',
 
 			// Staff
-			new \Nexora\Modules\Staff\StaffController(),
-			new \Nexora\Modules\Staff\MeController(),
+			'\CodeClove\Modules\Staff\StaffController',
+			'\CodeClove\Modules\Staff\MeController',
 
 			// Attendance
-			new \Nexora\Modules\Attendance\AttendanceController(),
+			'\CodeClove\Modules\Attendance\AttendanceController',
 
 			// Finance
-			new \Nexora\Modules\Finance\FinanceController(),
+			'\CodeClove\Modules\Finance\FinanceController',
 
 			// Student & Guardian Portal Module
-			new \Nexora\Modules\Portal\PortalController(),
+			'\CodeClove\Modules\Portal\PortalController',
+
+			// Optional / Pro modules
+			'\CodeClove\Modules\Notifications\NotificationsController',
+			'\CodeClove\Modules\Promotion\PromotionController',
+			'\CodeClove\Modules\Timetable\TimetableController',
+			'\CodeClove\Api\DevController',
 		];
 
-		// Optional / Pro modules — dynamically discovered if classes exist.
-		$optional = [
-			\Nexora\Modules\Notifications\NotificationsController::class,
-			\Nexora\Modules\Promotion\PromotionController::class,
-			\Nexora\Modules\Timetable\TimetableController::class,
-			\Nexora\Api\DevController::class,
-		];
-		foreach ( $optional as $class ) {
+		$controllers = [];
+
+		foreach ( $candidates as $class ) {
 			if ( class_exists( $class ) ) {
 				$controllers[] = new $class();
 			}

@@ -5,12 +5,12 @@
  * All developer seeders must implement this interface to support orchestration
  * by DevSeeder.
  *
- * @package Nexora\Database
+ * @package CodeClove\Database
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Database;
+namespace CodeClove\Database;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {

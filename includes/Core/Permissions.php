@@ -1,9 +1,9 @@
 <?php
 /**
- * Nexora RBAC permission checker.
+ * CodeClove RBAC permission checker.
  *
  * Provides a global helper function and a static class for checking whether
- * a WordPress user has a given Nexora permission key.
+ * a WordPress user has a given CodeClove permission key.
  *
  * Permission keys follow the {area}.{action} dot-notation convention
  * defined in docs/PERMISSIONS.md, e.g.:
@@ -13,19 +13,19 @@
  *
  * WordPress administrators always have access (admin recovery mechanism).
  *
- * @package Nexora\Core
+ * @package CodeClove\Core
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Core;
+namespace CodeClove\Core;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Database\Schema;
+use CodeClove\Database\Schema;
 
 /**
  * Class Permissions
@@ -49,7 +49,7 @@ final class Permissions {
 	// ─── Public API ──────────────────────────────────────────────────────────
 
 	/**
-	 * Checks whether a user has a given Nexora permission.
+	 * Checks whether a user has a given CodeClove permission.
 	 *
 	 * The cache stores per-key results. A '*' sentinel key is stored in the
 	 * cache when the user is an Owner (wildcard) so that all subsequent checks

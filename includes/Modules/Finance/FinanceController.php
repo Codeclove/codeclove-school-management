@@ -5,21 +5,21 @@
  * Exposes REST routes to manage fee types, student invoices,
  * manual payments, and fetch dashboard metrics.
  *
- * @package Nexora\Modules\Finance
+ * @package CodeClove\Modules\Finance
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Finance;
+namespace CodeClove\Modules\Finance;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\BaseController;
-use Nexora\Database\Schema;
-use Nexora\Shared\AuditLogger;
+use CodeClove\Api\BaseController;
+use CodeClove\Database\Schema;
+use CodeClove\Shared\AuditLogger;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -47,7 +47,7 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_summary' ],
-					'permission_callback' => $this->permission( 'finance.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'finance.view', $request ); },
 				],
 			]
 		);
@@ -59,7 +59,7 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_defaulters_report' ],
-					'permission_callback' => $this->permission( 'finance.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'finance.view', $request ); },
 				],
 			]
 		);
@@ -72,12 +72,12 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_fee_types' ],
-					'permission_callback' => $this->permission( 'fee_types.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'fee_types.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'create_fee_type' ],
-					'permission_callback' => $this->permission( 'fee_types.add' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'fee_types.add', $request ); },
 				],
 			]
 		);
@@ -89,17 +89,17 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_fee_type' ],
-					'permission_callback' => $this->permission( 'fee_types.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'fee_types.view', $request ); },
 				],
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'update_fee_type' ],
-					'permission_callback' => $this->permission( 'fee_types.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'fee_types.edit', $request ); },
 				],
 				[
 					'methods'             => 'DELETE',
 					'callback'            => [ $this, 'delete_fee_type' ],
-					'permission_callback' => $this->permission( 'fee_types.delete' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'fee_types.delete', $request ); },
 				],
 			]
 		);
@@ -111,12 +111,12 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_class_rates' ],
-					'permission_callback' => $this->permission( 'fee_types.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'fee_types.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'upsert_class_rate' ],
-					'permission_callback' => $this->permission( 'fee_types.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'fee_types.edit', $request ); },
 				],
 			]
 		);
@@ -127,7 +127,7 @@ final class FinanceController extends BaseController {
 			[
 				'methods'             => 'DELETE',
 				'callback'            => [ $this, 'delete_class_rate' ],
-				'permission_callback' => $this->permission( 'fee_types.edit' ),
+				'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'fee_types.edit', $request ); },
 			]
 		);
 
@@ -137,7 +137,7 @@ final class FinanceController extends BaseController {
 			[
 				'methods'             => 'GET',
 				'callback'            => [ $this, 'resolve_fee_amount' ],
-				'permission_callback' => $this->permission( 'invoices.view' ),
+				'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'invoices.view', $request ); },
 			]
 		);
 
@@ -149,12 +149,12 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_invoices' ],
-					'permission_callback' => $this->permission( 'invoices.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'invoices.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'create_invoice' ],
-					'permission_callback' => $this->permission( 'invoices.add' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'invoices.add', $request ); },
 				],
 			]
 		);
@@ -166,7 +166,7 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'bulk_invoices_action' ],
-					'permission_callback' => $this->permission( 'invoices.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'invoices.edit', $request ); },
 				],
 			]
 		);
@@ -178,12 +178,12 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_invoice' ],
-					'permission_callback' => $this->permission( 'invoices.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'invoices.view', $request ); },
 				],
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'update_invoice' ],
-					'permission_callback' => $this->permission( 'invoices.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'invoices.edit', $request ); },
 				],
 			]
 		);
@@ -196,7 +196,7 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'cancel_invoice' ],
-					'permission_callback' => $this->permission( 'invoices.delete' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'invoices.delete', $request ); },
 				],
 			]
 		);
@@ -208,7 +208,7 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'void_invoice' ],
-					'permission_callback' => $this->permission( 'invoices.delete' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'invoices.delete', $request ); },
 				],
 			]
 		);
@@ -220,7 +220,7 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'issue_invoice' ],
-					'permission_callback' => $this->permission( 'invoices.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'invoices.edit', $request ); },
 				],
 			]
 		);
@@ -232,7 +232,7 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'add_line_item' ],
-					'permission_callback' => $this->permission( 'invoices.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'invoices.edit', $request ); },
 				],
 			]
 		);
@@ -244,12 +244,12 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'update_line_item' ],
-					'permission_callback' => $this->permission( 'invoices.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'invoices.edit', $request ); },
 				],
 				[
 					'methods'             => 'DELETE',
 					'callback'            => [ $this, 'delete_line_item' ],
-					'permission_callback' => $this->permission( 'invoices.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'invoices.edit', $request ); },
 				],
 			]
 		);
@@ -262,12 +262,12 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_payments' ],
-					'permission_callback' => $this->permission( 'payments.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'payments.view', $request ); },
 				],
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'record_payment' ],
-					'permission_callback' => $this->permission( 'payments.add' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'payments.add', $request ); },
 				],
 			]
 		);
@@ -280,7 +280,7 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_payment' ],
-					'permission_callback' => $this->permission( 'payments.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'payments.view', $request ); },
 				],
 			]
 		);
@@ -293,7 +293,7 @@ final class FinanceController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'cancel_payment' ],
-					'permission_callback' => $this->permission( 'payments.delete' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'payments.delete', $request ); },
 				],
 			]
 		);
@@ -309,11 +309,11 @@ final class FinanceController extends BaseController {
 		if ( ! empty( $session_id ) ) {
 			$session_id = (int) $session_id;
 		} else {
-			$session_id = ( new \Nexora\Modules\Academics\Sessions\SessionsService() )->get_current_session_id();
+			$session_id = ( new \CodeClove\Modules\Academics\Sessions\SessionsService() )->get_current_session_id();
 		}
 
 		if ( ! $session_id ) {
-			return $this->error( 'missing_session', __( 'No academic session specified and no active session configured.', 'nexora-school-management' ), 400 );
+			return $this->error( 'missing_session', __( 'No academic session specified and no active session configured.', 'codeclove-school-management' ), 400 );
 		}
 
 		$range = $request->get_param( 'range' ) ?: 'month';
@@ -332,7 +332,7 @@ final class FinanceController extends BaseController {
 		if ( ! empty( $session_id ) ) {
 			$session_id = (int) $session_id;
 		} else {
-			$session_id = ( new \Nexora\Modules\Academics\Sessions\SessionsService() )->get_current_session_id();
+			$session_id = ( new \CodeClove\Modules\Academics\Sessions\SessionsService() )->get_current_session_id();
 		}
 
 		if ( ! $session_id ) {
@@ -392,7 +392,7 @@ final class FinanceController extends BaseController {
 		$result = $this->service->get_fee_type_by_id( $id );
 
 		if ( empty( $result ) ) {
-			return $this->error( 'not_found', __( 'Fee type not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'Fee type not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $result );
@@ -515,7 +515,7 @@ final class FinanceController extends BaseController {
 		$invoice = $this->service->get_invoice( $id );
 
 		if ( ! $invoice ) {
-			return $this->error( 'not_found', __( 'Invoice not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'Invoice not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $invoice );
@@ -642,7 +642,7 @@ final class FinanceController extends BaseController {
 		$payment = $this->service->get_payment( $id );
 
 		if ( ! $payment ) {
-			return $this->error( 'not_found', __( 'Payment not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'Payment not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $payment );
@@ -712,7 +712,7 @@ final class FinanceController extends BaseController {
 		$amount_minor = (int) ( $body['amount_minor'] ?? round( (float) ( $body['amount'] ?? 0 ) * 100 ) );
 
 		if ( ! $unit_id ) {
-			return $this->error( 'missing_unit', __( 'academic_unit_id is required.', 'nexora-school-management' ), 400 );
+			return $this->error( 'missing_unit', __( 'academic_unit_id is required.', 'codeclove-school-management' ), 400 );
 		}
 
 		$result = $this->service->upsert_class_rate( $id, $unit_id, $amount_minor );

@@ -3,21 +3,21 @@
  * Audit logger.
  *
  * Provides a simple, structured audit trail for important actions across
- * all Nexora modules. Uses the admission_logs table as a general-purpose
- * audit log in Phase 1; dedicated per-module log tables are used for
- * module-specific events from Phase 5 onwards.
+ * all CodeClove modules.
  *
- * @package Nexora\Shared
+ * @package CodeClove\Shared
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Shared;
+namespace CodeClove\Shared;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+use CodeClove\Database\Schema;
 
 /**
  * Class AuditLogger
@@ -39,9 +39,11 @@ final class AuditLogger {
 
 		global $wpdb;
 
+		$schema_class = Schema::class;
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->insert(
-			\Nexora\Database\Schema::app_logs(),
+			$schema_class::app_logs(),
 			[
 				'event_type'     => $event_type,
 				'actor_type'     => $actor_type,

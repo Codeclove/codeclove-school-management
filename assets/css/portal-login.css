@@ -1,16 +1,16 @@
 /**
- * Nexora Student & Guardian Portal - Login Card Styles
+ * CodeClove Student & Guardian Portal - Login Card Styles
  *
- * @package Nexora\Modules\Portal
+ * @package CodeClove\Modules\Portal
  */
 
 :root {
-	--nexora-brand: #4f46e5;
-	--nexora-brand-hover: #4338ca;
-	--nexora-brand-light: #eef2ff;
+	--codeclove-brand: #4f46e5;
+	--codeclove-brand-hover: #4338ca;
+	--codeclove-brand-light: #eef2ff;
 }
 
-.nexora-portal-login-wrap {
+.codeclove-portal-login-wrap {
 	max-width: 440px;
 	width: 100%;
 	margin: 32px auto 48px;
@@ -24,34 +24,34 @@
 	box-sizing: border-box;
 }
 
-.nexora-portal-login-wrap * {
+.codeclove-portal-login-wrap * {
 	box-sizing: border-box;
 }
 
-.nexora-portal-brand {
+.codeclove-portal-brand {
 	text-align: center;
 	margin-bottom: 28px;
 }
 
-.nexora-portal-logo {
+.codeclove-portal-logo {
 	width: 52px;
 	height: 52px;
 	margin: 0 auto 12px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: var(--nexora-brand-light);
+	background: var(--codeclove-brand-light);
 	border-radius: 12px;
 	padding: 8px;
 }
 
-.nexora-portal-logo img {
+.codeclove-portal-logo img {
 	width: 100%;
 	height: 100%;
 	object-fit: contain;
 }
 
-.nexora-portal-title {
+.codeclove-portal-title {
 	margin: 0 0 6px;
 	font-size: 1.35rem;
 	font-weight: 700;
@@ -59,14 +59,14 @@
 	letter-spacing: -0.02em;
 }
 
-.nexora-portal-subtitle {
+.codeclove-portal-subtitle {
 	margin: 0;
 	font-size: 0.875rem;
 	color: #64748b;
 	line-height: 1.4;
 }
 
-.nexora-portal-alert {
+.codeclove-portal-alert {
 	padding: 12px 14px;
 	border-radius: 8px;
 	font-size: 0.85rem;
@@ -79,11 +79,11 @@
 	gap: 8px;
 }
 
-.nexora-login-field {
+.codeclove-login-field {
 	margin-bottom: 18px;
 }
 
-.nexora-login-label {
+.codeclove-login-label {
 	display: block;
 	font-size: 0.8125rem;
 	font-weight: 600;
@@ -91,7 +91,7 @@
 	margin-bottom: 6px;
 }
 
-.nexora-login-input {
+.codeclove-login-input {
 	width: 100%;
 	padding: 10px 14px;
 	border: 1px solid #cbd5e1;
@@ -103,12 +103,12 @@
 	background: #ffffff;
 }
 
-.nexora-login-input:focus {
-	border-color: var(--nexora-brand);
-	box-shadow: 0 0 0 3px var(--nexora-brand-light);
+.codeclove-login-input:focus {
+	border-color: var(--codeclove-brand);
+	box-shadow: 0 0 0 3px var(--codeclove-brand-light);
 }
 
-.nexora-login-row {
+.codeclove-login-row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -116,7 +116,7 @@
 	font-size: 0.8125rem;
 }
 
-.nexora-login-remember {
+.codeclove-login-remember {
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -125,28 +125,28 @@
 	user-select: none;
 }
 
-.nexora-login-remember input[type="checkbox"] {
+.codeclove-login-remember input[type="checkbox"] {
 	width: 15px;
 	height: 15px;
-	accent-color: var(--nexora-brand);
+	accent-color: var(--codeclove-brand);
 	margin: 0;
 	cursor: pointer;
 }
 
-.nexora-login-forgot {
-	color: var(--nexora-brand);
+.codeclove-login-forgot {
+	color: var(--codeclove-brand);
 	text-decoration: none;
 	font-weight: 500;
 }
 
-.nexora-login-forgot:hover {
+.codeclove-login-forgot:hover {
 	text-decoration: underline;
 }
 
-.nexora-portal-submit-btn {
+.codeclove-portal-submit-btn {
 	width: 100%;
 	padding: 11px 18px;
-	background: var(--nexora-brand);
+	background: var(--codeclove-brand);
 	color: #ffffff;
 	font-weight: 600;
 	font-size: 0.925rem;
@@ -156,15 +156,15 @@
 	transition: background-color 0.15s ease, transform 0.05s ease;
 }
 
-.nexora-portal-submit-btn:hover {
-	background: var(--nexora-brand-hover);
+.codeclove-portal-submit-btn:hover {
+	background: var(--codeclove-brand-hover);
 }
 
-.nexora-portal-submit-btn:active {
+.codeclove-portal-submit-btn:active {
 	transform: scale(0.99);
 }
 
-.nexora-portal-footer {
+.codeclove-portal-footer {
 	margin-top: 24px;
 	text-align: center;
 	font-size: 0.775rem;

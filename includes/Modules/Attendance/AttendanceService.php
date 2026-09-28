@@ -4,20 +4,20 @@
  *
  * Handles database operations and business logic for student and staff attendance.
  *
- * @package Nexora\Modules\Attendance
+ * @package CodeClove\Modules\Attendance
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Attendance;
+namespace CodeClove\Modules\Attendance;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Database\Schema;
-use Nexora\Database\Transaction;
+use CodeClove\Database\Schema;
+use CodeClove\Database\Transaction;
 use WP_Error;
 
 /**
@@ -216,9 +216,9 @@ final class AttendanceService {
 		}
 
 		foreach ( $marked_students as $marked ) {
-			do_action( 'nexora_student_attendance_marked', $marked['student_id'], $date, $marked['status'] );
+			do_action( 'codeclove_student_attendance_marked', $marked['student_id'], $date, $marked['status'] );
 		}
-		do_action( 'nexora_attendance_saved', $unit_id, $group_id, $date, $user_id );
+		do_action( 'codeclove_attendance_saved', $unit_id, $group_id, $date, $user_id );
 
 		return true;
 	}
@@ -296,7 +296,7 @@ final class AttendanceService {
 				$row['status'] = 'absent';
 				$reason        = $absences[ $row['staff_member_id'] ] ?? '';
 				/* translators: %s: absence reason */
-				$row['note']   = $reason ? sprintf( __( 'Auto-marked: absent on timetable (%s)', 'nexora-school-management' ), $reason ) : __( 'Auto-marked: absent on timetable', 'nexora-school-management' );
+				$row['note']   = $reason ? sprintf( __( 'Auto-marked: absent on timetable (%s)', 'codeclove-school-management' ), $reason ) : __( 'Auto-marked: absent on timetable', 'codeclove-school-management' );
 			} else {
 				$row['status'] = $row['status'] ?: null;
 			}

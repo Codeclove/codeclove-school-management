@@ -2,20 +2,20 @@
 /**
  * REST API Controller for /me (My Account).
  *
- * @package Nexora\Modules\Staff
+ * @package CodeClove\Modules\Staff
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Staff;
+namespace CodeClove\Modules\Staff;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\BaseController;
-use Nexora\Database\Schema;
+use CodeClove\Api\BaseController;
+use CodeClove\Database\Schema;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -68,7 +68,7 @@ final class MeController extends BaseController {
 		if ( ! is_user_logged_in() ) {
 			return false;
 		}
-		if ( class_exists( '\Nexora\Licensing\License' ) && ! \Nexora\Licensing\License::verified() ) {
+		if ( class_exists( '\CodeClove\Licensing\License' ) && ! \CodeClove\Licensing\License::verified() ) {
 			return false;
 		}
 
@@ -81,7 +81,7 @@ final class MeController extends BaseController {
 	}
 
 	/**
-	 * Resolves the Nexora staff_member ID for the current WP user.
+	 * Resolves the CodeClove staff_member ID for the current WP user.
 	 */
 	private function get_current_staff_id(): ?int {
 		global $wpdb;
@@ -102,12 +102,12 @@ final class MeController extends BaseController {
 	public function get_me(): WP_REST_Response|WP_Error {
 		$staff_id = $this->get_current_staff_id();
 		if ( ! $staff_id ) {
-			return $this->error( 'not_found', __( 'No linked staff profile found for this user.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'No linked staff profile found for this user.', 'codeclove-school-management' ), 404 );
 		}
 
 		$item = $this->service->get_staff_member( $staff_id );
 		if ( ! $item ) {
-			return $this->error( 'not_found', __( 'Staff profile details not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'Staff profile details not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $item );
@@ -119,7 +119,7 @@ final class MeController extends BaseController {
 	public function update_me( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$staff_id = $this->get_current_staff_id();
 		if ( ! $staff_id ) {
-			return $this->error( 'not_found', __( 'No linked staff profile found for this user.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'No linked staff profile found for this user.', 'codeclove-school-management' ), 404 );
 		}
 
 		$body = $this->json_body( $request );
@@ -133,14 +133,14 @@ final class MeController extends BaseController {
 		// Password update requires current password check
 		if ( ! empty( $body['new_password'] ) ) {
 			if ( empty( $body['current_password'] ) ) {
-				return $this->error( 'validation_failed', __( 'Current password is required to set a new password.', 'nexora-school-management' ), 400 );
+				return $this->error( 'validation_failed', __( 'Current password is required to set a new password.', 'codeclove-school-management' ), 400 );
 			}
 			$wp_user = get_userdata( get_current_user_id() );
 			if ( ! $wp_user || ! wp_check_password( $body['current_password'], $wp_user->user_pass, get_current_user_id() ) ) {
-				return $this->error( 'validation_failed', __( 'Incorrect current password.', 'nexora-school-management' ), 400 );
+				return $this->error( 'validation_failed', __( 'Incorrect current password.', 'codeclove-school-management' ), 400 );
 			}
 			if ( strlen( $body['new_password'] ) < 6 ) {
-				return $this->error( 'validation_failed', __( 'New password must be at least 6 characters.', 'nexora-school-management' ), 400 );
+				return $this->error( 'validation_failed', __( 'New password must be at least 6 characters.', 'codeclove-school-management' ), 400 );
 			}
 
 			// Map it to 'password' for StaffService update flow

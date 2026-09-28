@@ -4,19 +4,19 @@
  *
  * Handles fetching, filtering, and pagination of audit logs.
  *
- * @package Nexora\Modules\Activity
+ * @package CodeClove\Modules\Activity
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Activity;
+namespace CodeClove\Modules\Activity;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Database\Schema;
+use CodeClove\Database\Schema;
 
 /**
  * Class ActivityService
