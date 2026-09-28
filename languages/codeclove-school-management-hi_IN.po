@@ -11,63 +11,63 @@ msgstr ""
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Language: \n"
 "X-Generator: WP-CLI 2.12.0\n"
-"X-Domain: nexora-school-management\n"
+"X-Domain: codeclove-school-management\n"
 
 #. Plugin Name of the plugin
 #. Author of the plugin
-#: nexora.php
+#: codeclove-school-management.php
 #: includes/Core/Assets.php:114
 #: includes/Core/Plugin.php:145
 #: includes/Core/Plugin.php:146
-msgid "Nexora"
-msgstr "Nexora"
+msgid "CodeClove"
+msgstr "CodeClove"
 
 #. Plugin URI of the plugin
 #. Author URI of the plugin
-#: nexora.php
-msgid "https://codeclove.com/plugins/nexora/"
-msgstr "https://codeclove.com/plugins/nexora/"
+#: codeclove-school-management.php
+msgid "https://codeclove.com/"
+msgstr "https://codeclove.com/"
 
 #. Description of the plugin
-#: nexora.php
+#: codeclove-school-management.php
 msgid "A comprehensive, country-aware school management system for educational institutions. Covers academics, admissions, students, staff, attendance, finance, and more."
 msgstr "शैक्षणिक संस्थानों के लिए एक व्यापक, देश-अनुकूल स्कूल प्रबंधन प्रणाली। इसमें शिक्षा, प्रवेश, छात्र, कर्मचारी, उपस्थिति, वित्त और बहुत कुछ शामिल है।"
 
 #: includes/Core/Assets.php:47
-msgid "Nexora is currently disabled. No valid license is active. Please contact your site administrator."
-msgstr "Nexora वर्तमान में अक्षम है। कोई मान्य लाइसेंस सक्रिय नहीं है। कृपया अपने साइट व्यवस्थापक से संपर्क करें।"
+msgid "CodeClove is currently disabled. No valid license is active. Please contact your site administrator."
+msgstr "CodeClove वर्तमान में अक्षम है। कोई मान्य लाइसेंस सक्रिय नहीं है। कृपया अपने साइट व्यवस्थापक से संपर्क करें।"
 
 #: includes/Core/Assets.php:48
 msgid "License Required"
 msgstr "लाइसेंस आवश्यक है"
 
 #: includes/Core/Assets.php:61
-msgid "You do not have permission to access the Nexora administration panel."
-msgstr "आपके पास Nexora व्यवस्थापक पैनल तक पहुँचने की अनुमति नहीं है।"
+msgid "You do not have permission to access the CodeClove administration panel."
+msgstr "आपके पास CodeClove व्यवस्थापक पैनल तक पहुँचने की अनुमति नहीं है।"
 
 #: includes/Core/Assets.php:62
 msgid "Access Denied"
 msgstr "पहुँच अस्वीकृत"
 
 #: includes/Core/Assets.php:88
-msgid "Nexora admin bundle not found. Please run \"npm run build\" in the admin directory."
-msgstr "Nexora एडमिन बंडल नहीं मिला। कृपया admin निर्देशिका में \\\"npm run build\\\" चलाएं।"
+msgid "CodeClove admin bundle not found. Please run \"npm run build\" in the admin directory."
+msgstr "CodeClove एडमिन बंडल नहीं मिला। कृपया admin निर्देशिका में \\\"npm run build\\\" चलाएं।"
 
 #: includes/Core/Plugin.php:61
-msgid "Nexora Staff"
-msgstr "Nexora कर्मचारी"
+msgid "CodeClove Staff"
+msgstr "CodeClove कर्मचारी"
 
 #: includes/Core/Plugin.php:62
-msgid "Nexora Guardian"
-msgstr "Nexora अभिभावक"
+msgid "CodeClove Guardian"
+msgstr "CodeClove अभिभावक"
 
 #: includes/Core/Plugin.php:63
-msgid "Nexora Student"
-msgstr "Nexora छात्र"
+msgid "CodeClove Student"
+msgstr "CodeClove छात्र"
 
 #: includes/Core/Plugin.php:178
-msgid "No active license found. Nexora is fully disabled until a license is activated."
-msgstr "कोई सक्रिय लाइसेंस नहीं मिला। लाइसेंस सक्रिय होने तक Nexora पूरी तरह से अक्षम है।"
+msgid "No active license found. CodeClove is fully disabled until a license is activated."
+msgstr "कोई सक्रिय लाइसेंस नहीं मिला। लाइसेंस सक्रिय होने तक CodeClove पूरी तरह से अक्षम है।"
 
 #: includes/Core/Plugin.php:180
 msgid "Activate your license"
@@ -141,8 +141,8 @@ msgid "Not activated"
 msgstr "सक्रिय नहीं है"
 
 #: includes/Licensing/LicensePage.php:127
-msgid "Nexora License"
-msgstr "Nexora लाइसेंस"
+msgid "CodeClove License"
+msgstr "CodeClove लाइसेंस"
 
 #: includes/Licensing/LicensePage.php:136
 msgid "License Key"
@@ -1043,8 +1043,8 @@ msgid "Sign In to Portal"
 msgstr "पोर्टल में साइन इन करें"
 
 #: includes/Modules/Portal/PortalShortcode.php:459
-msgid "Protected by Nexora School Management"
-msgstr "Nexora स्कूल प्रबंधन द्वारा सुरक्षित"
+msgid "Protected by CodeClove School Management"
+msgstr "CodeClove स्कूल प्रबंधन द्वारा सुरक्षित"
 
 #: includes/Modules/Promotion/PromotionController.php:90
 msgid "Session ID parameter is required."
@@ -7109,8 +7109,8 @@ msgstr "स्वीकृत करें और कनवर्ट करे�
 
 #: src/modules/students/AdmissionConvertPage.js:111
 #, js-format
-msgid "Confirm session placement and class section assignment. Nexora will generate permanent %s credentials."
-msgstr "सत्र प्लेसमेंट और कक्षा सेक्शन आवंटन की पुष्टि करें। Nexora स्थायी %s क्रेडेंशियल्स उत्पन्न करेगा।"
+msgid "Confirm session placement and class section assignment. CodeClove will generate permanent %s credentials."
+msgstr "सत्र प्लेसमेंट और कक्षा सेक्शन आवंटन की पुष्टि करें। CodeClove स्थायी %s क्रेडेंशियल्स उत्पन्न करेगा।"
 
 #: src/modules/students/AdmissionConvertPage.js:111
 msgid "Placement Configuration"
@@ -10154,7 +10154,7 @@ msgid "Delivery Configuration"
 msgstr "डिलीवरी कॉन्फ़िगरेशन"
 
 #: src/modules/settings/tabs/NotificationsTab.js:122
-msgid "Choose how Nexora routes outgoing school communications."
+msgid "Choose how CodeClove routes outgoing school communications."
 msgstr "चुनें कि नेक्सोरा आउटगोइंग स्कूल संचार को कैसे रूट करता है।"
 
 #: src/modules/settings/tabs/NotificationsTab.js:122
@@ -10467,7 +10467,7 @@ msgid "Enable SMS Notifications"
 msgstr "SMS सूचनाएं सक्षम करें"
 
 #: src/modules/settings/tabs/SmsNotificationsTab.js:121
-msgid "Allows Nexora to send real-time text message alerts to guardians."
+msgid "Allows CodeClove to send real-time text message alerts to guardians."
 msgstr "नेक्सोरा को अभिभावकों को रीयल-टाइम टेक्स्ट संदेश अलर्ट भेजने की अनुमति देता है।"
 
 #: src/modules/settings/tabs/SmsNotificationsTab.js:121
@@ -11965,8 +11965,8 @@ msgid "the school office"
 msgstr "स्कूल कार्यालय"
 
 #: src/modules/finance/PrintInvoiceSheet.js:68
-msgid "Generated via Nexora School Management System"
-msgstr "Nexora स्कूल प्रबंधन प्रणाली द्वारा जनरेट किया गया"
+msgid "Generated via CodeClove School Management System"
+msgstr "CodeClove स्कूल प्रबंधन प्रणाली द्वारा जनरेट किया गया"
 
 #: src/modules/finance/PrintPaymentReceipt.js:9
 msgid "UPI / QR"

@@ -5,20 +5,20 @@
  * Exposes REST routes to query, create, update, and transition status of:
  *   - Admissions Applications
  *
- * @package Nexora\Modules\Admissions
+ * @package CodeClove\Modules\Admissions
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Admissions;
+namespace CodeClove\Modules\Admissions;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\BaseController;
-use Nexora\Shared\AuditLogger;
+use CodeClove\Api\BaseController;
+use CodeClove\Shared\AuditLogger;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -72,7 +72,7 @@ final class AdmissionsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_applications' ],
-					'permission_callback' => $this->permission( 'admissions.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'admissions.view', $request ); },
 				],
 			]
 		);
@@ -84,7 +84,7 @@ final class AdmissionsController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'bulk_admissions_action' ],
-					'permission_callback' => $this->permission( 'admissions.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'admissions.edit', $request ); },
 				],
 			]
 		);
@@ -96,12 +96,12 @@ final class AdmissionsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_application' ],
-					'permission_callback' => $this->permission( 'admissions.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'admissions.view', $request ); },
 				],
 				[
 					'methods'             => 'PATCH',
 					'callback'            => [ $this, 'update_application' ],
-					'permission_callback' => $this->permission( 'admissions.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'admissions.edit', $request ); },
 				],
 			]
 		);
@@ -113,7 +113,7 @@ final class AdmissionsController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'update_application_status' ],
-					'permission_callback' => $this->permission( 'admissions.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'admissions.edit', $request ); },
 				],
 			]
 		);
@@ -125,7 +125,7 @@ final class AdmissionsController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'convert_application' ],
-					'permission_callback' => $this->permission( 'admissions.edit' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'admissions.edit', $request ); },
 				],
 			]
 		);
@@ -173,7 +173,7 @@ final class AdmissionsController extends BaseController {
 		$app = $this->service->get_application( $id );
 
 		if ( null === $app ) {
-			return $this->error( 'not_found', __( 'Admissions application not found.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'Admissions application not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->success( $app );
@@ -222,7 +222,7 @@ final class AdmissionsController extends BaseController {
 		}
 
 		if ( empty( $params['status'] ) ) {
-			return $this->error( 'validation_failed', __( 'Status parameter is required.', 'nexora-school-management' ), 400 );
+			return $this->error( 'validation_failed', __( 'Status parameter is required.', 'codeclove-school-management' ), 400 );
 		}
 
 		$to_status = sanitize_text_field( $params['status'] );
@@ -309,13 +309,13 @@ final class AdmissionsController extends BaseController {
 	 */
 	public function public_submit_application( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		if ( ! $this->check_rate_limit( 'admissions_public_submit', 15, 600 ) ) {
-			return $this->error( 'rate_limit_exceeded', __( 'Too many submission requests. Please try again later.', 'nexora-school-management' ), 429 );
+			return $this->error( 'rate_limit_exceeded', __( 'Too many submission requests. Please try again later.', 'codeclove-school-management' ), 429 );
 		}
 
-		$settings = get_option( 'nexora_settings', [] );
+		$settings = get_option( 'codeclove_settings', [] );
 		$enabled  = ! isset( $settings['admissions']['enable_public_form'] ) || ! empty( $settings['admissions']['enable_public_form'] );
 		if ( ! $enabled ) {
-			return $this->error( 'admissions_closed', __( 'Public admissions submissions are currently closed.', 'nexora-school-management' ), 403 );
+			return $this->error( 'admissions_closed', __( 'Public admissions submissions are currently closed.', 'codeclove-school-management' ), 403 );
 		}
 
 		$params = $request->get_json_params();
@@ -336,14 +336,14 @@ final class AdmissionsController extends BaseController {
 	 */
 	public function public_lookup_status( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		if ( ! $this->check_rate_limit( 'admissions_status_lookup', 20, 600 ) ) {
-			return $this->error( 'rate_limit_exceeded', __( 'Too many lookup requests. Please try again in a few minutes.', 'nexora-school-management' ), 429 );
+			return $this->error( 'rate_limit_exceeded', __( 'Too many lookup requests. Please try again in a few minutes.', 'codeclove-school-management' ), 429 );
 		}
 
 		$ref = $request->get_param( 'reference_number' ) ? sanitize_text_field( $request->get_param( 'reference_number' ) ) : '';
 		$dob = $request->get_param( 'student_date_of_birth' ) ? sanitize_text_field( $request->get_param( 'student_date_of_birth' ) ) : '';
 
 		if ( empty( $ref ) || empty( $dob ) ) {
-			return $this->error( 'validation_failed', __( 'Both reference number and student date of birth are required.', 'nexora-school-management' ), 400 );
+			return $this->error( 'validation_failed', __( 'Both reference number and student date of birth are required.', 'codeclove-school-management' ), 400 );
 		}
 
 		$result = $this->service->lookup_application_status( $ref, $dob );

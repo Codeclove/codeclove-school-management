@@ -2,24 +2,24 @@
 /**
  * Dashboard REST API controller.
  *
- * Single endpoint: GET /nexora/v1/dashboard/stats
+ * Single endpoint: GET /codeclove/v1/dashboard/stats
  * Returns only the stats the current user is permitted to see.
  * The permission_callback requires dashboard.view; individual
  * stat buckets are gated server-side by their own permissions.
  *
- * @package Nexora\Modules\Dashboard
+ * @package CodeClove\Modules\Dashboard
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Dashboard;
+namespace CodeClove\Modules\Dashboard;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\BaseController;
+use CodeClove\Api\BaseController;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -45,7 +45,7 @@ final class DashboardController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_stats' ],
-					'permission_callback' => $this->permission( 'dashboard.view' ),
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'dashboard.view', $request ); },
 				],
 			]
 		);

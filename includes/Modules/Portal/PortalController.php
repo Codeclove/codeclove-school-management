@@ -14,19 +14,19 @@
  * - /portal/documents (Admission documents)
  * - /portal/profile (Student and linked guardian details)
  *
- * @package Nexora\Modules\Portal
+ * @package CodeClove\Modules\Portal
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Portal;
+namespace CodeClove\Modules\Portal;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Api\BaseController;
+use CodeClove\Api\BaseController;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -288,7 +288,7 @@ final class PortalController extends BaseController {
 		if ( ! is_user_logged_in() ) {
 			return false;
 		}
-		if ( class_exists( '\Nexora\Licensing\License' ) && ! \Nexora\Licensing\License::verified() ) {
+		if ( class_exists( '\CodeClove\Licensing\License' ) && ! \CodeClove\Licensing\License::verified() ) {
 			return false;
 		}
 
@@ -312,11 +312,11 @@ final class PortalController extends BaseController {
 		}
 
 		if ( $student_id <= 0 ) {
-			return $this->error( 'not_found', __( 'No student profile found for this account.', 'nexora-school-management' ), 404 );
+			return $this->error( 'not_found', __( 'No student profile found for this account.', 'codeclove-school-management' ), 404 );
 		}
 
 		if ( ! $this->service->verify_student_access( $user_id, $student_id ) ) {
-			return $this->error( 'forbidden', __( 'You do not have access to this student.', 'nexora-school-management' ), 403 );
+			return $this->error( 'forbidden', __( 'You do not have access to this student.', 'codeclove-school-management' ), 403 );
 		}
 
 		return $student_id;

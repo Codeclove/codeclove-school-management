@@ -10,26 +10,26 @@ msgstr ""
 "POT-Creation-Date: 2026-09-25T20:27:47+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
-"X-Domain: nexora-school-management\n"
+"X-Domain: codeclove-school-management\n"
 
 #. Plugin Name of the plugin
-#: nexora.php
-msgid "Nexora Pro – School Management System"
+#: codeclove-school-management.php
+msgid "CodeClove School Management System Pro"
 msgstr ""
 
 #. Plugin URI of the plugin
 #. Author URI of the plugin
-#: nexora.php
-msgid "https://codeclove.com/plugins/nexora/"
+#: codeclove-school-management.php
+msgid "https://codeclove.com/"
 msgstr ""
 
 #. Description of the plugin
-#: nexora.php
+#: codeclove-school-management.php
 msgid "A comprehensive, country-aware school management system for educational institutions. Covers academics, admissions, students, staff, attendance, finance, and more."
 msgstr ""
 
 #. Author of the plugin
-#: nexora.php
+#: codeclove-school-management.php
 msgid "CodeClove"
 msgstr ""
 
@@ -39,7 +39,7 @@ msgid "Request body must be a JSON object."
 msgstr ""
 
 #: includes/Core/Assets.php:48
-msgid "Nexora is currently disabled. No valid license is active. Please contact your site administrator."
+msgid "CodeClove is currently disabled. No valid license is active. Please contact your site administrator."
 msgstr ""
 
 #: includes/Core/Assets.php:49
@@ -47,7 +47,7 @@ msgid "License Required"
 msgstr ""
 
 #: includes/Core/Assets.php:62
-msgid "You do not have permission to access the Nexora administration panel."
+msgid "You do not have permission to access the CodeClove administration panel."
 msgstr ""
 
 #: includes/Core/Assets.php:63
@@ -55,30 +55,30 @@ msgid "Access Denied"
 msgstr ""
 
 #: includes/Core/Assets.php:89
-msgid "Nexora admin bundle not found. Please run \"npm run build\" in the admin directory."
+msgid "CodeClove admin bundle not found. Please run \"npm run build\" in the admin directory."
 msgstr ""
 
 #: includes/Core/Assets.php:115
 #: includes/Core/Plugin.php:156
 #: includes/Core/Plugin.php:157
 #: src/layouts/Sidebar.js:135
-msgid "Nexora"
+msgid "CodeClove"
 msgstr ""
 
 #: includes/Core/Plugin.php:63
-msgid "Nexora Staff"
+msgid "CodeClove Staff"
 msgstr ""
 
 #: includes/Core/Plugin.php:64
-msgid "Nexora Guardian"
+msgid "CodeClove Guardian"
 msgstr ""
 
 #: includes/Core/Plugin.php:65
-msgid "Nexora Student"
+msgid "CodeClove Student"
 msgstr ""
 
 #: includes/Core/Plugin.php:189
-msgid "No active license found. Nexora is fully disabled until a license is activated."
+msgid "No active license found. CodeClove is fully disabled until a license is activated."
 msgstr ""
 
 #: includes/Core/Plugin.php:191
@@ -86,11 +86,11 @@ msgid "Activate your license"
 msgstr ""
 
 #: includes/Core/Plugin.php:399
-msgid "Nexora Pro activated!"
+msgid "CodeClove Pro activated!"
 msgstr ""
 
 #: includes/Core/Plugin.php:400
-msgid "Nexora Free has been smoothly deactivated. All your existing school data, students, and settings are active in Pro."
+msgid "CodeClove Free has been smoothly deactivated. All your existing school data, students, and settings are active in Pro."
 msgstr ""
 
 #: includes/Licensing/LicensePage.php:38
@@ -161,7 +161,7 @@ msgid "Not activated"
 msgstr ""
 
 #: includes/Licensing/LicensePage.php:128
-msgid "Nexora License"
+msgid "CodeClove License"
 msgstr ""
 
 #: includes/Licensing/LicensePage.php:137
@@ -1568,7 +1568,7 @@ msgid "Sign In to Portal"
 msgstr ""
 
 #: includes/Modules/Portal/PortalShortcode.php:431
-msgid "Protected by Nexora School Management"
+msgid "Protected by CodeClove School Management"
 msgstr ""
 
 #: includes/Modules/Promotion/PromotionController.php:90
@@ -6313,7 +6313,7 @@ msgid "the school office"
 msgstr ""
 
 #: src/modules/finance/PrintInvoiceSheet.js:68
-msgid "Generated via Nexora School Management System"
+msgid "Generated via CodeClove School Management System"
 msgstr ""
 
 #: src/modules/finance/PrintPaymentReceipt.js:9
@@ -7623,7 +7623,7 @@ msgid "Delivery Configuration"
 msgstr ""
 
 #: src/modules/settings/tabs/NotificationsTab.js:122
-msgid "Choose how Nexora routes outgoing school communications."
+msgid "Choose how CodeClove routes outgoing school communications."
 msgstr ""
 
 #: src/modules/settings/tabs/NotificationsTab.js:122
@@ -7936,7 +7936,7 @@ msgid "Enable SMS Notifications"
 msgstr ""
 
 #: src/modules/settings/tabs/SmsNotificationsTab.js:121
-msgid "Allows Nexora to send real-time text message alerts to guardians."
+msgid "Allows CodeClove to send real-time text message alerts to guardians."
 msgstr ""
 
 #: src/modules/settings/tabs/SmsNotificationsTab.js:121
@@ -9870,7 +9870,7 @@ msgstr ""
 
 #: src/modules/students/AdmissionConvertPage.js:111
 #, js-format
-msgid "Confirm session placement and class section assignment. Nexora will generate permanent %s credentials."
+msgid "Confirm session placement and class section assignment. CodeClove will generate permanent %s credentials."
 msgstr ""
 
 #: src/modules/students/AdmissionConvertPage.js:111
@@ -12526,7 +12526,7 @@ msgid "Online Payment Gateways & UPI"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:26
-msgid "Enable parents to pay tuition fees directly online with instant webhook reconciliation, zero Nexora transaction markups, and automated payment receipts."
+msgid "Enable parents to pay tuition fees directly online with instant webhook reconciliation, zero CodeClove transaction markups, and automated payment receipts."
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:28
@@ -12671,7 +12671,7 @@ msgid "Priority Updates & Direct Helpdesk Support"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:98
-msgid "Experience VIP support directly from core Nexora engineers with expedited ticket response times, priority feature requests, and one-click automatic Pro updates."
+msgid "Experience VIP support directly from core CodeClove engineers with expedited ticket response times, priority feature requests, and one-click automatic Pro updates."
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:100
@@ -12691,7 +12691,7 @@ msgid "Direct priority email and ticket helpdesk support with guaranteed respons
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:108
-msgid "Nexora Pro Upgrade"
+msgid "CodeClove Pro Upgrade"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:108
@@ -12699,11 +12699,11 @@ msgid "Unlock the Full Power of Enterprise School Management"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:108
-msgid "Upgrade to Nexora Pro to collect fees online, activate parent & student web portals, build clash-free timetables, and send instant SMS alerts — all with zero data loss."
+msgid "Upgrade to CodeClove Pro to collect fees online, activate parent & student web portals, build clash-free timetables, and send instant SMS alerts — all with zero data loss."
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:108
-msgid "Upgrade to Nexora Pro Now"
+msgid "Upgrade to CodeClove Pro Now"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:108
@@ -12723,7 +12723,7 @@ msgid "Unlock in Pro"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:114
-msgid "Compare Nexora Free vs Nexora Pro"
+msgid "Compare CodeClove Free vs CodeClove Pro"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:114
@@ -12735,11 +12735,11 @@ msgid "Core Feature"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:114
-msgid "Nexora Free"
+msgid "CodeClove Free"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:114
-msgid "Nexora Pro"
+msgid "CodeClove Pro"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:115
@@ -12835,15 +12835,15 @@ msgid "Dedicated Priority Email & Helpdesk Support"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:139
-msgid "Ready to upgrade to Nexora Pro?"
+msgid "Ready to upgrade to CodeClove Pro?"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:139
-msgid "Install Nexora Pro directly onto your WordPress site. All your current students, sessions, staff, and attendance logs are automatically preserved with 100% compatibility."
+msgid "Install CodeClove Pro directly onto your WordPress site. All your current students, sessions, staff, and attendance logs are automatically preserved with 100% compatibility."
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:139
-msgid "Get Nexora Pro Now"
+msgid "Get CodeClove Pro Now"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:139
@@ -12855,15 +12855,15 @@ msgid "Will I lose any existing data when upgrading to Pro?"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:139
-msgid "No. Nexora Pro utilizes the exact same database structure. When you activate Nexora Pro, it seamlessly adopts your students, classes, and attendance records with zero data migration needed."
+msgid "No. CodeClove Pro utilizes the exact same database structure. When you activate CodeClove Pro, it seamlessly adopts your students, classes, and attendance records with zero data migration needed."
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:139
-msgid "How do I activate Nexora Pro after purchasing?"
+msgid "How do I activate CodeClove Pro after purchasing?"
 msgstr ""
 
 #: src/modules/upgrade/ProUpgradePage.js:139
-msgid "After purchase on CodeClove, simply download nexora-pro.zip from your account, upload it in Plugins → Add New, activate it, and enter your license key."
+msgid "After purchase on CodeClove, simply download codeclove-school-management-pro.zip from your account, upload it in Plugins → Add New, activate it, and enter your license key."
 msgstr ""
 
 #: src/portal/components/NotificationBell.js:55

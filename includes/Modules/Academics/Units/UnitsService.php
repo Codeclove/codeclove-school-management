@@ -4,19 +4,19 @@
  *
  * Implements business logic and validation rules for academic units (class levels) and unit-subject mappings.
  *
- * @package Nexora\Modules\Academics\Units
+ * @package CodeClove\Modules\Academics\Units
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Academics\Units;
+namespace CodeClove\Modules\Academics\Units;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Database\Schema;
+use CodeClove\Database\Schema;
 use WP_Error;
 
 /**
@@ -67,7 +67,7 @@ final class UnitsService {
 
 		$id = $this->db_create_unit( $validated );
 		if ( null === $id ) {
-			return new WP_Error( 'nexora_create_failed', __( 'Failed to create academic unit.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_create_failed', __( 'Failed to create academic unit.', 'codeclove-school-management' ), 500 );
 		}
 
 		return $this->get_unit( $id );
@@ -83,7 +83,7 @@ final class UnitsService {
 	public function update_unit( int $id, array $payload ): array|WP_Error {
 		$current = $this->db_get_unit( $id );
 		if ( null === $current ) {
-			return new WP_Error( 'nexora_not_found', __( 'Academic unit not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Academic unit not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		$validated = $this->validate_unit_payload( $payload, $id );
@@ -93,7 +93,7 @@ final class UnitsService {
 
 		$updated = $this->db_update_unit( $id, $validated );
 		if ( ! $updated ) {
-			return new WP_Error( 'nexora_update_failed', __( 'Failed to update academic unit.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_update_failed', __( 'Failed to update academic unit.', 'codeclove-school-management' ), 500 );
 		}
 
 		return $this->get_unit( $id );
@@ -108,15 +108,15 @@ final class UnitsService {
 	public function delete_unit( int $id ): bool|WP_Error {
 		$unit = $this->db_get_unit( $id );
 		if ( null === $unit ) {
-			return new WP_Error( 'nexora_not_found', __( 'Academic unit not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Academic unit not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		if ( $this->db_has_associated_groups( $id ) ) {
-			return new WP_Error( 'nexora_has_groups', __( 'Cannot delete unit: it has active sections or homerooms.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_has_groups', __( 'Cannot delete unit: it has active sections or homerooms.', 'codeclove-school-management' ), 400 );
 		}
 
 		if ( $this->db_unit_has_enrolled_students( $id ) ) {
-			return new WP_Error( 'nexora_has_students', __( 'Cannot delete unit: it has enrolled students.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_has_students', __( 'Cannot delete unit: it has enrolled students.', 'codeclove-school-management' ), 400 );
 		}
 
 		return $this->db_delete_unit( $id );
@@ -136,24 +136,24 @@ final class UnitsService {
 
 		if ( isset( $payload['session_id'] ) ) {
 			$session_id = (int) $payload['session_id'];
-			$sessions_service = new \Nexora\Modules\Academics\Sessions\SessionsService();
+			$sessions_service = new \CodeClove\Modules\Academics\Sessions\SessionsService();
 			$session    = $sessions_service->get_session( $session_id );
 			if ( null === $session ) {
-				return new WP_Error( 'nexora_invalid_session', __( 'Academic session not found.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_invalid_session', __( 'Academic session not found.', 'codeclove-school-management' ), 400 );
 			}
 			$db_data['academic_session_id'] = $session_id;
 		} elseif ( null === $id ) {
-			return new WP_Error( 'nexora_missing_field', __( 'Session ID is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_missing_field', __( 'Session ID is required.', 'codeclove-school-management' ), 400 );
 		}
 
 		if ( isset( $payload['name'] ) ) {
 			$name = sanitize_text_field( trim( (string) $payload['name'] ) );
 			if ( strlen( $name ) < 2 ) {
-				return new WP_Error( 'nexora_invalid_name', __( 'Name must be at least 2 characters.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_invalid_name', __( 'Name must be at least 2 characters.', 'codeclove-school-management' ), 400 );
 			}
 			$db_data['name'] = $name;
 		} elseif ( null === $id ) {
-			return new WP_Error( 'nexora_missing_field', __( 'Name is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_missing_field', __( 'Name is required.', 'codeclove-school-management' ), 400 );
 		}
 
 		if ( isset( $payload['code'] ) ) {
@@ -167,7 +167,7 @@ final class UnitsService {
 		if ( isset( $payload['status'] ) ) {
 			$status = sanitize_text_field( $payload['status'] );
 			if ( ! in_array( $status, [ 'active', 'inactive', 'archived' ], true ) ) {
-				return new WP_Error( 'nexora_invalid_status', __( 'Status must be active, inactive, or archived.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_invalid_status', __( 'Status must be active, inactive, or archived.', 'codeclove-school-management' ), 400 );
 			}
 			$db_data['status'] = $status;
 		}
@@ -215,7 +215,7 @@ final class UnitsService {
 	 */
 	public function assign_subject_to_unit( int $unit_id, array $payload ): array|WP_Error {
 		if ( ! isset( $payload['subject_id'] ) ) {
-			return new WP_Error( 'nexora_missing_field', __( 'Subject ID (subject_id) is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_missing_field', __( 'Subject ID (subject_id) is required.', 'codeclove-school-management' ), 400 );
 		}
 		$subject_id = (int) $payload['subject_id'];
 		$is_required = ! empty( $payload['is_required'] );
@@ -224,14 +224,14 @@ final class UnitsService {
 		// Validate unit exists
 		$unit = $this->db_get_unit( $unit_id );
 		if ( ! $unit ) {
-			return new WP_Error( 'nexora_not_found', __( 'Academic unit not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Academic unit not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		// Validate subject exists
-		$subjects_service = new \Nexora\Modules\Academics\Subjects\SubjectsService();
+		$subjects_service = new \CodeClove\Modules\Academics\Subjects\SubjectsService();
 		$subject = $subjects_service->get_subject( $subject_id );
 		if ( ! $subject ) {
-			return new WP_Error( 'nexora_not_found', __( 'Subject not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Subject not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		// Attempt insertion and catch duplicate database constraint error
@@ -239,9 +239,9 @@ final class UnitsService {
 		if ( ! $inserted_id ) {
 			global $wpdb;
 			if ( str_contains( (string) $wpdb->last_error, 'Duplicate entry' ) || str_contains( (string) $wpdb->last_error, 'uq_unit_subject' ) ) {
-				return new WP_Error( 'nexora_duplicate', __( 'Subject is already assigned to this academic unit.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_duplicate', __( 'Subject is already assigned to this academic unit.', 'codeclove-school-management' ), 400 );
 			}
-			return new WP_Error( 'nexora_create_failed', __( 'Failed to assign subject to unit.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_create_failed', __( 'Failed to assign subject to unit.', 'codeclove-school-management' ), 500 );
 		}
 
 		// Find the newly mapped subject
@@ -252,7 +252,7 @@ final class UnitsService {
 			}
 		}
 
-		return new WP_Error( 'nexora_create_failed', __( 'Failed to retrieve assigned subject mapping.', 'nexora-school-management' ), 500 );
+		return new WP_Error( 'codeclove_create_failed', __( 'Failed to retrieve assigned subject mapping.', 'codeclove-school-management' ), 500 );
 	}
 
 	/**
@@ -265,7 +265,7 @@ final class UnitsService {
 	public function unassign_subject_from_unit( int $unit_id, int $subject_id ): bool|WP_Error {
 		$unit = $this->db_get_unit( $unit_id );
 		if ( ! $unit ) {
-			return new WP_Error( 'nexora_not_found', __( 'Academic unit not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Academic unit not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		return $this->db_unassign_subject_from_unit( $unit_id, $subject_id );

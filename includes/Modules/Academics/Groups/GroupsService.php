@@ -4,19 +4,19 @@
  *
  * Implements business logic and validation rules for academic groups (classroom sections).
  *
- * @package Nexora\Modules\Academics\Groups
+ * @package CodeClove\Modules\Academics\Groups
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Academics\Groups;
+namespace CodeClove\Modules\Academics\Groups;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Database\Schema;
+use CodeClove\Database\Schema;
 use WP_Error;
 
 /**
@@ -67,7 +67,7 @@ final class GroupsService {
 
 		$id = $this->db_create_group( $validated );
 		if ( null === $id ) {
-			return new WP_Error( 'nexora_create_failed', __( 'Failed to create academic group.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_create_failed', __( 'Failed to create academic group.', 'codeclove-school-management' ), 500 );
 		}
 
 		return $this->get_group( $id );
@@ -83,7 +83,7 @@ final class GroupsService {
 	public function update_group( int $id, array $payload ): array|WP_Error {
 		$current = $this->db_get_group( $id );
 		if ( null === $current ) {
-			return new WP_Error( 'nexora_not_found', __( 'Academic group not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Academic group not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		$validated = $this->validate_group_payload( $payload, true );
@@ -97,7 +97,7 @@ final class GroupsService {
 
 		$updated = $this->db_update_group( $id, $validated );
 		if ( ! $updated ) {
-			return new WP_Error( 'nexora_update_failed', __( 'Failed to update academic group.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_update_failed', __( 'Failed to update academic group.', 'codeclove-school-management' ), 500 );
 		}
 
 		return $this->get_group( $id );
@@ -112,11 +112,11 @@ final class GroupsService {
 	public function delete_group( int $id ): bool|WP_Error {
 		$group = $this->db_get_group( $id );
 		if ( null === $group ) {
-			return new WP_Error( 'nexora_not_found', __( 'Academic group not found.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'Academic group not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		if ( $this->db_group_has_enrolled_students( $id ) ) {
-			return new WP_Error( 'nexora_has_students', __( 'Cannot delete group: it has enrolled students.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_has_students', __( 'Cannot delete group: it has enrolled students.', 'codeclove-school-management' ), 400 );
 		}
 
 		return $this->db_delete_group( $id );
@@ -136,24 +136,24 @@ final class GroupsService {
 
 		if ( isset( $payload['unit_id'] ) ) {
 			$unit_id = (int) $payload['unit_id'];
-			$units_service = new \Nexora\Modules\Academics\Units\UnitsService();
+			$units_service = new \CodeClove\Modules\Academics\Units\UnitsService();
 			$unit    = $units_service->get_unit( $unit_id );
 			if ( null === $unit ) {
-				return new WP_Error( 'nexora_invalid_unit', __( 'Academic unit not found.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_invalid_unit', __( 'Academic unit not found.', 'codeclove-school-management' ), 400 );
 			}
 			$db_data['academic_unit_id'] = $unit_id;
 		} elseif ( ! $is_update ) {
-			return new WP_Error( 'nexora_missing_field', __( 'Academic unit ID (unit_id) is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_missing_field', __( 'Academic unit ID (unit_id) is required.', 'codeclove-school-management' ), 400 );
 		}
 
 		if ( isset( $payload['name'] ) ) {
 			$name = sanitize_text_field( trim( (string) $payload['name'] ) );
 			if ( strlen( $name ) < 2 ) {
-				return new WP_Error( 'nexora_invalid_name', __( 'Name must be at least 2 characters.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_invalid_name', __( 'Name must be at least 2 characters.', 'codeclove-school-management' ), 400 );
 			}
 			$db_data['name'] = $name;
 		} elseif ( ! $is_update ) {
-			return new WP_Error( 'nexora_missing_field', __( 'Name is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_missing_field', __( 'Name is required.', 'codeclove-school-management' ), 400 );
 		}
 
 		if ( isset( $payload['code'] ) ) {
@@ -167,7 +167,7 @@ final class GroupsService {
 		if ( isset( $payload['status'] ) ) {
 			$status = sanitize_text_field( $payload['status'] );
 			if ( ! in_array( $status, [ 'active', 'inactive', 'archived' ], true ) ) {
-				return new WP_Error( 'nexora_invalid_status', __( 'Status must be active, inactive, or archived.', 'nexora-school-management' ), 400 );
+				return new WP_Error( 'codeclove_invalid_status', __( 'Status must be active, inactive, or archived.', 'codeclove-school-management' ), 400 );
 			}
 			$db_data['status'] = $status;
 		}

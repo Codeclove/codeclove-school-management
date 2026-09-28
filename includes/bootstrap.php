@@ -2,9 +2,10 @@
 /**
  * Main plugin bootstrap file.
  *
- * Loaded by both Nexora Pro (nexora.php) and Nexora Free (nexora-school-management.php).
+ * Defines shared constants, registers the autoloader, and initializes
+ * the CodeClove core singleton.
  *
- * @package Nexora
+ * @package CodeClove
  */
 
 declare( strict_types=1 );
@@ -15,22 +16,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // ─── Shared Plugin Constants ──────────────────────────────────────────────────
 
-define( 'NEXORA_DIR', plugin_dir_path( NEXORA_FILE ) );
-define( 'NEXORA_URL', plugin_dir_url( NEXORA_FILE ) );
-define( 'NEXORA_BASENAME', plugin_basename( NEXORA_FILE ) );
-if ( ! defined( 'NEXORA_DEV_TOOLS' ) ) {
-	define( 'NEXORA_DEV_TOOLS', false );
+$codeclove_file = defined( 'CODECLOVE_FILE' ) ? CODECLOVE_FILE : __FILE__;
+
+if ( ! defined( 'CODECLOVE_FILE' ) ) {
+	define( 'CODECLOVE_FILE', $codeclove_file );
+}
+
+define( 'CODECLOVE_DIR', plugin_dir_path( CODECLOVE_FILE ) );
+define( 'CODECLOVE_URL', plugin_dir_url( CODECLOVE_FILE ) );
+define( 'CODECLOVE_BASENAME', plugin_basename( CODECLOVE_FILE ) );
+
+if ( ! defined( 'CODECLOVE_DEV_TOOLS' ) ) {
+	define( 'CODECLOVE_DEV_TOOLS', false );
 }
 
 // ─── Autoloader ──────────────────────────────────────────────────────────────
 
-if ( file_exists( NEXORA_DIR . 'vendor/autoload.php' ) ) {
-	require_once NEXORA_DIR . 'vendor/autoload.php';
+if ( file_exists( CODECLOVE_DIR . 'vendor/autoload.php' ) ) {
+	require_once CODECLOVE_DIR . 'vendor/autoload.php';
 } else {
 	// PSR-4 autoloader fallback for environments without Composer vendor directory.
 	spl_autoload_register( static function( string $class ): void {
-		$prefix   = 'Nexora\\';
-		$base_dir = NEXORA_DIR . 'includes/';
+		$prefix   = 'CodeClove\\';
+		$base_dir = CODECLOVE_DIR . 'includes/';
 
 		$len = strlen( $prefix );
 		if ( strncmp( $prefix, $class, $len ) !== 0 ) {
@@ -48,37 +56,38 @@ if ( file_exists( NEXORA_DIR . 'vendor/autoload.php' ) ) {
 
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
 
-use Nexora\Core\Plugin;
+use CodeClove\Core\Plugin;
 
-if ( ! function_exists( 'nexora' ) ) {
+if ( ! function_exists( 'codeclove' ) ) {
 	/**
 	 * Returns the singleton plugin instance.
 	 *
 	 * @return Plugin
 	 */
-	function nexora(): Plugin {
+	function codeclove(): Plugin {
 		return Plugin::get_instance();
 	}
 }
 
 // Activation / deactivation hooks.
-register_activation_hook( NEXORA_FILE, [ nexora(), 'activate' ] );
-register_deactivation_hook( NEXORA_FILE, [ nexora(), 'deactivate' ] );
+register_activation_hook( CODECLOVE_FILE, [ codeclove(), 'activate' ] );
+register_deactivation_hook( CODECLOVE_FILE, [ codeclove(), 'deactivate' ] );
 
 // Kick everything off.
-nexora()->run();
+codeclove()->run();
 
 // Register WP-CLI command for database seeding if WP-CLI is active.
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
-	if ( class_exists( '\Nexora\Database\DevSeeder' ) ) {
+	$codeclove_seeder_class = class_exists( '\CodeClove\Database\DevSeeder' ) ? '\CodeClove\Database\DevSeeder' : null;
+	if ( $codeclove_seeder_class ) {
 		\WP_CLI::add_command(
-			'nexora db seed',
-			static function ( array $args, array $assoc_args ): void {
+			'codeclove db seed',
+			static function ( array $args, array $assoc_args ) use ( $codeclove_seeder_class ): void {
 				$country = isset( $assoc_args['country'] ) ? strtoupper( $assoc_args['country'] ) : 'IN';
 				if ( ! in_array( $country, [ 'IN', 'US', 'GB' ], true ) ) {
 					$country = 'IN';
 				}
-				$res = \Nexora\Database\DevSeeder::run( $country );
+				$res = $codeclove_seeder_class::run( $country );
 				if ( ! $res['success'] ) {
 					\WP_CLI::error( $res['message'] );
 				} else {
@@ -88,9 +97,9 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		);
 
 		\WP_CLI::add_command(
-			'nexora db clear',
-			static function ( array $args, array $assoc_args ): void {
-				$res = \Nexora\Database\DevSeeder::clear();
+			'codeclove db clear',
+			static function ( array $args, array $assoc_args ) use ( $seeder_class ): void {
+				$res = $seeder_class::clear();
 				if ( ! $res['success'] ) {
 					\WP_CLI::error( $res['message'] );
 				} else {
@@ -103,24 +112,28 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
 // ─── Global Helper ───────────────────────────────────────────────────────────
 
-if ( ! function_exists( 'nexora_user_can' ) ) {
+if ( ! function_exists( 'codeclove_user_can' ) ) {
 	/**
-	 * Global helper for Nexora RBAC checks.
+	 * Global helper for CodeClove RBAC checks.
 	 *
-	 * Equivalent to WP's current_user_can() but for Nexora permissions.
+	 * Equivalent to WP's current_user_can() but for CodeClove permissions.
 	 * WordPress administrators always return true.
 	 *
 	 * Usage:
-	 *   if ( nexora_user_can( get_current_user_id(), 'students.view' ) ) { ... }
+	 *   if ( codeclove_user_can( get_current_user_id(), 'students.view' ) ) { ... }
 	 *
 	 * @param int    $user_id        WordPress user ID.
 	 * @param string $permission_key Dot-notation permission key.
 	 */
-	function nexora_user_can( int $user_id, string $permission_key ): bool {
+	function codeclove_user_can( int $user_id, string $permission_key ): bool {
 		if ( user_can( $user_id, 'manage_options' ) ) {
 			return true;
 		}
 
-		return \Nexora\Core\Permissions::check( $user_id, $permission_key );
+		if ( class_exists( '\CodeClove\Core\Permissions' ) ) {
+			return \CodeClove\Core\Permissions::check( $user_id, $permission_key );
+		}
+
+		return false;
 	}
 }

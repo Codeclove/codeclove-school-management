@@ -7,20 +7,20 @@
  * - Verification of student access permissions
  * - Dashboard summary, attendance, finance, timetable, academics, documents, profile, and notifications
  *
- * @package Nexora\Modules\Portal
+ * @package CodeClove\Modules\Portal
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Portal;
+namespace CodeClove\Modules\Portal;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Database\Schema;
-use Nexora\Modules\Settings\SettingsRepository;
+use CodeClove\Database\Schema;
+use CodeClove\Modules\Settings\SettingsRepository;
 
 /**
  * Class PortalService
@@ -84,9 +84,9 @@ final class PortalService {
 		$user_roles = $wp_user ? (array) $wp_user->roles : [];
 		if ( $is_admin ) {
 			$role = 'admin';
-		} elseif ( $guardian_row || in_array( 'nexora_guardian', $user_roles, true ) ) {
+		} elseif ( $guardian_row || in_array( 'codeclove_guardian', $user_roles, true ) ) {
 			$role = 'guardian';
-		} elseif ( $student_row || in_array( 'nexora_student', $user_roles, true ) ) {
+		} elseif ( $student_row || in_array( 'codeclove_student', $user_roles, true ) ) {
 			$role = 'student';
 		} else {
 			$role = 'guest';
@@ -175,7 +175,7 @@ final class PortalService {
 				( ! empty( $st['middle_name'] ) ? ' ' . $st['middle_name'] : '' ) .
 				' ' . (string) $st['last_name']
 			);
-			$photo_url = ( ! empty( $st['photo_id'] ) ? wp_get_attachment_image_url( (int) $st['photo_id'], 'medium' ) : null ) ?: NEXORA_URL . 'assets/defaults/avatar.svg';
+			$photo_url = ( ! empty( $st['photo_id'] ) ? wp_get_attachment_image_url( (int) $st['photo_id'], 'medium' ) : null ) ?: CODECLOVE_URL . 'assets/defaults/avatar.svg';
 
 			$formatted_students[] = [
 				'id'               => (int) $st['id'],
@@ -235,7 +235,7 @@ final class PortalService {
 	 * Verifies whether a WordPress user is authorized to view/manage a specific student record.
 	 *
 	 * @param int $user_id    WordPress user ID.
-	 * @param int $student_id Nexora student ID.
+	 * @param int $student_id CodeClove student ID.
 	 * @return bool True if authorized; false otherwise.
 	 */
 	public function verify_student_access( int $user_id, int $student_id ): bool {
@@ -494,7 +494,7 @@ final class PortalService {
 					'period_name'  => (string) $s['period_name'],
 					'start_time'   => (string) $s['start_time'],
 					'end_time'     => (string) $s['end_time'],
-					'subject_name' => (string) ( $s['subject_name'] ?? __( 'Activity', 'nexora-school-management' ) ),
+					'subject_name' => (string) ( $s['subject_name'] ?? __( 'Activity', 'codeclove-school-management' ) ),
 					'teacher_name' => trim( (string) ( $s['teacher_name'] ?? '' ) ),
 					'room'         => trim( (string) ( $s['room'] ?? '' ) ),
 				];
@@ -530,7 +530,7 @@ final class PortalService {
 				'id'          => 'inv-' . (int) $inv['id'],
 				'title'       => sprintf(
 					/* translators: %s: invoice number */
-					__( 'Invoice %s Due', 'nexora-school-management' ),
+					__( 'Invoice %s Due', 'codeclove-school-management' ),
 					(string) $inv['invoice_number']
 				),
 				'date'        => (string) $inv['due_date'],
@@ -541,7 +541,7 @@ final class PortalService {
 				'currency'    => $currency,
 				'description' => sprintf(
 					/* translators: 1: currency symbol/code, 2: balance amount */
-					__( 'Payment due: %1$s %2$s', 'nexora-school-management' ),
+					__( 'Payment due: %1$s %2$s', 'codeclove-school-management' ),
 					$currency,
 					number_format( $bal, 2 )
 				),
@@ -580,7 +580,7 @@ final class PortalService {
 						'id'          => 'term-start-' . (int) $term['id'],
 						'title'       => sprintf(
 							/* translators: %s: term name */
-							__( '%s Begins', 'nexora-school-management' ),
+							__( '%s Begins', 'codeclove-school-management' ),
 							$term_name
 						),
 						'date'        => (string) $term['starts_on'],
@@ -589,7 +589,7 @@ final class PortalService {
 						'url'         => '/academics',
 						'description' => sprintf(
 							/* translators: %s: term name */
-							__( 'Start of academic term: %s', 'nexora-school-management' ),
+							__( 'Start of academic term: %s', 'codeclove-school-management' ),
 							$term_name
 						),
 					];
@@ -599,7 +599,7 @@ final class PortalService {
 						'id'          => 'term-end-' . (int) $term['id'],
 						'title'       => sprintf(
 							/* translators: %s: term name */
-							__( '%s Ends', 'nexora-school-management' ),
+							__( '%s Ends', 'codeclove-school-management' ),
 							$term_name
 						),
 						'date'        => (string) $term['ends_on'],
@@ -608,7 +608,7 @@ final class PortalService {
 						'url'         => '/academics',
 						'description' => sprintf(
 							/* translators: %s: term name */
-							__( 'Conclusion of academic term: %s', 'nexora-school-management' ),
+							__( 'Conclusion of academic term: %s', 'codeclove-school-management' ),
 							$term_name
 						),
 					];
@@ -952,7 +952,7 @@ final class PortalService {
 						'period_name'  => (string) $slot['period_name'],
 						'start_time'   => (string) $slot['start_time'],
 						'end_time'     => (string) $slot['end_time'],
-						'subject_name' => (string) ( $slot['subject_name'] ?? __( 'Break / Free', 'nexora-school-management' ) ),
+						'subject_name' => (string) ( $slot['subject_name'] ?? __( 'Break / Free', 'codeclove-school-management' ) ),
 						'subject_code' => (string) ( $slot['subject_code'] ?? '' ),
 						'staff_name'   => trim( (string) ( $slot['staff_name'] ?? '' ) ),
 						'room'         => trim( (string) ( $slot['room'] ?? '' ) ),
@@ -1228,7 +1228,7 @@ final class PortalService {
 			$emergency_contact = $formatted_guardians[0];
 		}
 
-		$photo_url = ( ! empty( $student['photo_id'] ) ? wp_get_attachment_image_url( (int) $student['photo_id'], 'medium' ) : null ) ?: NEXORA_URL . 'assets/defaults/avatar.svg';
+		$photo_url = ( ! empty( $student['photo_id'] ) ? wp_get_attachment_image_url( (int) $student['photo_id'], 'medium' ) : null ) ?: CODECLOVE_URL . 'assets/defaults/avatar.svg';
 
 		$st_addr = null;
 		if ( ! empty( $student['address_json'] ) ) {
@@ -1288,7 +1288,7 @@ final class PortalService {
 		global $wpdb;
 
 		if ( ! $this->verify_student_access( $user_id, $student_id ) ) {
-			return new \WP_Error( 'nexora_forbidden', __( 'You do not have permission to edit this profile.', 'nexora-school-management' ), [ 'status' => 403 ] );
+			return new \WP_Error( 'codeclove_forbidden', __( 'You do not have permission to edit this profile.', 'codeclove-school-management' ), [ 'status' => 403 ] );
 		}
 
 		$update_data = [];
@@ -1300,7 +1300,7 @@ final class PortalService {
 		if ( array_key_exists( 'email', $payload ) ) {
 			$email = sanitize_email( (string) $payload['email'] );
 			if ( ! empty( $payload['email'] ) && ! is_email( $email ) ) {
-				return new \WP_Error( 'nexora_invalid_email', __( 'Please provide a valid email address.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new \WP_Error( 'codeclove_invalid_email', __( 'Please provide a valid email address.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 			$update_data['email'] = $email;
 		}

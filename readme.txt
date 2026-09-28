@@ -1,4 +1,4 @@
-=== Nexora – School Management System ===
+=== CodeClove School Management System ===
 Contributors: codeclove
 Tags: school management, student management, attendance, education, school erp
 Requires at least: 6.5
@@ -12,9 +12,9 @@ Multi-country school management system for WordPress. Manage student admissions,
 
 == Description ==
 
-**Nexora** is a modern, country-aware school management system built natively for WordPress. Designed for K-12 schools, coaching institutes, and colleges, Nexora simplifies student record-keeping, staff directories, academic session structuring, and daily student attendance tracking.
+**CodeClove School Management System** is a modern, country-aware school management system built natively for WordPress. Designed for K-12 schools, coaching institutes, and colleges, it simplifies student record-keeping, staff directories, academic session structuring, and daily student attendance tracking.
 
-Nexora is built from the ground up with built-in multi-country presets (India, United States, and United Kingdom), allowing you to immediately configure grading conventions, phone formats, currency symbols, and academic terms with a single click.
+The plugin is built from the ground up with built-in multi-country presets (India, United States, and United Kingdom), allowing you to immediately configure grading conventions, phone formats, currency symbols, and academic terms with a single click.
 
 = Free Features =
 
@@ -26,22 +26,22 @@ Nexora is built from the ground up with built-in multi-country presets (India, U
 * **Academic Structure** — Organize your school year into Academic Sessions, Terms/Units, Classes/Groups, and Subjects.
 * **Daily Attendance Tracking** — Mark student daily attendance (Present, Absent, Late, Excused) with instant daily summary reports.
 * **Multi-Country Presets** — One-click configuration for India (CBSE/ICSE), United States, and United Kingdom presets (terms, date formats, currencies, and identifiers).
+* **Student & Guardian Self-Service Portal** — Dedicated frontend portal (`[codeclove_portal]`) allowing authenticated students and parents to view attendance logs, academic schedules, and fee invoices.
 * **Modern Single-Page Dashboard** — Clean, responsive React administrative interface designed for speed and clarity.
 * **Privacy & GDPR Compliant** — All scripts and stylesheets are hosted 100% locally. Zero external fonts (no Google Fonts tracking) and zero third-party telemetry.
 
-Nexora adheres strictly to WordPress security and coding standards:
+This plugin adheres strictly to WordPress security and coding standards:
 * Custom `$wpdb` database tables prefixed with your WordPress installation table prefix.
 * Full REST API security with permission callbacks (`permission_callback`) and nonce authentication.
 * Role-based access control protecting all student and academic data.
 
-= Need Advanced ERP Capabilities? Upgrade to Nexora Pro =
+= Need Advanced ERP Capabilities? Upgrade to Pro =
 
-Take your institution to the next level with [Nexora Pro](https://codeclove.com/plugins/nexora/):
+Take your institution to the next level with [School Management Pro](https://codeclove.com/):
 
 * **Financial Analytics & Revenue Charts** — Real-time fee collection graphs, revenue forecasting, and payment mode breakdowns.
 * **Defaulters Report & Overdue Tracking** — Automated tracking of overdue invoices and uncollected dues.
 * **Online Payment Gateways & UPI** — Direct checkout support for Stripe, PayPal, Razorpay, and Indian UPI.
-* **Student & Guardian Web Portal** — Self-service frontend portal where students and parents can view timetables, invoices, and attendance logs.
 * **Weekly Timetable Matrix & Substitutions** — Conflict-free timetable builder with automatic teacher substitution assignment.
 * **Automated SMS Notifications** — Integrated alerts via Twilio, Vonage, Fast2SMS, and MSG91.
 * **Digital Noticeboard & Announcements** — Publish school-wide or targeted circulars and notices.
@@ -51,25 +51,21 @@ Take your institution to the next level with [Nexora Pro](https://codeclove.com/
 
 == Installation ==
 
-1. Upload the `nexora-school-management` folder to your `/wp-content/plugins/` directory (or install via *Plugins → Add New* in WordPress).
+1. Upload the `codeclove-school-management` folder to your `/wp-content/plugins/` directory (or install via *Plugins → Add New* in WordPress).
 2. Activate the plugin through the **Plugins** menu in WordPress.
-3. Navigate to **Nexora** in your WordPress admin sidebar.
+3. Navigate to **School Management** in your WordPress admin sidebar.
 4. Run the initial setup wizard to select your country preset (India, US, or UK) and configure your academic sessions.
 
 == Frequently Asked Questions ==
 
 = Is the free version limited in student or staff numbers? =
-No. Nexora Free allows unlimited students, guardians, classes, and staff members. There are no artificial quotas, trial periods, or disabled features.
+No. The free version allows unlimited students, guardians, classes, and staff members. There are no artificial quotas, trial periods, or disabled features.
 
-= Does Nexora make external network calls or track usage? =
-No. Nexora does not load remote fonts from Google Fonts or external CDNs, does not track usage data, and makes zero background network requests. All assets are self-hosted locally.
+= Does the plugin make external network calls or track usage? =
+No. This plugin does not load remote fonts from Google Fonts or external CDNs, does not track usage data, and makes zero background network requests. All assets are self-hosted locally.
 
-= Can I upgrade to Nexora Pro without losing my existing data? =
-Yes. When you install and activate Nexora Pro, it seamlessly utilizes your existing database tables and settings. All student records, attendance logs, and academic structures are fully preserved.
-
-= Where can I review the unminified source code for the admin app? =
-In compliance with WordPress.org Guideline 4, the full source code and Vite build configuration for the React administrative interface is available at:
-https://github.com/codeclove/nexora-school-management
+= Can I upgrade to School Management Pro without losing my existing data? =
+Yes. When you install and activate School Management Pro, it seamlessly utilizes your existing database tables and settings. All student records, attendance logs, and academic structures are fully preserved.
 
 == Screenshots ==
 
@@ -93,4 +89,4 @@ https://github.com/codeclove/nexora-school-management
 == Upgrade Notice ==
 
 = 1.0.0 =
-Initial release of Nexora School Management System.
+Initial release of CodeClove School Management System.

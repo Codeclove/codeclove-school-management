@@ -8,12 +8,12 @@
  * Example:
  *   $wpdb->get_results( "SELECT * FROM " . Schema::SESSIONS );
  *
- * @package Nexora\Database
+ * @package CodeClove\Database
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Database;
+namespace CodeClove\Database;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -75,7 +75,7 @@ final class Schema {
 	// ─── All Tables Accessor ──────────────────────────────────────────────────
 
 	/**
-	 * Returns all 35 fully-qualified Nexora table names.
+	 * Returns all 35 fully-qualified CodeClove table names.
 	 *
 	 * @return string[]
 	 */
@@ -122,12 +122,12 @@ final class Schema {
 	// ─── Private Helpers ─────────────────────────────────────────────────────
 
 	/**
-	 * Returns a fully-qualified table name with WP prefix and nexora_ prefix.
+	 * Returns a fully-qualified table name with WP prefix and codeclove_ prefix.
 	 *
-	 * @param string $name Short table name (without wp_ or nexora_).
+	 * @param string $name Short table name (without wp_ or codeclove_).
 	 */
 	private static function t( string $name ): string {
 		global $wpdb;
-		return $wpdb->prefix . 'nexora_' . $name;
+		return $wpdb->prefix . 'codeclove_' . $name;
 	}
 }

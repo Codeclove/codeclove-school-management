@@ -4,21 +4,21 @@
  *
  * Handles DB queries and CRUD operations for staff members.
  *
- * @package Nexora\Modules\Staff
+ * @package CodeClove\Modules\Staff
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Staff;
+namespace CodeClove\Modules\Staff;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Database\Schema;
-use Nexora\Shared\IdentifierService;
-use Nexora\Core\Logger;
+use CodeClove\Database\Schema;
+use CodeClove\Shared\IdentifierService;
+use CodeClove\Core\Logger;
 use WP_Error;
 
 /**
@@ -140,7 +140,7 @@ final class StaffService {
 		global $wpdb;
 
 		if ( empty( $body['first_name'] ) || empty( $body['last_name'] ) || empty( $body['email'] ) ) {
-			return new WP_Error( 'nexora_validation_failed', __( 'First name, last name, and email are required.', 'nexora-school-management' ), [ 'status' => 400 ] );
+			return new WP_Error( 'codeclove_validation_failed', __( 'First name, last name, and email are required.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
@@ -152,7 +152,7 @@ final class StaffService {
 		);
 		// phpcs:enable
 		if ( $email_check > 0 ) {
-			return new WP_Error( 'nexora_duplicate_email', __( 'A staff member with this email already exists.', 'nexora-school-management' ), [ 'status' => 400 ] );
+			return new WP_Error( 'codeclove_duplicate_email', __( 'A staff member with this email already exists.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
 
 		$staff_number = ! empty( $body['staff_number'] ) ? sanitize_text_field( $body['staff_number'] ) : ( IdentifierService::generate( 'staff_member' ) ?: '' );
@@ -241,15 +241,15 @@ final class StaffService {
 			$password = ! empty( $body['password'] ) ? $body['password'] : '';
 
 			if ( empty( $username ) || empty( $password ) ) {
-				return new WP_Error( 'nexora_validation_failed', __( 'Username and password are required to create a user account.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_validation_failed', __( 'Username and password are required to create a user account.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 
 			if ( username_exists( $username ) ) {
-				return new WP_Error( 'nexora_username_exists', __( 'Username already exists.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_username_exists', __( 'Username already exists.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 
 			if ( email_exists( $data['email'] ) ) {
-				return new WP_Error( 'nexora_email_exists', __( 'A user with this email address already exists.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_email_exists', __( 'A user with this email address already exists.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 
 			$user_id = wp_create_user( $username, $password, $data['email'] );
@@ -257,10 +257,10 @@ final class StaffService {
 				return $user_id;
 			}
 
-			// Assign the nexora_staff WP role and populate WP user profile.
+			// Assign the codeclove_staff WP role and populate WP user profile.
 			wp_update_user( [
 				'ID'           => $user_id,
-				'role'         => 'nexora_staff',
+				'role'         => 'codeclove_staff',
 				'first_name'   => $data['first_name'],
 				'last_name'    => $data['last_name'],
 				'display_name' => trim( $data['first_name'] . ' ' . $data['last_name'] ),
@@ -273,7 +273,7 @@ final class StaffService {
 		$result = $wpdb->insert( Schema::staff_members(), $data );
 		if ( false === $result || ! $wpdb->insert_id ) {
 			Logger::error( 'Failed to insert staff member: ' . $wpdb->last_error );
-			return new WP_Error( 'nexora_db_error', __( 'Failed to create staff member in database.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_db_error', __( 'Failed to create staff member in database.', 'codeclove-school-management' ), 500 );
 		}
 		$insert_id = (int) $wpdb->insert_id;
 
@@ -292,7 +292,7 @@ final class StaffService {
 		// phpcs:enable
 
 		if ( ! is_array( $fresh ) ) {
-			return new WP_Error( 'nexora_not_found', __( 'Failed to retrieve newly created staff member.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_not_found', __( 'Failed to retrieve newly created staff member.', 'codeclove-school-management' ), 500 );
 		}
 
 		return $this->format_staff_member( $fresh );
@@ -318,7 +318,7 @@ final class StaffService {
 		);
 		// phpcs:enable
 		if ( ! $exists_row ) {
-			return new WP_Error( 'nexora_not_found', __( 'Staff member not found.', 'nexora-school-management' ), [ 'status' => 404 ] );
+			return new WP_Error( 'codeclove_not_found', __( 'Staff member not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
 		}
 
 		// Prevent lockout: check if this is the last Owner user
@@ -334,12 +334,12 @@ final class StaffService {
 				);
 				// phpcs:enable
 				if ( $new_role_id !== $owner_role_id ) {
-					return new WP_Error( 'nexora_lockout_prevented', __( 'Cannot remove the Owner role from the last remaining Owner user.', 'nexora-school-management' ), [ 'status' => 400 ] );
+					return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot remove the Owner role from the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 				}
 			}
 
 			if ( isset( $body['status'] ) && in_array( $body['status'], [ 'inactive', 'suspended' ], true ) ) {
-				return new WP_Error( 'nexora_lockout_prevented', __( 'Cannot deactivate or suspend the last remaining Owner user.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot deactivate or suspend the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 		}
 
@@ -415,16 +415,16 @@ final class StaffService {
 			$password = ! empty( $body['password'] ) ? $body['password'] : '';
 
 			if ( empty( $username ) || empty( $password ) ) {
-				return new WP_Error( 'nexora_validation_failed', __( 'Username and password are required to create a user account.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_validation_failed', __( 'Username and password are required to create a user account.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 
 			if ( username_exists( $username ) ) {
-				return new WP_Error( 'nexora_username_exists', __( 'Username already exists.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_username_exists', __( 'Username already exists.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 
 			$email = ! empty( $data['email'] ) ? $data['email'] : $exists_row['email'];
 			if ( email_exists( $email ) ) {
-				return new WP_Error( 'nexora_email_exists', __( 'A user with this email address already exists.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_email_exists', __( 'A user with this email address already exists.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 
 			$user_id = wp_create_user( $username, $password, $email );
@@ -432,12 +432,12 @@ final class StaffService {
 				return $user_id;
 			}
 
-			// Assign the nexora_staff WP role and populate WP user profile.
+			// Assign the codeclove_staff WP role and populate WP user profile.
 			$first = $data['first_name'] ?? $exists_row['first_name'] ?? '';
 			$last  = $data['last_name'] ?? $exists_row['last_name'] ?? '';
 			wp_update_user( [
 				'ID'           => $user_id,
-				'role'         => 'nexora_staff',
+				'role'         => 'codeclove_staff',
 				'first_name'   => $first,
 				'last_name'    => $last,
 				'display_name' => trim( $first . ' ' . $last ),
@@ -449,7 +449,7 @@ final class StaffService {
 		// Check if we should update password of an existing user account
 		if ( ! empty( $exists_row['user_id'] ) && ! empty( $body['password'] ) ) {
 			if ( strlen( $body['password'] ) < 6 ) {
-				return new WP_Error( 'nexora_validation_failed', __( 'Password must be at least 6 characters.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_validation_failed', __( 'Password must be at least 6 characters.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 			wp_set_password( $body['password'], (int) $exists_row['user_id'] );
 		}
@@ -465,14 +465,14 @@ final class StaffService {
 			);
 			// phpcs:enable
 			if ( $email_check > 0 ) {
-				return new WP_Error( 'nexora_duplicate_email', __( 'A staff member with this email already exists.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_duplicate_email', __( 'A staff member with this email already exists.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 		}
 
 		if ( isset( $body['notification_preferences'] ) && is_array( $body['notification_preferences'] ) ) {
 			$target_user_id = ! empty( $exists_row['user_id'] ) ? (int) $exists_row['user_id'] : ( ! empty( $data['user_id'] ) ? (int) $data['user_id'] : 0 );
 			if ( $target_user_id ) {
-				update_user_meta( $target_user_id, '_nexora_notification_preferences', $body['notification_preferences'] );
+				update_user_meta( $target_user_id, '_codeclove_notification_preferences', $body['notification_preferences'] );
 			}
 		}
 
@@ -539,11 +539,11 @@ final class StaffService {
 		);
 		// phpcs:enable
 		if ( ! $exists ) {
-			return new WP_Error( 'nexora_not_found', __( 'Staff member not found.', 'nexora-school-management' ), [ 'status' => 404 ] );
+			return new WP_Error( 'codeclove_not_found', __( 'Staff member not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
 		}
 
 		if ( ! empty( $exists['user_id'] ) && $this->is_last_owner( (int) $exists['user_id'] ) ) {
-			return new WP_Error( 'nexora_lockout_prevented', __( 'Cannot delete the last remaining Owner user.', 'nexora-school-management' ), [ 'status' => 400 ] );
+			return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot delete the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
@@ -570,7 +570,7 @@ final class StaffService {
 		$ids    = $params['ids'] ?? [];
 
 		if ( empty( $ids ) || ! is_array( $ids ) ) {
-			return new WP_Error( 'nexora_invalid_ids', __( 'No IDs provided.', 'nexora-school-management' ), [ 'status' => 400 ] );
+			return new WP_Error( 'codeclove_invalid_ids', __( 'No IDs provided.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
 
 		$ids = array_map( 'intval', $ids );
@@ -578,7 +578,7 @@ final class StaffService {
 		if ( 'status' === $action ) {
 			$status = $params['status'] ?? '';
 			if ( ! in_array( $status, [ 'active', 'inactive', 'suspended' ], true ) ) {
-				return new WP_Error( 'nexora_invalid_status', __( 'Invalid status provided.', 'nexora-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_invalid_status', __( 'Invalid status provided.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 
 			// Prevent lockout in bulk status update
@@ -594,7 +594,7 @@ final class StaffService {
 					);
 					// phpcs:enable
 					if ( $staff && ! empty( $staff['user_id'] ) && $this->is_last_owner( (int) $staff['user_id'] ) ) {
-						return new WP_Error( 'nexora_lockout_prevented', __( 'Cannot deactivate or suspend the last remaining Owner user.', 'nexora-school-management' ), [ 'status' => 400 ] );
+						return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot deactivate or suspend the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 					}
 				}
 			}
@@ -626,7 +626,7 @@ final class StaffService {
 				);
 				// phpcs:enable
 				if ( $staff && ! empty( $staff['user_id'] ) && $this->is_last_owner( (int) $staff['user_id'] ) ) {
-					return new WP_Error( 'nexora_lockout_prevented', __( 'Cannot delete the last remaining Owner user.', 'nexora-school-management' ), [ 'status' => 400 ] );
+					return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot delete the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 				}
 			}
 
@@ -645,7 +645,7 @@ final class StaffService {
 			return [ 'success' => true, 'deleted_count' => count( $ids ) ];
 		}
 
-		return new WP_Error( 'nexora_invalid_action', __( 'Invalid bulk action.', 'nexora-school-management' ), [ 'status' => 400 ] );
+		return new WP_Error( 'codeclove_invalid_action', __( 'Invalid bulk action.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 	}
 
 	/**
@@ -669,13 +669,13 @@ final class StaffService {
 
 		$item['notification_preferences'] = [];
 		if ( $item['user_id'] ) {
-			$prefs = get_user_meta( $item['user_id'], '_nexora_notification_preferences', true );
+			$prefs = get_user_meta( $item['user_id'], '_codeclove_notification_preferences', true );
 			if ( is_array( $prefs ) ) {
 				$item['notification_preferences'] = $prefs;
 			}
 		}
 
-		$item['photo_url'] = ( ! empty( $item['photo_id'] ) ? wp_get_attachment_image_url( (int) $item['photo_id'], 'medium' ) : null ) ?: NEXORA_URL . 'assets/defaults/avatar.svg';
+		$item['photo_url'] = ( ! empty( $item['photo_id'] ) ? wp_get_attachment_image_url( (int) $item['photo_id'], 'medium' ) : null ) ?: CODECLOVE_URL . 'assets/defaults/avatar.svg';
 
 		$item['documents'] = ! empty( $item['documents_json'] ) ? json_decode( $item['documents_json'], true ) : [];
 		if ( ! is_array( $item['documents'] ) ) {
@@ -729,7 +729,7 @@ final class StaffService {
 	}
 
 	/**
-	 * Synchronizes a custom role mapping to the wp_nexora_user_roles table.
+	 * Synchronizes a custom role mapping to the wp_codeclove_user_roles table.
 	 *
 	 * @param int      $user_id User ID.
 	 * @param int|null $role_id Role ID.
@@ -751,14 +751,14 @@ final class StaffService {
 		] );
 		// phpcs:enable
 
-		// Ensure the WP user has the nexora_staff WP role (avoid demoting administrators).
+		// Ensure the WP user has the codeclove_staff WP role (avoid demoting administrators).
 		$wp_user = get_user_by( 'id', $user_id );
-		if ( $wp_user && ! $wp_user->has_cap( 'nexora_staff' ) && ! in_array( 'administrator', (array) $wp_user->roles, true ) ) {
-			$wp_user->set_role( 'nexora_staff' );
+		if ( $wp_user && ! $wp_user->has_cap( 'codeclove_staff' ) && ! in_array( 'administrator', (array) $wp_user->roles, true ) ) {
+			$wp_user->set_role( 'codeclove_staff' );
 		}
 
 		// Flush permissions cache for the user
-		\Nexora\Core\Permissions::flush_cache( $user_id );
+		\CodeClove\Core\Permissions::flush_cache( $user_id );
 	}
 
 	/**
@@ -772,7 +772,7 @@ final class StaffService {
 	public function import_staff_bulk( array $payload ): array|WP_Error {
 		$rows = $payload['rows'] ?? [];
 		if ( ! is_array( $rows ) || empty( $rows ) ) {
-			return new WP_Error( 'validation_failed', __( 'No staff rows provided for import.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'validation_failed', __( 'No staff rows provided for import.', 'codeclove-school-management' ), 400 );
 		}
 
 		$role_id = ! empty( $payload['role_id'] ) ? (int) $payload['role_id'] : null;
@@ -856,7 +856,7 @@ final class StaffService {
 	}
 
 	/**
-	 * Checks if a WordPress user is the last active Owner in Nexora.
+	 * Checks if a WordPress user is the last active Owner in CodeClove.
 	 *
 	 * @param int $user_id WordPress user ID.
 	 * @return bool
@@ -914,11 +914,11 @@ final class StaffService {
 		$email      = ! empty( $payload['email'] ) ? sanitize_email( $payload['email'] ) : '';
 
 		if ( empty( $first_name ) || empty( $last_name ) ) {
-			return new WP_Error( 'nexora_validation_failed', __( 'First name and last name are required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_validation_failed', __( 'First name and last name are required.', 'codeclove-school-management' ), 400 );
 		}
 
 		if ( empty( $email ) || ! is_email( $email ) ) {
-			return new WP_Error( 'nexora_validation_failed', __( 'A valid email address is required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_validation_failed', __( 'A valid email address is required.', 'codeclove-school-management' ), 400 );
 		}
 
 		$ref_number = IdentifierService::generate( 'staff_application' ) ?: 'STAFF-' . gmdate( 'Y' ) . '-' . strtoupper( wp_generate_password( 5, false ) );
@@ -970,7 +970,7 @@ final class StaffService {
 
 		if ( ! $result ) {
 			Logger::error( 'Failed to submit public staff application', $wpdb->last_error );
-			return new WP_Error( 'nexora_db_error', __( 'Failed to save application to database.', 'nexora-school-management' ), 500 );
+			return new WP_Error( 'codeclove_db_error', __( 'Failed to save application to database.', 'codeclove-school-management' ), 500 );
 		}
 
 		$app_id = (int) $wpdb->insert_id;
@@ -991,7 +991,7 @@ final class StaffService {
 		);
 		// phpcs:enable
 
-		do_action( 'nexora_staff_application_received', $app_id, $ref_number );
+		do_action( 'codeclove_staff_application_received', $app_id, $ref_number );
 
 		return [
 			'id'               => $app_id,
@@ -1017,7 +1017,7 @@ final class StaffService {
 
 		$ref_clean = sanitize_text_field( $reference_number );
 		if ( empty( $ref_clean ) || ( empty( $email ) && empty( $dob ) ) ) {
-			return new WP_Error( 'nexora_validation_failed', __( 'Reference number and verification details (email or date of birth) are required.', 'nexora-school-management' ), 400 );
+			return new WP_Error( 'codeclove_validation_failed', __( 'Reference number and verification details (email or date of birth) are required.', 'codeclove-school-management' ), 400 );
 		}
 
 		$table = Schema::staff_apps();
@@ -1039,7 +1039,7 @@ final class StaffService {
 		// phpcs:enable
 
 		if ( ! $app ) {
-			return new WP_Error( 'nexora_not_found', __( 'No application found matching the reference number and verification details.', 'nexora-school-management' ), 404 );
+			return new WP_Error( 'codeclove_not_found', __( 'No application found matching the reference number and verification details.', 'codeclove-school-management' ), 404 );
 		}
 
 		// Fetch public timeline events

@@ -5,19 +5,19 @@
  * Provides transactional boundary with automatic commit and rollback,
  * supporting nested transactions via MySQL SAVEPOINTs.
  *
- * @package Nexora\Database
+ * @package CodeClove\Database
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Database;
+namespace CodeClove\Database;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Core\Logger;
+use CodeClove\Core\Logger;
 use Throwable;
 use WP_Error;
 
@@ -46,7 +46,7 @@ final class Transaction {
 			// phpcs:enable
 		} else {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query( 'SAVEPOINT nexora_tx_' . (int) self::$depth );
+			$wpdb->query( 'SAVEPOINT codeclove_tx_' . (int) self::$depth );
 			// phpcs:enable
 		}
 	}
@@ -68,7 +68,7 @@ final class Transaction {
 			// phpcs:enable
 		} else {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query( 'RELEASE SAVEPOINT nexora_tx_' . (int) self::$depth );
+			$wpdb->query( 'RELEASE SAVEPOINT codeclove_tx_' . (int) self::$depth );
 			// phpcs:enable
 		}
 
@@ -92,7 +92,7 @@ final class Transaction {
 			// phpcs:enable
 		} else {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query( 'ROLLBACK TO SAVEPOINT nexora_tx_' . (int) self::$depth );
+			$wpdb->query( 'ROLLBACK TO SAVEPOINT codeclove_tx_' . (int) self::$depth );
 			// phpcs:enable
 		}
 

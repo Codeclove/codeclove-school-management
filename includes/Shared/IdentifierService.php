@@ -2,21 +2,22 @@
 /**
  * Shared service for auto-generating unique entity identifiers.
  *
- * @package Nexora\Shared
+ * @package CodeClove\Shared
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Shared;
+namespace CodeClove\Shared;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Database\Transaction;
-use Nexora\Modules\Settings\SettingsRepository;
+use CodeClove\Database\Transaction;
+use CodeClove\Modules\Settings\SettingsRepository;
 use WP_Error;
+
 /**
  * Class IdentifierService
  */
@@ -25,7 +26,7 @@ final class IdentifierService {
 	/**
 	 * Generates a unique sequential identifier for a given type.
 	 *
-	 * Uses database transaction row-level locking on the nexora_settings option row
+	 * Uses database transaction row-level locking on the codeclove_settings option row
 	 * to prevent race conditions when concurrent requests attempt to generate numbers.
 	 *
 	 * @param string $type Identifier type matching a key in identifiers settings (e.g. 'student_number').
@@ -34,11 +35,11 @@ final class IdentifierService {
 	public static function generate( string $type ): string|WP_Error {
 		return Transaction::run( function( $wpdb ) use ( $type ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery
-			// Execute row-level lock on the nexora_settings option.
+			// Execute row-level lock on the settings option.
 			$wpdb->get_var(
 				$wpdb->prepare(
 					"SELECT option_value FROM {$wpdb->options} WHERE option_name = %s FOR UPDATE",
-					'nexora_settings'
+					'codeclove_settings'
 				)
 			);
 			// phpcs:enable

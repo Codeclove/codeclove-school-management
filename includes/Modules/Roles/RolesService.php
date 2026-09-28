@@ -4,20 +4,20 @@
  *
  * Handles database CRUD operations for roles and permissions.
  *
- * @package Nexora\Modules\Roles
+ * @package CodeClove\Modules\Roles
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Modules\Roles;
+namespace CodeClove\Modules\Roles;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Nexora\Database\Schema;
-use Nexora\Shared\AuditLogger;
+use CodeClove\Database\Schema;
+use CodeClove\Shared\AuditLogger;
 use WP_Error;
 
 /**
@@ -117,7 +117,7 @@ final class RolesService {
 		$permissions = (array) ( $data['permissions'] ?? [] );
 
 		if ( empty( $name ) ) {
-			return new WP_Error( 'nexora_validation_failed', __( 'Role name is required.', 'nexora-school-management' ), [ 'status' => 400 ] );
+			return new WP_Error( 'codeclove_validation_failed', __( 'Role name is required.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
 
 		$slug = sanitize_title( $name );
@@ -130,7 +130,7 @@ final class RolesService {
 		// phpcs:enable
 
 		if ( $exists ) {
-			return new WP_Error( 'nexora_validation_failed', __( 'A role with a similar name already exists.', 'nexora-school-management' ), [ 'status' => 400 ] );
+			return new WP_Error( 'codeclove_validation_failed', __( 'A role with a similar name already exists.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
 
 		$now = gmdate( 'Y-m-d H:i:s' );
@@ -197,7 +197,7 @@ final class RolesService {
 		// phpcs:enable
 
 		if ( ! $row ) {
-			return new WP_Error( 'nexora_not_found', __( 'Role not found.', 'nexora-school-management' ), [ 'status' => 404 ] );
+			return new WP_Error( 'codeclove_not_found', __( 'Role not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
 		}
 
 		$is_locked = (int) $row['is_locked'] === 1;
@@ -249,7 +249,7 @@ final class RolesService {
 			}
 
 			// Flush permission checking cache for all users
-			\Nexora\Core\Permissions::flush_cache();
+			\CodeClove\Core\Permissions::flush_cache();
 		}
 
 		AuditLogger::log( 'roles.updated', [ 'role_id' => $id, 'name' => $row['name'] ] );
@@ -274,11 +274,11 @@ final class RolesService {
 		// phpcs:enable
 
 		if ( ! $row ) {
-			return new WP_Error( 'nexora_not_found', __( 'Role not found.', 'nexora-school-management' ), [ 'status' => 404 ] );
+			return new WP_Error( 'codeclove_not_found', __( 'Role not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
 		}
 
 		if ( (int) $row['is_system'] === 1 || (int) $row['is_locked'] === 1 ) {
-			return new WP_Error( 'nexora_action_blocked', __( 'System or locked roles cannot be deleted.', 'nexora-school-management' ), [ 'status' => 403 ] );
+			return new WP_Error( 'codeclove_action_blocked', __( 'System or locked roles cannot be deleted.', 'codeclove-school-management' ), [ 'status' => 403 ] );
 		}
 
 		// Check if any users are assigned to this role
@@ -290,7 +290,7 @@ final class RolesService {
 
 		if ( $assigned_count > 0 ) {
 			return new WP_Error(
-				'nexora_action_blocked',
+				'codeclove_action_blocked',
 				'Cannot delete role because it is currently assigned to ' . $assigned_count . ' user(s).',
 				[ 'status' => 400 ]
 			);

@@ -5,12 +5,12 @@
  * Renders the isolated fullscreen SPA and completely bypasses the WordPress
  * admin chrome, header, footer, and scripts.
  *
- * @package Nexora\Core
+ * @package CodeClove\Core
  */
 
 declare( strict_types=1 );
 
-namespace Nexora\Core;
+namespace CodeClove\Core;
 
 // Prevent direct file access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -22,11 +22,24 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Assets {
 
-	private const BUILD_DIR = NEXORA_DIR . 'assets/build/admin/';
-	private const BUILD_URL = NEXORA_URL . 'assets/build/admin/';
+	private const JS_HANDLE  = 'codeclove-admin';
+	private const CSS_HANDLE = 'codeclove-admin-css';
 
-	private const JS_HANDLE  = 'nexora-admin';
-	private const CSS_HANDLE = 'nexora-admin-css';
+	/**
+	 * Resolves build dir.
+	 */
+	private static function get_build_dir(): string {
+		$dir = defined( 'CODECLOVE_DIR' ) ? CODECLOVE_DIR : '';
+		return $dir . 'assets/build/admin/';
+	}
+
+	/**
+	 * Resolves build url.
+	 */
+	private static function get_build_url(): string {
+		$url = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
+		return $url . 'assets/build/admin/';
+	}
 
 	/**
 	 * Renders the fullscreen isolated SPA and terminates the request.
@@ -37,126 +50,81 @@ final class Assets {
 		nocache_headers();
 
 		$user_id = get_current_user_id();
+		$menu_slug = 'codeclove-school-management';
 		if ( ! $user_id ) {
-			$menu_slug = defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO ? 'nexora' : 'nexora-school-management';
 			wp_safe_redirect( wp_login_url( admin_url( 'admin.php?page=' . $menu_slug ) ) );
 			exit;
 		}
 
-		// No valid license — admins go to the activation page; everyone else gets a clear error.
-		if ( class_exists( '\Nexora\Licensing\License' ) && ( ! \Nexora\Licensing\License::verified() || ! \Nexora\Licensing\License::verify_integrity() ) ) {
-			if ( current_user_can( 'manage_options' ) ) {
-				wp_safe_redirect( admin_url( 'admin.php?page=nexora-license' ) );
-				exit;
-			}
-			wp_die(
-				esc_html__( 'Nexora is currently disabled. No valid license is active. Please contact your site administrator.', 'nexora-school-management' ),
-				esc_html__( 'License Required', 'nexora-school-management' ),
-				[ 'response' => 403 ]
-			);
-		}
-
 		// Students, guardians, and users without staff permissions must never access the admin SPA.
 		if ( ! current_user_can( 'manage_options' ) ) {
+			$has_perms = class_exists( Permissions::class ) ? ! empty( Permissions::get_user_permissions( $user_id ) ) : false;
 			if (
-				current_user_can( 'nexora_guardian' )
-				|| current_user_can( 'nexora_student' )
-				|| empty( \Nexora\Core\Permissions::get_user_permissions( $user_id ) )
+				current_user_can( 'codeclove_guardian' )
+				|| current_user_can( 'codeclove_student' )
+				|| ! $has_perms
 			) {
 				wp_die(
-					esc_html__( 'You do not have permission to access the Nexora administration panel.', 'nexora-school-management' ),
-					esc_html__( 'Access Denied', 'nexora-school-management' ),
+					esc_html__( 'You do not have permission to access the School Management administration panel.', 'codeclove-school-management' ),
+					esc_html__( 'Access Denied', 'codeclove-school-management' ),
 					[ 'response' => 403 ]
 				);
 			}
 		}
-		// phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedScript, WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet
-		if ( $this->is_vite_dev_active() ) {
-			$head = implode( "\n\t\t\t\t", [
-				'<script type="module">',
-					"import RefreshRuntime from 'http://localhost:5174/@react-refresh'",
-					'RefreshRuntime.injectIntoGlobalHook(window)',
-					'window.$RefreshReg$ = () => {}',
-					'window.$RefreshSig$ = () => (type) => type',
-					'window.__vite_plugin_react_preamble_installed__ = true',
-				'</script>',
-				'<script type="module" src="http://localhost:5174/@vite/client"></script>',
-			] );
-			$body = '<script type="module" src="http://localhost:5174/src/main.tsx?t=' . time() . '"></script>';
-			$this->render_html( $head, $body );
-		}
 
-		$js_path  = self::BUILD_DIR . 'index.js';
-		$css_path = self::BUILD_DIR . 'index.css';
+
+		$build_dir = self::get_build_dir();
+		$build_url = self::get_build_url();
+		$version   = defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0';
+
+		$js_path  = $build_dir . 'index.js';
+		$css_path = $build_dir . 'index.css';
 
 		if ( ! file_exists( $js_path ) ) {
 			wp_die(
-				esc_html__( 'Nexora admin bundle not found. Please run "npm run build" in the admin directory.', 'nexora-school-management' )
+				esc_html__( 'School Management admin bundle not found. Please run "npm run build" in the admin directory.', 'codeclove-school-management' )
 			);
 		}
 
-		$head = file_exists( $css_path )
-			? '<link rel="stylesheet" id="' . esc_attr( self::CSS_HANDLE ) . '" href="' . esc_url( self::BUILD_URL . 'index.css?ver=' . NEXORA_VERSION ) . '" media="all" />'
-			: '';
-		$body = '<script id="' . esc_attr( self::JS_HANDLE ) . '" src="' . esc_url( self::BUILD_URL . 'index.js?ver=' . NEXORA_VERSION ) . '"></script>';
+		// Enqueue via WordPress APIs — satisfies WP.org review requirements.
+		if ( file_exists( $css_path ) ) {
+			wp_enqueue_style( self::CSS_HANDLE, $build_url . 'index.css', [], $version );
+		}
+		wp_enqueue_script( self::JS_HANDLE, $build_url . 'index.js', [], $version, true );
 
-		$this->render_html( $head, $body );
-		// phpcs:enable
-	}
-	/**
-	 * Renders the shared fullscreen HTML shell and exits.
-	 *
-	 * @param string $head_extras  HTML to inject inside <head> (scripts/styles).
-	 * @param string $body_scripts HTML to inject before </body> (app entry script).
-	 */
-	private function render_html( string $head_extras, string $body_scripts ): void {
+		// Inline config — output is wp_json_encode()'d with full HEX escaping; safe.
 		$config_json = wp_json_encode( $this->build_config(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
+		wp_add_inline_script( self::JS_HANDLE, 'window.CodeCloveConfig = ' . $config_json . ';', 'before' );
+
+		$this->render_html();
+	}
+
+	/**
+	 * Renders the fullscreen HTML shell using WP's enqueue queue, then exits.
+	 */
+	private function render_html(): void {
+		$plugin_url = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
 		?>
 		<!DOCTYPE html>
 		<html <?php language_attributes(); ?>>
 		<head>
 			<meta charset="<?php bloginfo( 'charset' ); ?>">
 			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<title><?php esc_html_e( 'Nexora', 'nexora-school-management' ); ?></title>
-			<link rel="icon" type="image/svg+xml" href="<?php echo esc_url( NEXORA_URL . 'assets/defaults/logo.svg' ); ?>">
-			<link rel="shortcut icon" href="<?php echo esc_url( NEXORA_URL . 'assets/defaults/logo.svg' ); ?>">
-			<?php if ( $head_extras ) echo $head_extras; // phpcs:ignore WordPress.Security.EscapeOutput ?>
+			<title><?php esc_html_e( 'School Management', 'codeclove-school-management' ); ?></title>
+			<link rel="icon" type="image/svg+xml" href="<?php echo esc_url( $plugin_url . 'assets/defaults/logo.svg' ); ?>">
+			<link rel="shortcut icon" href="<?php echo esc_url( $plugin_url . 'assets/defaults/logo.svg' ); ?>">
 			<?php wp_print_styles(); wp_print_head_scripts(); ?>
-			<script>window.NexoraConfig = <?php echo $config_json; // phpcs:ignore WordPress.Security.EscapeOutput ?>;</script>
 		</head>
 		<body>
-			<div id="nexora-root"></div>
-			<?php echo $body_scripts; // phpcs:ignore WordPress.Security.EscapeOutput ?>
+			<div id="codeclove-root"></div>
 			<?php wp_print_footer_scripts(); ?>
 		</body>
 		</html>
 		<?php
 		exit;
 	}
-
 	/**
-	 * Checks if Vite dev server is running.
-	 *
-	 * @return bool
-	 */
-	private function is_vite_dev_active(): bool {
-		// Strict opt-in: only activate dev server if NEXORA_DEV is explicitly defined as true
-		if ( ! defined( 'NEXORA_DEV' ) || ! NEXORA_DEV ) {
-			return false;
-		}
-		$response = wp_remote_get( 'http://127.0.0.1:5174/@vite/client', [
-			'timeout'   => 0.05,
-			'sslverify' => false,
-		] );
-
-		if ( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ) ) {
-			return true;
-		}
-
-		return false;
-	}
-
-	/**
+	 * Builds config payload passed to the frontend via window.CodeCloveConfig.
 	 *
 	 * @return array<string, mixed>
 	 */
@@ -166,11 +134,11 @@ final class Assets {
 		$is_admin = user_can( $user_id, 'manage_options' );
 
 		// WP admins always have full access — skip the DB query entirely.
-		// For Nexora Owner role users, get_user_permissions() returns ['*' => true].
+		// For CodeClove Owner role users, get_user_permissions() returns ['*' => true].
 		// The frontend must treat a permissions array containing '*' as "all granted".
 		$permissions = $is_admin
 			? [ '*' ]
-			: array_keys( \Nexora\Core\Permissions::get_user_permissions( $user_id ) );
+			: array_keys( Permissions::get_user_permissions( $user_id ) );
 
 		global $wpdb;
 		$staff_id = null;
@@ -178,7 +146,7 @@ final class Assets {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$staff_id = $wpdb->get_var(
 				$wpdb->prepare(
-					'SELECT id FROM ' . \Nexora\Database\Schema::staff_members() . ' WHERE user_id = %d AND deleted_at IS NULL',
+					'SELECT id FROM ' . \CodeClove\Database\Schema::staff_members() . ' WHERE user_id = %d AND deleted_at IS NULL',
 					$user_id
 				)
 			);
@@ -186,27 +154,29 @@ final class Assets {
 			$staff_id = $staff_id ? (int) $staff_id : null;
 		}
 
-		$is_dev_mode = ( defined( 'NEXORA_DEV_TOOLS' ) && NEXORA_DEV_TOOLS ) || ( defined( 'NEXORA_DEV' ) && NEXORA_DEV ) || ( defined( 'WP_RUNNING_TESTS' ) && WP_RUNNING_TESTS );
-		$is_pro      = defined( 'NEXORA_IS_PRO' ) && NEXORA_IS_PRO;
-		$pro_url     = 'https://codeclove.com/plugins/nexora/?utm_source=wp_plugin&utm_medium=pro_page&utm_campaign=upgrade';
-		$settings    = get_option( 'nexora_settings', [] );
+		$is_dev_mode = ( defined( 'CODECLOVE_DEV_TOOLS' ) && CODECLOVE_DEV_TOOLS ) || ( defined( 'CODECLOVE_DEV' ) && CODECLOVE_DEV ) || ( defined( 'WP_RUNNING_TESTS' ) && WP_RUNNING_TESTS );
+		$is_pro      = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
+		$pro_url     = 'https://codeclove.com/?utm_source=wp_plugin&utm_medium=pro_page&utm_campaign=upgrade';
+		$settings    = get_option( 'codeclove_settings', [] );
 		$is_rtl      = is_rtl() || ! empty( $settings['localization']['rtl'] ?? false );
+		$plugin_url  = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
+		$version     = defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0';
 
 		return [
-			'restUrl'     => rest_url( 'nexora/v1/' ),
+			'restUrl'     => rest_url( 'codeclove/v1/' ),
 			'nonce'       => wp_create_nonce( 'wp_rest' ),
-			'adminUrl'    => admin_url( 'admin.php?page=' . ( $is_pro ? 'nexora' : 'nexora-school-management' ) ),
+			'adminUrl'    => admin_url( 'admin.php?page=codeclove-school-management' ),
 			'wpAdminUrl'  => admin_url(),
 			'logoutUrl'   => wp_logout_url( admin_url() ),
-			'pluginUrl'   => NEXORA_URL,
-			'version'     => NEXORA_VERSION,
+			'pluginUrl'   => $plugin_url,
+			'version'     => $version,
 			'devMode'     => (bool) $is_dev_mode,
 			'isPro'       => (bool) $is_pro,
 			'proUrl'      => $pro_url,
 			'permissions' => $permissions,
-			'locale'      => determine_locale(),
+			'locale'      => str_replace( '_', '-', determine_locale() ),
 			'rtl'         => (bool) $is_rtl,
-			'i18n'        => self::get_jed_data(),
+			'i18nUrl'     => self::get_i18n_url(),
 			'currentUser' => [
 				'id'       => $user_id,
 				'staff_id' => $staff_id,
@@ -219,42 +189,55 @@ final class Assets {
 	}
 
 	/**
-	 * Loads JED translation JSON data for the current locale.
+	 * Returns the URL of the JED translation JSON file for the current locale,
+	 * or null for English (no file needed).
 	 *
-	 * Checks WP_LANG_DIR first (WordPress.org translation updates), then plugin languages dir.
+	 * Checks WP_LANG_DIR first (WordPress.org auto-updates), then the plugin's
+	 * own languages/ directory.
+	 *
+	 * The file is served as a static asset — separately cacheable, not inlined
+	 * into the HTML. The frontend fetches it before mounting.
+	 *
+	 * @return string|null
+	 */
+	public static function get_i18n_url(): ?string {
+		$locale = determine_locale();
+		$slug   = 'codeclove-school-management-' . $locale . '.json';
+
+		// WP_LANG_DIR takes precedence (WordPress.org translation updates).
+		if ( defined( 'WP_LANG_DIR' ) && file_exists( WP_LANG_DIR . '/plugins/' . $slug ) ) {
+			return content_url( 'languages/plugins/' . $slug );
+		}
+
+		$plugin_dir = defined( 'CODECLOVE_DIR' ) ? CODECLOVE_DIR : '';
+		$plugin_url = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
+
+		if ( file_exists( $plugin_dir . 'languages/' . $slug ) ) {
+			return $plugin_url . 'languages/' . $slug;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Loads JED translation JSON data for the current locale, or null if English.
 	 *
 	 * @return array<string, mixed>|null
 	 */
 	public static function get_jed_data(): ?array {
-		$locale = determine_locale();
+		$locale     = determine_locale();
+		$slug       = 'codeclove-school-management-' . $locale . '.json';
+		$plugin_dir = defined( 'CODECLOVE_DIR' ) ? CODECLOVE_DIR : '';
+		$file       = $plugin_dir . 'languages/' . $slug;
 
-		// Candidate file paths in order of precedence:
-		$candidates = [];
-		if ( defined( 'WP_LANG_DIR' ) ) {
-			$candidates[] = WP_LANG_DIR . '/plugins/nexora-school-management-' . $locale . '.json';
-		}
-		$candidates[] = NEXORA_DIR . 'languages/nexora-school-management-' . $locale . '.json';
-
-		$json = null;
-		foreach ( $candidates as $file ) {
-			if ( file_exists( $file ) ) {
-				$content = file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-				if ( $content ) {
-					$json = $content;
-					break;
-				}
+		if ( file_exists( $file ) ) {
+			$raw = file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+			if ( false !== $raw ) {
+				$decoded = json_decode( $raw, true );
+				return is_array( $decoded ) ? $decoded : null;
 			}
 		}
 
-		if ( ! $json ) {
-			return null;
-		}
-
-		$data = json_decode( $json, true );
-		if ( ! is_array( $data ) || empty( $data['locale_data'] ) ) {
-			return null;
-		}
-
-		return $data;
+		return null;
 	}
 }

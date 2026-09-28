@@ -10,30 +10,30 @@ msgstr ""
 "POT-Creation-Date: 2026-09-24T17:06:09+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
-"X-Domain: nexora-school-management\n"
+"X-Domain: codeclove-school-management\n"
 
 #. Plugin Name of the plugin
 #. Author of the plugin
-#: nexora.php
+#: codeclove-school-management.php
 #: includes/Core/Assets.php:114
 #: includes/Core/Plugin.php:145
 #: includes/Core/Plugin.php:146
-msgid "Nexora"
+msgid "CodeClove"
 msgstr "نيكسورا"
 
 #. Plugin URI of the plugin
 #. Author URI of the plugin
-#: nexora.php
-msgid "https://codeclove.com/plugins/nexora/"
+#: codeclove-school-management.php
+msgid "https://codeclove.com/"
 msgstr ""
 
 #. Description of the plugin
-#: nexora.php
+#: codeclove-school-management.php
 msgid "A comprehensive, country-aware school management system for educational institutions. Covers academics, admissions, students, staff, attendance, finance, and more."
 msgstr ""
 
 #: includes/Core/Assets.php:47
-msgid "Nexora is currently disabled. No valid license is active. Please contact your site administrator."
+msgid "CodeClove is currently disabled. No valid license is active. Please contact your site administrator."
 msgstr ""
 
 #: includes/Core/Assets.php:48
@@ -41,7 +41,7 @@ msgid "License Required"
 msgstr ""
 
 #: includes/Core/Assets.php:61
-msgid "You do not have permission to access the Nexora administration panel."
+msgid "You do not have permission to access the CodeClove administration panel."
 msgstr ""
 
 #: includes/Core/Assets.php:62
@@ -49,23 +49,23 @@ msgid "Access Denied"
 msgstr ""
 
 #: includes/Core/Assets.php:88
-msgid "Nexora admin bundle not found. Please run \"npm run build\" in the admin directory."
+msgid "CodeClove admin bundle not found. Please run \"npm run build\" in the admin directory."
 msgstr ""
 
 #: includes/Core/Plugin.php:61
-msgid "Nexora Staff"
+msgid "CodeClove Staff"
 msgstr ""
 
 #: includes/Core/Plugin.php:62
-msgid "Nexora Guardian"
+msgid "CodeClove Guardian"
 msgstr ""
 
 #: includes/Core/Plugin.php:63
-msgid "Nexora Student"
+msgid "CodeClove Student"
 msgstr ""
 
 #: includes/Core/Plugin.php:178
-msgid "No active license found. Nexora is fully disabled until a license is activated."
+msgid "No active license found. CodeClove is fully disabled until a license is activated."
 msgstr ""
 
 #: includes/Core/Plugin.php:180
@@ -122,7 +122,7 @@ msgid "Not activated"
 msgstr ""
 
 #: includes/Licensing/LicensePage.php:127
-msgid "Nexora License"
+msgid "CodeClove License"
 msgstr ""
 
 #: includes/Licensing/LicensePage.php:136
@@ -904,7 +904,7 @@ msgid "Sign In to Portal"
 msgstr ""
 
 #: includes/Modules/Portal/PortalShortcode.php:425
-msgid "Protected by Nexora School Management"
+msgid "Protected by CodeClove School Management"
 msgstr ""
 
 #: includes/Modules/Promotion/PromotionController.php:90
