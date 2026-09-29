@@ -2,6 +2,9 @@
 node_modules/
 vendor/
 
+# Build artifacts
+*.zip
+
 # OS
 .DS_Store
 Thumbs.db
