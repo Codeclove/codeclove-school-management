@@ -121,10 +121,6 @@ final class Plugin {
 		// Daily cron + license heartbeat listeners.
 		add_action( 'codeclove_update_overdue_invoices', [ $this, 'update_overdue_invoices' ] );
 
-		$is_pro = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
-		if ( $is_pro ) {
-			add_action( 'admin_notices', [ $this, 'maybe_show_pro_welcome_notice' ] );
-		}
 
 		if ( class_exists( '\CodeClove\Modules\Notifications\NotificationsService' ) ) {
 			( new \CodeClove\Modules\Notifications\NotificationsService() )->init();
@@ -155,7 +151,7 @@ final class Plugin {
 	 * Registers the CodeClove top-level admin menu entry and hooks the fullscreen renderer.
 	 */
 	public function register_admin_menu(): void {
-		$is_pro    = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
+		$is_pro    = false; // Free version — always false.
 		$menu_slug = 'codeclove-school-management';
 		$page_hook = add_menu_page(
 			__( 'School Management', 'codeclove-school-management' ),
@@ -207,6 +203,11 @@ final class Plugin {
 			esc_html__( 'School Management Pro Activated', 'codeclove-school-management' ),
 			esc_html__( 'All your existing school data, students, and settings are active in Pro. You may safely deactivate and remove the Free version at your convenience.', 'codeclove-school-management' )
 		);
+	}
+	/**
+	 * Shows an admin notice if Pro is active without a valid license key.
+	 */
+	public function maybe_show_license_notice(): void {
 	}
 
 	// ─── Migrations ──────────────────────────────────────────────────────────

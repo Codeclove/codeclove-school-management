@@ -98,8 +98,8 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
 		\WP_CLI::add_command(
 			'codeclove db clear',
-			static function ( array $args, array $assoc_args ) use ( $seeder_class ): void {
-				$res = $seeder_class::clear();
+			static function ( array $args, array $assoc_args ) use ( $codeclove_seeder_class ): void {
+				$res = $codeclove_seeder_class::clear();
 				if ( ! $res['success'] ) {
 					\WP_CLI::error( $res['message'] );
 				} else {

@@ -2396,6 +2396,9 @@ final class FinanceService {
 		$ids = array_map( 'intval', $ids );
 
 		if ( 'send_reminders' === $action ) {
+			if ( ! class_exists( '\\CodeClove\\Modules\\Notifications\\NotificationsService' ) ) {
+				return new WP_Error( 'codeclove_pro_required', __( 'SMS reminders require the Pro version.', 'codeclove-school-management' ), [ 'status' => 403 ] );
+			}
 			$notif_service = new \CodeClove\Modules\Notifications\NotificationsService();
 			$sent_count = 0;
 			$errors = [];

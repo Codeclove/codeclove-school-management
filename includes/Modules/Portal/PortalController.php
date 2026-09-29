@@ -288,9 +288,6 @@ final class PortalController extends BaseController {
 		if ( ! is_user_logged_in() ) {
 			return false;
 		}
-		if ( class_exists( '\CodeClove\Licensing\License' ) && ! \CodeClove\Licensing\License::verified() ) {
-			return false;
-		}
 
 		return $this->verify_nonce( $request );
 	}

@@ -1,0 +1,556 @@
+/**
+ * Global CSS — CodeClove School Management Admin
+ *
+ * Design token strategy:
+ *   :root      → light theme CSS variables (default)
+ *   .dark      → dark theme CSS variables (toggled by ThemeProvider)
+ *
+ * Tailwind color tokens all reference these variables, so the entire
+ * palette switches by toggling one class on <html>.
+ */
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Light Theme Tokens                                                         */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ponytail: user view scaling factor, defaults to 100% (16px base) */
+  --codeclove-view-scale: 100%;
+
+  /* Backgrounds */
+  --bg-base:     #f4f6f9;   /* page canvas    */
+  --bg-surface:  #ffffff;   /* sidebar, panels*/
+  --bg-elevated: #ffffff;   /* cards          */
+  --bg-overlay:  #f8fafc;   /* menus, popovers*/
+
+  /* Borders */
+  --border:        #cbd5e1;
+  --border-subtle: rgba(0, 0, 0, 0.04);
+  --border-strong: #94a3b8;
+
+  /* Text — WCAG AA/AAA compliant (>= 4.5:1 on light surfaces) */
+  --text:          #0f172a;
+  --text-muted:    #475569;
+  --text-subtle:   #5b6b82;
+  --text-inverted: #ffffff;
+
+  /* Brand — indigo-violet */
+  --brand:         #5e5bf2;
+  --brand-strong:  #4845d2;
+  --brand-dim:     rgba(94, 91, 242, 0.08);
+  --brand-ring:    #4845d2;
+
+  /* Semantic — WCAG AA compliant on white */
+  --success:     #15803d;
+  --success-dim: rgba(21, 128, 61, 0.08);
+  --warning:     #b45309;
+  --warning-dim: rgba(180, 83, 9, 0.08);
+  --danger:      #b91c1c;
+  --danger-dim:  rgba(185, 28, 28, 0.08);
+  --info:        #0369a1;
+  --info-dim:    rgba(3, 105, 161, 0.08);
+
+  /* Status badge foreground — WCAG AA compliant on light */
+  --status-inquiry:       #475569;
+  --status-submitted:     #0369a1;
+  --status-under-review:  #4f46e5;
+  --status-more-info:     #b45309;
+  --status-interview:     #6d28d9;
+  --status-accepted:      #15803d;
+  --status-waitlisted:    #c2410c;
+  --status-rejected:      #b91c1c;
+  --status-admitted:      #047857;
+  --status-withdrawn:     #5b6b82;
+  --status-hired:         #047857;
+  --status-offer-sent:    #6d28d9;
+  --status-active:        #15803d;
+  --status-inactive:      #5b6b82;
+  --status-archived:      #475569;
+  --status-draft:         #5b6b82;
+  /* Interactive hover bg (for use in dark: and components) */
+  --hover-bg:  rgba(0, 0, 0, 0.04);
+  --active-bg: rgba(0, 0, 0, 0.06);
+
+  /* Shadows */
+  --shadow-card:    0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card-md: 0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-modal:   0 20px 60px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06);
+  --shadow-ring:    0 0 0 3px rgba(99,102,241,0.28);
+  --shadow-glow:    0 0 24px rgba(99,102,241,0.16);
+  --shadow-sidebar: 1px 0 0 rgba(0,0,0,0.06);
+  --shadow-header:  0 1px 0 rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+
+  /* Shimmer gradient */
+  --shimmer-from: #f1f5f9;
+  --shimmer-mid:  #e2e8f0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Dark Theme Tokens                                                          */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.dark {
+  /* Backgrounds */
+  --bg-base:     #09090b;   /* page canvas    */
+  --bg-surface:  #111115;   /* sidebar, panels*/
+  --bg-elevated: #1c1c26;   /* cards          */
+  --bg-overlay:  #242432;   /* menus, popovers*/
+
+  /* Borders */
+  --border:        rgba(255, 255, 255, 0.07);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-strong: rgba(255, 255, 255, 0.13);
+
+  /* Text */
+  --text:          #f1f5f9;
+  --text-muted:    #94a3b8;
+  --text-subtle:   #94a3b8;
+  --text-inverted: #0f172a;
+
+  /* Brand — slightly lighter for dark bg legibility */
+  --brand:         #807eff;
+  --brand-strong:  #9e9dff;
+  --brand-dim:     rgba(128, 126, 255, 0.14);
+  --brand-ring:    #807eff;
+
+  /* Semantic — brighter for dark bg visibility */
+  --success:     #22c55e;
+  --success-dim: rgba(34, 197, 94, 0.12);
+  --warning:     #f59e0b;
+  --warning-dim: rgba(245, 158, 11, 0.12);
+  --danger:      #f87171;
+  --danger-dim:  rgba(248, 113, 113, 0.12);
+  --info:        #38bdf8;
+  --info-dim:    rgba(56, 189, 248, 0.12);
+
+  /* Status badge foreground — more vivid on dark */
+  --status-inquiry:       #94a3b8;
+  --status-submitted:     #38bdf8;
+  --status-under-review:  #818cf8;
+  --status-more-info:     #f59e0b;
+  --status-interview:     #a78bfa;
+  --status-accepted:      #22c55e;
+  --status-waitlisted:    #fb923c;
+  --status-rejected:      #f87171;
+  --status-admitted:      #34d399;
+  --status-withdrawn:     #94a3b8;
+  --status-hired:         #34d399;
+  --status-offer-sent:    #a78bfa;
+  --status-active:        #22c55e;
+  --status-inactive:      #94a3b8;
+  --status-archived:      #94a3b8;
+  --status-draft:         #94a3b8;
+
+  /* Interactive hover */
+  --hover-bg:  rgba(255, 255, 255, 0.05);
+  --active-bg: rgba(255, 255, 255, 0.08);
+
+  /* Shadows — deeper on dark */
+  --shadow-card:    0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.24);
+  --shadow-card-md: 0 4px 20px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-modal:   0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-ring:    0 0 0 3px rgba(99,102,241,0.38);
+  --shadow-glow:    0 0 28px rgba(99,102,241,0.24);
+  --shadow-sidebar: 1px 0 0 rgba(255,255,255,0.04);
+  --shadow-header:  0 1px 0 rgba(255,255,255,0.04);
+
+  /* Shimmer gradient */
+  --shimmer-from: #1c1c26;
+  --shimmer-mid:  #242432;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Base Reset                                                                 */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+
+  html {
+    font-size: var(--codeclove-view-scale, 100%);
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: var(--bg-base);
+    color: var(--text);
+    font-family: theme('fontFamily.sans');
+    font-size: 0.875rem;
+    line-height: 1.375rem;
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  #codeclove-root {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  :focus { outline: none; }
+  :focus-visible:not([role="menuitem"]):not([role="option"]) {
+    @apply ring-2 ring-brand-ring ring-offset-1 ring-offset-bg-base rounded;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--text);
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0;
+  }
+
+  p { margin: 0; }
+
+  a { color: var(--brand); text-decoration: none; }
+  a:not([class*="text-"]):hover { color: var(--brand-strong); }
+
+  ::placeholder { color: var(--text-subtle); opacity: 1; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Custom Scrollbar                                                           */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  {
+    background: var(--border-strong);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover { opacity: 0.8; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Utility Layer                                                              */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+@layer utilities {
+  /* Glassmorphism panel */
+  .glass {
+    background: color-mix(in srgb, var(--bg-surface) 85%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+  }
+
+  /* Shimmer loading animation */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--shimmer-from) 25%,
+      var(--shimmer-mid)  50%,
+      var(--shimmer-from) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+
+  /* Hover / interactive states — driven by CSS vars */
+  .hover-bg:hover       { background-color: var(--hover-bg); }
+  .hover-bg-active:active { background-color: var(--active-bg); }
+
+  /* Sidebar active item left border */
+  .nav-active-bar { @apply relative; }
+  .nav-active-bar::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 18px;
+    background: var(--brand);
+    border-radius: 999px;
+  }
+
+  /* Table rows */
+  /* Table rows — works on both <tr> and <div> */
+  .table-row-hover {
+    transition: all 150ms ease;
+    cursor: pointer;
+  }
+  .table-row-hover:hover {
+    background-color: var(--hover-bg);
+  }
+  tr.table-row-hover:hover td {
+    background-color: transparent;
+  }
+
+
+  .ellipsis { @apply overflow-hidden text-ellipsis whitespace-nowrap; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Layout & Density Adaptations                                               */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* 1. Layout Density */
+[data-layout-density="boxed"] .app-content-container {
+  max-width: 80rem; /* 1280px / max-w-7xl */
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+[data-layout-density="fluid"] .app-content-container {
+  max-width: none;
+  width: 100%;
+}
+
+/* 2. Sidebar Density */
+[data-sidebar-density="compact"] aside {
+  width: 64px !important;
+}
+[data-sidebar-density="compact"] aside .sidebar-brand-text,
+[data-sidebar-density="compact"] aside .sidebar-link-text,
+[data-sidebar-density="compact"] aside .sidebar-group-title,
+[data-sidebar-density="compact"] aside .sidebar-group-chevron {
+  display: none !important;
+}
+[data-sidebar-density="compact"] aside a,
+[data-sidebar-density="compact"] aside button {
+  justify-content: center !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+[data-sidebar-density="compact"] aside .sidebar-brand {
+  justify-content: center !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* 3. Table Density */
+[data-table-density="compact"] th {
+  padding-top: 0.375rem !important; /* py-1.5 */
+  padding-bottom: 0.375rem !important;
+}
+[data-table-density="compact"] td {
+  padding-top: 0.375rem !important; /* py-1.5 */
+  padding-bottom: 0.375rem !important;
+  font-size: 0.8125rem !important;   /* text-xs */
+}
+
+/* Protect against WordPress admin .sticky { display: block; } conflicts */
+thead.sticky, thead[class*="sticky"] { display: table-header-group !important; }
+th.sticky, th[class*="sticky"], td.sticky, td[class*="sticky"] { display: table-cell !important; }
+
+/* Prevent Radix Dialog scroll-lock body layout shifts */
+body[data-scroll-locked], html[data-scroll-locked] {
+  margin-right: 0px !important;
+  padding-inline: 0px !important;
+}
+
+/* Custom Spotlight Dialog transitions */
+@keyframes command-palette-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@keyframes command-palette-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.97);
+  }
+}
+
+.animate-command-palette-in {
+  animation: command-palette-in 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-command-palette-out {
+  animation: command-palette-out 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Override WordPress admin input overrides inside the Command Palette */
+body.wp-admin .codeclove-command-palette-content input[type="text"],
+body.wp-core-ui .codeclove-command-palette-content input[type="text"],
+.codeclove-command-palette-content input[type="text"] {
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  height: auto !important;
+  min-height: unset !important;
+  line-height: inherit !important;
+  width: 100% !important;
+}
+
+body.wp-admin .codeclove-command-palette-content input[type="text"]:focus,
+body.wp-core-ui .codeclove-command-palette-content input[type="text"]:focus,
+.codeclove-command-palette-content input[type="text"]:focus {
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.toast-close-button {
+  left: auto !important;
+  right: 0 !important;
+  top: 0 !important;
+  transform: translate(35%, -35%) !important;
+}
+
+[dir="rtl"] {
+  --shadow-sidebar: -1px 0 0 rgba(0, 0, 0, 0.06);
+}
+.dark[dir="rtl"], [dir="rtl"] .dark {
+  --shadow-sidebar: -1px 0 0 rgba(255, 255, 255, 0.04);
+}
+[dir="rtl"] .toast-close-button {
+  left: 0 !important;
+  right: auto !important;
+  transform: translate(-35%, -35%) !important;
+}
+
+/* ── Print media overrides ───────────────────────────────────────────────── */
+@media print {
+  /* Hide WP admin shell navigation and action buttons */
+  #adminmenuback, #adminmenuwrap, #wpadminbar, #wpfooter,
+  [data-sidebar], [data-topbar], [data-breadcrumb], button, .no-print {
+    display: none !important;
+  }
+
+  /* Force print area to full width and adjust body margins */
+  html, body, #wpcontent, #wpbody, #wpbody-content, .app-layout-container, .app-content-container, [data-print-area] {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Page break controls */
+  .page-break {
+    page-break-after: always;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Theme Color Presets                                                         */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* Light Mode presets */
+html[data-theme-color="classic_indigo"] {
+  --brand:         #5e5bf2;
+  --brand-strong:  #4845d2;
+  --brand-dim:     rgba(94, 91, 242, 0.08);
+  --brand-ring:    rgba(94, 91, 242, 0.28);
+}
+html[data-theme-color="sky_blue"] {
+  --brand:         #2269e3;
+  --brand-strong:  #1d5ecb;
+  --brand-dim:     rgba(34, 105, 227, 0.08);
+  --brand-ring:    rgba(34, 105, 227, 0.28);
+}
+html[data-theme-color="sunset_orange"] {
+  --brand:         #d64f1a;
+  --brand-strong:  #c04212;
+  --brand-dim:     rgba(214, 79, 26, 0.08);
+  --brand-ring:    rgba(214, 79, 26, 0.28);
+}
+html[data-theme-color="sunny_gold"] {
+  --brand:         #d98a00;
+  --brand-strong:  #c27a00;
+  --brand-dim:     rgba(217, 138, 0, 0.08);
+  --brand-ring:    rgba(217, 138, 0, 0.28);
+}
+html[data-theme-color="fresh_mint"] {
+  --brand:         #158f49;
+  --brand-strong:  #10783c;
+  --brand-dim:     rgba(21, 143, 73, 0.08);
+  --brand-ring:    rgba(21, 143, 73, 0.28);
+}
+html[data-theme-color="playful_violet"] {
+  --brand:         #8a3ffc;
+  --brand-strong:  #7532df;
+  --brand-dim:     rgba(138, 63, 252, 0.08);
+  --brand-ring:    rgba(138, 63, 252, 0.28);
+}
+html[data-theme-color="fun_pink"] {
+  --brand:         #d12377;
+  --brand-strong:  #b61b65;
+  --brand-dim:     rgba(209, 35, 119, 0.08);
+  --brand-ring:    rgba(209, 35, 119, 0.28);
+}
+
+/* Dark Mode presets */
+html.dark[data-theme-color="classic_indigo"] {
+  --brand:         #807eff;
+  --brand-strong:  #5e5bf2;
+  --brand-dim:     rgba(128, 126, 255, 0.14);
+  --brand-ring:    rgba(128, 126, 255, 0.38);
+}
+html.dark[data-theme-color="sky_blue"] {
+  --brand:         #6bafff;
+  --brand-strong:  #4899ff;
+  --brand-dim:     rgba(107, 175, 255, 0.14);
+  --brand-ring:    rgba(107, 175, 255, 0.38);
+}
+html.dark[data-theme-color="sunset_orange"] {
+  --brand:         #ff8a50;
+  --brand-strong:  #ff6d29;
+  --brand-dim:     rgba(255, 138, 80, 0.14);
+  --brand-ring:    rgba(255, 138, 80, 0.38);
+}
+html.dark[data-theme-color="sunny_gold"] {
+  --brand:         #ffb74d;
+  --brand-strong:  #ffa21b;
+  --brand-dim:     rgba(255, 183, 77, 0.14);
+  --brand-ring:    rgba(255, 183, 77, 0.38);
+}
+html.dark[data-theme-color="fresh_mint"] {
+  --brand:         #56d087;
+  --brand-strong:  #34c46f;
+  --brand-dim:     rgba(86, 208, 135, 0.14);
+  --brand-ring:    rgba(86, 208, 135, 0.38);
+}
+html.dark[data-theme-color="playful_violet"] {
+  --brand:         #a78bfa;
+  --brand-strong:  #8b5cf6;
+  --brand-dim:     rgba(167, 139, 250, 0.14);
+  --brand-ring:    rgba(167, 139, 250, 0.38);
+}
+html.dark[data-theme-color="fun_pink"] {
+  --brand:         #f472b6;
+  --brand-strong:  #ec4899;
+  --brand-dim:     rgba(244, 114, 182, 0.14);
+  --brand-ring:    rgba(244, 114, 182, 0.38);
+}

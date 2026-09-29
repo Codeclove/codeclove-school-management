@@ -39,12 +39,6 @@ final class Shortcodes {
 		add_shortcode( 'codeclove_staff_application_form', [ __CLASS__, 'render_staff_application_form' ] );
 		add_shortcode( 'codeclove_staff_application_status', [ __CLASS__, 'render_staff_status_lookup' ] );
 
-		// Backwards-compatibility aliases.
-		add_shortcode( 'codeclove_admission_form', [ __CLASS__, 'render_admission_form' ] );
-		add_shortcode( 'codeclove_inquiry_form', [ __CLASS__, 'render_inquiry_form' ] );
-		add_shortcode( 'codeclove_application_status', [ __CLASS__, 'render_status_lookup' ] );
-		add_shortcode( 'codeclove_staff_application_form', [ __CLASS__, 'render_staff_application_form' ] );
-		add_shortcode( 'codeclove_staff_application_status', [ __CLASS__, 'render_staff_status_lookup' ] );
 	}
 
 	/**

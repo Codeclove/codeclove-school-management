@@ -31,7 +31,6 @@ final class PortalShortcode {
 	 */
 	public static function register(): void {
 		add_shortcode( 'codeclove_portal', [ __CLASS__, 'render_portal' ] );
-		add_shortcode( 'codeclove_portal', [ __CLASS__, 'render_portal' ] ); // backwards-compat alias
 		// Hide WP admin bar for portal-only roles (guardians/students don't need it)
 		add_filter( 'show_admin_bar', [ __CLASS__, 'maybe_hide_admin_bar' ] );
 
@@ -94,9 +93,6 @@ final class PortalShortcode {
 	 * @return string HTML output.
 	 */
 	public static function render_portal(): string {
-		if ( class_exists( '\CodeClove\Licensing\License' ) && ( ! \CodeClove\Licensing\License::verified() || ! \CodeClove\Licensing\License::verify_integrity() ) ) {
-			return '<div class="codeclove-portal-notice"><p>' . esc_html__( 'The student & guardian portal is currently unavailable. Please contact the school administration.', 'codeclove-school-management' ) . '</p></div>';
-		}
 
 		if ( ! is_user_logged_in() ) {
 			return self::render_login_form();
@@ -143,7 +139,7 @@ final class PortalShortcode {
 			'siteName'    => $site_name,
 			'logoUrl'     => esc_url( $logo_url ),
 			'version'     => CODECLOVE_VERSION,
-			'isPro'       => (bool) ( defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO ),
+			'isPro'       => false, // Free version — pro features locked.
 			'settings'    => [
 				'school'       => $settings['school'] ?? [],
 				'appearance'   => $settings['appearance'] ?? [],

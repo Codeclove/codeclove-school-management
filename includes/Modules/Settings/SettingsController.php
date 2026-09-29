@@ -351,9 +351,6 @@ final class SettingsController extends BaseController {
 		if ( ! is_user_logged_in() ) {
 			return false;
 		}
-		if ( class_exists( '\CodeClove\Licensing\License' ) && ! \CodeClove\Licensing\License::verified() ) {
-			return false;
-		}
 		// Security: CSRF Nonce Verification for Cookie-Authenticated Requests (Defense-in-depth).
 		if ( ! $this->verify_nonce( $request ) ) {
 			return false;

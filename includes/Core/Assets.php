@@ -56,6 +56,7 @@ final class Assets {
 			exit;
 		}
 
+
 		// Students, guardians, and users without staff permissions must never access the admin SPA.
 		if ( ! current_user_can( 'manage_options' ) ) {
 			$has_perms = class_exists( Permissions::class ) ? ! empty( Permissions::get_user_permissions( $user_id ) ) : false;
@@ -155,7 +156,7 @@ final class Assets {
 		}
 
 		$is_dev_mode = ( defined( 'CODECLOVE_DEV_TOOLS' ) && CODECLOVE_DEV_TOOLS ) || ( defined( 'CODECLOVE_DEV' ) && CODECLOVE_DEV ) || ( defined( 'WP_RUNNING_TESTS' ) && WP_RUNNING_TESTS );
-		$is_pro      = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
+		$is_pro = false; // ponytail: free version, always false.
 		$pro_url     = 'https://codeclove.com/?utm_source=wp_plugin&utm_medium=pro_page&utm_campaign=upgrade';
 		$settings    = get_option( 'codeclove_settings', [] );
 		$is_rtl      = is_rtl() || ! empty( $settings['localization']['rtl'] ?? false );

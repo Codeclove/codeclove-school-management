@@ -1,0 +1,474 @@
+/**
+ * Portal CSS — Scoped & Isolated.
+ *
+ * Strategy:
+ *   1. Load fonts (shared with admin)
+ *   2. NO @tailwind base — preflight disabled to prevent theme pollution
+ *   3. Scoped reset: `#codeclove-portal-root` gets its own box-model + typography baseline
+ *   4. CSS tokens scoped to portal root
+ *   5. @tailwind components + utilities (scoped via `important: '#codeclove-portal-root'`)
+ */
+
+
+@config "../../../tailwind.portal.config.ts";
+
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Scoped Reset — only inside the portal root                                 */
+/* Replaces Tailwind preflight without leaking to the WP theme               */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* Scoped portal baseline — cleanly contained within theme post content */
+#codeclove-portal-root {
+  /* Block inherited theme styles at the boundary */
+  all: revert;
+
+  /* Re-establish our own baseline */
+  display: block;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: calc(0.875rem * var(--codeclove-view-scale, 1));
+  line-height: calc(1.375rem * var(--codeclove-view-scale, 1));
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Box-model & Border reset scoped to portal — establishes Tailwind preflight baseline */
+#codeclove-portal-root,
+#codeclove-portal-root *,
+#codeclove-portal-root *::before,
+#codeclove-portal-root *::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: var(--border, #e2e8f0);
+}
+#codeclove-portal-root {
+  /* Tailwind core variable defaults (required when preflight is disabled) */
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x: ;
+  --tw-pan-y: ;
+  --tw-pinch-zoom: ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position: ;
+  --tw-gradient-via-position: ;
+  --tw-gradient-to-position: ;
+  --tw-ordinal: ;
+  --tw-slashed-zero: ;
+  --tw-numeric-figure: ;
+  --tw-numeric-spacing: ;
+  --tw-numeric-fraction: ;
+  --tw-ring-inset: ;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgb(79 70 229 / 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  --tw-blur: ;
+  --tw-brightness: ;
+  --tw-contrast: ;
+  --tw-grayscale: ;
+  --tw-hue-rotate: ;
+  --tw-invert: ;
+  --tw-saturate: ;
+  --tw-sepia: ;
+  --tw-drop-shadow: ;
+  --tw-backdrop-blur: ;
+  --tw-backdrop-brightness: ;
+  --tw-backdrop-contrast: ;
+  --tw-backdrop-grayscale: ;
+  --tw-backdrop-hue-rotate: ;
+  --tw-backdrop-invert: ;
+  --tw-backdrop-opacity: ;
+  --tw-backdrop-saturate: ;
+  --tw-backdrop-sepia: ;
+}
+
+/* Element resets scoped to portal — prevent WordPress theme leakage */
+#codeclove-portal-root h1,
+#codeclove-portal-root h2,
+#codeclove-portal-root h3,
+#codeclove-portal-root h4,
+#codeclove-portal-root h5,
+#codeclove-portal-root h6 {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  margin: 0;
+  line-height: inherit;
+}
+
+#codeclove-portal-root p,
+#codeclove-portal-root blockquote,
+#codeclove-portal-root dl,
+#codeclove-portal-root dd,
+#codeclove-portal-root figure,
+#codeclove-portal-root fieldset,
+#codeclove-portal-root legend,
+#codeclove-portal-root pre {
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  margin: 0;
+}
+
+#codeclove-portal-root ol,
+#codeclove-portal-root ul,
+#codeclove-portal-root menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#codeclove-portal-root a {
+  color: inherit;
+  text-decoration: none !important;
+}
+
+#codeclove-portal-root button,
+#codeclove-portal-root input,
+#codeclove-portal-root optgroup,
+#codeclove-portal-root select,
+#codeclove-portal-root textarea {
+  font-family: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
+  font-size: 100%;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+#codeclove-portal-root button,
+#codeclove-portal-root select {
+  text-transform: none;
+}
+
+#codeclove-portal-root button,
+#codeclove-portal-root input[type='button'],
+#codeclove-portal-root input[type='reset'],
+#codeclove-portal-root input[type='submit'] {
+  -webkit-appearance: button;
+  background-color: transparent;
+  background-image: none;
+}
+
+#codeclove-portal-root table {
+  text-indent: 0;
+  border-color: inherit;
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin: 0;
+  width: 100%;
+  display: table !important;
+}
+
+#codeclove-portal-root thead {
+  display: table-header-group !important;
+}
+
+#codeclove-portal-root tbody {
+  display: table-row-group !important;
+}
+
+#codeclove-portal-root tr {
+  display: table-row !important;
+}
+
+#codeclove-portal-root th,
+#codeclove-portal-root td {
+  border-style: solid;
+  border-width: 0;
+  border-color: var(--border, #e2e8f0);
+  padding: 0;
+  display: table-cell !important;
+}
+
+#codeclove-portal-root img,
+#codeclove-portal-root svg,
+#codeclove-portal-root video,
+#codeclove-portal-root canvas,
+#codeclove-portal-root audio,
+#codeclove-portal-root iframe,
+#codeclove-portal-root embed,
+#codeclove-portal-root object {
+  display: block;
+  vertical-align: middle;
+}
+
+#codeclove-portal-root img,
+#codeclove-portal-root video {
+  max-width: 100%;
+  height: auto;
+}
+
+#codeclove-portal-root ::placeholder {
+  opacity: 1;
+  color: var(--text-subtle, #5b6b82);
+}
+
+#codeclove-portal-root :focus {
+  outline: none;
+}
+
+#codeclove-portal-root :focus-visible {
+  outline: 2px solid var(--brand, #5e5bf2);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+#codeclove-portal-root hr {
+  height: 0;
+  color: inherit;
+  border-top-width: 1px;
+  margin: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Portal CSS Tokens                                                          */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+#codeclove-portal-root {
+  /* Backgrounds */
+  --bg-base:     #f4f6f9;
+  --bg-surface:  #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-overlay:  #f8fafc;
+
+  /* Borders */
+  --border:        #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --border-strong: #cbd5e1;
+
+  /* Text */
+  --text:          #0f172a;
+  --text-muted:    #334155;
+  --text-subtle:   #64748b;
+  --text-inverted: #ffffff;
+
+  /* Brand — Premium Deep Indigo */
+  --brand:         #4f46e5;
+  --brand-strong:  #4338ca;
+  --brand-dim:     rgba(79, 70, 229, 0.08);
+  --brand-ring:    #4f46e5;
+}
+
+/* Theme Color Presets mapped from Settings */
+#codeclove-portal-root[data-theme-color="classic_indigo"] {
+  --brand:         #5e5bf2;
+  --brand-strong:  #4845d2;
+  --brand-dim:     rgba(94, 91, 242, 0.08);
+  --brand-ring:    #5e5bf2;
+}
+
+#codeclove-portal-root[data-theme-color="sky_blue"] {
+  --brand:         #2269e3;
+  --brand-strong:  #1d5ecb;
+  --brand-dim:     rgba(34, 105, 227, 0.08);
+  --brand-ring:    #2269e3;
+}
+
+#codeclove-portal-root[data-theme-color="sunset_orange"] {
+  --brand:         #d64f1a;
+  --brand-strong:  #c04212;
+  --brand-dim:     rgba(214, 79, 26, 0.08);
+  --brand-ring:    #d64f1a;
+}
+
+#codeclove-portal-root[data-theme-color="sunny_gold"] {
+  --brand:         #d98a00;
+  --brand-strong:  #c27a00;
+  --brand-dim:     rgba(217, 138, 0, 0.08);
+  --brand-ring:    #d98a00;
+}
+
+#codeclove-portal-root[data-theme-color="fresh_mint"] {
+  --brand:         #158f49;
+  --brand-strong:  #10783c;
+  --brand-dim:     rgba(21, 143, 73, 0.08);
+  --brand-ring:    #158f49;
+}
+
+#codeclove-portal-root[data-theme-color="playful_violet"] {
+  --brand:         #8a3ffc;
+  --brand-strong:  #7532df;
+  --brand-dim:     rgba(138, 63, 252, 0.08);
+  --brand-ring:    #8a3ffc;
+}
+
+#codeclove-portal-root[data-theme-color="fun_pink"] {
+  --brand:         #d12377;
+  --brand-strong:  #b61b65;
+  --brand-dim:     rgba(209, 35, 119, 0.08);
+  --brand-ring:    #d12377;
+}
+
+#codeclove-portal-root {
+  /* Semantic */
+  --success:     #16a34a;
+  --success-dim: rgba(22, 163, 74, 0.08);
+  --warning:     #d97706;
+  --warning-dim: rgba(217, 119, 6, 0.08);
+  --danger:      #dc2626;
+  --danger-dim:  rgba(220, 38, 38, 0.08);
+  --info:        #0284c7;
+  --info-dim:    rgba(2, 132, 199, 0.08);
+
+  /* Status badge foreground tokens — WCAG AA compliant */
+  --status-active:         #15803d;
+  --status-paid:           #15803d;
+  --status-partially_paid: #b45309;
+  --status-overdue:        #b91c1c;
+  --status-present:        #15803d;
+  --status-absent:         #b91c1c;
+  --status-late:           #b45309;
+  --hover-bg:              rgba(0, 0, 0, 0.04);
+  --active-bg:             rgba(0, 0, 0, 0.06);
+  /* Shadows — Soft Layered Modern Depth */
+  --shadow-card:    0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+  --shadow-card-md: 0 4px 12px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  --shadow-modal:   0 20px 60px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --shadow-ring:    0 0 0 3px rgba(79, 70, 229, 0.25);
+  --shadow-glow:    0 0 24px rgba(79, 70, 229, 0.14);
+  --shadow-sidebar: 1px 0 0 rgba(0, 0, 0, 0.05);
+  --shadow-header:  0 1px 0 rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Maximize Mode                                                              */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+#codeclove-portal-root.codeclove-portal--maximized,
+#codeclove-portal-root.portal-maximized {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 999999 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--bg-base) !important;
+  overflow: hidden !important;
+}
+
+#codeclove-portal-root.codeclove-portal--maximized header,
+#codeclove-portal-root.portal-maximized header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+#codeclove-portal-root.codeclove-portal--maximized .codeclove-portal-drawer,
+#codeclove-portal-root.codeclove-portal--maximized .codeclove-portal-backdrop,
+#codeclove-portal-root.portal-maximized .codeclove-portal-drawer,
+#codeclove-portal-root.portal-maximized .codeclove-portal-backdrop {
+  top: 0 !important;
+}
+
+/* WP chrome hidden via JS DOM reparenting, not CSS — portal root
+   is not a direct child of <body> so ancestor-hiding rules break it. */
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Mobile Drawer — account for WP admin bar                                   */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* Mobile Drawer — ensure it stacks above WordPress theme headers (Astra is z-index: 99) and portal header (z-index: 20) */
+#codeclove-portal-root .codeclove-portal-drawer {
+  z-index: 9999 !important;
+}
+#codeclove-portal-root .codeclove-portal-backdrop {
+  z-index: 9990 !important;
+}
+
+/* WP admin bar is 32px on desktop, 46px on mobile (<782px) */
+body.admin-bar #codeclove-portal-root .codeclove-portal-drawer {
+  top: 32px;
+}
+@media screen and (max-width: 782px) {
+  body.admin-bar #codeclove-portal-root .codeclove-portal-drawer {
+    top: 46px;
+  }
+}
+body.admin-bar #codeclove-portal-root .codeclove-portal-backdrop {
+  top: 32px;
+}
+@media screen and (max-width: 782px) {
+  body.admin-bar #codeclove-portal-root .codeclove-portal-backdrop {
+    top: 46px;
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Custom Scrollbar                                                           */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+#codeclove-portal-root ::-webkit-scrollbar { width: 6px; height: 6px; }
+#codeclove-portal-root ::-webkit-scrollbar-track { background: transparent; }
+#codeclove-portal-root ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 9999px; }
+#codeclove-portal-root ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.22); }
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Print                                                                       */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+@media print {
+  #wpadminbar,
+  header,
+  aside,
+  .print\:hidden {
+    display: none !important;
+  }
+  #codeclove-portal-root {
+    position: static !important;
+    background: #ffffff !important;
+  }
+  #codeclove-portal-root main {
+    padding: 0 !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Clean WordPress Theme Canvas Integration                                   */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* Suppress theme's redundant post/page entry header when portal SPA is mounted */
+:is(body, .page, .post, article):has(#codeclove-portal-root) .entry-header {
+  display: none !important;
+}
+
+/* Ensure clean edge-to-edge container without unwanted theme inner margin */
+:is(body, .page, .post, article):has(#codeclove-portal-root) .entry-content {
+  margin: 0 !important;
+}

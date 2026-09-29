@@ -62,6 +62,7 @@ abstract class BaseController extends WP_REST_Controller {
 		if ( ! is_user_logged_in() ) {
 			return false;
 		}
+
 		// CSRF nonce verification for cookie-authenticated requests.
 		if ( ! $this->verify_nonce( $request ) ) {
 			return false;
@@ -139,6 +140,7 @@ abstract class BaseController extends WP_REST_Controller {
 	 */
 	protected function authenticated(): callable {
 		return function ( ?WP_REST_Request $request = null ): bool {
+
 			return is_user_logged_in()
 				&& $this->verify_nonce( $request );
 		};

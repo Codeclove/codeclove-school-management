@@ -68,9 +68,6 @@ final class MeController extends BaseController {
 		if ( ! is_user_logged_in() ) {
 			return false;
 		}
-		if ( class_exists( '\CodeClove\Licensing\License' ) && ! \CodeClove\Licensing\License::verified() ) {
-			return false;
-		}
 
 		// Deny WP administrators from accessing self-service profile endpoint.
 		if ( current_user_can( 'manage_options' ) ) {

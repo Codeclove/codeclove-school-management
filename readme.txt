@@ -75,6 +75,30 @@ Yes. When you install and activate School Management Pro, it seamlessly utilizes
 4. Academic management — Setup sessions, classes, units, and subjects with localized presets.
 5. Invoicing and fee types — Define school fees, issue invoices, and record offline payments.
 
+== Source Code ==
+
+The compiled JavaScript bundles in `assets/build/` are generated from TypeScript/React source files.
+
+The complete, human-readable source code is publicly available at:
+https://github.com/Codeclove/codeclove-school-management
+
+To regenerate the compiled assets from source:
+
+1. Requires Node.js 20+ and npm 10+.
+2. Clone the repository and run: `npm install`
+3. Build for production: `npm run build`
+   Vite outputs minified bundles to `assets/build/admin/` and `assets/build/portal/`.
+
+Third-party libraries bundled in the compiled output:
+
+* React 18 — MIT License — https://github.com/facebook/react
+* React Router 6 — MIT License — https://github.com/remix-run/react-router
+* Tailwind CSS — MIT License — https://github.com/tailwindlabs/tailwindcss
+* shadcn/ui components — MIT License — https://github.com/shadcn-ui/ui
+* Lucide React icons — ISC License — https://github.com/lucide-icons/lucide
+
+All bundled third-party libraries are open-source and GPL-compatible.
+
 == Changelog ==
 
 = 1.0.0 =
