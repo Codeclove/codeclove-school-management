@@ -33,6 +33,8 @@ export default defineConfig({
       input: path.resolve(__dirname, './src/portal/main.tsx'),
       output: {
         format: 'iife',
+        // Source repository for WordPress.org compliance (Guideline #4).
+        banner: '/*! CodeClove School Management Portal — source: https://github.com/Codeclove/codeclove-school-management */',
         // Predictable filenames so PHP can reliably enqueue them.
         entryFileNames: 'index.js',
         assetFileNames: (assetInfo) => {

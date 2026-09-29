@@ -21,6 +21,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         format: 'iife',
+        // Source repository for WordPress.org compliance (Guideline #4).
+        banner: '/*! CodeClove School Management — source: https://github.com/Codeclove/codeclove-school-management */',
         // Predictable filenames so PHP can reliably enqueue them.
         entryFileNames: 'index.js',
         chunkFileNames: 'chunks/[name]-[hash].js',
