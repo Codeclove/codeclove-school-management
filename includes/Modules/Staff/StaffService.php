@@ -80,18 +80,18 @@ final class StaffService {
 
 		$where_clause = implode( ' AND ', $where );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$query      = "SELECT s.*, r.name as role_name FROM {$table} s LEFT JOIN {$roles_table} r ON s.role_id = r.id WHERE {$where_clause} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d";
-		$query_args = array_merge( $args, [ $per_page, $offset ] );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Staff members list and count queries with dynamic clauses.
+		$query_args = array_merge( [ Schema::staff_members(), Schema::roles() ], $args, [ $per_page, $offset ] );
 		$items      = $wpdb->get_results(
-			$wpdb->prepare( $query, ...$query_args ),
+			$wpdb->prepare(
+				"SELECT s.*, r.name as role_name FROM %i s LEFT JOIN %i r ON s.role_id = r.id WHERE {$where_clause} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d",
+				...$query_args
+			),
 			ARRAY_A
 		);
-
-		$total_query = "SELECT COUNT(*) FROM {$table} s WHERE {$where_clause}";
-		$total       = (int) ( empty( $args )
-			? $wpdb->get_var( $total_query )
-			: $wpdb->get_var( $wpdb->prepare( $total_query, ...$args ) ) );
+		$total = (int) ( empty( $args )
+			? $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i s WHERE {$where_clause}", Schema::staff_members() ) )
+			: $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i s WHERE {$where_clause}", Schema::staff_members(), ...$args ) ) );
 		// phpcs:enable
 
 		foreach ( $items as &$item ) {
@@ -113,15 +113,16 @@ final class StaffService {
 	public function get_staff_member( int $id ): ?array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Get single staff member query.
 		$item = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT s.*, r.name as role_name FROM ' . Schema::staff_members() . ' s LEFT JOIN ' . Schema::roles() . ' r ON s.role_id = r.id WHERE s.id = %d AND s.deleted_at IS NULL',
+				'SELECT s.*, r.name as role_name FROM %i s LEFT JOIN %i r ON s.role_id = r.id WHERE s.id = %d AND s.deleted_at IS NULL',
+				Schema::staff_members(),
+				Schema::roles(),
 				$id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		if ( ! $item ) {
 			return null;
@@ -143,23 +144,24 @@ final class StaffService {
 			return new WP_Error( 'codeclove_validation_failed', __( 'First name, last name, and email are required.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Check duplicate staff email.
 		$email_check = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT COUNT(*) FROM ' . Schema::staff_members() . ' WHERE email = %s AND deleted_at IS NULL',
+				'SELECT COUNT(*) FROM %i WHERE email = %s AND deleted_at IS NULL',
+				Schema::staff_members(),
 				$body['email']
 			)
 		);
-		// phpcs:enable
 		if ( $email_check > 0 ) {
 			return new WP_Error( 'codeclove_duplicate_email', __( 'A staff member with this email already exists.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
 
 		$staff_number = ! empty( $body['staff_number'] ) ? sanitize_text_field( $body['staff_number'] ) : ( IdentifierService::generate( 'staff_member' ) ?: '' );
 		if ( ! $staff_number || is_wp_error( $staff_number ) ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$max_id = (int) $wpdb->get_var( 'SELECT MAX(id) FROM ' . Schema::staff_members() );
-			// phpcs:enable
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Max staff ID query.
+			$max_id = (int) $wpdb->get_var(
+				$wpdb->prepare( 'SELECT MAX(id) FROM %i', Schema::staff_members() )
+			);
 			$staff_number = 'STF-' . str_pad( (string) ( $max_id + 1 ), 3, '0', STR_PAD_LEFT );
 		}
 
@@ -282,14 +284,16 @@ final class StaffService {
 			$this->sync_user_role( (int) $data['user_id'], (int) $data['role_id'] );
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Fresh staff member retrieval.
 		$fresh = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT s.*, r.name as role_name FROM ' . Schema::staff_members() . ' s LEFT JOIN ' . Schema::roles() . ' r ON s.role_id = r.id WHERE s.id = %d',
+				'SELECT s.*, r.name as role_name FROM %i s LEFT JOIN %i r ON s.role_id = r.id WHERE s.id = %d',
+				Schema::staff_members(),
+				Schema::roles(),
 				$insert_id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		if ( ! is_array( $fresh ) ) {
 			return new WP_Error( 'codeclove_not_found', __( 'Failed to retrieve newly created staff member.', 'codeclove-school-management' ), 500 );
@@ -308,15 +312,15 @@ final class StaffService {
 	public function update_staff_member( int $id, array $body ): array|WP_Error {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Get staff member for update.
 		$exists_row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::staff_members() . ' WHERE id = %d AND deleted_at IS NULL',
+				'SELECT * FROM %i WHERE id = %d AND deleted_at IS NULL',
+				Schema::staff_members(),
 				$id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 		if ( ! $exists_row ) {
 			return new WP_Error( 'codeclove_not_found', __( 'Staff member not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
 		}
@@ -325,14 +329,14 @@ final class StaffService {
 		if ( ! empty( $exists_row['user_id'] ) && $this->is_last_owner( (int) $exists_row['user_id'] ) ) {
 			if ( isset( $body['role_id'] ) ) {
 				$new_role_id = empty( $body['role_id'] ) ? null : (int) $body['role_id'];
-				// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Owner role ID query.
 				$owner_role_id = (int) $wpdb->get_var(
 					$wpdb->prepare(
-						'SELECT id FROM ' . Schema::roles() . ' WHERE slug = %s',
+						'SELECT id FROM %i WHERE slug = %s',
+						Schema::roles(),
 						'owner'
 					)
 				);
-				// phpcs:enable
 				if ( $new_role_id !== $owner_role_id ) {
 					return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot remove the Owner role from the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 				}
@@ -455,15 +459,15 @@ final class StaffService {
 		}
 
 		if ( ! empty( $data['email'] ) ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Check duplicate staff email on update.
 			$email_check = (int) $wpdb->get_var(
 				$wpdb->prepare(
-					'SELECT COUNT(*) FROM ' . Schema::staff_members() . ' WHERE email = %s AND id != %d AND deleted_at IS NULL',
+					'SELECT COUNT(*) FROM %i WHERE email = %s AND id != %d AND deleted_at IS NULL',
+					Schema::staff_members(),
 					$data['email'],
 					$id
 				)
 			);
-			// phpcs:enable
 			if ( $email_check > 0 ) {
 				return new WP_Error( 'codeclove_duplicate_email', __( 'A staff member with this email already exists.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
@@ -478,9 +482,8 @@ final class StaffService {
 
 		if ( ! empty( $data ) ) {
 			$data['updated_at'] = current_time( 'mysql', true );
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Update staff member record.
 			$wpdb->update( Schema::staff_members(), $data, [ 'id' => $id ] );
-			// phpcs:enable
 
 			// Sync WP user details if user is linked
 			if ( ! empty( $exists_row['user_id'] ) ) {
@@ -508,15 +511,16 @@ final class StaffService {
 			}
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Updated staff member query.
 		$updated = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT s.*, r.name as role_name FROM ' . Schema::staff_members() . ' s LEFT JOIN ' . Schema::roles() . ' r ON s.role_id = r.id WHERE s.id = %d',
+				'SELECT s.*, r.name as role_name FROM %i s LEFT JOIN %i r ON s.role_id = r.id WHERE s.id = %d',
+				Schema::staff_members(),
+				Schema::roles(),
 				$id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		// Synchronize WP user role if mapping exists
 		if ( ! empty( $updated['user_id'] ) && ! empty( $updated['role_id'] ) ) {
@@ -529,15 +533,15 @@ final class StaffService {
 	public function delete_staff_member( int $id ): bool|WP_Error {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff member existence check before delete.
 		$exists = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT id, user_id FROM ' . Schema::staff_members() . ' WHERE id = %d AND deleted_at IS NULL',
+				'SELECT id, user_id FROM %i WHERE id = %d AND deleted_at IS NULL',
+				Schema::staff_members(),
 				$id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 		if ( ! $exists ) {
 			return new WP_Error( 'codeclove_not_found', __( 'Staff member not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
 		}
@@ -546,7 +550,7 @@ final class StaffService {
 			return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot delete the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Soft delete staff member.
 		$wpdb->update(
 			Schema::staff_members(),
 			[ 'deleted_at' => current_time( 'mysql', true ) ],
@@ -584,65 +588,73 @@ final class StaffService {
 			// Prevent lockout in bulk status update
 			if ( in_array( $status, [ 'inactive', 'suspended' ], true ) ) {
 				foreach ( $ids as $id ) {
-					// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff user_id lookup.
 					$staff = $wpdb->get_row(
 						$wpdb->prepare(
-							'SELECT user_id FROM ' . Schema::staff_members() . ' WHERE id = %d',
+							'SELECT user_id FROM %i WHERE id = %d',
+							Schema::staff_members(),
 							$id
 						),
 						ARRAY_A
 					);
-					// phpcs:enable
 					if ( $staff && ! empty( $staff['user_id'] ) && $this->is_last_owner( (int) $staff['user_id'] ) ) {
 						return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot deactivate or suspend the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 					}
 				}
 			}
 
-			$table = Schema::staff_members();
-			$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query(
-				$wpdb->prepare(
-					"UPDATE {$table} SET status = %s WHERE id IN ($placeholders)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-					$status,
-					...$ids
-				)
-			);
-			// phpcs:enable
-			return [ 'success' => true, 'updated_count' => count( $ids ) ];
+			$table   = Schema::staff_members();
+			$updated = 0;
+			foreach ( $ids as $id ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database table update.
+				$result = $wpdb->update(
+					$table,
+					[ 'status' => $status ],
+					[ 'id' => (int) $id ],
+					[ '%s' ],
+					[ '%d' ]
+				);
+				if ( false !== $result ) {
+					$updated++;
+				}
+			}
+			return [ 'success' => true, 'updated_count' => $updated ];
 		}
 
 		if ( 'delete' === $action ) {
 			// Prevent lockout in bulk delete
 			foreach ( $ids as $id ) {
-				// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database table query.
 				$staff = $wpdb->get_row(
 					$wpdb->prepare(
-						'SELECT user_id FROM ' . Schema::staff_members() . ' WHERE id = %d',
+						'SELECT user_id FROM %i WHERE id = %d',
+						Schema::staff_members(),
 						$id
 					),
 					ARRAY_A
 				);
-				// phpcs:enable
 				if ( $staff && ! empty( $staff['user_id'] ) && $this->is_last_owner( (int) $staff['user_id'] ) ) {
 					return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot delete the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 				}
 			}
 
-			$table = Schema::staff_members();
-			$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-			$now = current_time( 'mysql', true );
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query(
-				$wpdb->prepare(
-					"UPDATE {$table} SET deleted_at = %s WHERE id IN ($placeholders)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-					$now,
-					...$ids
-				)
-			);
-			// phpcs:enable
-			return [ 'success' => true, 'deleted_count' => count( $ids ) ];
+			$table   = Schema::staff_members();
+			$now     = current_time( 'mysql', true );
+			$deleted = 0;
+			foreach ( $ids as $id ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database table update.
+				$result = $wpdb->update(
+					$table,
+					[ 'deleted_at' => $now ],
+					[ 'id' => (int) $id ],
+					[ '%s' ],
+					[ '%d' ]
+				);
+				if ( false !== $result ) {
+					$deleted++;
+				}
+			}
+			return [ 'success' => true, 'deleted_count' => $deleted ];
 		}
 
 		return new WP_Error( 'codeclove_invalid_action', __( 'Invalid bulk action.', 'codeclove-school-management' ), [ 'status' => 400 ] );
@@ -865,10 +877,11 @@ final class StaffService {
 		global $wpdb;
 
 		// 1. Check if the user currently has the Owner role assigned.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Owner role ID query.
 		$owner_role_id = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT id FROM ' . Schema::roles() . ' WHERE slug = %s',
+				'SELECT id FROM %i WHERE slug = %s',
+				Schema::roles(),
 				'owner'
 			)
 		);
@@ -876,9 +889,11 @@ final class StaffService {
 			return false;
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- User has owner role query.
 		$user_has_owner = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT COUNT(*) FROM ' . Schema::user_roles() . ' WHERE user_id = %d AND role_id = %d',
+				'SELECT COUNT(*) FROM %i WHERE user_id = %d AND role_id = %d',
+				Schema::user_roles(),
 				$user_id,
 				$owner_role_id
 			)
@@ -889,13 +904,14 @@ final class StaffService {
 		}
 
 		// 2. Count how many total users have the Owner role.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Total owners count query.
 		$owner_count = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT COUNT(*) FROM ' . Schema::user_roles() . ' WHERE role_id = %d',
+				'SELECT COUNT(*) FROM %i WHERE role_id = %d',
+				Schema::user_roles(),
 				$owner_role_id
 			)
 		);
-		// phpcs:enable
 
 		return $owner_count <= 1;
 	}
@@ -1020,9 +1036,8 @@ final class StaffService {
 			return new WP_Error( 'codeclove_validation_failed', __( 'Reference number and verification details (email or date of birth) are required.', 'codeclove-school-management' ), 400 );
 		}
 
-		$table = Schema::staff_apps();
-		$sql   = "SELECT * FROM {$table} WHERE reference_number = %s AND deleted_at IS NULL";
-		$binds = [ $ref_clean ];
+		$sql   = 'SELECT * FROM %i WHERE reference_number = %s AND deleted_at IS NULL';
+		$binds = [ Schema::staff_apps(), $ref_clean ];
 
 		if ( ! empty( $email ) ) {
 			$sql    .= ' AND email = %s';
@@ -1031,24 +1046,24 @@ final class StaffService {
 			$sql    .= ' AND date_of_birth = %s';
 			$binds[] = sanitize_text_field( $dob );
 		}
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Public staff app status lookup with dynamic fields.
 		$app = $wpdb->get_row(
 			$wpdb->prepare( $sql, ...$binds ),
 			ARRAY_A
 		);
 		// phpcs:enable
-
 		if ( ! $app ) {
 			return new WP_Error( 'codeclove_not_found', __( 'No application found matching the reference number and verification details.', 'codeclove-school-management' ), 404 );
 		}
 
 		// Fetch public timeline events
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$events_table = Schema::staff_app_events();
-		$events       = $wpdb->get_results(
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Public staff app events query.
+		$events = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT to_status, reason, message, changed_at FROM {$events_table} WHERE staff_application_id = %d AND visibility = 'public' ORDER BY id ASC",
-				(int) $app['id']
+				'SELECT to_status, reason, message, changed_at FROM %i WHERE staff_application_id = %d AND visibility = %s ORDER BY id ASC',
+				Schema::staff_app_events(),
+				(int) $app['id'],
+				'public'
 			),
 			ARRAY_A
 		);

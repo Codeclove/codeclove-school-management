@@ -113,13 +113,14 @@ final class SubjectsService {
 			// Handle unit mapping sync if provided.
 			if ( isset( $payload['unit_ids'] ) && is_array( $payload['unit_ids'] ) ) {
 				$units_service = new \CodeClove\Modules\Academics\Units\UnitsService();
-				$table         = \CodeClove\Database\Schema::unit_subjects();
-				// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-				$current_units = $wpdb->get_col( $wpdb->prepare(
-					"SELECT academic_unit_id FROM {$table} WHERE subject_id = %d",
-					$id
-				) );
-				// phpcs:enable
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Unit subjects sync query.
+				$current_units = $wpdb->get_col(
+					$wpdb->prepare(
+						'SELECT academic_unit_id FROM %i WHERE subject_id = %d',
+						\CodeClove\Database\Schema::unit_subjects(),
+						$id
+					)
+				);
 				$current_units = array_map( 'intval', is_array( $current_units ) ? $current_units : [] );
 				$new_units     = array_map( 'intval', $payload['unit_ids'] );
 
@@ -221,23 +222,28 @@ final class SubjectsService {
 		$units_table = \CodeClove\Database\Schema::units();
 
 		if ( $session_id > 0 ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$unit_ids = $wpdb->get_col( $wpdb->prepare(
-				"SELECT us.academic_unit_id 
-				 FROM {$table} us
-				 JOIN {$units_table} u ON us.academic_unit_id = u.id
-				 WHERE us.subject_id = %d AND u.academic_session_id = %d",
-				(int) $row['id'],
-				$session_id
-			) );
-			// phpcs:enable
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Subject mapped unit IDs by session.
+			$unit_ids = $wpdb->get_col(
+				$wpdb->prepare(
+					'SELECT us.academic_unit_id 
+					 FROM %i us
+					 JOIN %i u ON us.academic_unit_id = u.id
+					 WHERE us.subject_id = %d AND u.academic_session_id = %d',
+					\CodeClove\Database\Schema::unit_subjects(),
+					\CodeClove\Database\Schema::units(),
+					(int) $row['id'],
+					$session_id
+				)
+			);
 		} else {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$unit_ids = $wpdb->get_col( $wpdb->prepare(
-				"SELECT academic_unit_id FROM {$table} WHERE subject_id = %d",
-				(int) $row['id']
-			) );
-			// phpcs:enable
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Subject mapped unit IDs.
+			$unit_ids = $wpdb->get_col(
+				$wpdb->prepare(
+					'SELECT academic_unit_id FROM %i WHERE subject_id = %d',
+					\CodeClove\Database\Schema::unit_subjects(),
+					(int) $row['id']
+				)
+			);
 		}
 		$unit_ids = array_map( 'intval', is_array( $unit_ids ) ? $unit_ids : [] );
 
@@ -274,24 +280,21 @@ final class SubjectsService {
 		];
 		$params = array_merge( $defaults, $args );
 
-		$subjects_table = Schema::subjects();
-		$unit_subjects_table = Schema::unit_subjects();
-		$units_table = Schema::units();
-
 		$session_id = (int) $params['session_id'];
 		$binds      = [];
 
 		if ( $session_id > 0 ) {
-			$query = "SELECT s.*,
-				(SELECT COUNT(*) FROM {$unit_subjects_table} us
-				 JOIN {$units_table} u ON us.academic_unit_id = u.id
+			$query = 'SELECT s.*,
+				(SELECT COUNT(*) FROM %i us
+				 JOIN %i u ON us.academic_unit_id = u.id
 				 WHERE us.subject_id = s.id AND u.academic_session_id = %d) as units_count
-				FROM {$subjects_table} s WHERE 1=1";
-			$binds[] = $session_id;
+				FROM %i s WHERE 1=1';
+			$binds = [ Schema::unit_subjects(), Schema::units(), $session_id, Schema::subjects() ];
 		} else {
-			$query = "SELECT s.*,
-				(SELECT COUNT(*) FROM {$unit_subjects_table} WHERE subject_id = s.id) as units_count
-				FROM {$subjects_table} s WHERE 1=1";
+			$query = 'SELECT s.*,
+				(SELECT COUNT(*) FROM %i WHERE subject_id = s.id) as units_count
+				FROM %i s WHERE 1=1';
+			$binds = [ Schema::unit_subjects(), Schema::subjects() ];
 		}
 
 		if ( '' !== $params['status'] ) {
@@ -324,10 +327,8 @@ final class SubjectsService {
 		$binds[] = $params['limit'];
 		$binds[] = $params['offset'];
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$sql = $wpdb->prepare( $query, ...$binds );
-		$results = $wpdb->get_results( $sql, ARRAY_A );
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Custom academic subjects list query with dynamic clauses.
+		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$binds ), ARRAY_A );
 
 		return is_array( $results ) ? $results : [];
 	}
@@ -338,9 +339,8 @@ final class SubjectsService {
 	private function db_count_subjects( array $args = [] ): int {
 		global $wpdb;
 
-		$subjects_table = Schema::subjects();
-		$query = "SELECT COUNT(*) FROM {$subjects_table} s WHERE 1=1";
-		$binds = [];
+		$query = 'SELECT COUNT(*) FROM %i s WHERE 1=1';
+		$binds = [ Schema::subjects() ];
 
 		if ( ! empty( $args['status'] ) ) {
 			$query   .= ' AND s.status = %s';
@@ -354,14 +354,8 @@ final class SubjectsService {
 			$binds[] = $like;
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		if ( ! empty( $binds ) ) {
-			$sql = $wpdb->prepare( $query, ...$binds );
-		} else {
-			$sql = $query;
-		}
-		return (int) $wpdb->get_var( $sql );
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Custom academic subjects count query with dynamic clauses.
+		return (int) $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );
 	}
 
 	/**
@@ -370,18 +364,18 @@ final class SubjectsService {
 	private function db_get_subject( int $id ): ?array {
 		global $wpdb;
 
-		$subjects_table = Schema::subjects();
-		$unit_subjects_table = Schema::unit_subjects();
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$query = $wpdb->prepare(
-			"SELECT s.*,
-				(SELECT COUNT(*) FROM {$unit_subjects_table} WHERE subject_id = s.id) as units_count
-			 FROM {$subjects_table} s WHERE s.id = %d",
-			$id
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Single academic subject query.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT s.*,
+					(SELECT COUNT(*) FROM %i WHERE subject_id = s.id) as units_count
+				 FROM %i s WHERE s.id = %d',
+				Schema::unit_subjects(),
+				Schema::subjects(),
+				$id
+			),
+			ARRAY_A
 		);
-		$row = $wpdb->get_row( $query, ARRAY_A );
-		// phpcs:enable
 
 		return is_array( $row ) ? $row : null;
 	}
@@ -443,12 +437,13 @@ final class SubjectsService {
 	private function db_is_subject_mapped_to_units( int $id ): bool {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$query = $wpdb->prepare(
-			'SELECT COUNT(*) FROM ' . Schema::unit_subjects() . ' WHERE subject_id = %d',
-			$id
-		);
-		return (int) $wpdb->get_var( $query ) > 0;
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Unit subject mapping check query.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE subject_id = %d',
+				Schema::unit_subjects(),
+				$id
+			)
+		) > 0;
 	}
 }

@@ -151,7 +151,7 @@ final class SettingsController extends BaseController {
 	 */
 	public function get_settings( WP_REST_Request $request ): WP_REST_Response {
 		$user_id    = get_current_user_id();
-		$can_manage = user_can( $user_id, 'manage_options' ) || \CodeClove\Core\Permissions::user_can( $user_id, 'settings.manage' );
+		$can_manage = codeclove_user_can( $user_id, 'settings.manage' );
 
 		$settings = $this->repository->get_settings( true );
 

@@ -237,19 +237,20 @@ final class AdmissionsService {
 			return new WP_Error( 'codeclove_validation_failed', __( 'Both reference number and date of birth are required.', 'codeclove-school-management' ), 400 );
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Public lookup of application with academic unit.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT a.*, u.name as academic_unit_name 
-		          FROM {$table} a 
-		          LEFT JOIN {$units_table} u ON a.academic_unit_id = u.id 
-		          WHERE a.reference_number = %s AND a.student_date_of_birth = %s AND a.deleted_at IS NULL",
+				'SELECT a.*, u.name as academic_unit_name 
+		          FROM %i a 
+		          LEFT JOIN %i u ON a.academic_unit_id = u.id 
+		          WHERE a.reference_number = %s AND a.student_date_of_birth = %s AND a.deleted_at IS NULL',
+				Schema::applications(),
+				Schema::units(),
 				$ref_clean,
 				$dob_clean
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		if ( ! is_array( $row ) ) {
 			return new WP_Error( 'codeclove_not_found', __( 'No matching application found with those credentials.', 'codeclove-school-management' ), 404 );
@@ -685,18 +686,21 @@ final class AdmissionsService {
 				return new WP_Error( 'codeclove_invalid_status', __( 'Invalid status provided.', 'codeclove-school-management' ), 400 );
 			}
 			$table = Schema::applications();
-			$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query(
-				$wpdb->prepare(
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-					"UPDATE {$table} SET status = %s WHERE id IN ($placeholders)",
-					$status,
-					...$ids
-				)
-			);
-			// phpcs:enable
-			return [ 'success' => true, 'updated_count' => count( $ids ) ];
+			$updated = 0;
+			foreach ( $ids as $id ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database table update.
+				$result = $wpdb->update(
+					$table,
+					[ 'status' => $status ],
+					[ 'id' => (int) $id ],
+					[ '%s' ],
+					[ '%d' ]
+				);
+				if ( false !== $result ) {
+					$updated++;
+				}
+			}
+			return [ 'success' => true, 'updated_count' => $updated ];
 		}
 
 		if ( 'convert' === $action ) {
@@ -899,12 +903,11 @@ final class AdmissionsService {
 		global $wpdb;
 		$table = Schema::applications();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Single admission application lookup.
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d AND deleted_at IS NULL", $id ),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d AND deleted_at IS NULL', Schema::applications(), $id ),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		return is_array( $row ) ? $row : null;
 	}
@@ -958,12 +961,11 @@ final class AdmissionsService {
 		global $wpdb;
 		$table = Schema::app_events();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Admission application status events query.
 		$results = $wpdb->get_results(
-			$wpdb->prepare( "SELECT * FROM {$table} WHERE application_id = %d ORDER BY changed_at ASC", $app_id ),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE application_id = %d ORDER BY changed_at ASC', Schema::app_events(), $app_id ),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		if ( ! is_array( $results ) ) {
 			return [];

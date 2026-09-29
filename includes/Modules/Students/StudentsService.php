@@ -424,15 +424,16 @@ final class StudentsService {
 		}
 
 		// Set user_id = NULL
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$wpdb->query(
-			$wpdb->prepare(
-				'UPDATE ' . ( 'student' === $entity_type ? Schema::students() : Schema::guardians() ) . ' SET user_id = NULL, updated_at = %s WHERE id = %d',
-				current_time( 'mysql', true ),
-				$entity_id
-			)
+		$table = 'student' === $entity_type ? Schema::students() : Schema::guardians();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal account unlinking update.
+		$wpdb->update(
+			$table,
+			[
+				'user_id'    => null,
+				'updated_at' => current_time( 'mysql', true ),
+			],
+			[ 'id' => $entity_id ]
 		);
-		// phpcs:enable
 
 		Logger::info(
 			sprintf( 'Unlinked portal account for %s #%d', $entity_type, $entity_id ),
@@ -827,17 +828,22 @@ final class StudentsService {
 			if ( ! in_array( $status, [ 'active', 'inactive', 'graduated', 'withdrawn' ], true ) ) {
 				return new WP_Error( 'codeclove_invalid_status', __( 'Invalid status provided.', 'codeclove-school-management' ), 400 );
 			}
-			$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query(
-				$wpdb->prepare(
-					'UPDATE ' . Schema::students() . " SET status = %s WHERE id IN ($placeholders)",
-					$status,
-					...$ids
-				)
-			);
-			// phpcs:enable
-			return [ 'success' => true, 'updated_count' => count( $ids ) ];
+			$table   = Schema::students();
+			$updated = 0;
+			foreach ( $ids as $id ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database table update.
+				$result = $wpdb->update(
+					$table,
+					[ 'status' => $status ],
+					[ 'id' => (int) $id ],
+					[ '%s' ],
+					[ '%d' ]
+				);
+				if ( false !== $result ) {
+					$updated++;
+				}
+			}
+			return [ 'success' => true, 'updated_count' => $updated ];
 		}
 
 		if ( 'assign_section' === $action ) {
@@ -1080,25 +1086,23 @@ final class StudentsService {
 		];
 		$params = array_merge( $defaults, $args );
 
-		$has_session_filter = ( ! empty( $params['academic_session_id'] ) );
-		$enrollment_join    = $has_session_filter
-			? 'INNER JOIN ' . Schema::enrollments() . ' se ON se.student_id = s.id AND se.academic_session_id = %d'
-			: 'LEFT JOIN ' . Schema::enrollments() . " se ON se.student_id = s.id AND se.status = 'active'";
-
+		$enrollment_join = $has_session_filter
+			? $wpdb->prepare( 'INNER JOIN %i se ON se.student_id = s.id AND se.academic_session_id = %d', Schema::enrollments(), (int) $params['academic_session_id'] )
+			: $wpdb->prepare( 'LEFT JOIN %i se ON se.student_id = s.id AND se.status = %s', Schema::enrollments(), 'active' );
 		$query = 'SELECT s.*, 
 			se.id as enrollment_id, se.academic_session_id, se.academic_unit_id, se.academic_group_id, se.roll_number, se.starts_on, se.status as enrollment_status,
 			u.name as unit_name,
 			grp.name as group_name,
 			g.id as guardian_id, g.first_name as guardian_first_name, g.last_name as guardian_last_name, g.email as guardian_email, g.phone as guardian_phone,
 			sg.relationship as guardian_relationship
-			FROM ' . Schema::students() . " s
-			{$enrollment_join}
-			LEFT JOIN " . Schema::units() . ' u ON u.id = se.academic_unit_id
-			LEFT JOIN ' . Schema::groups() . ' grp ON grp.id = se.academic_group_id
-			LEFT JOIN ' . Schema::student_guardians() . ' sg ON sg.student_id = s.id AND sg.is_primary = 1
-			LEFT JOIN ' . Schema::guardians() . ' g ON g.id = sg.guardian_id AND g.deleted_at IS NULL
+			FROM %i s
+			' . $enrollment_join . '
+			LEFT JOIN %i u ON u.id = se.academic_unit_id
+			LEFT JOIN %i grp ON grp.id = se.academic_group_id
+			LEFT JOIN %i sg ON sg.student_id = s.id AND sg.is_primary = 1
+			LEFT JOIN %i g ON g.id = sg.guardian_id AND g.deleted_at IS NULL
 			WHERE s.deleted_at IS NULL';
-		$binds = [];
+		$binds = [ Schema::students(), Schema::units(), Schema::groups(), Schema::student_guardians(), Schema::guardians() ];
 
 		if ( $has_session_filter ) {
 			$binds[] = (int) $params['academic_session_id'];
@@ -1148,12 +1152,8 @@ final class StudentsService {
 		$binds[] = (int) $params['limit'];
 		$binds[] = (int) $params['offset'];
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$results = $wpdb->get_results(
-			$wpdb->prepare( $query, ...$binds ),
-			ARRAY_A
-		);
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Students list query with dynamic clauses.
+		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$binds ), ARRAY_A );
 
 		return is_array( $results ) ? $results : [];
 	}
@@ -1164,21 +1164,15 @@ final class StudentsService {
 	public function db_count_students( array $args = [] ): int {
 		global $wpdb;
 
-		$has_session_filter = ( ! empty( $args['academic_session_id'] ) );
-		$enrollment_join    = $has_session_filter
-			? 'INNER JOIN ' . Schema::enrollments() . ' se ON se.student_id = s.id AND se.academic_session_id = %d'
-			: 'LEFT JOIN ' . Schema::enrollments() . " se ON se.student_id = s.id AND se.status = 'active'";
-
-		$query = 'SELECT COUNT(*) FROM ' . Schema::students() . " s
-			{$enrollment_join}
-			LEFT JOIN " . Schema::student_guardians() . ' sg ON sg.student_id = s.id AND sg.is_primary = 1
-			LEFT JOIN ' . Schema::guardians() . ' g ON g.id = sg.guardian_id AND g.deleted_at IS NULL
+		$enrollment_join = $has_session_filter
+			? $wpdb->prepare( 'INNER JOIN %i se ON se.student_id = s.id AND se.academic_session_id = %d', Schema::enrollments(), (int) $args['academic_session_id'] )
+			: $wpdb->prepare( 'LEFT JOIN %i se ON se.student_id = s.id AND se.status = %s', Schema::enrollments(), 'active' );
+		$query = 'SELECT COUNT(*) FROM %i s
+			' . $enrollment_join . '
+			LEFT JOIN %i sg ON sg.student_id = s.id AND sg.is_primary = 1
+			LEFT JOIN %i g ON g.id = sg.guardian_id AND g.deleted_at IS NULL
 			WHERE s.deleted_at IS NULL';
-		$binds = [];
-
-		if ( $has_session_filter ) {
-			$binds[] = (int) $args['academic_session_id'];
-		}
+		$binds = [ Schema::students(), Schema::student_guardians(), Schema::guardians() ];
 
 		if ( ! empty( $args['academic_unit_id'] ) ) {
 			$query   .= ' AND se.academic_unit_id = %d';
@@ -1206,11 +1200,8 @@ final class StudentsService {
 			$binds[] = $like;
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$count = ! empty( $binds )
-			? $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) )
-			: $wpdb->get_var( $query );
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Students count query with dynamic clauses.
+		$count = $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );
 
 		return (int) $count;
 	}
@@ -1221,7 +1212,7 @@ final class StudentsService {
 	private function db_get_student( int $id ): ?array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Single student full profile lookup.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				'SELECT s.*, 
@@ -1230,18 +1221,26 @@ final class StudentsService {
 				grp.name as group_name,
 				g.id as guardian_id, g.first_name as guardian_first_name, g.last_name as guardian_last_name, g.email as guardian_email, g.phone as guardian_phone,
 				sg.relationship as guardian_relationship
-				FROM ' . Schema::students() . ' s
-				LEFT JOIN ' . Schema::enrollments() . " se ON se.student_id = s.id AND se.status = 'active'
-				LEFT JOIN " . Schema::units() . ' u ON u.id = se.academic_unit_id
-				LEFT JOIN ' . Schema::groups() . ' grp ON grp.id = se.academic_group_id
-				LEFT JOIN ' . Schema::student_guardians() . ' sg ON sg.student_id = s.id AND sg.is_primary = 1
-				LEFT JOIN ' . Schema::guardians() . ' g ON g.id = sg.guardian_id AND g.deleted_at IS NULL
-				WHERE s.id = %d AND s.deleted_at IS NULL LIMIT 1',
-				$id
+				FROM %i s
+				LEFT JOIN %i se ON se.student_id = s.id AND se.status = %s
+				LEFT JOIN %i u ON u.id = se.academic_unit_id
+				LEFT JOIN %i grp ON grp.id = se.academic_group_id
+				LEFT JOIN %i sg ON sg.student_id = s.id AND sg.is_primary = %d
+				LEFT JOIN %i g ON g.id = sg.guardian_id AND g.deleted_at IS NULL
+				WHERE s.id = %d AND s.deleted_at IS NULL LIMIT %d',
+				Schema::students(),
+				Schema::enrollments(),
+				'active',
+				Schema::units(),
+				Schema::groups(),
+				Schema::student_guardians(),
+				1,
+				Schema::guardians(),
+				$id,
+				1
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		return is_array( $row ) ? $row : null;
 	}
@@ -1252,15 +1251,15 @@ final class StudentsService {
 	private function db_get_student_by_admission_number( string $admission_number ): ?array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Student lookup by admission number.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::students() . ' WHERE admission_number = %s AND deleted_at IS NULL LIMIT 1',
+				'SELECT * FROM %i WHERE admission_number = %s AND deleted_at IS NULL LIMIT 1',
+				Schema::students(),
 				$admission_number
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		return is_array( $row ) ? $row : null;
 	}
@@ -1337,15 +1336,16 @@ final class StudentsService {
 	private function db_get_active_enrollment( int $student_id ): ?array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Student active enrollment query.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::enrollments() . " WHERE student_id = %d AND status = 'active' LIMIT 1",
-				$student_id
+				'SELECT * FROM %i WHERE student_id = %d AND status = %s LIMIT 1',
+				Schema::enrollments(),
+				$student_id,
+				'active'
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		return is_array( $row ) ? $row : null;
 	}
@@ -1415,15 +1415,15 @@ final class StudentsService {
 	public function db_get_guardian_by_id( int $id ): ?array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Guardian lookup by ID.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::guardians() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
+				'SELECT * FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1',
+				Schema::guardians(),
 				$id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		return is_array( $row ) ? $row : null;
 	}
@@ -1434,15 +1434,15 @@ final class StudentsService {
 	private function db_get_guardian_by_email( string $email ): ?array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Guardian lookup by email.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::guardians() . ' WHERE email = %s AND deleted_at IS NULL LIMIT 1',
+				'SELECT * FROM %i WHERE email = %s AND deleted_at IS NULL LIMIT 1',
+				Schema::guardians(),
 				$email
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		return is_array( $row ) ? $row : null;
 	}
@@ -1453,12 +1453,15 @@ final class StudentsService {
 	private function db_get_guardians(): array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- List active guardians query.
 		$results = $wpdb->get_results(
-			'SELECT * FROM ' . Schema::guardians() . " WHERE status = 'active' AND deleted_at IS NULL ORDER BY last_name ASC, first_name ASC",
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE status = %s AND deleted_at IS NULL ORDER BY last_name ASC, first_name ASC',
+				Schema::guardians(),
+				'active'
+			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		return is_array( $results ) ? $results : [];
 	}
@@ -1469,12 +1472,15 @@ final class StudentsService {
 	private function db_get_group_enrollment_counts(): array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Group enrollment counts query.
 		$results = $wpdb->get_results(
-			'SELECT academic_group_id, COUNT(*) as active_count FROM ' . Schema::enrollments() . " WHERE status = 'active' AND academic_group_id IS NOT NULL GROUP BY academic_group_id",
+			$wpdb->prepare(
+				'SELECT academic_group_id, COUNT(*) as active_count FROM %i WHERE status = %s AND academic_group_id IS NOT NULL GROUP BY academic_group_id',
+				Schema::enrollments(),
+				'active'
+			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		return is_array( $results ) ? $results : [];
 	}
@@ -1502,18 +1508,20 @@ final class StudentsService {
 		global $wpdb;
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Student linked guardians query.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				'SELECT g.*, sg.relationship, sg.is_primary, sg.is_billing_contact, sg.is_emergency_contact
-				FROM ' . Schema::guardians() . ' g
-				INNER JOIN ' . Schema::student_guardians() . ' sg ON sg.guardian_id = g.id
+				FROM %i g
+				INNER JOIN %i sg ON sg.guardian_id = g.id
 				WHERE sg.student_id = %d AND g.deleted_at IS NULL
 				ORDER BY sg.sort_order ASC',
+				Schema::guardians(),
+				Schema::student_guardians(),
 				$student_id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		return is_array( $rows ) ? $rows : [];
 	}
@@ -1526,16 +1534,20 @@ final class StudentsService {
 	public function db_get_student_enrollments( int $student_id ): array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Student all enrollments query.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				'SELECT e.*, s.name as session_name, u.name as unit_name, g.name as group_name 
-				FROM ' . Schema::enrollments() . ' e 
-				JOIN ' . Schema::sessions() . ' s ON s.id = e.academic_session_id 
-				JOIN ' . Schema::units() . ' u ON u.id = e.academic_unit_id 
-				LEFT JOIN ' . Schema::groups() . ' g ON g.id = e.academic_group_id 
+				FROM %i e 
+				JOIN %i s ON s.id = e.academic_session_id 
+				JOIN %i u ON u.id = e.academic_unit_id 
+				LEFT JOIN %i g ON g.id = e.academic_group_id 
 				WHERE e.student_id = %d 
 				ORDER BY s.starts_on DESC, e.id DESC',
+				Schema::enrollments(),
+				Schema::sessions(),
+				Schema::units(),
+				Schema::groups(),
 				$student_id
 			),
 			ARRAY_A
@@ -1557,14 +1569,14 @@ final class StudentsService {
 	private function db_get_student_subject_ids( int $student_id ): array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Student subject IDs query.
 		$results = $wpdb->get_col(
 			$wpdb->prepare(
-				'SELECT subject_id FROM ' . Schema::student_subjects() . ' WHERE student_id = %d',
+				'SELECT subject_id FROM %i WHERE student_id = %d',
+				Schema::student_subjects(),
 				$student_id
 			)
 		);
-		// phpcs:enable
 
 		return is_array( $results ) ? array_map( 'intval', $results ) : [];
 	}
@@ -1589,29 +1601,30 @@ final class StudentsService {
 		}
 
 		// Fetch the student's current active enrollment.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Student active enrollment check for transfer.
 		$enrollment = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::enrollments() . " WHERE student_id = %d AND status = 'active' ORDER BY id DESC LIMIT 1",
-				$student_id
+				'SELECT * FROM %i WHERE student_id = %d AND status = %s ORDER BY id DESC LIMIT 1',
+				Schema::enrollments(),
+				$student_id,
+				'active'
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		if ( ! $enrollment ) {
 			return new WP_Error( 'codeclove_no_enrollment', __( 'Student has no active enrollment to transfer.', 'codeclove-school-management' ), 404 );
 		}
 
 		// Validate target unit belongs to the same session.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Unit session query for transfer validation.
 		$unit_session = $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT academic_session_id FROM ' . Schema::units() . ' WHERE id = %d',
+				'SELECT academic_session_id FROM %i WHERE id = %d',
+				Schema::units(),
 				$target_unit_id
 			)
 		);
-		// phpcs:enable
 		if ( (int) $unit_session !== (int) $enrollment['academic_session_id'] ) {
 			return new WP_Error( 'codeclove_invalid_unit', __( 'Target class must belong to the same academic session as the current enrollment.', 'codeclove-school-management' ), 400 );
 		}

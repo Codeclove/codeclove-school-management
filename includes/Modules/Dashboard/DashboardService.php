@@ -57,33 +57,38 @@ final class DashboardService {
 		$thirty_days_ago = gmdate( 'Y-m-d H:i:s', strtotime( '-30 days' ) );
 
 		if ( $is_admin || codeclove_user_can( $user_id, 'students.view' ) ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			if ( $session_id ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- KPI students count query.
 				$row = $wpdb->get_row(
 					$wpdb->prepare(
 						'SELECT COUNT(DISTINCT e.student_id) AS total,
 						        COUNT(DISTINCT CASE WHEN e.created_at < %s THEN e.student_id END) AS prev
-						 FROM ' . Schema::enrollments() . ' e
-						 INNER JOIN ' . Schema::students() . " s ON s.id = e.student_id
-						 WHERE e.academic_session_id = %d AND e.status = 'active' AND s.deleted_at IS NULL",
+						 FROM %i e
+						 INNER JOIN %i s ON s.id = e.student_id
+						 WHERE e.academic_session_id = %d AND e.status = %s AND s.deleted_at IS NULL',
 						$thirty_days_ago,
-						$session_id
+						Schema::enrollments(),
+						Schema::students(),
+						$session_id,
+						'active'
 					),
 					ARRAY_A
 				);
 			} else {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- KPI students count query.
 				$row = $wpdb->get_row(
 					$wpdb->prepare(
 						'SELECT COUNT(*) AS total,
 						        SUM(CASE WHEN created_at < %s THEN 1 ELSE 0 END) AS prev
-						 FROM ' . Schema::students() . "
-						 WHERE status = 'active' AND deleted_at IS NULL",
-						$thirty_days_ago
+						 FROM %i
+						 WHERE status = %s AND deleted_at IS NULL',
+						$thirty_days_ago,
+						Schema::students(),
+						'active'
 					),
 					ARRAY_A
 				);
 			}
-			// phpcs:enable
 			$total_students = (int) ( $row['total'] ?? 0 );
 			$prev_students  = (int) ( $row['prev'] ?? 0 );
 			$new_students   = $total_students - $prev_students;
@@ -96,20 +101,55 @@ final class DashboardService {
 		}
 
 		if ( $is_admin || codeclove_user_can( $user_id, 'admissions.view' ) ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$query_total      = 'SELECT COUNT(*) FROM ' . Schema::applications() . " WHERE status NOT IN ('admitted','rejected','withdrawn') AND deleted_at IS NULL";
-			$total_admissions = (int) ( $session_id ? $wpdb->get_var( $wpdb->prepare( $query_total . ' AND academic_session_id = %d', $session_id ) ) : $wpdb->get_var( $query_total ) );
-
-			$query_new  = 'SELECT COUNT(*) FROM ' . Schema::applications() . " WHERE created_at >= %s AND status NOT IN ('admitted','rejected','withdrawn') AND deleted_at IS NULL";
-			$new_params = [ $thirty_days_ago ];
 			if ( $session_id ) {
-				$query_new   .= ' AND academic_session_id = %d';
-				$new_params[] = $session_id;
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- KPI admissions total query.
+				$total_admissions = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COUNT(*) FROM %i WHERE status NOT IN (%s,%s,%s) AND deleted_at IS NULL AND academic_session_id = %d',
+						Schema::applications(),
+						'admitted',
+						'rejected',
+						'withdrawn',
+						$session_id
+					)
+				);
+
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- KPI admissions new query.
+				$new_admissions = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND status NOT IN (%s,%s,%s) AND deleted_at IS NULL AND academic_session_id = %d',
+						Schema::applications(),
+						$thirty_days_ago,
+						'admitted',
+						'rejected',
+						'withdrawn',
+						$session_id
+					)
+				);
+			} else {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- KPI admissions total query.
+				$total_admissions = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COUNT(*) FROM %i WHERE status NOT IN (%s,%s,%s) AND deleted_at IS NULL',
+						Schema::applications(),
+						'admitted',
+						'rejected',
+						'withdrawn'
+					)
+				);
+
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- KPI admissions new query.
+				$new_admissions = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND status NOT IN (%s,%s,%s) AND deleted_at IS NULL',
+						Schema::applications(),
+						$thirty_days_ago,
+						'admitted',
+						'rejected',
+						'withdrawn'
+					)
+				);
 			}
-			$new_admissions = (int) $wpdb->get_var(
-				$wpdb->prepare( $query_new, ...$new_params )
-			);
-			// phpcs:enable
 
 			$stats['open_admissions']           = $total_admissions;
 			$stats['admissions_delta']          = '+' . $new_admissions;
@@ -118,17 +158,23 @@ final class DashboardService {
 		}
 
 		if ( $is_admin || codeclove_user_can( $user_id, 'staff.view' ) ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- KPI active staff count query.
 			$total_staff = (int) $wpdb->get_var(
-				'SELECT COUNT(*) FROM ' . Schema::staff_members() . " WHERE status = 'active' AND deleted_at IS NULL"
+				$wpdb->prepare(
+					'SELECT COUNT(*) FROM %i WHERE status = %s AND deleted_at IS NULL',
+					Schema::staff_members(),
+					'active'
+				)
 			);
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- KPI prev staff count query.
 			$prev_staff  = (int) $wpdb->get_var(
 				$wpdb->prepare(
-					'SELECT COUNT(*) FROM ' . Schema::staff_members() . " WHERE status = 'active' AND created_at < %s AND deleted_at IS NULL",
+					'SELECT COUNT(*) FROM %i WHERE status = %s AND created_at < %s AND deleted_at IS NULL',
+					Schema::staff_members(),
+					'active',
 					$thirty_days_ago
 				)
 			);
-			// phpcs:enable
 			$new_staff = $total_staff - $prev_staff;
 
 			$stats['total_staff']            = $total_staff;
@@ -138,39 +184,97 @@ final class DashboardService {
 		}
 
 		if ( $is_admin || codeclove_user_can( $user_id, 'finance.view' ) ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$query_out                       = 'SELECT COALESCE(SUM(balance_minor),0) FROM ' . Schema::invoices() . " WHERE status IN ('issued','partially_paid','overdue') AND deleted_at IS NULL";
-			$stats['outstanding_fees_minor'] = (int) ( $session_id ? $wpdb->get_var( $wpdb->prepare( $query_out . ' AND academic_session_id = %d', $session_id ) ) : $wpdb->get_var( $query_out ) );
-
-			$query_coll  = 'SELECT COALESCE(SUM(p.amount_minor),0) FROM ' . Schema::payments() . ' p
-				 INNER JOIN ' . Schema::invoices() . " i ON i.id = p.invoice_id
-				 WHERE p.paid_on >= %s AND p.status = 'completed' AND p.deleted_at IS NULL";
-			$coll_params = [ $thirty_days_ago ];
 			if ( $session_id ) {
-				$query_coll   .= ' AND i.academic_session_id = %d';
-				$coll_params[] = $session_id;
-			}
-			$collected_30d = (int) $wpdb->get_var(
-				$wpdb->prepare( $query_coll, ...$coll_params )
-			);
-			$stats['fees_delta_minor']    = $collected_30d;
-			$stats['fees_delta_positive'] = true;
-			$stats['fees_delta_label']    = 'collected this month';
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Outstanding fees query.
+				$stats['outstanding_fees_minor'] = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COALESCE(SUM(balance_minor),0) FROM %i WHERE status IN (%s,%s,%s) AND deleted_at IS NULL AND academic_session_id = %d',
+						Schema::invoices(),
+						'issued',
+						'partially_paid',
+						'overdue',
+						$session_id
+					)
+				);
 
-			$query_overdue    = 'SELECT COUNT(*) FROM ' . Schema::invoices() . " WHERE status = 'overdue' AND deleted_at IS NULL";
-			$overdue_invoices = (int) ( $session_id ? $wpdb->get_var( $wpdb->prepare( $query_overdue . ' AND academic_session_id = %d', $session_id ) ) : $wpdb->get_var( $query_overdue ) );
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Collected fees 30d query.
+				$collected_30d = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COALESCE(SUM(p.amount_minor),0) FROM %i p
+						 INNER JOIN %i i ON i.id = p.invoice_id
+						 WHERE p.paid_on >= %s AND p.status = %s AND p.deleted_at IS NULL AND i.academic_session_id = %d',
+						Schema::payments(),
+						Schema::invoices(),
+						$thirty_days_ago,
+						'completed',
+						$session_id
+					)
+				);
 
-			$query_overdue_new  = 'SELECT COUNT(*) FROM ' . Schema::invoices() . "
-				 WHERE status = 'overdue' AND updated_at >= %s AND deleted_at IS NULL";
-			$overdue_new_params = [ $thirty_days_ago ];
-			if ( $session_id ) {
-				$query_overdue_new  .= ' AND academic_session_id = %d';
-				$overdue_new_params[] = $session_id;
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Overdue invoices count query.
+				$overdue_invoices = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COUNT(*) FROM %i WHERE status = %s AND deleted_at IS NULL AND academic_session_id = %d',
+						Schema::invoices(),
+						'overdue',
+						$session_id
+					)
+				);
+
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- New overdue invoices query.
+				$new_overdue = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COUNT(*) FROM %i WHERE status = %s AND updated_at >= %s AND deleted_at IS NULL AND academic_session_id = %d',
+						Schema::invoices(),
+						'overdue',
+						$thirty_days_ago,
+						$session_id
+					)
+				);
+			} else {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Outstanding fees query.
+				$stats['outstanding_fees_minor'] = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COALESCE(SUM(balance_minor),0) FROM %i WHERE status IN (%s,%s,%s) AND deleted_at IS NULL',
+						Schema::invoices(),
+						'issued',
+						'partially_paid',
+						'overdue'
+					)
+				);
+
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Collected fees 30d query.
+				$collected_30d = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COALESCE(SUM(p.amount_minor),0) FROM %i p
+						 INNER JOIN %i i ON i.id = p.invoice_id
+						 WHERE p.paid_on >= %s AND p.status = %s AND p.deleted_at IS NULL',
+						Schema::payments(),
+						Schema::invoices(),
+						$thirty_days_ago,
+						'completed'
+					)
+				);
+
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Overdue invoices count query.
+				$overdue_invoices = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COUNT(*) FROM %i WHERE status = %s AND deleted_at IS NULL',
+						Schema::invoices(),
+						'overdue'
+					)
+				);
+
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- New overdue invoices query.
+				$new_overdue = (int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COUNT(*) FROM %i WHERE status = %s AND updated_at >= %s AND deleted_at IS NULL',
+						Schema::invoices(),
+						'overdue',
+						$thirty_days_ago
+					)
+				);
 			}
-			$new_overdue = (int) $wpdb->get_var(
-				$wpdb->prepare( $query_overdue_new, ...$overdue_new_params )
-			);
-			// phpcs:enable
 			$stats['overdue_invoices']       = $overdue_invoices;
 			$stats['overdue_delta']          = '+' . $new_overdue;
 			$stats['overdue_delta_positive'] = false;
@@ -182,18 +286,24 @@ final class DashboardService {
 		$pa_adm   = 0;
 		$pa_staff = 0;
 		if ( $is_admin || codeclove_user_can( $user_id, 'admissions.approve' ) ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Pending admissions count query.
 			$pa_adm = (int) $wpdb->get_var(
-				'SELECT COUNT(*) FROM ' . Schema::applications() . " WHERE status = 'under_review' AND deleted_at IS NULL"
+				$wpdb->prepare(
+					'SELECT COUNT(*) FROM %i WHERE status = %s AND deleted_at IS NULL',
+					Schema::applications(),
+					'under_review'
+				)
 			);
-			// phpcs:enable
 		}
 		if ( $is_admin || codeclove_user_can( $user_id, 'staff_applications.approve' ) ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Pending staff apps count query.
 			$pa_staff = (int) $wpdb->get_var(
-				'SELECT COUNT(*) FROM ' . Schema::staff_apps() . " WHERE status = 'under_review' AND deleted_at IS NULL"
+				$wpdb->prepare(
+					'SELECT COUNT(*) FROM %i WHERE status = %s AND deleted_at IS NULL',
+					Schema::staff_apps(),
+					'under_review'
+				)
 			);
-			// phpcs:enable
 		}
 
 		// ── Today at a Glance ──────────────────────────────────────────────────
@@ -201,20 +311,36 @@ final class DashboardService {
 		if ( $is_admin || codeclove_user_can( $user_id, 'attendance.view' ) ) {
 			$today = current_time( 'Y-m-d' );
 
-			$query_att  = 'SELECT COUNT(*) AS total, SUM(CASE WHEN status IN (\'present\',\'late\',\'half_day\') THEN 1 ELSE 0 END) AS present FROM ' . Schema::attendance() . ' WHERE attendance_date = %s AND deleted_at IS NULL';
-			$att_params = [ $today ];
 			if ( $session_id ) {
-				$query_att   .= ' AND academic_session_id = %d';
-				$att_params[] = $session_id;
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Today student attendance summary.
+				$att_row = $wpdb->get_row(
+					$wpdb->prepare(
+						'SELECT COUNT(*) AS total, SUM(CASE WHEN status IN (%s,%s,%s) THEN 1 ELSE 0 END) AS present
+						 FROM %i WHERE attendance_date = %s AND deleted_at IS NULL AND academic_session_id = %d',
+						'present',
+						'late',
+						'half_day',
+						Schema::attendance(),
+						$today,
+						$session_id
+					),
+					ARRAY_A
+				);
+			} else {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Today student attendance summary.
+				$att_row = $wpdb->get_row(
+					$wpdb->prepare(
+						'SELECT COUNT(*) AS total, SUM(CASE WHEN status IN (%s,%s,%s) THEN 1 ELSE 0 END) AS present
+						 FROM %i WHERE attendance_date = %s AND deleted_at IS NULL',
+						'present',
+						'late',
+						'half_day',
+						Schema::attendance(),
+						$today
+					),
+					ARRAY_A
+				);
 			}
-
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$att_row = $wpdb->get_row(
-				$wpdb->prepare( $query_att, ...$att_params ),
-				ARRAY_A
-			);
-			// phpcs:enable
-
 			$total_today   = (int) ( $att_row['total'] ?? 0 );
 			$present_today = (int) ( $att_row['present'] ?? 0 );
 
@@ -233,22 +359,25 @@ final class DashboardService {
 		if ( $is_admin || codeclove_user_can( $user_id, 'staff_attendance.view' ) ) {
 			$today = $today ?? current_time( 'Y-m-d' );
 
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff attendance total today.
 			$staff_total = (int) $wpdb->get_var(
 				$wpdb->prepare(
-					'SELECT COUNT(*) FROM ' . Schema::staff_attendance() . '
-					 WHERE attendance_date = %s AND deleted_at IS NULL',
+					'SELECT COUNT(*) FROM %i WHERE attendance_date = %s AND deleted_at IS NULL',
+					Schema::staff_attendance(),
 					$today
 				)
 			);
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff attendance present today.
 			$staff_present = $staff_total > 0 ? (int) $wpdb->get_var(
 				$wpdb->prepare(
-					'SELECT COUNT(*) FROM ' . Schema::staff_attendance() . "
-					 WHERE attendance_date = %s AND status IN ('present','late','half_day') AND deleted_at IS NULL",
-					$today
+					'SELECT COUNT(*) FROM %i WHERE attendance_date = %s AND status IN (%s,%s,%s) AND deleted_at IS NULL',
+					Schema::staff_attendance(),
+					$today,
+					'present',
+					'late',
+					'half_day'
 				)
 			) : 0;
-			// phpcs:enable
 
 			$stats['staff_attendance_today'] = [
 				'total'   => $staff_total,
@@ -324,15 +453,15 @@ final class DashboardService {
 
 			case 'session':
 				if ( $session_id ) {
-					// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Session dates query.
 					$row = $wpdb->get_row(
 						$wpdb->prepare(
-							'SELECT starts_on, ends_on FROM ' . Schema::sessions() . ' WHERE id = %d',
+							'SELECT starts_on, ends_on FROM %i WHERE id = %d',
+							Schema::sessions(),
 							$session_id
 						),
 						ARRAY_A
 					);
-					// phpcs:enable
 					if ( $row ) {
 						return [ $row['starts_on'], $row['ends_on'], null ];
 					}
@@ -344,19 +473,20 @@ final class DashboardService {
 				// Find the term whose window contains today (or the most recent past term).
 				if ( $session_id ) {
 					// ponytail: find active or most recently ended term.
-					// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Active or recent term query.
 					$term = $wpdb->get_row(
 						$wpdb->prepare(
-							'SELECT id, name, starts_on, ends_on FROM ' . Schema::terms() . '
+							'SELECT id, name, starts_on, ends_on FROM %i
 							 WHERE academic_session_id = %d
 							   AND starts_on <= %s
-							 ORDER BY ends_on DESC LIMIT 1',
+							 ORDER BY ends_on DESC LIMIT %d',
+							Schema::terms(),
 							$session_id,
-							$today
+							$today,
+							1
 						),
 						ARRAY_A
 					);
-					// phpcs:enable
 					if ( $term ) {
 						return [
 							$term['starts_on'],
@@ -410,26 +540,38 @@ final class DashboardService {
 		$day_diff = max( 1, (int) round( ( strtotime( $date_to ) - strtotime( $date_from ) ) / 86400 ) );
 		$format   = $day_diff <= 31 ? '%Y-%m-%d' : '%Y-%m';
 
-		$query  = 'SELECT DATE_FORMAT(created_at, %s) AS label, COUNT(*) AS count
-			 FROM ' . Schema::applications() . '
-			 WHERE created_at >= %s AND created_at <= %s AND deleted_at IS NULL';
-		$params = [
-			$format,
-			$date_from . ' 00:00:00',
-			$date_to . ' 23:59:59',
-		];
 		if ( $session_id ) {
-			$query   .= ' AND academic_session_id = %d';
-			$params[] = $session_id;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Admissions trend query.
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT DATE_FORMAT(created_at, %s) AS label, COUNT(*) AS count
+					 FROM %i
+					 WHERE created_at >= %s AND created_at <= %s AND deleted_at IS NULL AND academic_session_id = %d
+					 GROUP BY label ORDER BY label ASC',
+					$format,
+					Schema::applications(),
+					$date_from . ' 00:00:00',
+					$date_to . ' 23:59:59',
+					$session_id
+				),
+				ARRAY_A
+			);
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Admissions trend query.
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT DATE_FORMAT(created_at, %s) AS label, COUNT(*) AS count
+					 FROM %i
+					 WHERE created_at >= %s AND created_at <= %s AND deleted_at IS NULL
+					 GROUP BY label ORDER BY label ASC',
+					$format,
+					Schema::applications(),
+					$date_from . ' 00:00:00',
+					$date_to . ' 23:59:59'
+				),
+				ARRAY_A
+			);
 		}
-		$query .= ' GROUP BY label ORDER BY label ASC';
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$rows = $wpdb->get_results(
-			$wpdb->prepare( $query, ...$params ),
-			ARRAY_A
-		);
-		// phpcs:enable
 		// Fill in missing dates to make charts look professional
 		$buckets = [];
 		$curr    = strtotime( $date_from );
@@ -471,36 +613,44 @@ final class DashboardService {
 		$day_diff = max( 1, (int) round( ( strtotime( $date_to ) - strtotime( $date_from ) ) / 86400 ) );
 		$format   = $day_diff <= 31 ? '%Y-%m-%d' : '%Y-%m';
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Billed trend query.
 		$billed_rows = $wpdb->get_results(
 			$wpdb->prepare(
 				'SELECT DATE_FORMAT(created_at, %s) AS label, COALESCE(SUM(total_minor),0) AS amount
-				 FROM ' . Schema::invoices() . "
+				 FROM %i
 				 WHERE academic_session_id = %d
 				   AND created_at >= %s AND created_at <= %s
-				   AND status NOT IN ('draft','void','cancelled') AND deleted_at IS NULL
-				 GROUP BY label ORDER BY label ASC",
+				   AND status NOT IN (%s,%s,%s) AND deleted_at IS NULL
+				 GROUP BY label ORDER BY label ASC',
 				$format,
+				Schema::invoices(),
 				$session_id,
 				$date_from . ' 00:00:00',
-				$date_to . ' 23:59:59'
+				$date_to . ' 23:59:59',
+				'draft',
+				'void',
+				'cancelled'
 			),
 			ARRAY_A
 		);
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Collected trend query.
 		$collected_rows = $wpdb->get_results(
 			$wpdb->prepare(
 				'SELECT DATE_FORMAT(p.paid_on, %s) AS label, COALESCE(SUM(p.amount_minor),0) AS amount
-				 FROM ' . Schema::payments() . ' p
-				 INNER JOIN ' . Schema::invoices() . " i ON i.id = p.invoice_id
+				 FROM %i p
+				 INNER JOIN %i i ON i.id = p.invoice_id
 				 WHERE i.academic_session_id = %d
 				   AND p.paid_on >= %s AND p.paid_on <= %s
-				   AND p.status = 'completed' AND p.deleted_at IS NULL
-				 GROUP BY label ORDER BY label ASC",
+				   AND p.status = %s AND p.deleted_at IS NULL
+				 GROUP BY label ORDER BY label ASC',
 				$format,
+				Schema::payments(),
+				Schema::invoices(),
 				$session_id,
 				$date_from,
-				$date_to
+				$date_to,
+				'completed'
 			),
 			ARRAY_A
 		);
@@ -567,26 +717,46 @@ final class DashboardService {
 	 * @return array<int, array{label: string, present: int, total: int}>
 	 */
 	private function attendance_trend( int $session_id, string $date_from, string $date_to ): array {
-		global $wpdb;
-		$query  = 'SELECT attendance_date AS label,
-				        COUNT(*) AS total,
-				        SUM(CASE WHEN status IN (\'present\',\'late\',\'half_day\') THEN 1 ELSE 0 END) AS present
-				 FROM ' . Schema::attendance() . '
-				 WHERE attendance_date >= %s AND attendance_date <= %s AND deleted_at IS NULL';
-		$params = [ $date_from, $date_to ];
 		if ( $session_id ) {
-			$query   .= ' AND academic_session_id = %d';
-			$params[] = $session_id;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Attendance trend query.
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT attendance_date AS label,
+					        COUNT(*) AS total,
+					        SUM(CASE WHEN status IN (%s,%s,%s) THEN 1 ELSE 0 END) AS present
+					 FROM %i
+					 WHERE attendance_date >= %s AND attendance_date <= %s AND deleted_at IS NULL AND academic_session_id = %d
+					 GROUP BY attendance_date ORDER BY attendance_date ASC',
+					'present',
+					'late',
+					'half_day',
+					Schema::attendance(),
+					$date_from,
+					$date_to,
+					$session_id
+				),
+				ARRAY_A
+			);
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Attendance trend query.
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT attendance_date AS label,
+					        COUNT(*) AS total,
+					        SUM(CASE WHEN status IN (%s,%s,%s) THEN 1 ELSE 0 END) AS present
+					 FROM %i
+					 WHERE attendance_date >= %s AND attendance_date <= %s AND deleted_at IS NULL
+					 GROUP BY attendance_date ORDER BY attendance_date ASC',
+					'present',
+					'late',
+					'half_day',
+					Schema::attendance(),
+					$date_from,
+					$date_to
+				),
+				ARRAY_A
+			);
 		}
-		$query .= ' GROUP BY attendance_date ORDER BY attendance_date ASC';
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$rows = $wpdb->get_results(
-			$wpdb->prepare( $query, ...$params ),
-			ARRAY_A
-		);
-		// phpcs:enable
-
 		return array_map(
 			static fn( $r ) => [
 				'label'   => $r['label'],
@@ -653,12 +823,34 @@ final class DashboardService {
 		}
 		$query .= ' ORDER BY created_at DESC LIMIT 10';
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$rows = ! empty( $params )
-			? $wpdb->get_results( $wpdb->prepare( $query, ...$params ), ARRAY_A )
-			: $wpdb->get_results( $query, ARRAY_A );
-		// phpcs:enable
-
+		if ( ! $is_admin ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Recent audit logs user-scoped query.
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT id, event_type, actor_type, actor_id, actor_label, created_at, metadata_json
+					 FROM %i
+					 WHERE actor_id = %d OR actor_type = %s
+					 ORDER BY created_at DESC LIMIT %d',
+					Schema::app_logs(),
+					$user_id,
+					'system',
+					10
+				),
+				ARRAY_A
+			);
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Recent audit logs admin query.
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT id, event_type, actor_type, actor_id, actor_label, created_at, metadata_json
+					 FROM %i
+					 ORDER BY created_at DESC LIMIT %d',
+					Schema::app_logs(),
+					10
+				),
+				ARRAY_A
+			);
+		}
 		if ( empty( $rows ) ) {
 			return [];
 		}
@@ -692,13 +884,16 @@ final class DashboardService {
 		if ( ! empty( $app_ids ) ) {
 			$unique_app_ids   = array_values( array_map( 'intval', array_unique( $app_ids ) ) );
 			$app_placeholders = implode( ',', array_fill( 0, count( $unique_app_ids ), '%d' ) );
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Batch applications lookup with dynamic IN placeholders.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database query.
 			$app_rows = $wpdb->get_results(
 				$wpdb->prepare(
-					'SELECT a.id, a.student_first_name, a.student_last_name, a.status, u.name AS unit_name
-					 FROM ' . Schema::applications() . ' a
-					 LEFT JOIN ' . Schema::units() . " u ON u.id = a.academic_unit_id
+					"SELECT a.id, a.student_first_name, a.student_last_name, a.status, u.name AS unit_name
+					 FROM %i a
+					 LEFT JOIN %i u ON u.id = a.academic_unit_id
 					 WHERE a.id IN ({$app_placeholders})",
+					Schema::applications(),
+					Schema::units(),
 					...$unique_app_ids
 				),
 				ARRAY_A
@@ -712,10 +907,12 @@ final class DashboardService {
 		if ( ! empty( $unit_ids ) ) {
 			$unique_unit_ids   = array_values( array_map( 'intval', array_unique( $unit_ids ) ) );
 			$unit_placeholders = implode( ',', array_fill( 0, count( $unique_unit_ids ), '%d' ) );
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Batch units lookup with dynamic IN placeholders.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database query.
 			$unit_rows = $wpdb->get_results(
 				$wpdb->prepare(
-					'SELECT id, name FROM ' . Schema::units() . " WHERE id IN ({$unit_placeholders})",
+					"SELECT id, name FROM %i WHERE id IN ({$unit_placeholders})",
+					Schema::units(),
 					...$unique_unit_ids
 				),
 				ARRAY_A
@@ -729,16 +926,23 @@ final class DashboardService {
 		if ( ! empty( $payment_ids ) ) {
 			$unique_payment_ids = array_values( array_map( 'intval', array_unique( $payment_ids ) ) );
 			$pay_placeholders   = implode( ',', array_fill( 0, count( $unique_payment_ids ), '%d' ) );
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Batch payments lookup with dynamic IN placeholders.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database query.
 			$pay_rows = $wpdb->get_results(
 				$wpdb->prepare(
-					'SELECT p.id, p.amount_minor, s.first_name, s.last_name, u.name AS unit_name
-					 FROM ' . Schema::payments() . ' p
-					 LEFT JOIN ' . Schema::invoices() . ' i ON i.id = p.invoice_id
-					 LEFT JOIN ' . Schema::students() . " s ON s.id = i.student_id
-					 LEFT JOIN " . Schema::enrollments() . " e ON (e.student_id = s.id AND e.status = 'active')
-					 LEFT JOIN " . Schema::units() . " u ON u.id = e.academic_unit_id
+					"SELECT p.id, p.amount_minor, s.first_name, s.last_name, u.name AS unit_name
+					 FROM %i p
+					 LEFT JOIN %i i ON i.id = p.invoice_id
+					 LEFT JOIN %i s ON s.id = i.student_id
+					 LEFT JOIN %i e ON (e.student_id = s.id AND e.status = %s)
+					 LEFT JOIN %i u ON u.id = e.academic_unit_id
 					 WHERE p.id IN ({$pay_placeholders})",
+					Schema::payments(),
+					Schema::invoices(),
+					Schema::students(),
+					Schema::enrollments(),
+					'active',
+					Schema::units(),
 					...$unique_payment_ids
 				),
 				ARRAY_A
@@ -840,22 +1044,33 @@ final class DashboardService {
 	 */
 	private function setup_checklist( int $session_id ): array {
 		global $wpdb;
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$has_session     = (bool) $wpdb->get_var( 'SELECT id FROM ' . Schema::sessions() . ' LIMIT 1' );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Setup checklist session existence check.
+		$has_session     = (bool) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT id FROM %i LIMIT %d', Schema::sessions(), 1 )
+		);
 		$has_units       = $session_id
 			? (bool) $wpdb->get_var(
 				$wpdb->prepare(
-					'SELECT id FROM ' . Schema::units() . ' WHERE academic_session_id = %d LIMIT 1',
-					$session_id
+					'SELECT id FROM %i WHERE academic_session_id = %d LIMIT %d',
+					Schema::units(),
+					$session_id,
+					1
 				)
 			)
 			: false;
-		$has_custom_role = (bool) $wpdb->get_var( 'SELECT id FROM ' . Schema::roles() . ' WHERE is_system = 0 LIMIT 1' );
-		$has_user_roles  = (bool) $wpdb->get_var( 'SELECT id FROM ' . Schema::user_roles() . ' LIMIT 1' );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Setup checklist custom role check.
+		$has_custom_role = (bool) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT id FROM %i WHERE is_system = %d LIMIT %d', Schema::roles(), 0, 1 )
+		);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Setup checklist user roles check.
+		$has_user_roles  = (bool) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT id FROM %i LIMIT %d', Schema::user_roles(), 1 )
+		);
 		$has_roles       = $has_custom_role || $has_user_roles;
-		$has_admission   = (bool) $wpdb->get_var( 'SELECT id FROM ' . Schema::applications() . ' WHERE deleted_at IS NULL LIMIT 1' );
-		// phpcs:enable
-
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Setup checklist admission check.
+		$has_admission   = (bool) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT id FROM %i WHERE deleted_at IS NULL LIMIT %d', Schema::applications(), 1 )
+		);
 		$settings   = get_option( 'codeclove_settings', [] );
 		$has_preset = ! empty( $settings['education_system']['preset'] );
 
@@ -876,15 +1091,17 @@ final class DashboardService {
 	 */
 	private function user_role_name( int $user_id ): ?string {
 		global $wpdb;
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- User primary role display name query.
 		return $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT r.name FROM ' . Schema::roles() . ' r
-				 INNER JOIN ' . Schema::user_roles() . ' ur ON ur.role_id = r.id
-				 WHERE ur.user_id = %d LIMIT 1',
-				$user_id
+				'SELECT r.name FROM %i r
+				 INNER JOIN %i ur ON ur.role_id = r.id
+				 WHERE ur.user_id = %d LIMIT %d',
+				Schema::roles(),
+				Schema::user_roles(),
+				$user_id,
+				1
 			)
 		) ?: null;
-		// phpcs:enable
-	}
+}
 }

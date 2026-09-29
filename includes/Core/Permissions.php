@@ -51,6 +51,18 @@ final class Permissions {
 	/**
 	 * Checks whether a user has a given CodeClove permission.
 	 *
+	 * Alias for check() for backward-compatibility and defensive safety.
+	 *
+	 * @param int    $user_id        WordPress user ID.
+	 * @param string $permission_key Dot-notation permission key.
+	 * @return bool
+	 */
+	public static function user_can( int $user_id, string $permission_key ): bool {
+		return self::check( $user_id, $permission_key );
+	}
+	/**
+	 * Checks whether a user has a given CodeClove permission.
+	 *
 	 * The cache stores per-key results. A '*' sentinel key is stored in the
 	 * cache when the user is an Owner (wildcard) so that all subsequent checks
 	 * for that user are O(1) — zero DB queries after the first call.
@@ -109,19 +121,19 @@ final class Permissions {
 	public static function get_user_permissions( int $user_id ): array {
 		global $wpdb;
 
-		// ponytail: fetch all allowed permissions in a single query instead of checking wildcard first.
-// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom role permissions mapping query.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				'SELECT rp.permission_key, rp.allowed
-				 FROM ' . Schema::role_permissions() . ' rp
-				 INNER JOIN ' . Schema::user_roles() . ' ur ON ur.role_id = rp.role_id
+				 FROM %i rp
+				 INNER JOIN %i ur ON ur.role_id = rp.role_id
 				 WHERE ur.user_id = %d AND rp.allowed = 1',
+				Schema::role_permissions(),
+				Schema::user_roles(),
 				$user_id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		$permissions = [];
 		foreach ( (array) $rows as $row ) {
@@ -148,22 +160,23 @@ final class Permissions {
 	private static function query( int $user_id, string $permission_key ): bool {
 		global $wpdb;
 
-		// ponytail: query both wildcard '*' and specific key in a single query using IN
-// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- User capability query.
 		$allowed_keys = $wpdb->get_col(
 			$wpdb->prepare(
 				'SELECT rp.permission_key
-				 FROM ' . Schema::role_permissions() . ' rp
-				 INNER JOIN ' . Schema::user_roles() . ' ur ON ur.role_id = rp.role_id
+				 FROM %i rp
+				 INNER JOIN %i ur ON ur.role_id = rp.role_id
 				 WHERE ur.user_id = %d
 				   AND rp.permission_key IN (%s, %s)
 				   AND rp.allowed = 1',
+				Schema::role_permissions(),
+				Schema::user_roles(),
 				$user_id,
 				'*',
 				$permission_key
 			)
 		);
-		// phpcs:enable
 
 		if ( in_array( '*', $allowed_keys, true ) ) {
 			self::$cache[ $user_id ]['*'] = true;

@@ -6,7 +6,7 @@
  * anywhere else in the codebase. Use Schema::table() or the typed constants.
  *
  * Example:
- *   $wpdb->get_results( "SELECT * FROM " . Schema::SESSIONS );
+ *   $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i', Schema::sessions() ) );
  *
  * @package CodeClove\Database
  */

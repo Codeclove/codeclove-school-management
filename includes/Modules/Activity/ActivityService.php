@@ -89,23 +89,20 @@ final class ActivityService {
 		$where_clause = implode( ' AND ', $where );
 
 		// Query total count
-		$count_query = "SELECT COUNT(*) FROM " . Schema::app_logs() . " WHERE {$where_clause}";
-		if ( ! empty( $values ) ) {
-		$count_query = $wpdb->prepare( $count_query, ...$values ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		}
-		$total = (int) $wpdb->get_var( $count_query ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$count_query = 'SELECT COUNT(*) FROM %i WHERE ' . $where_clause;
+		$count_binds = array_merge( [ Schema::app_logs() ], $values );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Activity logs count query.
+		$total = (int) $wpdb->get_var( $wpdb->prepare( $count_query, ...$count_binds ) );
 
 		// Query records
-		$query = "SELECT id, event_type, actor_type, actor_id, actor_label, created_at, metadata_json
-				  FROM " . Schema::app_logs() . "
-				  WHERE {$where_clause}
+		$query = 'SELECT id, event_type, actor_type, actor_id, actor_label, created_at, metadata_json
+				  FROM %i
+				  WHERE ' . $where_clause . '
 				  ORDER BY created_at DESC
-				  LIMIT %d OFFSET %d";
-		$query_values   = array_merge( $values, [ $per_page, $offset ] );
-		$prepared_query = $wpdb->prepare( $query, ...$query_values ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-
-		$rows = $wpdb->get_results( $prepared_query, ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-
+				  LIMIT %d OFFSET %d';
+		$query_values = array_merge( [ Schema::app_logs() ], $values, [ $per_page, $offset ] );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Activity logs list query.
+		$rows = $wpdb->get_results( $wpdb->prepare( $query, ...$query_values ), ARRAY_A );
 		$items = array_map(
 			function ( $r ) {
 				$meta       = json_decode( $r['metadata_json'] ?? '{}', true );

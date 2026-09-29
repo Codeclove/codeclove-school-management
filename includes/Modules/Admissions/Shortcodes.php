@@ -48,19 +48,27 @@ final class Shortcodes {
 	 */
 	private static function get_academic_units(): array {
 		global $wpdb;
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Shortcode academic units query.
 		$units = $wpdb->get_results(
-			'SELECT u.id, u.name FROM ' . Schema::units() . " u
-			WHERE u.status = 'active'
-			  AND (
-			    u.academic_session_id = (SELECT id FROM " . Schema::sessions() . " WHERE status = 'active' ORDER BY id DESC LIMIT 1)
-			    OR NOT EXISTS (SELECT 1 FROM " . Schema::sessions() . " WHERE status = 'active')
-			  )
-			ORDER BY u.id ASC",
+			$wpdb->prepare(
+				'SELECT u.id, u.name FROM %i u
+				WHERE u.status = %s
+				  AND (
+				    u.academic_session_id = (SELECT id FROM %i WHERE status = %s ORDER BY id DESC LIMIT %d)
+				    OR NOT EXISTS (SELECT 1 FROM %i WHERE status = %s)
+				  )
+				ORDER BY u.id ASC',
+				Schema::units(),
+				'active',
+				Schema::sessions(),
+				'active',
+				1,
+				Schema::sessions(),
+				'active'
+			),
 			ARRAY_A
 		);
 		return $units ?: [];
-		// phpcs:enable
 	}
 
 	/**

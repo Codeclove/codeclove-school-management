@@ -38,21 +38,24 @@ final class AttendanceService {
 
 		// History Mode (single student)
 		if ( ! empty( $student_id ) ) {
-			$attendance_table = Schema::attendance();
-			$units_table      = Schema::units();
-			$groups_table     = Schema::groups();
-			$sessions_table   = Schema::sessions();
-
-			$query = "SELECT a.*, u.name as unit_name, g.name as group_name, s.name as session_name
-				FROM {$attendance_table} a
-				LEFT JOIN {$units_table} u ON u.id = a.academic_unit_id
-				LEFT JOIN {$groups_table} g ON g.id = a.academic_group_id
-				LEFT JOIN {$sessions_table} s ON s.id = a.academic_session_id
-				WHERE a.student_id = %d AND a.deleted_at IS NULL
-				ORDER BY a.attendance_date DESC";
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			return $wpdb->get_results( $wpdb->prepare( $query, (int) $student_id ), ARRAY_A );
-			// phpcs:enable
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Student attendance history query.
+			return $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT a.*, u.name as unit_name, g.name as group_name, s.name as session_name
+					FROM %i a
+					LEFT JOIN %i u ON u.id = a.academic_unit_id
+					LEFT JOIN %i g ON g.id = a.academic_group_id
+					LEFT JOIN %i s ON s.id = a.academic_session_id
+					WHERE a.student_id = %d AND a.deleted_at IS NULL
+					ORDER BY a.attendance_date DESC',
+					Schema::attendance(),
+					Schema::units(),
+					Schema::groups(),
+					Schema::sessions(),
+					(int) $student_id
+				),
+				ARRAY_A
+			);
 		}
 
 		// Register Mode (class + section + date)
@@ -61,38 +64,42 @@ final class AttendanceService {
 		$group_id   = $params['academic_group_id'] ?? null;
 		$date       = $params['attendance_date'] ?? null;
 
-		$students_table    = Schema::students();
-		$enrollments_table = Schema::enrollments();
-		$attendance_table  = Schema::attendance();
-		$groups_table      = Schema::groups();
-
-		$query = "SELECT 
+		$query = 'SELECT 
 			s.id as student_id, s.first_name, s.last_name, s.student_number,
 			se.roll_number, se.academic_group_id, g.name as group_name,
 			a.id as attendance_id, a.status, a.note, a.taken_by
-			FROM {$students_table} s
-			INNER JOIN {$enrollments_table} se ON se.student_id = s.id
-			LEFT JOIN {$groups_table} g ON g.id = se.academic_group_id
-			LEFT JOIN {$attendance_table} a ON a.student_id = s.id 
+			FROM %i s
+			INNER JOIN %i se ON se.student_id = s.id
+			LEFT JOIN %i g ON g.id = se.academic_group_id
+			LEFT JOIN %i a ON a.student_id = s.id 
 				AND a.attendance_date = %s 
-				AND a.academic_session_id = %d
+				AND a.academic_session_id = %d 
 				AND a.deleted_at IS NULL
 			WHERE s.deleted_at IS NULL
 				AND se.academic_session_id = %d
 				AND se.academic_unit_id = %d
-				AND se.status != 'withdrawn'";
+				AND se.status != %s';
 
-		$binds = [ $date, (int) $session_id, (int) $session_id, (int) $unit_id ];
+		$binds = [
+			Schema::students(),
+			Schema::enrollments(),
+			Schema::groups(),
+			Schema::attendance(),
+			$date,
+			(int) $session_id,
+			(int) $session_id,
+			(int) $unit_id,
+			'withdrawn',
+		];
 
 		if ( ! empty( $group_id ) ) {
-			$query   .= " AND se.academic_group_id = %d";
+			$query   .= ' AND se.academic_group_id = %d';
 			$binds[] = (int) $group_id;
 		}
 
-		$query .= " ORDER BY g.name ASC, CAST(se.roll_number AS UNSIGNED) ASC, se.roll_number ASC, s.last_name ASC, s.first_name ASC";
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$query .= ' ORDER BY g.name ASC, CAST(se.roll_number AS UNSIGNED) ASC, se.roll_number ASC, s.last_name ASC, s.first_name ASC';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Dynamic student attendance register query.
 		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$binds ), ARRAY_A );
-		// phpcs:enable
 
 		// Clean null fields for JSON output consistency
 		foreach ( $results as &$row ) {
@@ -134,12 +141,13 @@ final class AttendanceService {
 					continue;
 				}
 
-				// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				// soft-delete if status is empty to avoid DB bloat
 				if ( empty( $status ) ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Student attendance record lookup.
 					$existing_id = $wpdb->get_var(
 						$wpdb->prepare(
-							"SELECT id FROM {$table} WHERE student_id = %d AND attendance_date = %s AND academic_session_id = %d LIMIT 1",
+							'SELECT id FROM %i WHERE student_id = %d AND attendance_date = %s AND academic_session_id = %d LIMIT 1',
+							$table,
 							$student_id,
 							$date,
 							(int) $session_id
@@ -175,9 +183,11 @@ final class AttendanceService {
 
 				$format = [ '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%d', '%s', '%s' ];
 
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Student attendance record lookup.
 				$existing_id = $wpdb->get_var(
 					$wpdb->prepare(
-						"SELECT id FROM {$table} WHERE student_id = %d AND attendance_date = %s AND academic_session_id = %d LIMIT 1",
+						'SELECT id FROM %i WHERE student_id = %d AND attendance_date = %s AND academic_session_id = %d LIMIT 1',
+						$table,
 						$student_id,
 						$date,
 						(int) $session_id
@@ -236,49 +246,54 @@ final class AttendanceService {
 
 		// History Mode (single staff member)
 		if ( ! empty( $staff_member_id ) ) {
-			$table = Schema::staff_attendance();
-			$query = "SELECT * FROM {$table}
-				WHERE staff_member_id = %d AND deleted_at IS NULL
-				ORDER BY attendance_date DESC";
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			return $wpdb->get_results( $wpdb->prepare( $query, (int) $staff_member_id ), ARRAY_A );
-			// phpcs:enable
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff attendance history query.
+			return $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE staff_member_id = %d AND deleted_at IS NULL ORDER BY attendance_date DESC',
+					Schema::staff_attendance(),
+					(int) $staff_member_id
+				),
+				ARRAY_A
+			);
 		}
 
 		// Register Mode (date)
 		$date = $params['attendance_date'] ?? null;
 
-		$staff_table      = Schema::staff_members();
-		$attendance_table = Schema::staff_attendance();
-
-		$query = "SELECT 
-			s.id as staff_member_id, s.first_name, s.last_name, s.staff_number, s.department, s.designation,
-			a.id as attendance_id, a.status, a.note, a.taken_by
-			FROM {$staff_table} s
-			LEFT JOIN {$attendance_table} a ON a.staff_member_id = s.id 
-				AND a.attendance_date = %s 
-				AND a.deleted_at IS NULL
-			WHERE s.deleted_at IS NULL AND s.status = 'active'
-			ORDER BY s.last_name ASC, s.first_name ASC";
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$results = $wpdb->get_results( $wpdb->prepare( $query, $date ), ARRAY_A );
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff daily attendance register query.
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT 
+				s.id as staff_member_id, s.first_name, s.last_name, s.staff_number, s.department, s.designation,
+				a.id as attendance_id, a.status, a.note, a.taken_by
+				FROM %i s
+				LEFT JOIN %i a ON a.staff_member_id = s.id 
+					AND a.attendance_date = %s 
+					AND a.deleted_at IS NULL
+				WHERE s.deleted_at IS NULL AND s.status = %s
+				ORDER BY s.last_name ASC, s.first_name ASC',
+				Schema::staff_members(),
+				Schema::staff_attendance(),
+				$date,
+				'active'
+			),
+			ARRAY_A
+		);
 
 		// Query any substitute mappings where staff members were absent (original staff member of the slot) on this date
-		$sub_table = Schema::timetable_substitutes();
-		$slots_table = Schema::timetable_slots();
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Timetable substitutes absences query.
 		$absences_rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT DISTINCT ts.staff_member_id, sub.reason 
-				 FROM {$sub_table} sub
-				 JOIN {$slots_table} ts ON sub.slot_id = ts.id
-				 WHERE sub.date = %s",
+				'SELECT DISTINCT ts.staff_member_id, sub.reason 
+				 FROM %i sub
+				 JOIN %i ts ON sub.slot_id = ts.id
+				 WHERE sub.date = %s',
+				Schema::timetable_substitutes(),
+				Schema::timetable_slots(),
 				$date
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		$absences = [];
 		foreach ( $absences_rows as $abs ) {
@@ -329,12 +344,13 @@ final class AttendanceService {
 					continue;
 				}
 
-				// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				// soft-delete if status is empty to avoid DB bloat
 				if ( empty( $status ) ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff attendance lookup query.
 					$existing_id = $wpdb->get_var(
 						$wpdb->prepare(
-							"SELECT id FROM {$table} WHERE staff_member_id = %d AND attendance_date = %s LIMIT 1",
+							'SELECT id FROM %i WHERE staff_member_id = %d AND attendance_date = %s LIMIT 1',
+							$table,
 							$staff_member_id,
 							$date
 						)
@@ -355,14 +371,15 @@ final class AttendanceService {
 				}
 
 				// check-then-insert-or-update
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff attendance lookup query.
 				$existing_id = $wpdb->get_var(
 					$wpdb->prepare(
-						"SELECT id FROM {$table} WHERE staff_member_id = %d AND attendance_date = %s LIMIT 1",
+						'SELECT id FROM %i WHERE staff_member_id = %d AND attendance_date = %s LIMIT 1',
+						$table,
 						$staff_member_id,
 						$date
 					)
 				);
-
 				if ( $existing_id ) {
 					$wpdb->update(
 						$table,
@@ -424,50 +441,50 @@ final class AttendanceService {
 		$start_date = "{$year}-{$month}-01";
 		$end_date   = gmdate( 'Y-m-t', strtotime( $start_date ) );
 
-		$students_table    = Schema::students();
-		$enrollments_table = Schema::enrollments();
-		$attendance_table  = Schema::attendance();
-		$units_table       = Schema::units();
-		$groups_table      = Schema::groups();
-
 		// Fetch active students
-		$student_query = "SELECT s.id as student_id, s.first_name, s.last_name, s.student_number, se.roll_number,
+		$student_query = 'SELECT s.id as student_id, s.first_name, s.last_name, s.student_number, se.roll_number,
 			u.name as unit_name, u.name as class_name, g.name as group_name, g.name as section_name
-			FROM {$students_table} s
-			INNER JOIN {$enrollments_table} se ON se.student_id = s.id
-			LEFT JOIN {$units_table} u ON u.id = se.academic_unit_id
-			LEFT JOIN {$groups_table} g ON g.id = se.academic_group_id
+			FROM %i s
+			INNER JOIN %i se ON se.student_id = s.id
+			LEFT JOIN %i u ON u.id = se.academic_unit_id
+			LEFT JOIN %i g ON g.id = se.academic_group_id
 			WHERE s.deleted_at IS NULL 
 				AND se.academic_session_id = %d 
 				AND se.academic_unit_id = %d
-				AND se.status != 'withdrawn'";
+				AND se.status != %s';
 		
-		$student_binds = [ (int) $session_id, (int) $unit_id ];
+		$student_binds = [
+			Schema::students(),
+			Schema::enrollments(),
+			Schema::units(),
+			Schema::groups(),
+			(int) $session_id,
+			(int) $unit_id,
+			'withdrawn',
+		];
 
 		if ( ! empty( $group_id ) ) {
-			$student_query .= " AND se.academic_group_id = %d";
+			$student_query .= ' AND se.academic_group_id = %d';
 			$student_binds[] = (int) $group_id;
 		}
 
-		$student_query .= " ORDER BY g.name ASC, CAST(se.roll_number AS UNSIGNED) ASC, se.roll_number ASC, s.last_name ASC, s.first_name ASC";
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$student_query .= ' ORDER BY g.name ASC, CAST(se.roll_number AS UNSIGNED) ASC, se.roll_number ASC, s.last_name ASC, s.first_name ASC';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Monthly student attendance roster query.
 		$students = $wpdb->get_results( $wpdb->prepare( $student_query, ...$student_binds ), ARRAY_A );
-		// phpcs:enable
 
 		// Fetch attendance records in date range
-		$attendance_query = "SELECT student_id, attendance_date, status, note
-			FROM {$attendance_table}
-			WHERE academic_session_id = %d AND academic_unit_id = %d AND attendance_date BETWEEN %s AND %s AND deleted_at IS NULL";
+		$attendance_query = 'SELECT student_id, attendance_date, status, note
+			FROM %i
+			WHERE academic_session_id = %d AND academic_unit_id = %d AND attendance_date BETWEEN %s AND %s AND deleted_at IS NULL';
 		
-		$attendance_binds = [ (int) $session_id, (int) $unit_id, $start_date, $end_date ];
+		$attendance_binds = [ Schema::attendance(), (int) $session_id, (int) $unit_id, $start_date, $end_date ];
 
 		if ( ! empty( $group_id ) ) {
-			$attendance_query .= " AND academic_group_id = %d";
+			$attendance_query .= ' AND academic_group_id = %d';
 			$attendance_binds[] = (int) $group_id;
 		}
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Monthly student attendance records query.
 		$attendance_records = $wpdb->get_results( $wpdb->prepare( $attendance_query, ...$attendance_binds ), ARRAY_A );
-		// phpcs:enable
 
 		// Pivot records
 		$matrix = [];
@@ -503,25 +520,33 @@ final class AttendanceService {
 		$start_date = "{$year}-{$month}-01";
 		$end_date   = gmdate( 'Y-m-t', strtotime( $start_date ) );
 
-		$staff_table      = Schema::staff_members();
-		$attendance_table = Schema::staff_attendance();
-
 		// Fetch active staff
-		$staff_query = "SELECT id as staff_member_id, first_name, last_name, staff_number, department, designation
-			FROM {$staff_table}
-			WHERE deleted_at IS NULL AND status = 'active'
-			ORDER BY last_name ASC, first_name ASC";
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$staff = $wpdb->get_results( $staff_query, ARRAY_A );
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Monthly staff roster query.
+		$staff = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT id as staff_member_id, first_name, last_name, staff_number, department, designation
+				FROM %i
+				WHERE deleted_at IS NULL AND status = %s
+				ORDER BY last_name ASC, first_name ASC',
+				Schema::staff_members(),
+				'active'
+			),
+			ARRAY_A
+		);
 
 		// Fetch attendance in date range
-		$attendance_query = "SELECT staff_member_id, attendance_date, status, note
-			FROM {$attendance_table}
-			WHERE attendance_date BETWEEN %s AND %s AND deleted_at IS NULL";
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$attendance_records = $wpdb->get_results( $wpdb->prepare( $attendance_query, $start_date, $end_date ), ARRAY_A );
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Monthly staff attendance records query.
+		$attendance_records = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT staff_member_id, attendance_date, status, note
+				FROM %i
+				WHERE attendance_date BETWEEN %s AND %s AND deleted_at IS NULL',
+				Schema::staff_attendance(),
+				$start_date,
+				$end_date
+			),
+			ARRAY_A
+		);
 
 		// Pivot records
 		$matrix = [];

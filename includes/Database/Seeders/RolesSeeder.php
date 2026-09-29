@@ -184,9 +184,11 @@ final class RolesSeeder implements SeederInterface {
 // phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		foreach ( self::ROLES as $role ) {
 			// Check if role already exists.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Role existence check.
 			$existing_id = $wpdb->get_var(
 				$wpdb->prepare(
-					'SELECT id FROM ' . Schema::roles() . ' WHERE slug = %s',
+					'SELECT id FROM %i WHERE slug = %s',
+					Schema::roles(),
 					$role['slug']
 				)
 			);
@@ -201,11 +203,14 @@ final class RolesSeeder implements SeederInterface {
 			// Seed permissions for this role.
 			if ( isset( self::ROLE_PERMISSIONS[ $role['slug'] ] ) ) {
 				foreach ( self::ROLE_PERMISSIONS[ $role['slug'] ] as $permission ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Role permission insert ignore.
 					$wpdb->query(
 						$wpdb->prepare(
-							'INSERT IGNORE INTO ' . Schema::role_permissions() . ' (role_id, permission_key, allowed) VALUES (%d, %s, 1)',
+							'INSERT IGNORE INTO %i (role_id, permission_key, allowed) VALUES (%d, %s, %d)',
+							Schema::role_permissions(),
 							$role_id,
-							$permission
+							$permission,
+							1
 						)
 					);
 				}
@@ -229,24 +234,27 @@ final class RolesSeeder implements SeederInterface {
 		}
 
 		if ( $current_user_id > 0 ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Owner role lookup.
 			$owner_role_id = $wpdb->get_var(
 				$wpdb->prepare(
-					'SELECT id FROM ' . Schema::roles() . ' WHERE slug = %s',
+					'SELECT id FROM %i WHERE slug = %s',
+					Schema::roles(),
 					'owner'
 				)
 			);
 
 			if ( $owner_role_id ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Assign owner role to activating user.
 				$wpdb->query(
 					$wpdb->prepare(
-						'INSERT IGNORE INTO ' . Schema::user_roles() . ' (user_id, role_id) VALUES (%d, %d)',
+						'INSERT IGNORE INTO %i (user_id, role_id) VALUES (%d, %d)',
+						Schema::user_roles(),
 						$current_user_id,
 						$owner_role_id
 					)
 				);
 			}
 		}
-		// phpcs:enable
 	}
 
 	/**
@@ -254,10 +262,11 @@ final class RolesSeeder implements SeederInterface {
 	 */
 	public function truncate(): void {
 		global $wpdb;
-// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$wpdb->query( 'DELETE FROM ' . Schema::user_roles() );
-		$wpdb->query( 'DELETE FROM ' . Schema::role_permissions() );
-		$wpdb->query( 'DELETE FROM ' . Schema::roles() );
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Truncating role tables for dev/tests.
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', Schema::user_roles() ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Truncating role tables for dev/tests.
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', Schema::role_permissions() ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Truncating role tables for dev/tests.
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', Schema::roles() ) );
 	}
 }

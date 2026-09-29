@@ -309,14 +309,14 @@ final class Plugin {
 		if ( $retention_days > 0 ) {
 			global $wpdb;
 			if ( class_exists( '\CodeClove\Database\Schema' ) ) {
-				// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Daily cron log retention pruning.
 				$wpdb->query(
 					$wpdb->prepare(
-						"DELETE FROM " . \CodeClove\Database\Schema::app_logs() . " WHERE created_at < DATE_SUB( UTC_TIMESTAMP(), INTERVAL %d DAY )",
+						'DELETE FROM %i WHERE created_at < DATE_SUB( UTC_TIMESTAMP(), INTERVAL %d DAY )',
+						\CodeClove\Database\Schema::app_logs(),
 						$retention_days
 					)
 				);
-				// phpcs:enable
 			}
 		}
 	}

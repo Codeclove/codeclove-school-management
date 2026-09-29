@@ -35,16 +35,20 @@ final class RolesService {
 		$roles_table = Schema::roles();
 		$permissions_table = Schema::role_permissions();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- List roles with permissions count.
 		$results = $wpdb->get_results(
-			"SELECT r.*, COUNT(rp.id) as permission_count
-			 FROM {$roles_table} r
-			 LEFT JOIN {$permissions_table} rp ON rp.role_id = r.id AND rp.allowed = 1
-			 GROUP BY r.id
-			 ORDER BY r.is_system DESC, r.name ASC",
+			$wpdb->prepare(
+				'SELECT r.*, COUNT(rp.id) as permission_count
+				 FROM %i r
+				 LEFT JOIN %i rp ON rp.role_id = r.id AND rp.allowed = %d
+				 GROUP BY r.id
+				 ORDER BY r.is_system DESC, r.name ASC',
+				Schema::roles(),
+				Schema::role_permissions(),
+				1
+			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		$roles = [];
 		foreach ( (array) $results as $row ) {
@@ -71,26 +75,26 @@ final class RolesService {
 	public function get_role( int $id ): ?array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Get single role by ID.
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM " . Schema::roles() . " WHERE id = %d", $id ),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', Schema::roles(), $id ),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		if ( ! $row ) {
 			return null;
 		}
 
 		// Fetch permissions
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Fetch role allowed permission keys.
 		$perm_rows = $wpdb->get_col(
 			$wpdb->prepare(
-				"SELECT permission_key FROM " . Schema::role_permissions() . " WHERE role_id = %d AND allowed = 1",
-				$id
+				'SELECT permission_key FROM %i WHERE role_id = %d AND allowed = %d',
+				Schema::role_permissions(),
+				$id,
+				1
 			)
 		);
-		// phpcs:enable
 
 		return [
 			'id'          => (int) $row['id'],
@@ -123,11 +127,10 @@ final class RolesService {
 		$slug = sanitize_title( $name );
 
 		// Check duplicate slug
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Check duplicate role slug.
 		$exists = $wpdb->get_var(
-			$wpdb->prepare( "SELECT id FROM " . Schema::roles() . " WHERE slug = %s", $slug )
+			$wpdb->prepare( 'SELECT id FROM %i WHERE slug = %s', Schema::roles(), $slug )
 		);
-		// phpcs:enable
 
 		if ( $exists ) {
 			return new WP_Error( 'codeclove_validation_failed', __( 'A role with a similar name already exists.', 'codeclove-school-management' ), [ 'status' => 400 ] );
@@ -189,12 +192,11 @@ final class RolesService {
 	public function update_role( int $id, array $data ): array|WP_Error {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Get role for update.
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM " . Schema::roles() . " WHERE id = %d", $id ),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', Schema::roles(), $id ),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		if ( ! $row ) {
 			return new WP_Error( 'codeclove_not_found', __( 'Role not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
@@ -266,12 +268,11 @@ final class RolesService {
 	public function delete_role( int $id ): bool|WP_Error {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Get role for deletion.
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM " . Schema::roles() . " WHERE id = %d", $id ),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', Schema::roles(), $id ),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		if ( ! $row ) {
 			return new WP_Error( 'codeclove_not_found', __( 'Role not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
@@ -282,11 +283,10 @@ final class RolesService {
 		}
 
 		// Check if any users are assigned to this role
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Count users assigned to role.
 		$assigned_count = (int) $wpdb->get_var(
-			$wpdb->prepare( "SELECT COUNT(*) FROM " . Schema::user_roles() . " WHERE role_id = %d", $id )
+			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE role_id = %d', Schema::user_roles(), $id )
 		);
-		// phpcs:enable
 
 		if ( $assigned_count > 0 ) {
 			return new WP_Error(

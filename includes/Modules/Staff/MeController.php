@@ -82,14 +82,14 @@ final class MeController extends BaseController {
 	 */
 	private function get_current_staff_id(): ?int {
 		global $wpdb;
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Resolving current staff member ID.
 		$staff_id = $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT id FROM ' . Schema::staff_members() . ' WHERE user_id = %d AND deleted_at IS NULL',
+				'SELECT id FROM %i WHERE user_id = %d AND deleted_at IS NULL',
+				Schema::staff_members(),
 				get_current_user_id()
 			)
 		);
-		// phpcs:enable
 		return $staff_id ? (int) $staff_id : null;
 	}
 

@@ -59,26 +59,26 @@ final class PortalService {
 		$is_admin = user_can( $user_id, 'manage_options' );
 
 		// 1. Locate guardian record if any.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal guardian record lookup.
 		$guardian_row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::guardians() . ' WHERE user_id = %d AND deleted_at IS NULL LIMIT 1',
+				'SELECT * FROM %i WHERE user_id = %d AND deleted_at IS NULL LIMIT 1',
+				Schema::guardians(),
 				$user_id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		// 2. Locate student record if any.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student record lookup.
 		$student_row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::students() . ' WHERE user_id = %d AND deleted_at IS NULL LIMIT 1',
+				'SELECT * FROM %i WHERE user_id = %d AND deleted_at IS NULL LIMIT 1',
+				Schema::students(),
 				$user_id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		// 3. Determine role.
 		$user_roles = $wp_user ? (array) $wp_user->roles : [];
@@ -102,24 +102,29 @@ final class PortalService {
 			$units_table     = Schema::units();
 			$groups_table    = Schema::groups();
 
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal guardian linked students query.
 			$students_rows = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT s.id, s.student_number, s.admission_number, s.first_name, s.middle_name, s.last_name,
+					'SELECT s.id, s.student_number, s.admission_number, s.first_name, s.middle_name, s.last_name,
 							s.gender, s.photo_id,
 							u.name as unit_name, g.name as group_name, e.roll_number
-					 FROM {$students_table} s
-					 INNER JOIN {$links_table} sg ON sg.student_id = s.id
-					 LEFT JOIN {$enroll_table} e ON e.student_id = s.id AND e.status = 'active'
-					 LEFT JOIN {$units_table} u ON u.id = e.academic_unit_id
-					 LEFT JOIN {$groups_table} g ON g.id = e.academic_group_id
+					 FROM %i s
+					 INNER JOIN %i sg ON sg.student_id = s.id
+					 LEFT JOIN %i e ON e.student_id = s.id AND e.status = %s
+					 LEFT JOIN %i u ON u.id = e.academic_unit_id
+					 LEFT JOIN %i g ON g.id = e.academic_group_id
 					 WHERE sg.guardian_id = %d AND s.deleted_at IS NULL
-					 ORDER BY sg.is_primary DESC, s.first_name ASC",
+					 ORDER BY sg.is_primary DESC, s.first_name ASC',
+					Schema::students(),
+					Schema::student_guardians(),
+					Schema::enrollments(),
+					'active',
+					Schema::units(),
+					Schema::groups(),
 					(int) $guardian_row['id']
 				),
 				ARRAY_A
 			) ?: [];
-			// phpcs:enable
 		} elseif ( 'student' === $role && $student_row ) {
 			// Single student record for this student user.
 			$students_table  = Schema::students();
@@ -127,23 +132,28 @@ final class PortalService {
 			$units_table     = Schema::units();
 			$groups_table    = Schema::groups();
 
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student self record query.
 			$students_rows = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT s.id, s.student_number, s.admission_number, s.first_name, s.middle_name, s.last_name,
+					'SELECT s.id, s.student_number, s.admission_number, s.first_name, s.middle_name, s.last_name,
 							s.gender, s.photo_id,
 							u.name as unit_name, g.name as group_name, e.roll_number
-					 FROM {$students_table} s
-					 LEFT JOIN {$enroll_table} e ON e.student_id = s.id AND e.status = 'active'
-					 LEFT JOIN {$units_table} u ON u.id = e.academic_unit_id
-					 LEFT JOIN {$groups_table} g ON g.id = e.academic_group_id
+					 FROM %i s
+					 LEFT JOIN %i e ON e.student_id = s.id AND e.status = %s
+					 LEFT JOIN %i u ON u.id = e.academic_unit_id
+					 LEFT JOIN %i g ON g.id = e.academic_group_id
 					 WHERE s.id = %d AND s.deleted_at IS NULL
-					 LIMIT 1",
-					(int) $student_row['id']
+					 LIMIT %d',
+					Schema::students(),
+					Schema::enrollments(),
+					'active',
+					Schema::units(),
+					Schema::groups(),
+					(int) $student_row['id'],
+					1
 				),
 				ARRAY_A
 			) ?: [];
-			// phpcs:enable
 		} elseif ( 'admin' === $role ) {
 			// For admin previews: return active students.
 			$students_table  = Schema::students();
@@ -151,21 +161,29 @@ final class PortalService {
 			$units_table     = Schema::units();
 			$groups_table    = Schema::groups();
 
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal admin preview students query.
 			$students_rows = $wpdb->get_results(
-				"SELECT s.id, s.student_number, s.admission_number, s.first_name, s.middle_name, s.last_name,
-						s.gender, s.photo_id,
-						u.name as unit_name, g.name as group_name, e.roll_number
-				 FROM {$students_table} s
-				 LEFT JOIN {$enroll_table} e ON e.student_id = s.id AND e.status = 'active'
-				 LEFT JOIN {$units_table} u ON u.id = e.academic_unit_id
-				 LEFT JOIN {$groups_table} g ON g.id = e.academic_group_id
-				 WHERE s.deleted_at IS NULL AND s.status = 'active'
-				 ORDER BY s.first_name ASC
-				 LIMIT 50",
+				$wpdb->prepare(
+					'SELECT s.id, s.student_number, s.admission_number, s.first_name, s.middle_name, s.last_name,
+							s.gender, s.photo_id,
+							u.name as unit_name, g.name as group_name, e.roll_number
+					 FROM %i s
+					 LEFT JOIN %i e ON e.student_id = s.id AND e.status = %s
+					 LEFT JOIN %i u ON u.id = e.academic_unit_id
+					 LEFT JOIN %i g ON g.id = e.academic_group_id
+					 WHERE s.deleted_at IS NULL AND s.status = %s
+					 ORDER BY s.first_name ASC
+					 LIMIT %d',
+					Schema::students(),
+					Schema::enrollments(),
+					'active',
+					Schema::units(),
+					Schema::groups(),
+					'active',
+					50
+				),
 				ARRAY_A
 			) ?: [];
-			// phpcs:enable
 		}
 
 		$formatted_students = [];
@@ -251,38 +269,38 @@ final class PortalService {
 		global $wpdb;
 
 		// 1. Check if student's own account.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal own student check.
 		$is_own_student = (bool) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT id FROM ' . Schema::students() . ' WHERE id = %d AND user_id = %d AND deleted_at IS NULL LIMIT 1',
+				'SELECT id FROM %i WHERE id = %d AND user_id = %d AND deleted_at IS NULL LIMIT 1',
+				Schema::students(),
 				$student_id,
 				$user_id
 			)
 		);
-		// phpcs:enable
 		if ( $is_own_student ) {
 			return true;
 		}
 
 		// 2. Check if linked via guardian record.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal guardian record lookup.
 		$guardian_id = $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT id FROM ' . Schema::guardians() . ' WHERE user_id = %d AND deleted_at IS NULL LIMIT 1',
+				'SELECT id FROM %i WHERE user_id = %d AND deleted_at IS NULL LIMIT 1',
+				Schema::guardians(),
 				$user_id
 			)
 		);
-		// phpcs:enable
 		if ( $guardian_id ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal guardian student link check.
 			$is_linked = (bool) $wpdb->get_var(
 				$wpdb->prepare(
-					'SELECT id FROM ' . Schema::student_guardians() . ' WHERE student_id = %d AND guardian_id = %d LIMIT 1',
+					'SELECT id FROM %i WHERE student_id = %d AND guardian_id = %d LIMIT 1',
+					Schema::student_guardians(),
 					$student_id,
 					(int) $guardian_id
 				)
 			);
-			// phpcs:enable
 			if ( $is_linked ) {
 				return true;
 			}
@@ -308,11 +326,11 @@ final class PortalService {
 		$date        = $date ?: current_time( 'Y-m-d' );
 		$terms_table = Schema::terms();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal current term query.
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT id FROM {$terms_table}
-				 WHERE academic_session_id = %d AND status != 'archived'
+				'SELECT id FROM %i
+				 WHERE academic_session_id = %d AND status != %s
 				 ORDER BY
 				   (CASE
 				     WHEN starts_on <= %s AND ends_on >= %s THEN 0
@@ -322,15 +340,16 @@ final class PortalService {
 				   (CASE WHEN starts_on <= %s THEN ends_on END) DESC,
 				   sort_order ASC,
 				   starts_on ASC
-				 LIMIT 1",
+				 LIMIT 1',
+				Schema::terms(),
 				$session_id,
+				'archived',
 				$date,
 				$date,
 				$date,
 				$date
 			)
 		);
-		// phpcs:enable
 	}
 
 	/**
@@ -347,19 +366,19 @@ final class PortalService {
 		$start_date = gmdate( 'Y-m-01' );
 		$end_date   = gmdate( 'Y-m-t' );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student attendance summary.
 		$att_counts = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT status, COUNT(*) as count FROM ' . Schema::attendance() . '
+				'SELECT status, COUNT(*) as count FROM %i
 				 WHERE student_id = %d AND attendance_date BETWEEN %s AND %s AND deleted_at IS NULL
 				 GROUP BY status',
+				Schema::attendance(),
 				$student_id,
 				$start_date,
 				$end_date
 			),
 			ARRAY_A
 		) ?: [];
-		// phpcs:enable
 
 		$present_days = 0;
 		$absent_days  = 0;
@@ -390,16 +409,17 @@ final class PortalService {
 		$settings = ( new SettingsRepository() )->get_settings();
 		$currency = $settings['localization']['currency'] ?? 'USD';
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student invoices summary.
 		$inv_rows = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT total_minor, paid_minor, balance_minor, due_date, status FROM ' . Schema::invoices() . "
-				 WHERE student_id = %d AND status != 'cancelled' AND deleted_at IS NULL",
-				$student_id
+				'SELECT total_minor, paid_minor, balance_minor, due_date, status FROM %i
+				 WHERE student_id = %d AND status != %s AND deleted_at IS NULL',
+				Schema::invoices(),
+				$student_id,
+				'cancelled'
 			),
 			ARRAY_A
 		) ?: [];
-		// phpcs:enable
 
 		$total_invoiced_minor = 0;
 		$total_paid_minor     = 0;
@@ -428,13 +448,15 @@ final class PortalService {
 		}
 
 		// ─── 3. Today Timetable ──────────────────────────────────────────────
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal active enrollment lookup.
 		$enrollment = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT academic_session_id, academic_unit_id, academic_group_id FROM " . Schema::enrollments() . "
-				 WHERE student_id = %d AND status = 'active'
-				 ORDER BY id DESC LIMIT 1",
-				$student_id
+				'SELECT academic_session_id, academic_unit_id, academic_group_id FROM %i
+				 WHERE student_id = %d AND status = %s
+				 ORDER BY id DESC LIMIT 1',
+				Schema::enrollments(),
+				$student_id,
+				'active'
 			),
 			ARRAY_A
 		);
@@ -470,19 +492,24 @@ final class PortalService {
 			$where_clause  .= ' AND ts.day_of_week = %d';
 			$where_params[] = $day_of_week;
 
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Dynamic timetable query.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database query.
 			$slots = $wpdb->get_results(
 				$wpdb->prepare(
 					"SELECT p.name as period_name, p.start_time, p.end_time,
 							sub.name as subject_name,
 							CONCAT(st.first_name, ' ', st.last_name) as teacher_name,
 							ts.notes as room
-					 FROM {$slots_table} ts
-					 INNER JOIN {$periods_table} p ON p.id = ts.period_id
-					 LEFT JOIN {$subj_table} sub ON sub.id = ts.subject_id
-					 LEFT JOIN {$staff_table} st ON st.id = ts.staff_member_id
+					 FROM %i ts
+					 INNER JOIN %i p ON p.id = ts.period_id
+					 LEFT JOIN %i sub ON sub.id = ts.subject_id
+					 LEFT JOIN %i st ON st.id = ts.staff_member_id
 					 WHERE {$where_clause}
 					 ORDER BY p.sort_order ASC, p.start_time ASC",
+					Schema::timetable_slots(),
+					Schema::timetable_periods(),
+					Schema::subjects(),
+					Schema::staff_members(),
 					...$where_params
 				),
 				ARRAY_A
@@ -512,17 +539,19 @@ final class PortalService {
 
 		// (a) Upcoming invoice due dates
 		$invoices_table = Schema::invoices();
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal upcoming invoices query.
 		$inv_events     = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id, invoice_number, due_date, balance_minor FROM {$invoices_table}
-				 WHERE student_id = %d AND due_date >= CURDATE() AND status != 'paid' AND deleted_at IS NULL
-				 ORDER BY due_date ASC LIMIT 10",
-				$student_id
+				'SELECT id, invoice_number, due_date, balance_minor FROM %i
+				 WHERE student_id = %d AND due_date >= CURDATE() AND status != %s AND deleted_at IS NULL
+				 ORDER BY due_date ASC LIMIT %d',
+				Schema::invoices(),
+				$student_id,
+				'paid',
+				10
 			),
 			ARRAY_A
 		) ?: [];
-		// phpcs:enable
 
 		foreach ( $inv_events as $inv ) {
 			$bal = round( (int) ( $inv['balance_minor'] ?? 0 ) / 100, 2 );
@@ -561,17 +590,18 @@ final class PortalService {
 
 		if ( $session_id > 0 ) {
 			$terms_table = Schema::terms();
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal session terms query.
 			$term_rows   = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT id, name, starts_on, ends_on FROM {$terms_table}
-					 WHERE academic_session_id = %d AND status != 'archived'
-					 ORDER BY starts_on ASC",
-					$session_id
+					'SELECT id, name, starts_on, ends_on FROM %i
+					 WHERE academic_session_id = %d AND status != %s
+					 ORDER BY starts_on ASC',
+					Schema::terms(),
+					$session_id,
+					'archived'
 				),
 				ARRAY_A
 			) ?: [];
-			// phpcs:enable
 
 			foreach ( $term_rows as $term ) {
 				$term_name = (string) $term['name'];
@@ -662,20 +692,20 @@ final class PortalService {
 		$start_date = "{$month}-01";
 		$end_date   = gmdate( 'Y-m-t', strtotime( $start_date ) );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student attendance history query.
 		$records = $wpdb->get_results(
 			$wpdb->prepare(
 				'SELECT attendance_date, status, note
-				 FROM ' . Schema::attendance() . '
+				 FROM %i
 				 WHERE student_id = %d AND attendance_date BETWEEN %s AND %s AND deleted_at IS NULL
 				 ORDER BY attendance_date ASC',
+				Schema::attendance(),
 				$student_id,
 				$start_date,
 				$end_date
 			),
 			ARRAY_A
 		) ?: [];
-		// phpcs:enable
 
 		$present  = 0;
 		$absent   = 0;
@@ -737,19 +767,19 @@ final class PortalService {
 		$items_table    = Schema::line_items();
 		$payments_table = Schema::payments();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student invoices list query.
 		$invoices = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id, invoice_number, issue_date, due_date, currency,
+				'SELECT id, invoice_number, issue_date, due_date, currency,
 						total_minor, paid_minor, balance_minor, status
-				 FROM {$invoices_table}
+				 FROM %i
 				 WHERE student_id = %d AND deleted_at IS NULL
-				 ORDER BY issue_date DESC, id DESC",
+				 ORDER BY issue_date DESC, id DESC',
+				Schema::invoices(),
 				$student_id
 			),
 			ARRAY_A
 		) ?: [];
-		// phpcs:enable
 
 		$total_invoiced_minor = 0;
 		$total_paid_minor     = 0;
@@ -765,13 +795,15 @@ final class PortalService {
 			$placeholders = implode( ',', array_fill( 0, count( $invoice_ids ), '%d' ) );
 
 			// Fetch line items
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Batch items lookup.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database query.
 			$items_rows = $wpdb->get_results(
 				$wpdb->prepare(
 					"SELECT id, invoice_id, description, quantity, unit_amount_minor, total_minor
-					 FROM {$items_table}
+					 FROM %i
 					 WHERE invoice_id IN ({$placeholders})
 					 ORDER BY sort_order ASC, id ASC",
+					Schema::line_items(),
 					...$invoice_ids
 				),
 				ARRAY_A
@@ -788,13 +820,15 @@ final class PortalService {
 				];
 			}
 			// Fetch payments
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Batch payments lookup.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database query.
 			$pay_rows = $wpdb->get_results(
 				$wpdb->prepare(
 					"SELECT id, invoice_id, payment_number, amount_minor, method, status, paid_on
-					 FROM {$payments_table}
+					 FROM %i
 					 WHERE invoice_id IN ({$placeholders}) AND deleted_at IS NULL
 					 ORDER BY paid_on DESC, id DESC",
+					Schema::payments(),
 					...$invoice_ids
 				),
 				ARRAY_A
@@ -873,20 +907,23 @@ final class PortalService {
 		$units_table  = Schema::units();
 		$groups_table = Schema::groups();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student timetable enrollment lookup.
 		$enrollment = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT e.academic_session_id, e.academic_unit_id, e.academic_group_id, u.name as unit_name, g.name as group_name
-				 FROM {$enroll_table} e
-				 LEFT JOIN {$units_table} u ON u.id = e.academic_unit_id
-				 LEFT JOIN {$groups_table} g ON g.id = e.academic_group_id
-				 WHERE e.student_id = %d AND e.status = 'active'
-				 ORDER BY e.id DESC LIMIT 1",
-				$student_id
+				'SELECT e.academic_session_id, e.academic_unit_id, e.academic_group_id, u.name as unit_name, g.name as group_name
+				 FROM %i e
+				 LEFT JOIN %i u ON u.id = e.academic_unit_id
+				 LEFT JOIN %i g ON g.id = e.academic_group_id
+				 WHERE e.student_id = %d AND e.status = %s
+				 ORDER BY e.id DESC LIMIT 1',
+				Schema::enrollments(),
+				Schema::units(),
+				Schema::groups(),
+				$student_id,
+				'active'
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		$days = [
 			1 => [],
@@ -923,7 +960,8 @@ final class PortalService {
 				$where_params[] = $term_id;
 			}
 
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Dynamic timetable query.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database query.
 			$slots = $wpdb->get_results(
 				$wpdb->prepare(
 					"SELECT ts.id, ts.period_id, ts.day_of_week,
@@ -931,12 +969,16 @@ final class PortalService {
 							sub.name as subject_name, sub.code as subject_code,
 							CONCAT(st.first_name, ' ', st.last_name) as staff_name,
 							ts.notes as room
-					 FROM {$slots_table} ts
-					 INNER JOIN {$periods_table} p ON p.id = ts.period_id
-					 LEFT JOIN {$subj_table} sub ON sub.id = ts.subject_id
-					 LEFT JOIN {$staff_table} st ON st.id = ts.staff_member_id
+					 FROM %i ts
+					 INNER JOIN %i p ON p.id = ts.period_id
+					 LEFT JOIN %i sub ON sub.id = ts.subject_id
+					 LEFT JOIN %i st ON st.id = ts.staff_member_id
 					 WHERE {$where_clause}
 					 ORDER BY ts.day_of_week ASC, p.sort_order ASC, p.start_time ASC",
+					Schema::timetable_slots(),
+					Schema::timetable_periods(),
+					Schema::subjects(),
+					Schema::staff_members(),
 					...$where_params
 				),
 				ARRAY_A
@@ -984,57 +1026,65 @@ final class PortalService {
 		$units_table    = Schema::units();
 		$groups_table   = Schema::groups();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal academic enrollment query.
 		$enrollment = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT e.roll_number, e.starts_on, e.academic_unit_id,
+				'SELECT e.roll_number, e.starts_on, e.academic_unit_id,
 						s.name as session_name, u.name as unit_name, g.name as group_name
-				 FROM {$enroll_table} e
-				 LEFT JOIN {$sessions_table} s ON s.id = e.academic_session_id
-				 LEFT JOIN {$units_table} u ON u.id = e.academic_unit_id
-				 LEFT JOIN {$groups_table} g ON g.id = e.academic_group_id
-				 WHERE e.student_id = %d AND e.status = 'active'
-				 ORDER BY e.id DESC LIMIT 1",
-				$student_id
+				 FROM %i e
+				 LEFT JOIN %i s ON s.id = e.academic_session_id
+				 LEFT JOIN %i u ON u.id = e.academic_unit_id
+				 LEFT JOIN %i g ON g.id = e.academic_group_id
+				 WHERE e.student_id = %d AND e.status = %s
+				 ORDER BY e.id DESC LIMIT 1',
+				Schema::enrollments(),
+				Schema::sessions(),
+				Schema::units(),
+				Schema::groups(),
+				$student_id,
+				'active'
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		$subjects_table    = Schema::subjects();
 		$student_sub_table = Schema::student_subjects();
 		$unit_sub_table    = Schema::unit_subjects();
 
 		// 1. Check direct student-subject assignments
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student elective subjects query.
 		$subjects = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT s.id, s.name, s.code, s.type
-				 FROM {$student_sub_table} ss
-				 INNER JOIN {$subjects_table} s ON s.id = ss.subject_id
-				 WHERE ss.student_id = %d AND s.status = 'active'
-				 ORDER BY s.name ASC",
-				$student_id
+				'SELECT s.id, s.name, s.code, s.type
+				 FROM %i ss
+				 INNER JOIN %i s ON s.id = ss.subject_id
+				 WHERE ss.student_id = %d AND s.status = %s
+				 ORDER BY s.name ASC',
+				Schema::student_subjects(),
+				Schema::subjects(),
+				$student_id,
+				'active'
 			),
 			ARRAY_A
 		) ?: [];
-		// phpcs:enable
 
 		// 2. If no direct assignments, fallback to the unit's curriculum
 		if ( empty( $subjects ) && ! empty( $enrollment['academic_unit_id'] ) ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal unit curriculum subjects query.
 			$subjects = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT s.id, s.name, s.code, s.type
-					 FROM {$unit_sub_table} us
-					 INNER JOIN {$subjects_table} s ON s.id = us.subject_id
-					 WHERE us.academic_unit_id = %d AND s.status = 'active'
-					 ORDER BY us.sort_order ASC, s.name ASC",
-					(int) $enrollment['academic_unit_id']
+					'SELECT s.id, s.name, s.code, s.type
+					 FROM %i us
+					 INNER JOIN %i s ON s.id = us.subject_id
+					 WHERE us.academic_unit_id = %d AND s.status = %s
+					 ORDER BY us.sort_order ASC, s.name ASC',
+					Schema::unit_subjects(),
+					Schema::subjects(),
+					(int) $enrollment['academic_unit_id'],
+					'active'
 				),
 				ARRAY_A
 			) ?: [];
-			// phpcs:enable
 		}
 
 		$formatted_subjects = [];
@@ -1071,19 +1121,20 @@ final class PortalService {
 		$docs_table = Schema::app_documents();
 		$apps_table = Schema::applications();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student documents query.
 		$docs = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT d.id, d.document_type, d.label, d.attachment_id, d.status, d.created_at
-				 FROM {$docs_table} d
-				 INNER JOIN {$apps_table} a ON a.id = d.application_id
+				'SELECT d.id, d.document_type, d.label, d.attachment_id, d.status, d.created_at
+				 FROM %i d
+				 INNER JOIN %i a ON a.id = d.application_id
 				 WHERE a.converted_student_id = %d AND a.deleted_at IS NULL
-				 ORDER BY d.id DESC",
+				 ORDER BY d.id DESC',
+				Schema::app_documents(),
+				Schema::applications(),
 				$student_id
 			),
 			ARRAY_A
 		) ?: [];
-		// phpcs:enable
 
 		$formatted_docs = [];
 		foreach ( $docs as $d ) {
@@ -1126,15 +1177,15 @@ final class PortalService {
 	public function get_profile( int $student_id ): array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student profile query.
 		$student = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::students() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
+				'SELECT * FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1',
+				Schema::students(),
 				$student_id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		if ( ! $student ) {
 			return [
@@ -1150,41 +1201,46 @@ final class PortalService {
 		$units_table    = Schema::units();
 		$groups_table   = Schema::groups();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal profile enrollment query.
 		$enrollment = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT e.roll_number, u.name as unit_name, g.name as group_name, s.name as session_name
-				 FROM {$enroll_table} e
-				 LEFT JOIN {$sessions_table} s ON s.id = e.academic_session_id
-				 LEFT JOIN {$units_table} u ON u.id = e.academic_unit_id
-				 LEFT JOIN {$groups_table} g ON g.id = e.academic_group_id
-				 WHERE e.student_id = %d AND e.status = 'active'
-				 ORDER BY e.id DESC LIMIT 1",
-				$student_id
+				'SELECT e.roll_number, u.name as unit_name, g.name as group_name, s.name as session_name
+				 FROM %i e
+				 LEFT JOIN %i s ON s.id = e.academic_session_id
+				 LEFT JOIN %i u ON u.id = e.academic_unit_id
+				 LEFT JOIN %i g ON g.id = e.academic_group_id
+				 WHERE e.student_id = %d AND e.status = %s
+				 ORDER BY e.id DESC LIMIT 1',
+				Schema::enrollments(),
+				Schema::sessions(),
+				Schema::units(),
+				Schema::groups(),
+				$student_id,
+				'active'
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		// Linked guardians
 		$guardians_table = Schema::guardians();
 		$links_table     = Schema::student_guardians();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal profile guardians query.
 		$guardian_rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT g.id, g.first_name, g.middle_name, g.last_name, g.email, g.phone, g.alternate_phone,
+				'SELECT g.id, g.first_name, g.middle_name, g.last_name, g.email, g.phone, g.alternate_phone,
 						g.occupation, g.address_json,
 						sg.relationship, sg.is_primary, sg.is_billing_contact, sg.is_emergency_contact
-				 FROM {$guardians_table} g
-				 INNER JOIN {$links_table} sg ON sg.guardian_id = g.id
+				 FROM %i g
+				 INNER JOIN %i sg ON sg.guardian_id = g.id
 				 WHERE sg.student_id = %d AND g.deleted_at IS NULL
-				 ORDER BY sg.is_primary DESC, sg.is_emergency_contact DESC, g.id ASC",
+				 ORDER BY sg.is_primary DESC, sg.is_emergency_contact DESC, g.id ASC',
+				Schema::guardians(),
+				Schema::student_guardians(),
 				$student_id
 			),
 			ARRAY_A
 		) ?: [];
-		// phpcs:enable
 
 		$formatted_guardians = [];
 		$emergency_contact   = null;

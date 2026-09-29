@@ -563,9 +563,9 @@ final class SessionsService {
 
 		// Subquery to get terms count.
 		$query = 'SELECT s.*, 
-			(SELECT COUNT(*) FROM ' . Schema::terms() . ' WHERE academic_session_id = s.id) as terms_count
-			FROM ' . Schema::sessions() . ' s WHERE 1=1';
-		$binds = [];
+			(SELECT COUNT(*) FROM %i WHERE academic_session_id = s.id) as terms_count
+			FROM %i s WHERE 1=1';
+		$binds = [ Schema::terms(), Schema::sessions() ];
 
 		if ( '' !== $params['status'] ) {
 			$query   .= ' AND s.status = %s';
@@ -584,13 +584,8 @@ final class SessionsService {
 		$binds[] = $params['limit'];
 		$binds[] = $params['offset'];
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$results = $wpdb->get_results(
-			$wpdb->prepare( $query, ...$binds ),
-			ARRAY_A
-		);
-		// phpcs:enable
-
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Custom academic sessions list query with dynamic clauses.
+		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$binds ), ARRAY_A );
 		return is_array( $results ) ? $results : [];
 	}
 
@@ -600,8 +595,8 @@ final class SessionsService {
 	private function db_count_sessions( array $args = [] ): int {
 		global $wpdb;
 
-		$query = 'SELECT COUNT(*) FROM ' . Schema::sessions() . ' WHERE 1=1';
-		$binds = [];
+		$query = 'SELECT COUNT(*) FROM %i WHERE 1=1';
+		$binds = [ Schema::sessions() ];
 
 		if ( ! empty( $args['status'] ) ) {
 			$query   .= ' AND status = %s';
@@ -615,12 +610,8 @@ final class SessionsService {
 			$binds[] = $like;
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$count = ! empty( $binds )
-			? $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) )
-			: $wpdb->get_var( $query );
-		// phpcs:enable
-
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Custom academic sessions count query with dynamic clauses.
+		$count = $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );
 		return (int) $count;
 	}
 
@@ -630,17 +621,18 @@ final class SessionsService {
 	private function db_get_session( int $id ): ?array {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Single academic session query.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				'SELECT s.*, 
-					(SELECT COUNT(*) FROM ' . Schema::terms() . ' WHERE academic_session_id = s.id) as terms_count
-				 FROM ' . Schema::sessions() . ' s WHERE s.id = %d',
+					(SELECT COUNT(*) FROM %i WHERE academic_session_id = s.id) as terms_count
+				 FROM %i s WHERE s.id = %d',
+				Schema::terms(),
+				Schema::sessions(),
 				$id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		return is_array( $row ) ? $row : null;
 	}
@@ -720,14 +712,14 @@ final class SessionsService {
 	 */
 	private function db_has_enrolled_students( int $id ): bool {
 		global $wpdb;
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Enrolled students check query.
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT COUNT(*) FROM ' . Schema::enrollments() . ' WHERE academic_session_id = %d',
+				'SELECT COUNT(*) FROM %i WHERE academic_session_id = %d',
+				Schema::enrollments(),
 				$id
 			)
 		) > 0;
-		// phpcs:enable
 	}
 
 	/**
@@ -735,14 +727,14 @@ final class SessionsService {
 	 */
 	private function db_has_active_transactions( int $id ): bool {
 		global $wpdb;
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Active invoices check query.
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT COUNT(*) FROM ' . Schema::invoices() . ' WHERE academic_session_id = %d',
+				'SELECT COUNT(*) FROM %i WHERE academic_session_id = %d',
+				Schema::invoices(),
 				$id
 			)
 		) > 0;
-		// phpcs:enable
 	}
 
 	/**
@@ -750,20 +742,28 @@ final class SessionsService {
 	 */
 	private function db_get_latest_session( ?int $exclude_session_id = null ): ?array {
 		global $wpdb;
-		$query  = 'SELECT * FROM ' . Schema::sessions();
-		$params = [];
 		if ( $exclude_session_id ) {
-			$query   .= ' WHERE id != %d';
-			$params[] = $exclude_session_id;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Latest academic session query.
+			$row = $wpdb->get_row(
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE id != %d ORDER BY ends_on DESC LIMIT %d',
+					Schema::sessions(),
+					$exclude_session_id,
+					1
+				),
+				ARRAY_A
+			);
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Latest academic session query.
+			$row = $wpdb->get_row(
+				$wpdb->prepare(
+					'SELECT * FROM %i ORDER BY ends_on DESC LIMIT %d',
+					Schema::sessions(),
+					1
+				),
+				ARRAY_A
+			);
 		}
-		$query .= ' ORDER BY ends_on DESC LIMIT 1';
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$row = $wpdb->get_row(
-			! empty( $params ) ? $wpdb->prepare( $query, ...$params ) : $query,
-			ARRAY_A
-		);
-		// phpcs:enable
 		return is_array( $row ) ? $row : null;
 	}
 
@@ -774,22 +774,32 @@ final class SessionsService {
 	private function db_get_latest_session_with_units( ?int $exclude_session_id = null ): ?array {
 		global $wpdb;
 
-		$query  = 'SELECT * FROM ' . Schema::sessions() . ' WHERE 1=1';
-		$params = [];
 		if ( $exclude_session_id ) {
-			$query   .= ' AND id != %d';
-			$params[] = $exclude_session_id;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Latest academic session with units query.
+			$row = $wpdb->get_row(
+				$wpdb->prepare(
+					'SELECT * FROM %i s WHERE id != %d AND EXISTS (SELECT 1 FROM %i u WHERE u.academic_session_id = s.id AND u.status = %s) ORDER BY ends_on DESC LIMIT %d',
+					Schema::sessions(),
+					$exclude_session_id,
+					Schema::units(),
+					'active',
+					1
+				),
+				ARRAY_A
+			);
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Latest academic session with units query.
+			$row = $wpdb->get_row(
+				$wpdb->prepare(
+					'SELECT * FROM %i s WHERE EXISTS (SELECT 1 FROM %i u WHERE u.academic_session_id = s.id AND u.status = %s) ORDER BY ends_on DESC LIMIT %d',
+					Schema::sessions(),
+					Schema::units(),
+					'active',
+					1
+				),
+				ARRAY_A
+			);
 		}
-
-		$query .= ' AND EXISTS (SELECT 1 FROM ' . Schema::units() . ' WHERE academic_session_id = ' . Schema::sessions() . ".id AND status = 'active')
-			ORDER BY ends_on DESC LIMIT 1";
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$row = $wpdb->get_row(
-			! empty( $params ) ? $wpdb->prepare( $query, ...$params ) : $query,
-			ARRAY_A
-		);
-		// phpcs:enable
 		return is_array( $row ) ? $row : null;
 	}
 
@@ -800,15 +810,16 @@ final class SessionsService {
 		global $wpdb;
 
 		// Fetch units from source session.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Cloning units from session query.
 		$units = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::units() . " WHERE academic_session_id = %d AND status = 'active'",
-				$from_session_id
+				'SELECT * FROM %i WHERE academic_session_id = %d AND status = %s',
+				Schema::units(),
+				$from_session_id,
+				'active'
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		if ( empty( $units ) ) {
 			return true;
@@ -838,15 +849,16 @@ final class SessionsService {
 			$new_unit_id = (int) $wpdb->insert_id;
 
 			// Fetch groups for this source unit.
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Cloning groups from unit query.
 			$groups = $wpdb->get_results(
 				$wpdb->prepare(
-					'SELECT * FROM ' . Schema::groups() . " WHERE academic_unit_id = %d AND status = 'active'",
-					(int) $unit['id']
+					'SELECT * FROM %i WHERE academic_unit_id = %d AND status = %s',
+					Schema::groups(),
+					(int) $unit['id'],
+					'active'
 				),
 				ARRAY_A
 			);
-			// phpcs:enable
 
 			foreach ( $groups as $group ) {
 				$group_data = [
@@ -954,15 +966,15 @@ final class SessionsService {
 	 */
 	private function db_get_terms( int $session_id ): array {
 		global $wpdb;
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Session terms list query.
 		$results = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::terms() . ' WHERE academic_session_id = %d ORDER BY sort_order ASC',
+				'SELECT * FROM %i WHERE academic_session_id = %d ORDER BY sort_order ASC',
+				Schema::terms(),
 				$session_id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 		return is_array( $results ) ? $results : [];
 	}
 
@@ -971,15 +983,15 @@ final class SessionsService {
 	 */
 	private function db_get_term( int $id ): ?array {
 		global $wpdb;
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Single term query.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::terms() . ' WHERE id = %d',
+				'SELECT * FROM %i WHERE id = %d',
+				Schema::terms(),
 				$id
 			),
 			ARRAY_A
 		);
-		// phpcs:enable
 		return is_array( $row ) ? $row : null;
 	}
 

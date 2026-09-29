@@ -191,10 +191,7 @@ final class FinanceService {
 		if ( null !== $insert['code'] ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$existing_id = $wpdb->get_var(
-				$wpdb->prepare(
-					'SELECT id FROM ' . Schema::fee_types() . ' WHERE code = %s AND deleted_at IS NULL LIMIT 1',
-					$insert['code']
-				)
+				$wpdb->prepare( 'SELECT id FROM %i WHERE code = %s AND deleted_at IS NULL LIMIT 1', Schema::fee_types(), $insert['code'] )
 			);
 			// phpcs:enable
 			if ( $existing_id ) {
@@ -220,10 +217,7 @@ final class FinanceService {
 		global $wpdb;
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT f.*, (SELECT COUNT(*) FROM ' . Schema::fee_type_class_rates() . ' r WHERE r.fee_type_id = f.id) AS overrides_count FROM ' . Schema::fee_types() . ' f WHERE f.id = %d LIMIT 1',
-				$id
-			),
+			$wpdb->prepare( 'SELECT f.*, (SELECT COUNT(*) FROM %i r WHERE r.fee_type_id = f.id) AS overrides_count FROM %i f WHERE f.id = %d LIMIT 1', Schema::fee_type_class_rates(), Schema::fee_types(), $id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -243,10 +237,7 @@ final class FinanceService {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$existing = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT id FROM ' . Schema::fee_types() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
-				$id
-			)
+			$wpdb->prepare( 'SELECT id FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1', Schema::fee_types(), $id )
 		);
 		// phpcs:enable
 		if ( ! $existing ) {
@@ -263,11 +254,7 @@ final class FinanceService {
 			if ( null !== $code ) {
 				// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$dup = $wpdb->get_var(
-					$wpdb->prepare(
-						'SELECT id FROM ' . Schema::fee_types() . ' WHERE code = %s AND id != %d AND deleted_at IS NULL LIMIT 1',
-						$code,
-						$id
-					)
+					$wpdb->prepare( 'SELECT id FROM %i WHERE code = %s AND id != %d AND deleted_at IS NULL LIMIT 1', Schema::fee_types(), $code, $id )
 				);
 				// phpcs:enable
 				if ( $dup ) {
@@ -326,10 +313,7 @@ final class FinanceService {
 		$table = Schema::fee_types();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$exists = $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT id FROM ' . Schema::fee_types() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
-				$id
-			)
+			$wpdb->prepare( 'SELECT id FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1', Schema::fee_types(), $id )
 		);
 		// phpcs:enable
 		if ( ! $exists ) {
@@ -339,22 +323,16 @@ final class FinanceService {
 		// Count active invoices referencing this fee type (for UI warning).
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$active_invoice_count = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT COUNT(DISTINCT li.invoice_id)
-				FROM ' . Schema::line_items() . ' li
-				INNER JOIN ' . Schema::invoices() . ' i ON i.id = li.invoice_id
-				WHERE li.fee_type_id = %d AND i.deleted_at IS NULL AND i.status NOT IN (\'cancelled\', \'void\')',
-				$id
-			)
+			$wpdb->prepare( 'SELECT COUNT(DISTINCT li.invoice_id)
+				FROM %i li
+				INNER JOIN %i i ON i.id = li.invoice_id
+				WHERE li.fee_type_id = %d AND i.deleted_at IS NULL AND i.status NOT IN (\'cancelled\', \'void\')', Schema::line_items(), Schema::invoices(), $id )
 		);
 		// phpcs:enable
 		// Fetch current code and append deleted timestamp to release MySQL UNIQUE KEY uq_code for future re-use
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$current_code = $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT code FROM ' . Schema::fee_types() . ' WHERE id = %d',
-				$id
-			)
+			$wpdb->prepare( 'SELECT code FROM %i WHERE id = %d', Schema::fee_types(), $id )
 		);
 		$new_code     = $current_code ? $current_code . '__deleted_' . time() : null;
 
@@ -385,14 +363,11 @@ final class FinanceService {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT r.*, u.name AS unit_name
-				FROM ' . Schema::fee_type_class_rates() . ' r
-				LEFT JOIN ' . Schema::units() . ' u ON u.id = r.academic_unit_id
+			$wpdb->prepare( 'SELECT r.*, u.name AS unit_name
+				FROM %i r
+				LEFT JOIN %i u ON u.id = r.academic_unit_id
 				WHERE r.fee_type_id = %d
-				ORDER BY u.name ASC',
-				$fee_type_id
-			),
+				ORDER BY u.name ASC', Schema::fee_type_class_rates(), Schema::units(), $fee_type_id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -418,16 +393,9 @@ final class FinanceService {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$wpdb->query(
-			$wpdb->prepare(
-				'INSERT INTO ' . Schema::fee_type_class_rates() . ' (fee_type_id, academic_unit_id, amount_minor, created_at, updated_at)
+			$wpdb->prepare( 'INSERT INTO %i (fee_type_id, academic_unit_id, amount_minor, created_at, updated_at)
 				VALUES (%d, %d, %d, %s, %s)
-				ON DUPLICATE KEY UPDATE amount_minor = VALUES(amount_minor), updated_at = VALUES(updated_at)',
-				$fee_type_id,
-				$unit_id,
-				$amount_minor,
-				current_time( 'mysql', true ),
-				current_time( 'mysql', true )
-			)
+				ON DUPLICATE KEY UPDATE amount_minor = VALUES(amount_minor), updated_at = VALUES(updated_at)', Schema::fee_type_class_rates(), $fee_type_id, $unit_id, $amount_minor, current_time( 'mysql', true ), current_time( 'mysql', true ) )
 		);
 		// phpcs:enable
 
@@ -464,19 +432,14 @@ final class FinanceService {
 		// ponytail: single JOIN query — avoids two round trips
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$result = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT COALESCE(r.amount_minor, ft.default_amount_minor) AS amount_minor
-				FROM ' . Schema::fee_types() . ' ft
-				LEFT JOIN ' . Schema::enrollments() . ' e
+			$wpdb->prepare( 'SELECT COALESCE(r.amount_minor, ft.default_amount_minor) AS amount_minor
+				FROM %i ft
+				LEFT JOIN %i e
 					ON e.student_id = %d AND e.academic_session_id = %d AND e.status != \'withdrawn\'
-				LEFT JOIN ' . Schema::fee_type_class_rates() . ' r
+				LEFT JOIN %i r
 					ON r.fee_type_id = ft.id AND r.academic_unit_id = e.academic_unit_id
 				WHERE ft.id = %d AND ft.deleted_at IS NULL
-				LIMIT 1',
-				$student_id,
-				$session_id,
-				$fee_type_id
-			),
+				LIMIT 1', Schema::fee_types(), Schema::enrollments(), Schema::fee_type_class_rates(), $student_id, $session_id, $fee_type_id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -693,22 +656,19 @@ final class FinanceService {
 		$groups_table     = Schema::groups();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$invoice = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT i.*, 
+			$wpdb->prepare( 'SELECT i.*, 
 					s.first_name as student_first_name, s.last_name as student_last_name, s.student_number,
 					t.name as academic_term_name,
 					sess.name as academic_session_name,
 					u.name as academic_unit_name,
 					g.name as academic_group_name
-				FROM ' . Schema::invoices() . ' i
-				LEFT JOIN ' . Schema::students() . ' s ON s.id = i.student_id
-				LEFT JOIN ' . Schema::terms() . ' t ON t.id = i.academic_term_id
-				LEFT JOIN ' . Schema::sessions() . ' sess ON sess.id = i.academic_session_id
-				LEFT JOIN ' . Schema::units() . ' u ON u.id = i.academic_unit_id
-				LEFT JOIN ' . Schema::groups() . ' g ON g.id = i.academic_group_id
-				WHERE i.id = %d AND i.deleted_at IS NULL LIMIT 1',
-				$id
-			),
+				FROM %i i
+				LEFT JOIN %i s ON s.id = i.student_id
+				LEFT JOIN %i t ON t.id = i.academic_term_id
+				LEFT JOIN %i sess ON sess.id = i.academic_session_id
+				LEFT JOIN %i u ON u.id = i.academic_unit_id
+				LEFT JOIN %i g ON g.id = i.academic_group_id
+				WHERE i.id = %d AND i.deleted_at IS NULL LIMIT 1', Schema::invoices(), Schema::students(), Schema::terms(), Schema::sessions(), Schema::units(), Schema::groups(), $id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -722,10 +682,7 @@ final class FinanceService {
 		// Get line items.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$line_items = $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::line_items() . ' WHERE invoice_id = %d ORDER BY sort_order ASC, id ASC',
-				$id
-			),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE invoice_id = %d ORDER BY sort_order ASC, id ASC', Schema::line_items(), $id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -745,10 +702,7 @@ final class FinanceService {
 		// Get payments.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$payments = $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::payments() . ' WHERE invoice_id = %d AND deleted_at IS NULL ORDER BY paid_on DESC, id DESC',
-				$id
-			),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE invoice_id = %d AND deleted_at IS NULL ORDER BY paid_on DESC, id DESC', Schema::payments(), $id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -879,15 +833,12 @@ final class FinanceService {
 			if ( empty( $guardian_name ) ) {
 				// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$primary_g = $wpdb->get_row(
-					$wpdb->prepare(
-						'SELECT g.first_name, g.last_name, g.email
-						FROM ' . Schema::guardians() . ' g
-						INNER JOIN ' . Schema::student_guardians() . ' sg ON sg.guardian_id = g.id
+					$wpdb->prepare( 'SELECT g.first_name, g.last_name, g.email
+						FROM %i g
+						INNER JOIN %i sg ON sg.guardian_id = g.id
 						WHERE sg.student_id = %d AND g.deleted_at IS NULL
 						ORDER BY sg.is_billing_contact DESC, sg.is_primary DESC
-						LIMIT 1',
-						(int) $payload['student_id']
-					),
+						LIMIT 1', Schema::guardians(), Schema::student_guardians(), (int) $payload['student_id'] ),
 					ARRAY_A
 				);
 				// phpcs:enable
@@ -902,13 +853,9 @@ final class FinanceService {
 			$academic_group_id = null;
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$enrollment = $wpdb->get_row(
-				$wpdb->prepare(
-					'SELECT academic_unit_id, academic_group_id
-					FROM ' . Schema::enrollments() . '
-					WHERE student_id = %d AND academic_session_id = %d AND status != \'withdrawn\' LIMIT 1',
-					(int) $payload['student_id'],
-					(int) $payload['academic_session_id']
-				),
+				$wpdb->prepare( 'SELECT academic_unit_id, academic_group_id
+					FROM %i
+					WHERE student_id = %d AND academic_session_id = %d AND status != \'withdrawn\' LIMIT 1', Schema::enrollments(), (int) $payload['student_id'], (int) $payload['academic_session_id'] ),
 				ARRAY_A
 			);
 			// phpcs:enable
@@ -986,10 +933,7 @@ final class FinanceService {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$invoice = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::invoices() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
-				$id
-			),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1', Schema::invoices(), $id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -1054,20 +998,14 @@ final class FinanceService {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$exists = $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT id FROM ' . Schema::invoices() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
-				$id
-			)
+			$wpdb->prepare( 'SELECT id FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1', Schema::invoices(), $id )
 		);
 		if ( ! $exists ) {
 			return new WP_Error( 'not_found', __( 'Invoice not found.', 'codeclove-school-management' ), 404 );
 		}
 
 		$paid = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT paid_minor FROM ' . Schema::invoices() . ' WHERE id = %d LIMIT 1',
-				$id
-			)
+			$wpdb->prepare( 'SELECT paid_minor FROM %i WHERE id = %d LIMIT 1', Schema::invoices(), $id )
 		);
 		if ( $paid > 0 ) {
 			return new WP_Error(
@@ -1257,14 +1195,11 @@ final class FinanceService {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT p.*, s.first_name as student_first_name, s.last_name as student_last_name, s.student_number, i.invoice_number
-				FROM ' . Schema::payments() . ' p
-				LEFT JOIN ' . Schema::students() . ' s ON s.id = p.student_id
-				LEFT JOIN ' . Schema::invoices() . ' i ON i.id = p.invoice_id
-				WHERE p.id = %d AND p.deleted_at IS NULL LIMIT 1',
-				$id
-			),
+			$wpdb->prepare( 'SELECT p.*, s.first_name as student_first_name, s.last_name as student_last_name, s.student_number, i.invoice_number
+				FROM %i p
+				LEFT JOIN %i s ON s.id = p.student_id
+				LEFT JOIN %i i ON i.id = p.invoice_id
+				WHERE p.id = %d AND p.deleted_at IS NULL LIMIT 1', Schema::payments(), Schema::students(), Schema::invoices(), $id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -1308,10 +1243,7 @@ final class FinanceService {
 		$invoices_table = Schema::invoices();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$invoice = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::invoices() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
-				(int) $payload['invoice_id']
-			),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1', Schema::invoices(), (int) $payload['invoice_id'] ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -1339,11 +1271,8 @@ final class FinanceService {
 			$payments_table = Schema::payments();
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$total_paid_so_far = (int) $wpdb->get_var(
-				$wpdb->prepare(
-					'SELECT COALESCE(SUM(amount_minor), 0) FROM ' . Schema::payments() . '
-					WHERE invoice_id = %d AND status = \'completed\' AND deleted_at IS NULL',
-					(int) $invoice['id']
-				)
+				$wpdb->prepare( 'SELECT COALESCE(SUM(amount_minor), 0) FROM %i
+					WHERE invoice_id = %d AND status = \'completed\' AND deleted_at IS NULL', Schema::payments(), (int) $invoice['id'] )
 			);
 			// phpcs:enable
 			$remaining_balance = (int) $invoice['total_minor'] - $total_paid_so_far;
@@ -1421,10 +1350,7 @@ final class FinanceService {
 		$table = Schema::payments();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::payments() . ' WHERE id = %d LIMIT 1',
-				$id
-			),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d LIMIT 1', Schema::payments(), $id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -1443,10 +1369,7 @@ final class FinanceService {
 		$payments_table = Schema::payments();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$payment = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT id, invoice_id, status, payment_source FROM ' . Schema::payments() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
-				$id
-			),
+			$wpdb->prepare( 'SELECT id, invoice_id, status, payment_source FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1', Schema::payments(), $id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -1514,50 +1437,35 @@ final class FinanceService {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		// 1. Fetch Session-Wide Metrics
 		$sums = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT
+			$wpdb->prepare( 'SELECT
 					COALESCE(SUM(total_minor), 0) as total_billed,
 					COALESCE(SUM(paid_minor), 0) as total_collected,
 					COALESCE(SUM(balance_minor), 0) as total_outstanding
-				FROM ' . Schema::invoices() . '
-				WHERE academic_session_id = %d AND deleted_at IS NULL AND status NOT IN (\'cancelled\', \'void\')',
-				$session_id
-			),
+				FROM %i
+				WHERE academic_session_id = %d AND deleted_at IS NULL AND status NOT IN (\'cancelled\', \'void\')', Schema::invoices(), $session_id ),
 			ARRAY_A
 		);
 
 		$today_collected = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT COALESCE(SUM(amount_minor), 0)
-				FROM ' . Schema::payments() . '
-				WHERE academic_session_id = %d AND paid_on = %s AND status = \'completed\' AND deleted_at IS NULL',
-				$session_id,
-				$today
-			)
+			$wpdb->prepare( 'SELECT COALESCE(SUM(amount_minor), 0)
+				FROM %i
+				WHERE academic_session_id = %d AND paid_on = %s AND status = \'completed\' AND deleted_at IS NULL', Schema::payments(), $session_id, $today )
 		);
 
 		$month_collected = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT COALESCE(SUM(amount_minor), 0)
-				FROM ' . Schema::payments() . '
-				WHERE academic_session_id = %d AND paid_on >= %s AND status = \'completed\' AND deleted_at IS NULL',
-				$session_id,
-				$month_start
-			)
+			$wpdb->prepare( 'SELECT COALESCE(SUM(amount_minor), 0)
+				FROM %i
+				WHERE academic_session_id = %d AND paid_on >= %s AND status = \'completed\' AND deleted_at IS NULL', Schema::payments(), $session_id, $month_start )
 		);
 
 		$overdue_count = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT COUNT(*)
-				FROM ' . Schema::invoices() . '
+			$wpdb->prepare( 'SELECT COUNT(*)
+				FROM %i
 				WHERE academic_session_id = %d
 				AND deleted_at IS NULL
 				AND balance_minor > 0
 				AND due_date < %s
-				AND status IN (\'issued\', \'partially_paid\', \'overdue\')',
-				$session_id,
-				$today
-			)
+				AND status IN (\'issued\', \'partially_paid\', \'overdue\')', Schema::invoices(), $session_id, $today )
 		);
 
 		// 2. Resolve the active Date Range for the filter
@@ -1579,35 +1487,24 @@ final class FinanceService {
 			// Current active term
 			$terms_table = Schema::terms();
 			$current_term = $wpdb->get_row(
-				$wpdb->prepare(
-					'SELECT name, starts_on, ends_on FROM ' . Schema::terms() . '
+				$wpdb->prepare( 'SELECT name, starts_on, ends_on FROM %i
 					WHERE academic_session_id = %d AND status = \'active\' AND starts_on <= %s AND ends_on >= %s
-					LIMIT 1',
-					$session_id,
-					$today,
-					$today
-				),
+					LIMIT 1', Schema::terms(), $session_id, $today, $today ),
 				ARRAY_A
 			);
 			if ( ! $current_term ) {
 				$current_term = $wpdb->get_row(
-					$wpdb->prepare(
-						'SELECT name, starts_on, ends_on FROM ' . Schema::terms() . '
+					$wpdb->prepare( 'SELECT name, starts_on, ends_on FROM %i
 						WHERE academic_session_id = %d AND status = \'active\'
-						ORDER BY starts_on ASC LIMIT 1',
-						$session_id
-					),
+						ORDER BY starts_on ASC LIMIT 1', Schema::terms(), $session_id ),
 					ARRAY_A
 				);
 			}
 			if ( ! $current_term ) {
 				$current_term = $wpdb->get_row(
-					$wpdb->prepare(
-						'SELECT name, starts_on, ends_on FROM ' . Schema::terms() . '
+					$wpdb->prepare( 'SELECT name, starts_on, ends_on FROM %i
 						WHERE academic_session_id = %d
-						ORDER BY starts_on ASC LIMIT 1',
-						$session_id
-					),
+						ORDER BY starts_on ASC LIMIT 1', Schema::terms(), $session_id ),
 					ARRAY_A
 				);
 			}
@@ -1625,11 +1522,8 @@ final class FinanceService {
 			// Current academic session (Year)
 			$sessions_table = Schema::sessions();
 			$session = $wpdb->get_row(
-				$wpdb->prepare(
-					'SELECT name, starts_on, ends_on FROM ' . Schema::sessions() . '
-					WHERE id = %d LIMIT 1',
-					$session_id
-				),
+				$wpdb->prepare( 'SELECT name, starts_on, ends_on FROM %i
+					WHERE id = %d LIMIT 1', Schema::sessions(), $session_id ),
 				ARRAY_A
 			);
 			if ( $session ) {
@@ -1646,30 +1540,20 @@ final class FinanceService {
 
 		// 3. Fetch Daily Billings & Payments in this Date Range
 		$billed_raw = $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT issue_date as date_val, COALESCE(SUM(total_minor), 0) as total
-				FROM ' . Schema::invoices() . '
+			$wpdb->prepare( 'SELECT issue_date as date_val, COALESCE(SUM(total_minor), 0) as total
+				FROM %i
 				WHERE academic_session_id = %d AND deleted_at IS NULL AND status NOT IN (\'cancelled\', \'void\')
 				  AND issue_date BETWEEN %s AND %s
-				GROUP BY issue_date',
-				$session_id,
-				$start_date,
-				$end_date
-			),
+				GROUP BY issue_date', Schema::invoices(), $session_id, $start_date, $end_date ),
 			ARRAY_A
 		);
 
 		$collected_raw = $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT paid_on as date_val, COALESCE(SUM(amount_minor), 0) as total
-				FROM ' . Schema::payments() . '
+			$wpdb->prepare( 'SELECT paid_on as date_val, COALESCE(SUM(amount_minor), 0) as total
+				FROM %i
 				WHERE academic_session_id = %d AND status = \'completed\' AND deleted_at IS NULL
 				  AND paid_on BETWEEN %s AND %s
-				GROUP BY paid_on',
-				$session_id,
-				$start_date,
-				$end_date
-			),
+				GROUP BY paid_on', Schema::payments(), $session_id, $start_date, $end_date ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -1867,19 +1751,13 @@ final class FinanceService {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$total_paid = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT COALESCE(SUM(amount_minor), 0)
-				FROM ' . Schema::payments() . '
-				WHERE invoice_id = %d AND status = \'completed\' AND deleted_at IS NULL',
-				$invoice_id
-			)
+			$wpdb->prepare( 'SELECT COALESCE(SUM(amount_minor), 0)
+				FROM %i
+				WHERE invoice_id = %d AND status = \'completed\' AND deleted_at IS NULL', Schema::payments(), $invoice_id )
 		);
 
 		$invoice = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT total_minor, due_date, status FROM ' . Schema::invoices() . ' WHERE id = %d LIMIT 1',
-				$invoice_id
-			),
+			$wpdb->prepare( 'SELECT total_minor, due_date, status FROM %i WHERE id = %d LIMIT 1', Schema::invoices(), $invoice_id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -1965,12 +1843,9 @@ final class FinanceService {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$totals = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT COALESCE(SUM(total_minor), 0) as subtotal, COALESCE(SUM(tax_minor), 0) as tax
-				FROM ' . Schema::line_items() . '
-				WHERE invoice_id = %d',
-				$invoice_id
-			),
+			$wpdb->prepare( 'SELECT COALESCE(SUM(total_minor), 0) as subtotal, COALESCE(SUM(tax_minor), 0) as tax
+				FROM %i
+				WHERE invoice_id = %d', Schema::line_items(), $invoice_id ),
 			ARRAY_A
 		);
 
@@ -1979,10 +1854,7 @@ final class FinanceService {
 
 		// Retrieve invoice discount
 		$discount_minor = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT discount_minor FROM ' . Schema::invoices() . ' WHERE id = %d LIMIT 1',
-				$invoice_id
-			)
+			$wpdb->prepare( 'SELECT discount_minor FROM %i WHERE id = %d LIMIT 1', Schema::invoices(), $invoice_id )
 		);
 
 		$total_minor = max( 0, $subtotal_minor - $discount_minor + $tax_minor );
@@ -2010,10 +1882,7 @@ final class FinanceService {
 		$invoices_table = Schema::invoices();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$invoice = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT status, paid_minor FROM ' . Schema::invoices() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
-				$invoice_id
-			),
+			$wpdb->prepare( 'SELECT status, paid_minor FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1', Schema::invoices(), $invoice_id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -2037,10 +1906,7 @@ final class FinanceService {
 			$line_items_table = Schema::line_items();
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$max_sort = (int) $wpdb->get_var(
-				$wpdb->prepare(
-					'SELECT MAX(sort_order) FROM ' . Schema::line_items() . ' WHERE invoice_id = %d',
-					$invoice_id
-				)
+				$wpdb->prepare( 'SELECT MAX(sort_order) FROM %i WHERE invoice_id = %d', Schema::line_items(), $invoice_id )
 			);
 			// phpcs:enable
 			$insert = [
@@ -2080,10 +1946,7 @@ final class FinanceService {
 		$invoices_table = Schema::invoices();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$invoice = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT status, paid_minor FROM ' . Schema::invoices() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
-				$invoice_id
-			),
+			$wpdb->prepare( 'SELECT status, paid_minor FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1', Schema::invoices(), $invoice_id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -2095,11 +1958,7 @@ final class FinanceService {
 		$line_items_table = Schema::line_items();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$line = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT id FROM ' . Schema::line_items() . ' WHERE id = %d AND invoice_id = %d LIMIT 1',
-				$line_id,
-				$invoice_id
-			),
+			$wpdb->prepare( 'SELECT id FROM %i WHERE id = %d AND invoice_id = %d LIMIT 1', Schema::line_items(), $line_id, $invoice_id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -2130,10 +1989,7 @@ final class FinanceService {
 
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$current_line = $wpdb->get_row(
-				$wpdb->prepare(
-					'SELECT * FROM ' . Schema::line_items() . ' WHERE id = %d',
-					$line_id
-				),
+				$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', Schema::line_items(), $line_id ),
 				ARRAY_A
 			);
 			$q = isset( $update['quantity'] ) ? $update['quantity'] : (float) $current_line['quantity'];
@@ -2160,10 +2016,7 @@ final class FinanceService {
 		$invoices_table = Schema::invoices();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$invoice = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT status, paid_minor FROM ' . Schema::invoices() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
-				$invoice_id
-			),
+			$wpdb->prepare( 'SELECT status, paid_minor FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1', Schema::invoices(), $invoice_id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -2175,11 +2028,7 @@ final class FinanceService {
 		$line_items_table = Schema::line_items();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$line = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT id FROM ' . Schema::line_items() . ' WHERE id = %d AND invoice_id = %d LIMIT 1',
-				$line_id,
-				$invoice_id
-			),
+			$wpdb->prepare( 'SELECT id FROM %i WHERE id = %d AND invoice_id = %d LIMIT 1', Schema::line_items(), $line_id, $invoice_id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -2203,10 +2052,7 @@ final class FinanceService {
 		$invoices_table = Schema::invoices();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$invoice = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT * FROM ' . Schema::invoices() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
-				$id
-			),
+			$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1', Schema::invoices(), $id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -2353,15 +2199,12 @@ final class FinanceService {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		// Fetch IDs of all invoices that are past due date
 		$ids = $wpdb->get_col(
-			$wpdb->prepare(
-				'SELECT id FROM ' . Schema::invoices() . '
+			$wpdb->prepare( 'SELECT id FROM %i
 				WHERE status IN (\'issued\', \'partially_paid\')
 					AND due_date IS NOT NULL
 					AND due_date < %s
 					AND balance_minor > 0
-					AND deleted_at IS NULL',
-				current_time( 'Y-m-d' )
-			)
+					AND deleted_at IS NULL', Schema::invoices(), current_time( 'Y-m-d' ) )
 		);
 
 		if ( ! empty( $ids ) ) {
@@ -2453,10 +2296,7 @@ final class FinanceService {
 				// Lock check: once paid, do not allow modifying discounts.
 				// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$invoice = $wpdb->get_row(
-					$wpdb->prepare(
-						'SELECT * FROM ' . Schema::invoices() . ' WHERE id = %d AND deleted_at IS NULL LIMIT 1',
-						$id
-					),
+					$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d AND deleted_at IS NULL LIMIT 1', Schema::invoices(), $id ),
 					ARRAY_A
 				);
 				// phpcs:enable

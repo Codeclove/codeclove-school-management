@@ -216,16 +216,12 @@ final class GroupsService {
 		];
 		$params = array_merge( $defaults, $args );
 
-		$groups_table = Schema::groups();
-		$units_table  = Schema::units();
-		$enrollments_table = Schema::enrollments();
-
-		$query = "SELECT g.*, u.academic_session_id as session_id,
-			(SELECT COUNT(*) FROM {$enrollments_table} WHERE academic_group_id = g.id AND status != 'withdrawn') as students_count
-			FROM {$groups_table} g
-			INNER JOIN {$units_table} u ON g.academic_unit_id = u.id
-			WHERE 1=1";
-		$binds = [];
+		$query = 'SELECT g.*, u.academic_session_id as session_id,
+			(SELECT COUNT(*) FROM %i WHERE academic_group_id = g.id AND status != %s) as students_count
+			FROM %i g
+			INNER JOIN %i u ON g.academic_unit_id = u.id
+			WHERE 1=1';
+		$binds = [ Schema::enrollments(), 'withdrawn', Schema::groups(), Schema::units() ];
 
 		if ( $params['session_id'] > 0 ) {
 			$query   .= ' AND u.academic_session_id = %d';
@@ -266,10 +262,8 @@ final class GroupsService {
 		$binds[] = $params['limit'];
 		$binds[] = $params['offset'];
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$sql = $wpdb->prepare( $query, ...$binds );
-		$results = $wpdb->get_results( $sql, ARRAY_A );
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Custom academic groups list query with dynamic clauses.
+		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$binds ), ARRAY_A );
 
 		return is_array( $results ) ? $results : [];
 	}
@@ -280,13 +274,10 @@ final class GroupsService {
 	private function db_count_groups( array $args = [] ): int {
 		global $wpdb;
 
-		$groups_table = Schema::groups();
-		$units_table  = Schema::units();
-
-		$query = "SELECT COUNT(*) FROM {$groups_table} g
-			INNER JOIN {$units_table} u ON g.academic_unit_id = u.id
-			WHERE 1=1";
-		$binds = [];
+		$query = 'SELECT COUNT(*) FROM %i g
+			INNER JOIN %i u ON g.academic_unit_id = u.id
+			WHERE 1=1';
+		$binds = [ Schema::groups(), Schema::units() ];
 
 		if ( ! empty( $args['session_id'] ) ) {
 			$query   .= ' AND u.academic_session_id = %d';
@@ -310,14 +301,8 @@ final class GroupsService {
 			$binds[] = $like;
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		if ( ! empty( $binds ) ) {
-			$sql = $wpdb->prepare( $query, ...$binds );
-		} else {
-			$sql = $query;
-		}
-		return (int) $wpdb->get_var( $sql );
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Custom academic groups count query with dynamic clauses.
+		return (int) $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );
 	}
 
 	/**
@@ -326,22 +311,22 @@ final class GroupsService {
 	private function db_get_group( int $id ): ?array {
 		global $wpdb;
 
-		$groups_table = Schema::groups();
-		$units_table  = Schema::units();
-		$enrollments_table = Schema::enrollments();
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$query = $wpdb->prepare(
-			"SELECT g.*, u.academic_session_id as session_id,
-				(SELECT COUNT(*) FROM {$enrollments_table} WHERE academic_group_id = g.id AND status != 'withdrawn') as students_count
-			 FROM {$groups_table} g
-			 INNER JOIN {$units_table} u ON g.academic_unit_id = u.id
-			 WHERE g.id = %d",
-			$id
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Single academic group query.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT g.*, u.academic_session_id as session_id,
+					(SELECT COUNT(*) FROM %i WHERE academic_group_id = g.id AND status != %s) as students_count
+				 FROM %i g
+				 INNER JOIN %i u ON g.academic_unit_id = u.id
+				 WHERE g.id = %d',
+				Schema::enrollments(),
+				'withdrawn',
+				Schema::groups(),
+				Schema::units(),
+				$id
+			),
+			ARRAY_A
 		);
-		$row = $wpdb->get_row( $query, ARRAY_A );
-		// phpcs:enable
-
 		return is_array( $row ) ? $row : null;
 	}
 
@@ -402,12 +387,13 @@ final class GroupsService {
 	private function db_group_has_enrolled_students( int $id ): bool {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$query = $wpdb->prepare(
-			'SELECT COUNT(*) FROM ' . Schema::enrollments() . ' WHERE academic_group_id = %d',
-			$id
-		);
-		return (int) $wpdb->get_var( $query ) > 0;
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Enrolled students check query.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE academic_group_id = %d',
+				Schema::enrollments(),
+				$id
+			)
+		) > 0;
 	}
 }

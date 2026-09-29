@@ -41,13 +41,11 @@ final class Transaction {
 		self::$depth++;
 
 		if ( self::$depth === 1 ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Core transaction control.
 			$wpdb->query( 'START TRANSACTION' );
-			// phpcs:enable
 		} else {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query( 'SAVEPOINT codeclove_tx_' . (int) self::$depth );
-			// phpcs:enable
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Transaction savepoint.
+			$wpdb->query( $wpdb->prepare( 'SAVEPOINT %i', 'codeclove_tx_' . (int) self::$depth ) );
 		}
 	}
 
@@ -63,13 +61,11 @@ final class Transaction {
 		}
 
 		if ( self::$depth === 1 ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Core transaction control.
 			$wpdb->query( 'COMMIT' );
-			// phpcs:enable
 		} else {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query( 'RELEASE SAVEPOINT codeclove_tx_' . (int) self::$depth );
-			// phpcs:enable
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Transaction savepoint release.
+			$wpdb->query( $wpdb->prepare( 'RELEASE SAVEPOINT %i', 'codeclove_tx_' . (int) self::$depth ) );
 		}
 
 		self::$depth--;
@@ -87,13 +83,11 @@ final class Transaction {
 		}
 
 		if ( self::$depth === 1 ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Core transaction control.
 			$wpdb->query( 'ROLLBACK' );
-			// phpcs:enable
 		} else {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query( 'ROLLBACK TO SAVEPOINT codeclove_tx_' . (int) self::$depth );
-			// phpcs:enable
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Transaction rollback to savepoint.
+			$wpdb->query( $wpdb->prepare( 'ROLLBACK TO SAVEPOINT %i', 'codeclove_tx_' . (int) self::$depth ) );
 		}
 
 		self::$depth--;

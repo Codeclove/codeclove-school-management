@@ -310,15 +310,11 @@ final class UnitsService {
 		];
 		$params = array_merge( $defaults, $args );
 
-		$table = Schema::units();
-		$groups_table = Schema::groups();
-		$enrollments_table = Schema::enrollments();
-
-		$query = "SELECT u.*, 
-			(SELECT COUNT(*) FROM {$groups_table} WHERE academic_unit_id = u.id) as groups_count,
-			(SELECT COUNT(*) FROM {$enrollments_table} WHERE academic_unit_id = u.id AND status != 'withdrawn') as students_count
-			FROM {$table} u WHERE 1=1";
-		$binds = [];
+		$query = 'SELECT u.*, 
+			(SELECT COUNT(*) FROM %i WHERE academic_unit_id = u.id) as groups_count,
+			(SELECT COUNT(*) FROM %i WHERE academic_unit_id = u.id AND status != %s) as students_count
+			FROM %i u WHERE 1=1';
+		$binds = [ Schema::groups(), Schema::enrollments(), 'withdrawn', Schema::units() ];
 
 		if ( $params['session_id'] > 0 ) {
 			$query   .= ' AND u.academic_session_id = %d';
@@ -355,11 +351,8 @@ final class UnitsService {
 		$query   .= ' LIMIT %d OFFSET %d';
 		$binds[] = $params['limit'];
 		$binds[] = $params['offset'];
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$sql = $wpdb->prepare( $query, ...$binds );
-		$results = $wpdb->get_results( $sql, ARRAY_A );
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Custom academic units list query with dynamic clauses.
+		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$binds ), ARRAY_A );
 		return is_array( $results ) ? $results : [];
 	}
 
@@ -369,9 +362,8 @@ final class UnitsService {
 	private function db_count_units( array $args = [] ): int {
 		global $wpdb;
 
-		$table = Schema::units();
-		$query = "SELECT COUNT(*) FROM {$table} WHERE 1=1";
-		$binds = [];
+		$query = 'SELECT COUNT(*) FROM %i WHERE 1=1';
+		$binds = [ Schema::units() ];
 
 		if ( ! empty( $args['session_id'] ) ) {
 			$query   .= ' AND academic_session_id = %d';
@@ -390,14 +382,8 @@ final class UnitsService {
 			$binds[] = $like;
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		if ( ! empty( $binds ) ) {
-			$sql = $wpdb->prepare( $query, ...$binds );
-		} else {
-			$sql = $query;
-		}
-		return (int) $wpdb->get_var( $sql );
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Custom academic units count query with dynamic clauses.
+		return (int) $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );
 	}
 
 	/**
@@ -406,21 +392,21 @@ final class UnitsService {
 	private function db_get_unit( int $id ): ?array {
 		global $wpdb;
 
-		$table = Schema::units();
-		$groups_table = Schema::groups();
-		$enrollments_table = Schema::enrollments();
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$query = $wpdb->prepare(
-			"SELECT u.*, 
-				(SELECT COUNT(*) FROM {$groups_table} WHERE academic_unit_id = u.id) as groups_count,
-				(SELECT COUNT(*) FROM {$enrollments_table} WHERE academic_unit_id = u.id AND status != 'withdrawn') as students_count
-			 FROM {$table} u WHERE u.id = %d",
-			$id
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Single academic unit query.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT u.*, 
+					(SELECT COUNT(*) FROM %i WHERE academic_unit_id = u.id) as groups_count,
+					(SELECT COUNT(*) FROM %i WHERE academic_unit_id = u.id AND status != %s) as students_count
+				 FROM %i u WHERE u.id = %d',
+				Schema::groups(),
+				Schema::enrollments(),
+				'withdrawn',
+				Schema::units(),
+				$id
+			),
+			ARRAY_A
 		);
-		$row = $wpdb->get_row( $query, ARRAY_A );
-		// phpcs:enable
-
 		return is_array( $row ) ? $row : null;
 	}
 
@@ -481,13 +467,14 @@ final class UnitsService {
 	private function db_has_associated_groups( int $id ): bool {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$query = $wpdb->prepare(
-			'SELECT COUNT(*) FROM ' . Schema::groups() . ' WHERE academic_unit_id = %d',
-			$id
-		);
-		return (int) $wpdb->get_var( $query ) > 0;
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Associated groups check query.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE academic_unit_id = %d',
+				Schema::groups(),
+				$id
+			)
+		) > 0;
 	}
 
 	/**
@@ -496,13 +483,14 @@ final class UnitsService {
 	private function db_unit_has_enrolled_students( int $id ): bool {
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$query = $wpdb->prepare(
-			'SELECT COUNT(*) FROM ' . Schema::enrollments() . ' WHERE academic_unit_id = %d',
-			$id
-		);
-		return (int) $wpdb->get_var( $query ) > 0;
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Unit enrolled students check query.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE academic_unit_id = %d',
+				Schema::enrollments(),
+				$id
+			)
+		) > 0;
 	}
 
 	/**
@@ -510,19 +498,20 @@ final class UnitsService {
 	 */
 	private function db_get_unit_subjects( int $unit_id ): array {
 		global $wpdb;
-		$us_table = Schema::unit_subjects();
-		$s_table = Schema::subjects();
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$query = $wpdb->prepare(
-			"SELECT us.*, s.name as subject_name, s.code as subject_code, s.type as subject_type
-			 FROM {$us_table} us
-			 JOIN {$s_table} s ON us.subject_id = s.id
-			 WHERE us.academic_unit_id = %d
-			 ORDER BY us.sort_order ASC",
-			$unit_id
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Unit subjects mapped query.
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT us.*, s.name as subject_name, s.code as subject_code, s.type as subject_type
+				 FROM %i us
+				 JOIN %i s ON us.subject_id = s.id
+				 WHERE us.academic_unit_id = %d
+				 ORDER BY us.sort_order ASC',
+				Schema::unit_subjects(),
+				Schema::subjects(),
+				$unit_id
+			),
+			ARRAY_A
 		);
-		$results = $wpdb->get_results( $query, ARRAY_A );
-		// phpcs:enable
 		return is_array( $results ) ? $results : [];
 	}
 

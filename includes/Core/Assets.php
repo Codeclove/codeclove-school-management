@@ -144,14 +144,14 @@ final class Assets {
 		global $wpdb;
 		$staff_id = null;
 		if ( $user_id > 0 ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Resolving staff member profile id.
 			$staff_id = $wpdb->get_var(
 				$wpdb->prepare(
-					'SELECT id FROM ' . \CodeClove\Database\Schema::staff_members() . ' WHERE user_id = %d AND deleted_at IS NULL',
+					'SELECT id FROM %i WHERE user_id = %d AND deleted_at IS NULL',
+					\CodeClove\Database\Schema::staff_members(),
 					$user_id
 				)
 			);
-			// phpcs:enable
 			$staff_id = $staff_id ? (int) $staff_id : null;
 		}
 
