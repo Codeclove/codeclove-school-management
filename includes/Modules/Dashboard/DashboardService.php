@@ -812,17 +812,6 @@ final class DashboardService {
 	 */
 	private function recent_events( int $user_id, bool $is_admin ): array {
 		global $wpdb;
-		$query  = 'SELECT id, event_type, actor_type, actor_id, actor_label, created_at, metadata_json
-			 FROM ' . Schema::app_logs() . '
-			 WHERE 1=1';
-		$params = [];
-		if ( ! $is_admin ) {
-			$query   .= ' AND (actor_id = %d OR actor_type = %s)';
-			$params[] = $user_id;
-			$params[] = 'system';
-		}
-		$query .= ' ORDER BY created_at DESC LIMIT 10';
-
 		if ( ! $is_admin ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Recent audit logs user-scoped query.
 			$rows = $wpdb->get_results(

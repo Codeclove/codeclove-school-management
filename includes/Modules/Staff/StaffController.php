@@ -157,11 +157,11 @@ final class StaffController extends BaseController {
 		$params = [
 			'page'     => $pagination['page'],
 			'per_page' => $pagination['per_page'],
-			'search'   => $request->get_param( 'search' ),
-			'status'   => $request->get_param( 'status' ),
+			'search'   => sanitize_text_field( (string) ( $request->get_param( 'search' ) ?: '' ) ),
+			'status'   => sanitize_key( (string) ( $request->get_param( 'status' ) ?: '' ) ),
 			'role_id'  => $request->get_param( 'role_id' ),
-			'orderby'  => $request->get_param( 'orderby' ),
-			'order'    => $request->get_param( 'order' ),
+			'orderby'  => sanitize_key( (string) ( $request->get_param( 'orderby' ) ?: 'id' ) ),
+			'order'    => sanitize_key( (string) ( $request->get_param( 'order' ) ?: 'DESC' ) ),
 		];
 
 		$result = $this->service->get_staff_members( $params );

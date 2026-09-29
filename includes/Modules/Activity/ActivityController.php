@@ -57,10 +57,10 @@ final class ActivityController extends BaseController {
 		$params = [
 			'page'      => (int) ( $request->get_param( 'page' ) ?: 1 ),
 			'per_page'  => (int) ( $request->get_param( 'per_page' ) ?: 25 ),
-			'category'  => $request->get_param( 'category' ),
-			'search'    => $request->get_param( 'search' ),
-			'date_from' => $request->get_param( 'date_from' ),
-			'date_to'   => $request->get_param( 'date_to' ),
+			'category'  => sanitize_key( (string) ( $request->get_param( 'category' ) ?: '' ) ),
+			'search'    => sanitize_text_field( (string) ( $request->get_param( 'search' ) ?: '' ) ),
+			'date_from' => sanitize_text_field( (string) ( $request->get_param( 'date_from' ) ?: '' ) ),
+			'date_to'   => sanitize_text_field( (string) ( $request->get_param( 'date_to' ) ?: '' ) ),
 		];
 
 		$result = $this->service->get_log( $params );

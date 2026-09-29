@@ -778,8 +778,8 @@ final class AdmissionsService {
 		$params = array_merge( $defaults, $args );
 
 		$table = Schema::applications();
-		$query = "SELECT * FROM {$table} WHERE deleted_at IS NULL";
-		$binds = [];
+		$query = 'SELECT * FROM %i WHERE deleted_at IS NULL';
+		$binds = [ $table ];
 
 		if ( '' !== $params['status'] ) {
 			$query   .= ' AND status = %s';
@@ -850,8 +850,8 @@ final class AdmissionsService {
 		global $wpdb;
 
 		$table = Schema::applications();
-		$query = "SELECT COUNT(*) FROM {$table} WHERE deleted_at IS NULL";
-		$binds = [];
+		$query = 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NULL';
+		$binds = [ $table ];
 
 		if ( ! empty( $args['status'] ) ) {
 			$query   .= ' AND status = %s';
@@ -887,10 +887,8 @@ final class AdmissionsService {
 			$binds[] = $like;
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$count = ! empty( $binds )
-			? $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) )
-			: $wpdb->get_var( $query );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		$count = $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );
 		// phpcs:enable
 
 		return (int) $count;
