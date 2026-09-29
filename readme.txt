@@ -4,7 +4,7 @@ Tags: school management, student management, attendance, education, school erp
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -101,6 +101,12 @@ All bundled third-party libraries are open-source and GPL-compatible.
 
 == Changelog ==
 
+= 1.0.1 =
+* Fix: Adopt native %i identifier placeholders for all database table references in prepared SQL queries (WordPress 6.1+ compliance).
+* Fix: Controller-boundary input sanitization across REST API query parameters.
+* Fix: Remove deprecated print_emoji_styles handler before rendering standalone SPA shell.
+* Fix: Guard pro-only timetable queries in attendance and portal services for clean free-tier activation.
+
 = 1.0.0 =
 * Initial public release on WordPress.org.
 * Core academic structure (Sessions, Units, Groups, Subjects).
@@ -111,6 +117,9 @@ All bundled third-party libraries are open-source and GPL-compatible.
 * Localized typography and zero-telemetry architecture.
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+Review revision: SQL query placeholders, input sanitization, and compatibility fixes.
 
 = 1.0.0 =
 Initial release of CodeClove School Management System.

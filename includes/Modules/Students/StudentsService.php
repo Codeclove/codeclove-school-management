@@ -1105,9 +1105,7 @@ final class StudentsService {
 			WHERE s.deleted_at IS NULL';
 		$binds = [ Schema::students(), Schema::units(), Schema::groups(), Schema::student_guardians(), Schema::guardians() ];
 
-		if ( $has_session_filter ) {
-			$binds[] = (int) $params['academic_session_id'];
-		}
+		// Note: session_id already baked into $enrollment_join via pre-prepare; do not re-add to $binds.
 
 		if ( null !== $params['academic_unit_id'] && 0 !== $params['academic_unit_id'] ) {
 			$query   .= ' AND se.academic_unit_id = %d';

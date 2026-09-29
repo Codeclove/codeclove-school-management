@@ -105,6 +105,13 @@ final class Assets {
 	 */
 	private function render_html(): void {
 		$plugin_url = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
+
+		// WordPress 6.4+ deprecated print_emoji_styles() on wp_print_styles/admin_print_styles.
+		// Core unhooks it inside wp_enqueue_emoji_styles() during standard enqueue actions.
+		// Since our fullscreen SPA shell prints styles directly on load-{$hook}, remove the
+		// deprecated handler (same pattern WordPress core uses in wp-includes/block-editor.php).
+		remove_action( 'wp_print_styles', 'print_emoji_styles' );
+		remove_action( 'admin_print_styles', 'print_emoji_styles' );
 		?>
 		<!DOCTYPE html>
 		<html <?php language_attributes(); ?>>

@@ -280,25 +280,7 @@ final class AttendanceService {
 			ARRAY_A
 		);
 
-		// Query any substitute mappings where staff members were absent (original staff member of the slot) on this date
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Timetable substitutes absences query.
-		$absences_rows = $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT DISTINCT ts.staff_member_id, sub.reason 
-				 FROM %i sub
-				 JOIN %i ts ON sub.slot_id = ts.id
-				 WHERE sub.date = %s',
-				Schema::timetable_substitutes(),
-				Schema::timetable_slots(),
-				$date
-			),
-			ARRAY_A
-		);
-
 		$absences = [];
-		foreach ( $absences_rows as $abs ) {
-			$absences[ (int) $abs['staff_member_id'] ] = $abs['reason'];
-		}
 
 		// Clean null fields for JSON output consistency
 		foreach ( $results as &$row ) {

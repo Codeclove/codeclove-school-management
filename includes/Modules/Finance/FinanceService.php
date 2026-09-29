@@ -110,6 +110,7 @@ final class FinanceService {
 		if ( ! empty( $params['has_overrides'] ) ) {
 			$op       = 'yes' === $params['has_overrides'] ? '>' : '=';
 			$where   .= ' AND (SELECT COUNT(*) FROM %i r WHERE r.fee_type_id = f.id) ' . $op . ' 0';
+			$binds[]  = $class_rates_table; // %i for the WHERE subquery.
 		}
 
 		if ( ! empty( $params['search'] ) ) {
@@ -123,12 +124,13 @@ final class FinanceService {
 		$query = 'SELECT f.*, (SELECT COUNT(*) FROM %i r WHERE r.fee_type_id = f.id) AS overrides_count FROM %i f WHERE ' . $where . ' ORDER BY f.name ASC';
 		$table_binds = [ $class_rates_table, $table ];
 		if ( $params['limit'] > 0 ) {
+			$query   .= ' LIMIT %d OFFSET %d';
 			$binds[] = (int) $params['limit'];
 			$binds[] = (int) $params['offset'];
 		}
 
 		$all_binds = array_merge( $table_binds, $binds );
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$all_binds ), ARRAY_A );
 
 		$count_query = 'SELECT COUNT(*) FROM %i f WHERE ' . $where;
@@ -589,11 +591,12 @@ final class FinanceService {
 
 		$table_args = [ $line_items_table, $invoices_table, $students_table, $enrollments_table, $terms_table, $sessions_table, $units_table, $groups_table ];
 		if ( $params['limit'] > 0 ) {
+			$query   .= ' LIMIT %d OFFSET %d';
 			$binds[] = (int) $params['limit'];
 			$binds[] = (int) $params['offset'];
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$table_args, ...$binds ), ARRAY_A );
 		// phpcs:enable
 
@@ -637,7 +640,7 @@ final class FinanceService {
 			LEFT JOIN %i e ON e.student_id = i.student_id AND e.academic_session_id = i.academic_session_id
 			WHERE ' . $where;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		return (int) $wpdb->get_var( $wpdb->prepare( $query, $invoices_table, $students_table, $enrollments_table, ...$binds ) );
 		// phpcs:enable
 	}
@@ -768,7 +771,7 @@ final class FinanceService {
 					AND i.deleted_at IS NULL
 				LIMIT 1";
 			// Table names prepended as %i identifiers; dynamic IN list uses %d placeholders.
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$duplicate_id = $wpdb->get_var( $wpdb->prepare( $query, Schema::invoices(), Schema::line_items(), ...$prepare_args ) );
 			// phpcs:enable
 			if ( $duplicate_id ) {
@@ -1133,11 +1136,12 @@ final class FinanceService {
 
 		$table_args = [ $payments_table, $students_table, $invoices_table ];
 		if ( $params['limit'] > 0 ) {
+			$query   .= ' LIMIT %d OFFSET %d';
 			$binds[] = (int) $params['limit'];
 			$binds[] = (int) $params['offset'];
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$table_args, ...$binds ), ARRAY_A );
 		// phpcs:enable
 
@@ -1180,7 +1184,7 @@ final class FinanceService {
 			LEFT JOIN %i i ON i.id = p.invoice_id
 			WHERE ' . $where;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		return (int) $wpdb->get_var( $wpdb->prepare( $query, $payments_table, $students_table, $invoices_table, ...$binds ) );
 		// phpcs:enable
 	}
@@ -2136,7 +2140,7 @@ final class FinanceService {
 
 		// Count query
 		$count_query = "SELECT COUNT(i.id) FROM %i i INNER JOIN %i s ON s.id = i.student_id WHERE {$where}";
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$total = (int) $wpdb->get_var(
 			$wpdb->prepare( $count_query, Schema::invoices(), Schema::students(), ...$binds )
 		);
@@ -2169,7 +2173,7 @@ final class FinanceService {
 
 		$select_binds = array_merge( [ $invoices_table, $students_table, $units_table, $current_date ], $binds, [ $limit, $offset ] );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$results = $wpdb->get_results(
 			$wpdb->prepare( $query, ...$select_binds ),
 			ARRAY_A

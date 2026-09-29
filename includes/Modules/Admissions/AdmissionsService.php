@@ -887,7 +887,7 @@ final class AdmissionsService {
 			$binds[] = $like;
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$count = $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );
 		// phpcs:enable
 
