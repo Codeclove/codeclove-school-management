@@ -133,7 +133,7 @@ final class FinanceService {
 
 		$count_query = 'SELECT COUNT(*) FROM %i f WHERE ' . $where;
 		$count_data_binds = array_slice( $binds, 0, count( $binds ) - ( $params['limit'] > 0 ? 2 : 0 ) );
-		$total        = (int) $wpdb->get_var( $wpdb->prepare( $count_query, $class_rates_table, $table, ...$count_data_binds ) );
+		$total        = (int) $wpdb->get_var( $wpdb->prepare( $count_query, $table, ...$count_data_binds ) );
 		// phpcs:enable
 
 		foreach ( $results as &$row ) {

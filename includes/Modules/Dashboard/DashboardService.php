@@ -717,6 +717,7 @@ final class DashboardService {
 	 * @return array<int, array{label: string, present: int, total: int}>
 	 */
 	private function attendance_trend( int $session_id, string $date_from, string $date_to ): array {
+		global $wpdb;
 		if ( $session_id ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Attendance trend query.
 			$rows = $wpdb->get_results(

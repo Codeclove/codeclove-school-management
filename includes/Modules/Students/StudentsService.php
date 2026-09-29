@@ -1086,6 +1086,7 @@ final class StudentsService {
 		];
 		$params = array_merge( $defaults, $args );
 
+		$has_session_filter = ! empty( $params['academic_session_id'] );
 		$enrollment_join = $has_session_filter
 			? $wpdb->prepare( 'INNER JOIN %i se ON se.student_id = s.id AND se.academic_session_id = %d', Schema::enrollments(), (int) $params['academic_session_id'] )
 			: $wpdb->prepare( 'LEFT JOIN %i se ON se.student_id = s.id AND se.status = %s', Schema::enrollments(), 'active' );
@@ -1164,6 +1165,7 @@ final class StudentsService {
 	public function db_count_students( array $args = [] ): int {
 		global $wpdb;
 
+		$has_session_filter = ! empty( $args['academic_session_id'] );
 		$enrollment_join = $has_session_filter
 			? $wpdb->prepare( 'INNER JOIN %i se ON se.student_id = s.id AND se.academic_session_id = %d', Schema::enrollments(), (int) $args['academic_session_id'] )
 			: $wpdb->prepare( 'LEFT JOIN %i se ON se.student_id = s.id AND se.status = %s', Schema::enrollments(), 'active' );
