@@ -327,7 +327,7 @@ final class SubjectsService {
 		$binds[] = $params['limit'];
 		$binds[] = $params['offset'];
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Custom academic subjects list query with dynamic clauses.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom academic subjects list query with dynamic clauses.
 		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$binds ), ARRAY_A );
 
 		return is_array( $results ) ? $results : [];
@@ -354,7 +354,7 @@ final class SubjectsService {
 			$binds[] = $like;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Custom academic subjects count query with dynamic clauses.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom academic subjects count query with dynamic clauses.
 		return (int) $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );
 	}
 

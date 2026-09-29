@@ -85,3 +85,8 @@ foreach ( $codeclove_tables as $codeclove_table ) {
 delete_option( 'codeclove_settings' );
 delete_option( 'codeclove_db_version' );
 delete_option( 'codeclove_license' );
+
+// Remove custom WordPress roles.
+remove_role( 'codeclove_staff' );
+remove_role( 'codeclove_guardian' );
+remove_role( 'codeclove_student' );

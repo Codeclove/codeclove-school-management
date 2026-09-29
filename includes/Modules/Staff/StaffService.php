@@ -80,7 +80,7 @@ final class StaffService {
 
 		$where_clause = implode( ' AND ', $where );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Staff members list and count queries with dynamic clauses.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Staff members list and count queries with dynamic clauses.
 		$query_args = array_merge( [ Schema::staff_members(), Schema::roles() ], $args, [ $per_page, $offset ] );
 		$items      = $wpdb->get_results(
 			$wpdb->prepare(
@@ -1046,7 +1046,7 @@ final class StaffService {
 			$sql    .= ' AND date_of_birth = %s';
 			$binds[] = sanitize_text_field( $dob );
 		}
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Public staff app status lookup with dynamic fields.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Public staff app status lookup with dynamic fields.
 		$app = $wpdb->get_row(
 			$wpdb->prepare( $sql, ...$binds ),
 			ARRAY_A

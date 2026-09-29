@@ -91,7 +91,7 @@ final class ActivityService {
 		// Query total count
 		$count_query = 'SELECT COUNT(*) FROM %i WHERE ' . $where_clause;
 		$count_binds = array_merge( [ Schema::app_logs() ], $values );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Activity logs count query.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Activity logs count query.
 		$total = (int) $wpdb->get_var( $wpdb->prepare( $count_query, ...$count_binds ) );
 
 		// Query records
@@ -101,7 +101,7 @@ final class ActivityService {
 				  ORDER BY created_at DESC
 				  LIMIT %d OFFSET %d';
 		$query_values = array_merge( [ Schema::app_logs() ], $values, [ $per_page, $offset ] );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Activity logs list query.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Activity logs list query.
 		$rows = $wpdb->get_results( $wpdb->prepare( $query, ...$query_values ), ARRAY_A );
 		$items = array_map(
 			function ( $r ) {

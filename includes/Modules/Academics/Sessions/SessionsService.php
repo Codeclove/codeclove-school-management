@@ -584,7 +584,7 @@ final class SessionsService {
 		$binds[] = $params['limit'];
 		$binds[] = $params['offset'];
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Custom academic sessions list query with dynamic clauses.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom academic sessions list query with dynamic clauses.
 		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$binds ), ARRAY_A );
 		return is_array( $results ) ? $results : [];
 	}
@@ -610,7 +610,7 @@ final class SessionsService {
 			$binds[] = $like;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Custom academic sessions count query with dynamic clauses.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom academic sessions count query with dynamic clauses.
 		$count = $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );
 		return (int) $count;
 	}

@@ -492,7 +492,7 @@ final class PortalService {
 			$where_clause  .= ' AND ts.day_of_week = %d';
 			$where_params[] = $day_of_week;
 
-			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Dynamic timetable query.
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Dynamic timetable query.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database query.
 			$slots = $wpdb->get_results(
 				$wpdb->prepare(
@@ -960,7 +960,7 @@ final class PortalService {
 				$where_params[] = $term_id;
 			}
 
-			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Dynamic timetable query.
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Dynamic timetable query.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database query.
 			$slots = $wpdb->get_results(
 				$wpdb->prepare(

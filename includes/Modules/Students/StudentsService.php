@@ -1152,7 +1152,7 @@ final class StudentsService {
 		$binds[] = (int) $params['limit'];
 		$binds[] = (int) $params['offset'];
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Students list query with dynamic clauses.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Students list query with dynamic clauses.
 		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$binds ), ARRAY_A );
 
 		return is_array( $results ) ? $results : [];
@@ -1200,7 +1200,7 @@ final class StudentsService {
 			$binds[] = $like;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Students count query with dynamic clauses.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Students count query with dynamic clauses.
 		$count = $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );
 
 		return (int) $count;

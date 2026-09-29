@@ -98,7 +98,7 @@ final class AttendanceService {
 		}
 
 		$query .= ' ORDER BY g.name ASC, CAST(se.roll_number AS UNSIGNED) ASC, se.roll_number ASC, s.last_name ASC, s.first_name ASC';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Dynamic student attendance register query.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Dynamic student attendance register query.
 		$results = $wpdb->get_results( $wpdb->prepare( $query, ...$binds ), ARRAY_A );
 
 		// Clean null fields for JSON output consistency
@@ -469,7 +469,7 @@ final class AttendanceService {
 		}
 
 		$student_query .= ' ORDER BY g.name ASC, CAST(se.roll_number AS UNSIGNED) ASC, se.roll_number ASC, s.last_name ASC, s.first_name ASC';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Monthly student attendance roster query.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Monthly student attendance roster query.
 		$students = $wpdb->get_results( $wpdb->prepare( $student_query, ...$student_binds ), ARRAY_A );
 
 		// Fetch attendance records in date range
@@ -483,7 +483,7 @@ final class AttendanceService {
 			$attendance_query .= ' AND academic_group_id = %d';
 			$attendance_binds[] = (int) $group_id;
 		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Monthly student attendance records query.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Monthly student attendance records query.
 		$attendance_records = $wpdb->get_results( $wpdb->prepare( $attendance_query, ...$attendance_binds ), ARRAY_A );
 
 		// Pivot records

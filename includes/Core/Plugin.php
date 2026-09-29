@@ -92,15 +92,10 @@ final class Plugin {
 
 	/**
 	 * Called on plugin deactivation.
-	 * Does NOT drop tables — use uninstall.php for cleanup.
+	 * Does NOT drop tables or remove roles — use uninstall.php for cleanup per WordPress.org guidelines.
 	 */
 	public function deactivate(): void {
 		wp_clear_scheduled_hook( 'codeclove_update_overdue_invoices' );
-		// Remove custom WordPress roles.
-		remove_role( 'codeclove_staff' );
-		remove_role( 'codeclove_guardian' );
-		remove_role( 'codeclove_student' );
-
 		flush_rewrite_rules();
 	}
 
@@ -109,7 +104,6 @@ final class Plugin {
 	public function run(): void {
 		$rest = new RestApi();
 
-		// Register custom admin menu (single top-level page).
 		add_action( 'admin_menu', [ $this, 'register_admin_menu' ] );
 
 		// Register the REST API namespace and all routes.
