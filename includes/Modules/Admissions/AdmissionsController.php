@@ -84,7 +84,11 @@ final class AdmissionsController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'bulk_admissions_action' ],
-					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'admissions.edit', $request ); },
+					'permission_callback' => function ( WP_REST_Request $request ): bool {
+						$action = $request->get_json_params()['action'] ?? '';
+						$cap    = ( 'delete' === $action ) ? 'admissions.delete' : 'admissions.edit';
+						return $this->can( $cap, $request );
+					},
 				],
 			]
 		);

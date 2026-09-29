@@ -67,7 +67,11 @@ final class StudentsController extends BaseController {
 				[
 					'methods'             => 'POST',
 					'callback'            => [ $this, 'bulk_students_action' ],
-					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.edit', $request ); },
+					'permission_callback' => function ( WP_REST_Request $request ): bool {
+						$action = $request->get_json_params()['action'] ?? '';
+						$cap    = ( 'delete' === $action ) ? 'students.delete' : 'students.edit';
+						return $this->can( $cap, $request );
+					},
 				],
 			]
 		);
