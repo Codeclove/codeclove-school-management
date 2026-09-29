@@ -1,8 +1,0 @@
-{
-  "name": "codeclove-school-management",
-  "private": true,
-  "scripts": {
-    "dev": "npm run dev --prefix admin",
-    "build": "npm run build --prefix admin"
-  }
-}

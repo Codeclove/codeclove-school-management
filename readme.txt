@@ -85,7 +85,7 @@ https://github.com/Codeclove/codeclove-school-management
 To regenerate the compiled assets from source:
 
 1. Requires Node.js 20+ and npm 10+.
-2. Clone the repository and run: `npm install`
+2. Navigate to admin directory and install dependencies: `cd admin && npm install`
 3. Build for production: `npm run build`
    Vite outputs minified bundles to `assets/build/admin/` and `assets/build/portal/`.
 
