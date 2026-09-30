@@ -135,6 +135,7 @@ final class FinanceService {
 
 		$count_query = 'SELECT COUNT(*) FROM %i f WHERE ' . $where;
 		$count_data_binds = array_slice( $binds, 0, count( $binds ) - ( $params['limit'] > 0 ? 2 : 0 ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Query built with %i/%s/%d placeholders; table names from Schema constants, never user input.
 		$total        = (int) $wpdb->get_var( $wpdb->prepare( $count_query, $table, ...$count_data_binds ) );
 		// phpcs:enable
 
@@ -2142,6 +2143,7 @@ final class FinanceService {
 		$count_query = "SELECT COUNT(i.id) FROM %i i INNER JOIN %i s ON s.id = i.student_id WHERE {$where}";
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$total = (int) $wpdb->get_var(
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Query built with %i/%s/%d placeholders; table names from Schema constants, never user input.
 			$wpdb->prepare( $count_query, Schema::invoices(), Schema::students(), ...$binds )
 		);
 		// phpcs:enable
@@ -2175,6 +2177,7 @@ final class FinanceService {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$results = $wpdb->get_results(
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Query built with %i/%s/%d placeholders; table names from Schema constants, never user input.
 			$wpdb->prepare( $query, ...$select_binds ),
 			ARRAY_A
 		);

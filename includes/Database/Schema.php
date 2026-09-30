@@ -75,7 +75,7 @@ final class Schema {
 	// ─── All Tables Accessor ──────────────────────────────────────────────────
 
 	/**
-	 * Returns all 35 fully-qualified CodeClove table names.
+	 * Returns all fully-qualified CodeClove table names created by this build.
 	 *
 	 * @return string[]
 	 */
@@ -95,7 +95,6 @@ final class Schema {
 			self::app_documents(),
 			self::app_notes(),
 			self::app_logs(),
-			self::notifications(),
 			self::students(),
 			self::student_subjects(),
 			self::guardians(),
@@ -113,9 +112,6 @@ final class Schema {
 			self::invoices(),
 			self::line_items(),
 			self::payments(),
-			self::timetable_periods(),
-			self::timetable_slots(),
-			self::timetable_substitutes(),
 		];
 	}
 

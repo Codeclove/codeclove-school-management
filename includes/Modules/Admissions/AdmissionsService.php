@@ -835,6 +835,7 @@ final class AdmissionsService {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$results = $wpdb->get_results(
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Query built with %i/%s/%d placeholders; table names from Schema constants, never user input.
 			$wpdb->prepare( $query, ...$binds ),
 			ARRAY_A
 		);

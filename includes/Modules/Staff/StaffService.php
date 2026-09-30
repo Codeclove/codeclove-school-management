@@ -1048,6 +1048,7 @@ final class StaffService {
 		}
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Public staff app status lookup with dynamic fields.
 		$app = $wpdb->get_row(
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared -- Query built with %i/%s/%d placeholders; table names from Schema constants, never user input.
 			$wpdb->prepare( $sql, ...$binds ),
 			ARRAY_A
 		);
