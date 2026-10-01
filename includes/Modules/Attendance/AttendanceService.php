@@ -153,7 +153,9 @@ final class AttendanceService {
 							(int) $session_id
 						)
 					);
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Soft-delete attendance inside transaction.
 					if ( $existing_id ) {
+						// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Soft-delete attendance write inside transaction.
 						$wpdb->update(
 							$table,
 							[
@@ -194,7 +196,9 @@ final class AttendanceService {
 					)
 				);
 
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Attendance upsert inside transaction.
 				if ( $existing_id ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Attendance update inside transaction.
 					$wpdb->update(
 						$table,
 						[
@@ -209,9 +213,9 @@ final class AttendanceService {
 						[ '%d' ]
 					);
 				} else {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Attendance insert inside transaction.
 					$wpdb->insert( $table, $insert_data, $format );
 				}
-				// phpcs:enable
 				$marked_students[] = [
 					'student_id' => $student_id,
 					'status'     => $status,
@@ -337,7 +341,9 @@ final class AttendanceService {
 							$date
 						)
 					);
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff soft-delete inside transaction.
 					if ( $existing_id ) {
+						// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff attendance soft-delete write.
 						$wpdb->update(
 							$table,
 							[
@@ -362,7 +368,9 @@ final class AttendanceService {
 						$date
 					)
 				);
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff attendance upsert inside transaction.
 				if ( $existing_id ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff attendance update inside transaction.
 					$wpdb->update(
 						$table,
 						[
@@ -377,6 +385,7 @@ final class AttendanceService {
 						[ '%d' ]
 					);
 				} else {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff attendance insert inside transaction.
 					$wpdb->insert(
 						$table,
 						[

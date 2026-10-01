@@ -1038,16 +1038,18 @@ final class DashboardService {
 		$has_session     = (bool) $wpdb->get_var(
 			$wpdb->prepare( 'SELECT id FROM %i LIMIT %d', Schema::sessions(), 1 )
 		);
-		$has_units       = $session_id
-			? (bool) $wpdb->get_var(
+		$has_units = false;
+		if ( $session_id ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Setup checklist units existence check.
+			$has_units = (bool) $wpdb->get_var(
 				$wpdb->prepare(
 					'SELECT id FROM %i WHERE academic_session_id = %d LIMIT %d',
 					Schema::units(),
 					$session_id,
 					1
 				)
-			)
-			: false;
+			);
+		}
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Setup checklist custom role check.
 		$has_custom_role = (bool) $wpdb->get_var(
 			$wpdb->prepare( 'SELECT id FROM %i WHERE is_system = %d LIMIT %d', Schema::roles(), 0, 1 )
