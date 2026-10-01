@@ -145,7 +145,7 @@ final class Plugin {
 	 * Registers the CodeClove top-level admin menu entry and hooks the fullscreen renderer.
 	 */
 	public function register_admin_menu(): void {
-		$is_pro    = false; // Free version — always false.
+		$is_pro    = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
 		$menu_slug = 'codeclove-school-management';
 		$page_hook = add_menu_page(
 			__( 'School Management', 'codeclove-school-management' ),

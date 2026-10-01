@@ -19,7 +19,7 @@ import { isRtl } from '@/lib/rtl'
 import 'react-day-picker/style.css'
 
 // Helper to parse dates with multiple formats and delimiters flexibly
-function parseFlexibleDate(val: string, formatStr: string): Date | null {
+export function parseFlexibleDate(val: string, formatStr: string): Date | null {
   const cleanVal = val.trim()
   if (!cleanVal) return null
 
@@ -95,6 +95,7 @@ export interface DatePickerProps {
   minDate?: Date
   maxDate?: Date
   container?: HTMLElement | null
+  modal?: boolean
   'aria-invalid'?: boolean | 'true' | 'false'
   'aria-describedby'?: string
   'aria-label'?: string
@@ -114,6 +115,7 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
       minDate,
       maxDate,
       container,
+      modal = true,
       'aria-invalid': ariaInvalid,
       'aria-describedby': ariaDescribedBy,
       'aria-label': ariaLabel,
@@ -224,12 +226,15 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
       }
     }
 
-    // Handle keydown: commit and close popover on Enter
+    // Handle keydown: commit and close popover on Enter, open on ArrowDown
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
         e.preventDefault()
         handleBlur()
         setOpen(false)
+      } else if (e.key === 'ArrowDown' && !open && !disabled) {
+        e.preventDefault()
+        setOpen(true)
       }
     }
 
@@ -272,7 +277,7 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
     const defaultEndMonth = React.useMemo(() => new Date(new Date().getFullYear() + 10, 11), [])
 
     return (
-      <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+      <PopoverPrimitive.Root modal={modal} open={open} onOpenChange={setOpen}>
         <PopoverPrimitive.Anchor asChild>
           {/* Trigger Container matching exactly our standard inputs */}
           <div className="relative w-full min-w-[140px]">
@@ -285,7 +290,6 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
               onChange={handleInputChange}
               onBlur={handleBlur}
               onKeyDown={handleKeyDown}
-              onFocus={() => setOpen(true)}
               placeholder={placeholderText}
               disabled={disabled}
               error={error}

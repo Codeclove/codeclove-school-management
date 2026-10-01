@@ -1,95 +1,106 @@
 === CodeClove School Management System ===
 Contributors: codeclove
-Tags: school management, student management, attendance, education, school erp
+Tags: school management, student management, attendance, school erp, education management
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Multi-country school management system for WordPress. Manage student admissions, classes, staff, and daily attendance. Free forever.
+CodeClove School management plugin for WordPress. Manage student admissions, attendance, staff, fees, and academic sessions.
 
 == Description ==
 
-**CodeClove School Management System** is a modern, country-aware school management system built natively for WordPress. Designed for K-12 schools, coaching institutes, and colleges, it simplifies student record-keeping, staff directories, academic session structuring, and daily student attendance tracking.
+**CodeClove School Management System** is a WordPress plugin built for K-12 schools, coaching institutes, and colleges. It handles student records, staff directories, academic sessions, daily attendance, fee invoicing, and a parent-student self-service portal, all from your WordPress admin.
 
-The plugin is built from the ground up with built-in multi-country presets (India, United States, and United Kingdom), allowing you to immediately configure grading conventions, phone formats, currency symbols, and academic terms with a single click.
+= Works out of the box for India, US, and UK =
 
-= Free Features =
+Pick your country during setup and the plugin configures grading conventions, phone formats, currency symbols, academic terms, and date formats automatically. One click, not a settings marathon.
 
-* **Unlimited Student Records** — Create and manage detailed student profiles, guardian information, contact records, and enrollment dates with no artificial caps.
-* **Bulk CSV Spreadsheet Import** — Fast spreadsheet onboarding for students and faculty with custom column mapping.
-* **Online Admissions & Inquiries** — Public embeddable shortcode application form, application review stages, and one-click applicant-to-student conversion.
-* **Fee Types & Manual Invoicing** — Configure fee heads/types with class rates, generate student invoices, and record manual payments with receipts.
-* **Staff & Faculty Directory** — Maintain comprehensive teacher and administrative staff records with roles, contact info, and assignments.
-* **Academic Structure** — Organize your school year into Academic Sessions, Terms/Units, Classes/Groups, and Subjects.
-* **Daily Attendance Tracking** — Mark student daily attendance (Present, Absent, Late, Excused) with instant daily summary reports.
-* **Multi-Country Presets** — One-click configuration for India (CBSE/ICSE), United States, and United Kingdom presets (terms, date formats, currencies, and identifiers).
-* **Student & Guardian Self-Service Portal** — Dedicated frontend portal (`[codeclove_portal]`) allowing authenticated students and parents to view attendance logs, academic schedules, and fee invoices.
-* **Modern Single-Page Dashboard** — Clean, responsive React administrative interface designed for speed and clarity.
-* **Privacy & GDPR Compliant** — All scripts and stylesheets are hosted 100% locally. Zero external fonts (no Google Fonts tracking) and zero third-party telemetry.
+= Free features =
 
-This plugin adheres strictly to WordPress security and coding standards:
-* Custom `$wpdb` database tables prefixed with your WordPress installation table prefix.
-* Full REST API security with permission callbacks (`permission_callback`) and nonce authentication.
-* Role-based access control protecting all student and academic data.
+* **Unlimited student records.** Student profiles, guardian contacts, enrollment dates. No caps, no paywalls on record counts.
+* **Bulk CSV import.** Onboard hundreds of students or staff from a spreadsheet with custom column mapping.
+* **Online admissions.** Embed an application form with `[codeclove_admission_form]`. Review applications, then convert an applicant to a student in one click.
+* **Fee types and invoicing.** Define fee heads per class, generate invoices, and record offline payments with printable receipts.
+* **Staff directory.** Teacher and admin records with roles, contact info, and class assignments.
+* **Academic structure.** Sessions, terms, classes, groups, and subjects organized the way your school actually works.
+* **Daily attendance.** Mark Present, Absent, Late, or Excused per student. Instant daily summary reports.
+* **Student and parent portal.** `[codeclove_portal]` gives students and guardians a frontend view of attendance, schedules, and fee invoices.
+* **Printable ID cards.** Dual-side student ID cards generated from profile data.
+* **Command palette.** Global search across students, staff, pages, and shortcuts.
+* **Dark mode.** Full dark theme for the admin interface.
+* **Zero tracking.** No Google Fonts, no external CDNs, no analytics calls. Everything loads from your server.
 
-= Need Advanced ERP Capabilities? Upgrade to Pro =
+= Security =
 
-Take your institution to the next level with [School Management Pro](https://codeclove.com/):
+* All database tables use your WordPress table prefix.
+* Every REST API endpoint has a `permission_callback` and nonce verification.
+* Role-based access control on all student and academic data.
 
-* **Financial Analytics & Revenue Charts** — Real-time fee collection graphs, revenue forecasting, and payment mode breakdowns.
-* **Defaulters Report & Overdue Tracking** — Automated tracking of overdue invoices and uncollected dues.
-* **Online Payment Gateways & UPI** — Direct checkout support for Stripe, PayPal, Razorpay, and Indian UPI.
-* **Weekly Timetable Matrix & Substitutions** — Conflict-free timetable builder with automatic teacher substitution assignment.
-* **Automated SMS Notifications** — Integrated alerts via Twilio, Vonage, Fast2SMS, and MSG91.
-* **Digital Noticeboard & Announcements** — Publish school-wide or targeted circulars and notices.
-* **Batch Student Promotion Engine** — One-click end-of-year batch promotion between academic sessions.
-* **Granular Role Permission Matrix** — Fine-grained capability control across teachers, accountants, and staff members.
-* **Priority Email & Ticket Support** — Dedicated technical assistance and onboarding help.
+= School Management Pro =
+
+The free plugin covers daily operations. [School Management Pro](https://codeclove.com/) adds:
+
+* **Revenue analytics.** Fee collection graphs, forecasting, and payment mode breakdowns.
+* **Defaulter tracking.** Automatic overdue invoice reports.
+* **Online payments.** Stripe, PayPal, Razorpay, and Indian UPI checkout.
+* **Timetable builder.** Weekly schedule matrix with teacher substitution handling.
+* **SMS notifications.** Twilio, Vonage, Fast2SMS, and MSG91 integrations.
+* **Noticeboard.** School-wide or targeted announcements and circulars.
+* **Batch promotion.** Move students between academic sessions at year-end in one operation.
+* **Permission matrix.** Capability control per role across teachers, accountants, and staff.
+* **Priority support.** Email and ticket support with onboarding help.
 
 == Installation ==
 
-1. Upload the `codeclove-school-management` folder to your `/wp-content/plugins/` directory (or install via *Plugins → Add New* in WordPress).
-2. Activate the plugin through the **Plugins** menu in WordPress.
-3. Navigate to **School Management** in your WordPress admin sidebar.
-4. Run the initial setup wizard to select your country preset (India, US, or UK) and configure your academic sessions.
+1. Go to **Plugins → Add New** in your WordPress admin and search for "CodeClove School Management", or upload the zip manually.
+2. Activate the plugin.
+3. Open **School Management** in your admin sidebar.
+4. Run the setup wizard, pick your country preset, and create your first academic session.
 
 == Frequently Asked Questions ==
 
 = Is the free version limited in student or staff numbers? =
-No. The free version allows unlimited students, guardians, classes, and staff members. There are no artificial quotas, trial periods, or disabled features.
 
-= Does the plugin make external network calls or track usage? =
-No. This plugin does not load remote fonts from Google Fonts or external CDNs, does not track usage data, and makes zero background network requests. All assets are self-hosted locally.
+No. Unlimited students, guardians, classes, and staff. No quotas, no trial periods, no features disabled behind a paywall.
 
-= Can I upgrade to School Management Pro without losing my existing data? =
-Yes. When you install and activate School Management Pro, it seamlessly utilizes your existing database tables and settings. All student records, attendance logs, and academic structures are fully preserved.
+= Does the plugin make external network calls? =
+
+No. No remote fonts, no CDN assets, no usage tracking, no background requests of any kind. All assets load from your server.
+
+= Can I upgrade to Pro without losing data? =
+
+Yes. Pro uses the same database tables. Install and activate it alongside the free plugin and all your existing records carry over.
+
+= What WordPress and PHP versions does it require? =
+
+WordPress 6.5 or later and PHP 8.1 or later.
+
+= Does it work for coaching institutes, not just schools? =
+
+Yes. The academic structure, sessions, groups, and subjects work for any teaching institution.
 
 == Screenshots ==
 
-1. Dashboard overview — Key operational metrics, attendance summaries, and recent activity.
-2. Student directory — Manage student profiles, parent details, and academic enrollments.
-3. Daily attendance register — Fast, one-click attendance marking for classes and groups.
-4. Academic management — Setup sessions, classes, units, and subjects with localized presets.
-5. Invoicing and fee types — Define school fees, issue invoices, and record offline payments.
+1. Dashboard — attendance summaries, key metrics, and recent activity at a glance.
+2. Student directory — profiles, guardian details, and academic enrollments.
+3. Daily attendance register — one-click marking with Present, Absent, Late, and Excused statuses.
+4. Academic management — sessions, classes, units, and subjects with country presets.
+5. Invoicing — define fee types, generate invoices, record offline payments.
+6. Student profile and ID card — full academic record with printable dual-side ID card.
+7. Roles and permissions — access control matrix for staff and administrators.
+8. Command palette — global search for students, pages, shortcuts, and actions.
+9. Dark mode — full dark theme for the admin interface.
 
-== Source Code ==
+== Source code ==
 
-The compiled JavaScript bundles in `assets/build/` are generated from TypeScript/React source files.
+The JavaScript bundles in `assets/build/` are compiled from TypeScript and React source files.
 
-The complete, human-readable source code is publicly available at:
-https://github.com/Codeclove/codeclove-school-management
+Full source: https://github.com/Codeclove/codeclove-school-management
 
-To regenerate the compiled assets from source:
-
-1. Requires Node.js 20+ and npm 10+.
-2. Navigate to admin directory and install dependencies: `cd admin && npm install`
-3. Build for production: `npm run build`
-   Vite outputs minified bundles to `assets/build/admin/` and `assets/build/portal/`.
-
-Third-party libraries bundled in the compiled output:
+Third-party libraries in the compiled output:
 
 * React 18 — MIT License — https://github.com/facebook/react
 * React Router 6 — MIT License — https://github.com/remix-run/react-router
@@ -97,29 +108,25 @@ Third-party libraries bundled in the compiled output:
 * shadcn/ui components — MIT License — https://github.com/shadcn-ui/ui
 * Lucide React icons — ISC License — https://github.com/lucide-icons/lucide
 
-All bundled third-party libraries are open-source and GPL-compatible.
+All bundled libraries are open-source and GPL-compatible.
 
 == Changelog ==
 
+= 1.0.2 =
+* Fix: Date picker calendar selection and event handling inside modal dialogs.
+* Fix: Prevent modal dismissal when interacting with portaled overlays.
+* Fix: Prevent text input focus from capturing keyboard typing in date fields.
+* Tweak: Add ArrowDown keyboard shortcut to open calendar picker.
+
 = 1.0.1 =
-* Fix: Adopt native %i identifier placeholders for all database table references in prepared SQL queries (WordPress 6.1+ compliance).
-* Fix: Controller-boundary input sanitization across REST API query parameters.
-* Fix: Remove deprecated print_emoji_styles handler before rendering standalone SPA shell.
-* Fix: Guard pro-only timetable queries in attendance and portal services for clean free-tier activation.
+* Fix: Input sanitization at REST API controller boundaries.
+* Fix: Remove deprecated print_emoji_styles hook before rendering the SPA shell.
+* Fix: timetable queries in attendance and portal services
 
 = 1.0.0 =
-* Initial public release on WordPress.org.
-* Core academic structure (Sessions, Units, Groups, Subjects).
-* Student directory and guardian profile management.
-* Staff and faculty directory with native role assignments.
-* Daily student attendance marking and daily reports.
+* Initial release.
+* Academic structure: sessions, units, groups, subjects.
+* Student directory with guardian profile management.
+* Staff and faculty directory with role assignments.
+* Daily student attendance marking and reports.
 * Country presets for India, United States, and United Kingdom.
-* Localized typography and zero-telemetry architecture.
-
-== Upgrade Notice ==
-
-= 1.0.1 =
-Review revision: SQL query placeholders, input sanitization, and compatibility fixes.
-
-= 1.0.0 =
-Initial release of CodeClove School Management System.

@@ -67,20 +67,14 @@ export function Modal({
         <DialogPrimitive.Content
           ref={contentRef}
           onPointerDownOutside={(e) => {
-            const originalEvent = e.detail.originalEvent
-            if (contentRef.current && originalEvent) {
-              const rect = contentRef.current.getBoundingClientRect()
-              const { clientX, clientY } = originalEvent
-              if (
-                typeof clientX === 'number' &&
-                typeof clientY === 'number' &&
-                clientX >= rect.left &&
-                clientX <= rect.right &&
-                clientY >= rect.top &&
-                clientY <= rect.bottom
-              ) {
-                e.preventDefault()
-              }
+            const ev = e.detail.originalEvent
+            if (!contentRef.current || !ev) return
+            const rect = contentRef.current.getBoundingClientRect()
+            const inRect = typeof ev.clientX === 'number' && typeof ev.clientY === 'number' &&
+              ev.clientX >= rect.left && ev.clientX <= rect.right &&
+              ev.clientY >= rect.top && ev.clientY <= rect.bottom
+            if (inRect || (ev.target as HTMLElement)?.closest?.('[data-radix-popper-content-wrapper], [data-radix-focus-guard]')) {
+              e.preventDefault()
             }
           }}
           className={cn(
