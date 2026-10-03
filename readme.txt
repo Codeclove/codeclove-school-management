@@ -1,22 +1,23 @@
-=== CodeClove School Management System ===
+=== School Management System for WordPress – CodeClove ===
 Contributors: codeclove
 Tags: school management, student management, attendance, school erp, education management
+Donate link: https://codeclove.com/plugins/codeclove-school-management-pro/
 Requires at least: 6.5
-Tested up to: 7.1
+Tested up to: 7.1.2
 Requires PHP: 8.1
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-CodeClove School management plugin for WordPress. Manage student admissions, attendance, staff, fees, and academic sessions.
+school management for WordPress. Unlimited students, no monthly fees. Admissions, attendance, fees, and parent portal — free.
 
 == Description ==
 
-**CodeClove School Management System** is a WordPress plugin built for K-12 schools, coaching institutes, and colleges. It handles student records, staff directories, academic sessions, daily attendance, fee invoicing, and a parent-student self-service portal, all from your WordPress admin.
+**CodeClove School Management System** handles student records, staff directories, academic sessions, daily attendance, fee invoicing, and a parent-student self-service portal — all from your WordPress admin. No SaaS fees, no student caps, no data leaving your server.
 
-= Works out of the box for India, US, and UK =
+= Works worldwide — built-in presets for India, US, and UK =
 
-Pick your country during setup and the plugin configures grading conventions, phone formats, currency symbols, academic terms, and date formats automatically. One click, not a settings marathon.
+Pick your country during setup and the plugin configures grading conventions, phone formats, currency symbols, academic terms, and date formats automatically. Built-in presets cover India (CBSE/ICSE), United States (K-12), and United Kingdom (Key Stages). Every setting is fully customizable for any other country or curriculum.
 
 = Free features =
 
@@ -41,7 +42,7 @@ Pick your country during setup and the plugin configures grading conventions, ph
 
 = School Management Pro =
 
-The free plugin covers daily operations. [School Management Pro](https://codeclove.com/) adds:
+The free plugin covers daily operations. [School Management Pro](https://codeclove.com/plugins/codeclove-school-management-pro/) is **$59/year** and adds:
 
 * **Revenue analytics.** Fee collection graphs, forecasting, and payment mode breakdowns.
 * **Defaulter tracking.** Automatic overdue invoice reports.
@@ -82,6 +83,14 @@ WordPress 6.5 or later and PHP 8.1 or later.
 
 Yes. The academic structure, sessions, groups, and subjects work for any teaching institution.
 
+= Does it work for Indian schools with CBSE or ICSE curriculum? =
+
+Yes. Select the India preset during setup and the plugin configures INR currency, Indian phone formats, and CBSE/ICSE class naming automatically. The plugin also works for any other country — all terminology, currency, date formats, and academic structure are fully customizable.
+
+= Is there a free version available? =
+
+Yes — this is the free version. Download it directly from WordPress.org. There are no hidden paywalls, no student caps, and no trial period. [School Management Pro](https://codeclove.com/plugins/codeclove-school-management-pro/) is an optional upgrade that adds online payments, timetable builder, SMS notifications, and revenue analytics.
+
 == Screenshots ==
 
 1. Dashboard — attendance summaries, key metrics, and recent activity at a glance.
@@ -111,6 +120,12 @@ Third-party libraries in the compiled output:
 All bundled libraries are open-source and GPL-compatible.
 
 == Changelog ==
+
+= 1.0.3 =
+* Tweak: Improved readme short description to fit WordPress.org 150-character limit.
+* Tweak: Corrected "Tested up to" version to 7.1.2.
+* Tweak: Updated plugin tags: replaced learning management and fees management with school erp and education management.
+* Tweak: Added Donate link pointing to Pro upgrade page.
 
 = 1.0.2 =
 * Fix: Date picker calendar selection and event handling inside modal dialogs.

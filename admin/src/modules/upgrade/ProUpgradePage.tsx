@@ -102,21 +102,22 @@ export default function ProUpgradePage() {
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8 animate-fade-in">
       {/* ─── Hero Header ──────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand via-brand-strong to-indigo-700 text-white p-8 md:p-10 shadow-lg">
-        <div className="relative z-10 max-w-3xl space-y-4">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand via-brand-strong to-indigo-700 text-white p-8 md:p-12 shadow-lg">
+        <div className="relative z-10 space-y-5">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/20 text-white backdrop-blur-sm">
             <Sparkles size={14} className="text-amber-300" />
             {__( 'School Management Pro Upgrade', 'codeclove-school-management' )}
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
-            {__( 'Run Your Entire School on Autopilot with Pro', 'codeclove-school-management' )}
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            {__( 'Online Payments, SMS Alerts, Finance Analytics & Overdue Invoice Reports — Built to Get Your School Paid on Time', 'codeclove-school-management' )}
           </h1>
 
-          <p className="text-base md:text-lg text-white/90 leading-relaxed max-w-2xl">
-            {__( 'Collect fees online, build clash-free timetables, and send automated SMS alerts. All your existing student and academic records remain intact.', 'codeclove-school-management' )}
+          <p className="text-base md:text-lg text-white/85 leading-relaxed max-w-2xl">
+            {__( 'Collect fees online, build clash-free timetables, and alert parents by SMS. All your existing records carry over automatically.', 'codeclove-school-management' )}
           </p>
-          <div className="pt-2 flex flex-wrap items-center gap-4">
+
+          <div className="flex flex-wrap items-center gap-4 pt-1">
             <a
               href={proUrl}
               target="_blank"
@@ -127,16 +128,15 @@ export default function ProUpgradePage() {
               <span>{__( 'Upgrade to Pro Now', 'codeclove-school-management' )}</span>
               <ExternalLink size={15} />
             </a>
-
             <div className="flex items-center gap-2 text-xs text-white/80 font-medium">
-              <ShieldCheck size={16} className="text-emerald-300" />
-              <span>{__( '100% Data Preserved • 14-Day Money-Back Guarantee', 'codeclove-school-management' )}</span>
+              <ShieldCheck size={15} className="text-emerald-300 shrink-0" />
+              <span>{__( '$59/year · 100% Data Preserved · 14-Day Money-Back Guarantee', 'codeclove-school-management' )}</span>
             </div>
           </div>
         </div>
 
-        {/* Ambient background decoration */}
-        <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -top-16 -right-16 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 right-40 w-56 h-56 bg-indigo-400/20 rounded-full blur-2xl pointer-events-none" />
       </div>
 
       {/* ─── Highlights Cards ─────────────────────────────────────────────────── */}
