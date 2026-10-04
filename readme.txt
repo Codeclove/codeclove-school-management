@@ -122,7 +122,6 @@ All bundled libraries are open-source and GPL-compatible.
 == Changelog ==
 
 = 1.0.4 =
-* Maintenance: Added GitHub Actions deploy workflow for automated WordPress.org SVN releases.
 * Tweak: Force tag metadata re-index on WordPress.org.
 
 = 1.0.3 =
