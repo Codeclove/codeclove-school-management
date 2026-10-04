@@ -5,7 +5,7 @@ Donate link: https://codeclove.com/plugins/codeclove-school-management-pro/
 Requires at least: 6.5
 Tested up to: 7.1.2
 Requires PHP: 8.1
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,10 @@ Third-party libraries in the compiled output:
 All bundled libraries are open-source and GPL-compatible.
 
 == Changelog ==
+
+= 1.0.4 =
+* Maintenance: Added GitHub Actions deploy workflow for automated WordPress.org SVN releases.
+* Tweak: Force tag metadata re-index on WordPress.org.
 
 = 1.0.3 =
 * Tweak: Improved readme short description to fit WordPress.org 150-character limit.

@@ -1,0 +1,27 @@
+name: Test Deploy to WordPress.org (Dry Run)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to test (e.g. 1.0.4)'
+        required: true
+        default: '1.0.4'
+
+jobs:
+  dry-run-deploy:
+    name: Dry-Run Deployment Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Test WordPress.org Deployment
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        with:
+          dry-run: true
+        env:
+          SLUG: codeclove-school-management
+          VERSION: ${{ inputs.version || '1.0.4' }}
+          SVN_USERNAME: ${{ secrets.WPORG_USERNAME || secrets.SVN_USERNAME || 'codeclove' }}
+          SVN_PASSWORD: ${{ secrets.WPORG_PASSWORD || secrets.SVN_PASSWORD }}
