@@ -17,8 +17,8 @@ import {
 import { usePortal } from '../../lib/portal-context'
 import { useFinance } from '../../api/portal'
 import { formatCurrency, formatDate } from '../../lib/formatter'
-import { InvoiceDetailModal } from './InvoiceDetailModal'
-import { PaymentReceiptModal } from './PaymentReceiptModal'
+import { InvoiceStatementView } from './InvoiceStatementView'
+import { ReceiptSlipView } from './ReceiptSlipView'
 import type { Invoice, InvoicePayment } from '../../types'
 import {
   Badge,
@@ -62,6 +62,46 @@ export const FinancePage: React.FC = () => {
       }))
     )
   }, [invoices])
+
+  // Dedicated In-Page View 1: Receipt Slip View
+  if (selectedPayment) {
+    return (
+      <ReceiptSlipView
+        payment={selectedPayment}
+        invoice={selectedPayment.invoice || selectedInvoice}
+        currency={currency}
+        onBack={() => setSelectedPayment(null)}
+        onBackToInvoice={() => setSelectedPayment(null)}
+        onBackToLedger={() => {
+          setSelectedPayment(null)
+          setSelectedInvoice(null)
+        }}
+        onViewInvoice={(inv) => {
+          setSelectedPayment(null)
+          setSelectedInvoice(inv)
+        }}
+      />
+    )
+  }
+
+  // Dedicated In-Page View 2: Invoice Statement & Payment Dock View
+  if (selectedInvoice) {
+    return (
+      <InvoiceStatementView
+        invoice={selectedInvoice}
+        currency={currency}
+        onBack={() => setSelectedInvoice(null)}
+        onBackToLedger={() => setSelectedInvoice(null)}
+        onViewReceipt={(pmt) => {
+          setSelectedPayment({
+            ...pmt,
+            invoice: selectedInvoice,
+            invoice_number: selectedInvoice.invoice_number,
+          })
+        }}
+      />
+    )
+  }
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -400,31 +440,6 @@ export const FinancePage: React.FC = () => {
         </>
       )}
 
-      {/* Invoice Detail Modal */}
-      {selectedInvoice && (
-        <InvoiceDetailModal
-          invoice={selectedInvoice}
-          currency={currency}
-          onClose={() => setSelectedInvoice(null)}
-          onViewReceipt={(pmt) => {
-            setSelectedPayment({
-              ...pmt,
-              invoice: selectedInvoice,
-              invoice_number: selectedInvoice.invoice_number,
-            })
-          }}
-        />
-      )}
-
-      {/* Payment Receipt Modal */}
-      {selectedPayment && (
-        <PaymentReceiptModal
-          payment={selectedPayment}
-          invoice={selectedPayment.invoice}
-          currency={currency}
-          onClose={() => setSelectedPayment(null)}
-        />
-      )}
     </div>
   )
 }

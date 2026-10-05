@@ -62,9 +62,7 @@ final class SettingsRepository {
 			if ( ! empty( $settings['notifications']['smtp_password'] ) ) {
 				$settings['notifications']['smtp_password'] = '********';
 			}
-		if ( class_exists( SmsSettingsPro::class ) ) {
-			SmsSettingsPro::mask_settings( $settings );
-		}
+			$settings = apply_filters( 'codeclove_mask_settings', $settings );
 		}
 
 		return $settings;
@@ -91,10 +89,7 @@ final class SettingsRepository {
 			}
 		}
 
-		// Handle SMS provider credential masking (Pro-only keys).
-		if ( class_exists( SmsSettingsPro::class ) ) {
-			SmsSettingsPro::restore_masked_settings( $settings, $current );
-		}
+		$settings = apply_filters( 'codeclove_restore_masked_settings', $settings, $current );
 
 		$merged  = $this->deep_merge( $current, $settings );
 
@@ -119,7 +114,7 @@ final class SettingsRepository {
 	 * @return array
 	 */
 	public function get_defaults(): array {
-		return [
+		$defaults = [
 			'schema_version'   => CODECLOVE_DB_VERSION,
 			'plugin_version'   => CODECLOVE_VERSION,
 			'school'           => [
@@ -291,9 +286,24 @@ final class SettingsRepository {
 						'send_to_guardian' => true,
 					],
 				],
-				...( class_exists( SmsSettingsPro::class ) ? SmsSettingsPro::get_defaults() : [] ),
+			],
+			'payment_methods'  => [
+				'cash'          => true,
+				'bank_transfer' => true,
+				'cheque'        => true,
+				'card'          => true,
+				'upi'           => true,
+				'other'         => true,
+			],
+			'payment_gateways' => [
+				'gateway_order' => [],
 			],
 		];
+
+		$defaults['notifications']    = apply_filters( 'codeclove_notification_settings_defaults', $defaults['notifications'] );
+		$defaults['payment_gateways'] = apply_filters( 'codeclove_payment_gateway_settings_defaults', $defaults['payment_gateways'] );
+
+		return $defaults;
 	}
 
 	/**

@@ -13,6 +13,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
+  LifeBuoy,
   LayoutDashboard,
   GraduationCap,
   CalendarDays,
@@ -31,7 +32,6 @@ import {
   CreditCard,
   Settings,
   ChevronDown,
-  Clock,
   AlertTriangle,
   RefreshCw,
   Megaphone,
@@ -56,6 +56,8 @@ import { IS_MAC } from './Header'
 interface NavItem  { label: string; to: string; icon: LucideIcon; permission?: PermissionKey; end?: boolean; pro?: boolean }
 interface NavGroup { id: string; label: string; icon: LucideIcon; items: NavItem[] }
 
+import { useFeedbackModal } from '@/lib/feedback-context'
+import { proNavItems } from '@/pro'
 interface SidebarProps {
   isMobileOpen?: boolean
   onCloseMobile?: () => void
@@ -64,6 +66,7 @@ interface SidebarProps {
 // ─── Sidebar Component ────────────────────────────────────────────────────────
 
 export default function Sidebar({ isMobileOpen = false, onCloseMobile }: SidebarProps) {
+  const { openFeedback } = useFeedbackModal()
   const { getLabel } = useLabels()
   const location = useLocation()
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
@@ -117,6 +120,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
   const { can } = usePermissions()
 
   const isPro = window.CodeCloveConfig?.isPro ?? false
+  const helpLabel = isPro ? __( 'Help & Feedback', 'codeclove-school-management' ) : __( 'Help & Support', 'codeclove-school-management' )
 
   // Navigation groups and items matching docs/NAVIGATION.md
   const rawNavGroups: NavGroup[] = [
@@ -127,7 +131,6 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
         { label: getLabel('academic_unit',  true, __( 'Classes', 'codeclove-school-management' )),                to: ROUTES.UNITS,     icon: BookOpen,     permission: PERMISSIONS.UNITS_VIEW },
         { label: getLabel('academic_group', true, __( 'Sections', 'codeclove-school-management' )),               to: ROUTES.GROUPS,    icon: Layers,        permission: PERMISSIONS.GROUPS_VIEW },
         { label: getLabel('subject',        true, __( 'Subjects', 'codeclove-school-management' )),               to: ROUTES.SUBJECTS,  icon: BookMarked,    permission: PERMISSIONS.SUBJECTS_VIEW },
-        { label: __( 'Timetable', 'codeclove-school-management' ),                                                to: ROUTES.TIMETABLE, icon: Clock,        permission: PERMISSIONS.TIMETABLE_VIEW, end: true, pro: true },
       ],
     },
     {
@@ -158,7 +161,15 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
       ],
     },
   ]
-  const resolvedNavGroups = rawNavGroups
+  const mergedNavGroups = rawNavGroups.map((group) => {
+    const extraProItems = proNavItems.filter((item) => item.groupId === group.id)
+    if (!extraProItems.length) return group
+    return {
+      ...group,
+      items: [...group.items, ...extraProItems],
+    }
+  })
+  const resolvedNavGroups = mergedNavGroups
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => (!item.pro || isPro) && (!item.permission || can(item.permission))),
@@ -269,6 +280,33 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
               </NavLink>
             )
           )}
+          {/* Help & Feedback Button */}
+          {sidebarCollapsed ? (
+            <Tooltip content={helpLabel} side={isRtl() ? 'left' : 'right'}>
+              <div className="w-full flex justify-center py-0.5">
+                <button
+                  type="button"
+                  onClick={() => openFeedback()}
+                  className="w-9 h-9 mx-auto flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-hover-bg transition-colors duration-150 cursor-pointer"
+                  aria-label={helpLabel}
+                >
+                  <LifeBuoy size={16} className="text-text-subtle hover:text-text" />
+                </button>
+              </div>
+            </Tooltip>
+          ) : (
+            <button
+              type="button"
+              onClick={() => openFeedback()}
+              className="w-full flex items-center rounded-md px-2.5 py-1.5 gap-2.5 text-sm text-text-muted hover:text-text hover:bg-hover-bg transition-colors duration-150 group cursor-pointer"
+            >
+              <LifeBuoy size={16} className="flex-shrink-0 text-text-subtle group-hover:text-text transition-colors" />
+              <span className="text-sm leading-snug sidebar-link-text truncate min-w-0">
+                {helpLabel}
+              </span>
+            </button>
+          )}
+
           {can(PERMISSIONS.SETTINGS_MANAGE) && (
             <SidebarLink
               to={ROUTES.SETTINGS}

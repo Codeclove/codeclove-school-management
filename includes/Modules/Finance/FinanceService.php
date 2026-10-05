@@ -52,12 +52,12 @@ final class FinanceService {
 	/**
 	 * Valid payment method values.
 	 */
-	private const VALID_METHODS = [ 'cash', 'bank_transfer', 'cheque', 'upi', 'card', 'other' ];
+	public const VALID_METHODS = [ 'cash', 'bank_transfer', 'cheque', 'upi', 'card', 'paypal', 'other' ];
 
 	/**
 	 * Valid payment source values (manual vs future gateway).
 	 */
-	private const VALID_SOURCES = [ 'manual', 'razorpay', 'stripe' ];
+	public const VALID_SOURCES = [ 'manual', 'razorpay', 'stripe', 'paypal' ];
 
 	public function __construct() {
 		// ponytail: resolve once here; SettingsRepository is cheap but repeating it per-method is noise
@@ -1241,10 +1241,11 @@ final class FinanceService {
 		}
 
 		// Validate payment method.
-		$method = ! empty( $payload['method'] ) ? sanitize_text_field( $payload['method'] ) : 'cash';
-		if ( ! in_array( $method, self::VALID_METHODS, true ) ) {
+		$method        = ! empty( $payload['method'] ) ? sanitize_text_field( $payload['method'] ) : 'cash';
+		$valid_methods = apply_filters( 'codeclove_valid_payment_methods', self::VALID_METHODS );
+		if ( ! in_array( $method, $valid_methods, true ) ) {
 			/* translators: %s: allowed payment methods */
-			return new WP_Error( 'invalid_field', sprintf( __( 'Invalid method. Allowed: %s.', 'codeclove-school-management' ), implode( ', ', self::VALID_METHODS ) ), 400 );
+			return new WP_Error( 'invalid_field', sprintf( __( 'Invalid method. Allowed: %s.', 'codeclove-school-management' ), implode( ', ', $valid_methods ) ), 400 );
 		}
 
 		$invoices_table = Schema::invoices();
@@ -1313,7 +1314,9 @@ final class FinanceService {
 				'amount_minor'        => $amount_minor,
 				'currency'            => $invoice['currency'],
 				'method'              => $method, // validated above
-				'payment_source'      => 'manual', // ponytail: gateway sources written by gateway adapters in V2
+				'payment_source'      => ! empty( $payload['payment_source'] ) && in_array( $payload['payment_source'], apply_filters( 'codeclove_valid_payment_sources', self::VALID_SOURCES ), true )
+					? sanitize_text_field( $payload['payment_source'] )
+					: 'manual',
 				'status'              => 'completed',
 				'paid_on'             => ! empty( $payload['paid_on'] ) ? sanitize_text_field( $payload['paid_on'] ) : current_time( 'Y-m-d' ),
 				'reference'           => ! empty( $payload['reference'] ) ? sanitize_text_field( $payload['reference'] ) : null,
@@ -2248,6 +2251,10 @@ final class FinanceService {
 		$ids = array_map( 'intval', $ids );
 
 		if ( 'send_reminders' === $action ) {
+			$handled = apply_filters( 'codeclove_finance_bulk_send_reminders', null, $ids );
+			if ( null !== $handled ) {
+				return $handled;
+			}
 			if ( ! class_exists( '\\CodeClove\\Modules\\Notifications\\NotificationsService' ) ) {
 				return new WP_Error( 'codeclove_pro_required', __( 'SMS reminders require the Pro version.', 'codeclove-school-management' ), [ 'status' => 403 ] );
 			}

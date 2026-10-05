@@ -1196,21 +1196,23 @@ export default function StudentProfilePage() {
 
                     {/* Finance Sub-tabs & Filter bar */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-                      <div className="bg-bg-base/60 dark:bg-bg-base/30 border border-border/60 rounded-xl p-1 inline-flex items-center gap-1 self-start">
+                      <div className="p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 inline-flex items-center gap-1 self-start text-xs font-medium">
                         <button
                           type="button"
                           onClick={() => setFinanceTab('ledger')}
                           className={cn(
-                            'inline-flex items-center justify-center gap-2 font-medium text-xs rounded-lg transition-all h-8 px-3.5 select-none',
+                            'inline-flex items-center justify-center gap-2 font-medium text-xs rounded-lg transition-all h-8 px-3.5 select-none cursor-pointer',
                             financeTab === 'ledger'
-                              ? 'bg-bg-surface text-text shadow-xs border border-border/40 font-semibold'
-                              : 'text-text-muted hover:text-text hover:bg-bg-surface/50'
+                              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold shadow-xs border border-slate-200/80 dark:border-slate-700'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/40 dark:hover:bg-slate-800/60'
                           )}
                         >
                           <span>{__( 'Invoice Ledger', 'codeclove-school-management' )}</span>
                           <span className={cn(
-                            'text-3xs px-1.5 py-0.5 rounded-full font-mono font-bold',
-                            financeTab === 'ledger' ? 'bg-brand-dim text-brand' : 'bg-bg-overlay/20 text-text-muted'
+                            'px-1.5 py-0.2 rounded-full text-[10px] font-bold font-mono',
+                            financeTab === 'ledger'
+                              ? 'bg-primary/10 text-primary'
+                              : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                           )}>
                             {filteredInvoices.length}
                           </span>
@@ -1219,16 +1221,18 @@ export default function StudentProfilePage() {
                           type="button"
                           onClick={() => setFinanceTab('history')}
                           className={cn(
-                            'inline-flex items-center justify-center gap-2 font-medium text-xs rounded-lg transition-all h-8 px-3.5 select-none',
+                            'inline-flex items-center justify-center gap-2 font-medium text-xs rounded-lg transition-all h-8 px-3.5 select-none cursor-pointer',
                             financeTab === 'history'
-                              ? 'bg-bg-surface text-text shadow-xs border border-border/40 font-semibold'
-                              : 'text-text-muted hover:text-text hover:bg-bg-surface/50'
+                              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold shadow-xs border border-slate-200/80 dark:border-slate-700'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/40 dark:hover:bg-slate-800/60'
                           )}
                         >
                           <span>{__( 'Payment History', 'codeclove-school-management' )}</span>
                           <span className={cn(
-                            'text-3xs px-1.5 py-0.5 rounded-full font-mono font-bold',
-                            financeTab === 'history' ? 'bg-success-dim text-success' : 'bg-bg-overlay/20 text-text-muted'
+                            'px-1.5 py-0.2 rounded-full text-[10px] font-bold font-mono',
+                            financeTab === 'history'
+                              ? 'bg-primary/10 text-primary'
+                              : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                           )}>
                             {payments.length}
                           </span>

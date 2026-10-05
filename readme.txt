@@ -5,7 +5,7 @@ Donate link: https://codeclove.com/plugins/codeclove-school-management-pro/
 Requires at least: 6.5
 Tested up to: 7.1.2
 Requires PHP: 8.1
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -33,12 +33,6 @@ Pick your country during setup and the plugin configures grading conventions, ph
 * **Command palette.** Global search across students, staff, pages, and shortcuts.
 * **Dark mode.** Full dark theme for the admin interface.
 * **Zero tracking.** No Google Fonts, no external CDNs, no analytics calls. Everything loads from your server.
-
-= Security =
-
-* All database tables use your WordPress table prefix.
-* Every REST API endpoint has a `permission_callback` and nonce verification.
-* Role-based access control on all student and academic data.
 
 = School Management Pro =
 
@@ -120,9 +114,9 @@ Third-party libraries in the compiled output:
 All bundled libraries are open-source and GPL-compatible.
 
 == Changelog ==
-
-= 1.0.4 =
-* Tweak: Force tag metadata re-index on WordPress.org.
+= 1.0.5 =
+* Feature: Enhanced student admissions and portal workflow.
+* Tweak: Updated compatibility and core asset optimizations.
 
 = 1.0.3 =
 * Tweak: Improved readme short description to fit WordPress.org 150-character limit.

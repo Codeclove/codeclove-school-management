@@ -80,6 +80,7 @@ final class SettingsValidator {
 			'appearance',
 			'system',
 			'notifications',
+			'payment_gateways',
 		];
 		$error = $this->reject_unknown_keys( $payload, $allowed_sections, 'settings' );
 		if ( $error ) {
@@ -107,6 +108,8 @@ final class SettingsValidator {
 				'appearance'       => $this->validate_appearance( $values ),
 				'system'           => $this->validate_system( $values ),
 				'notifications'    => $this->validate_notifications( $values ),
+				'payment_methods'  => $this->validate_payment_methods( $values ),
+				'payment_gateways' => $this->validate_payment_gateways( $values ),
 				default            => [],
 			};
 
@@ -661,8 +664,8 @@ final class SettingsValidator {
 			'smtp_username',
 			'smtp_password',
 			'templates',
-			...( class_exists( SmsSettingsPro::class ) ? SmsSettingsPro::get_allowed_keys() : [] ),
 		];
+		$allowed_fields = apply_filters( 'codeclove_notification_allowed_keys', $allowed_fields );
 		$error = $this->reject_unknown_keys( $values, $allowed_fields, 'notifications' );
 		if ( $error ) {
 			return $error;
@@ -823,12 +826,9 @@ final class SettingsValidator {
 			}
 		}
 
-		if ( class_exists( SmsSettingsPro::class ) ) {
-			$sms = SmsSettingsPro::validate( $values );
-			if ( $sms instanceof \WP_Error ) {
-				return $sms;
-			}
-			$result = array_merge( $result, $sms );
+		$result = apply_filters( 'codeclove_validate_notifications', $result, $values );
+		if ( $result instanceof \WP_Error ) {
+			return $result;
 		}
 
 		return $result;
@@ -952,7 +952,66 @@ final class SettingsValidator {
 
 		return null;
 	}
+	/**
+	 * Validates payment gateways configuration.
+	 *
+	 * @param array $values
+	 * @return array|WP_Error
+	 */
+	private function validate_payment_gateways( array $values ): array|WP_Error {
+		$allowed_gateways = apply_filters( 'codeclove_allowed_payment_gateways', [ 'gateway_order' ] );
+		$error = $this->reject_unknown_keys( $values, $allowed_gateways, 'payment_gateways' );
+		if ( $error ) {
+			return $error;
+		}
 
+		$validated = [];
+
+		if ( isset( $values['gateway_order'] ) ) {
+			if ( ! is_array( $values['gateway_order'] ) ) {
+				return $this->invalid( 'payment_gateways.gateway_order', 'must be an array.' );
+			}
+			$allowed_ids = apply_filters( 'codeclove_allowed_gateway_ids', [ 'paypal', 'stripe' ] );
+			$order = [];
+			foreach ( $values['gateway_order'] as $item ) {
+				$clean = sanitize_key( (string) $item );
+				if ( in_array( $clean, $allowed_ids, true ) && ! in_array( $clean, $order, true ) ) {
+					$order[] = $clean;
+				}
+			}
+			$validated['gateway_order'] = $order;
+		}
+
+		$validated = apply_filters( 'codeclove_validate_payment_gateways', $validated, $values );
+		if ( $validated instanceof WP_Error ) {
+			return $validated;
+		}
+
+		return $validated;
+	}
+
+	/**
+	 * Validates counter/desk payment methods configuration.
+	 *
+	 * @param array $values
+	 * @return array|WP_Error
+	 */
+	private function validate_payment_methods( array $values ): array|WP_Error {
+		$allowed_methods = [ 'cash', 'bank_transfer', 'cheque', 'card', 'upi', 'other' ];
+		$error           = $this->reject_unknown_keys( $values, $allowed_methods, 'payment_methods' );
+		if ( $error ) {
+			return $error;
+		}
+
+		$validated = [];
+		foreach ( $allowed_methods as $method ) {
+			if ( isset( $values[ $method ] ) ) {
+				$validated[ $method ] = (bool) $values[ $method ];
+			}
+		}
+
+		return $validated;
+	}
 	/**
 	 * Creates a consistent REST validation error.
 	 */

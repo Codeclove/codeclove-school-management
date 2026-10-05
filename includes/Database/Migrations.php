@@ -18,6 +18,11 @@ declare( strict_types=1 );
 
 namespace CodeClove\Database;
 
+// Prevent direct file access.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Class Migrations
  */
@@ -59,9 +64,7 @@ final class Migrations {
 		self::migrate_staff_tables( $charset_collate );
 		self::migrate_attendance_tables( $charset_collate );
 		self::migrate_finance_tables( $charset_collate );
-		if ( class_exists( ProMigrations::class ) ) {
-			ProMigrations::run( $charset_collate );
-		}
+		do_action( 'codeclove_run_migrations_db', $charset_collate );
 
 
 
@@ -720,6 +723,7 @@ final class Migrations {
   KEY idx_fee_type (fee_type_id),
   KEY idx_unit (academic_unit_id)
 ) $cc;" );
+
 	}
 
 	// ─── Private Helpers ─────────────────────────────────────────────────────

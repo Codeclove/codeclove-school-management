@@ -102,7 +102,6 @@ final class RolesSeeder implements SeederInterface {
 			'academic_units.view', 'academic_units.add', 'academic_units.edit', 'academic_units.delete',
 			'academic_groups.view', 'academic_groups.add', 'academic_groups.edit', 'academic_groups.delete',
 			'subjects.view', 'subjects.add', 'subjects.edit', 'subjects.delete',
-			'timetable.view', 'timetable.add', 'timetable.edit', 'timetable.delete', 'timetable.substitute',
 			'students.view', 'students.add', 'students.edit', 'students.delete',
 			'guardians.view', 'guardians.add', 'guardians.edit', 'guardians.delete',
 			'admissions.view', 'admissions.add', 'admissions.edit', 'admissions.delete', 'admissions.approve', 'admissions.convert',
@@ -118,7 +117,7 @@ final class RolesSeeder implements SeederInterface {
 			'payments.view', 'payments.add', 'payments.edit', 'payments.delete',
 			'settings.manage', 'roles_permissions.manage', 'notifications.manage',
 			'imports.manage', 'exports.manage', 'system.manage',
-			'students.promote', 'finance.view', 'dashboard.view',
+			'finance.view', 'dashboard.view',
 		],
 		'admissions_officer' => [
 			'students.view', 'students.add', 'students.edit',
@@ -133,11 +132,10 @@ final class RolesSeeder implements SeederInterface {
 			'academic_units.view', 'academic_units.add', 'academic_units.edit', 'academic_units.delete',
 			'academic_groups.view', 'academic_groups.add', 'academic_groups.edit', 'academic_groups.delete',
 			'subjects.view', 'subjects.add', 'subjects.edit', 'subjects.delete',
-			'timetable.view', 'timetable.add', 'timetable.edit', 'timetable.delete', 'timetable.substitute',
-			'students.view', 'students.promote', 'dashboard.view',
+			'dashboard.view',
 		],
 		'teacher'            => [
-			'academic_sessions.view', 'academic_terms.view', 'academic_units.view', 'academic_groups.view', 'subjects.view', 'timetable.view',
+			'academic_sessions.view', 'academic_terms.view', 'academic_units.view', 'academic_groups.view', 'subjects.view',
 			'students.view',
 			'attendance.view', 'attendance.add', 'attendance.edit', 'dashboard.view',
 		],
@@ -163,7 +161,7 @@ final class RolesSeeder implements SeederInterface {
 			'students.view', 'dashboard.view',
 		],
 		'readonly_staff'     => [
-			'academic_sessions.view', 'academic_terms.view', 'academic_units.view', 'academic_groups.view', 'subjects.view', 'timetable.view',
+			'academic_sessions.view', 'academic_terms.view', 'academic_units.view', 'academic_groups.view', 'subjects.view',
 			'students.view', 'guardians.view', 'admissions.view', 'staff.view', 'fee_types.view', 'invoices.view', 'payments.view', 'dashboard.view',
 		],
 	];
@@ -182,8 +180,9 @@ final class RolesSeeder implements SeederInterface {
 		global $wpdb;
 
 // phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$role_permissions = apply_filters( 'codeclove_role_permissions', self::ROLE_PERMISSIONS );
+
 		foreach ( self::ROLES as $role ) {
-			// Check if role already exists.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Role existence check.
 			$existing_id = $wpdb->get_var(
 				$wpdb->prepare(
@@ -201,8 +200,8 @@ final class RolesSeeder implements SeederInterface {
 			}
 
 			// Seed permissions for this role.
-			if ( isset( self::ROLE_PERMISSIONS[ $role['slug'] ] ) ) {
-				foreach ( self::ROLE_PERMISSIONS[ $role['slug'] ] as $permission ) {
+			if ( isset( $role_permissions[ $role['slug'] ] ) ) {
+				foreach ( $role_permissions[ $role['slug'] ] as $permission ) {
 					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Role permission insert ignore.
 					$wpdb->query(
 						$wpdb->prepare(

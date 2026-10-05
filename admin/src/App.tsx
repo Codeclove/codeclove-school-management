@@ -2,6 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Component, type ReactNode } from 'react'
 import { ThemeProvider, useTheme } from './lib/theme'
+import { FeedbackProvider, useFeedbackModal } from './lib/feedback-context'
+import FeedbackModal from './components/feedback/FeedbackModal'
+import { __ } from './lib/i18n'
 import AppShell from './layouts/AppShell'
 import DashboardPage   from './modules/dashboard/DashboardPage'
 import SettingsPage    from './modules/settings/SettingsPage'
@@ -9,8 +12,7 @@ import SessionsPage    from './modules/academics/SessionsPage'
 import UnitsPage       from './modules/academics/UnitsPage'
 import GroupsPage      from './modules/academics/GroupsPage'
 import SubjectsPage    from './modules/academics/SubjectsPage'
-import TimetablePage   from './modules/timetable/TimetablePage'
-import SubstitutePage  from './modules/timetable/SubstitutePage'
+import { proRoutes } from './pro'
 import StudentDirectoryPage from './modules/students/StudentDirectoryPage'
 import StudentAdmitPage from './modules/students/StudentAdmitPage'
 import StudentImportPage from './modules/students/StudentImportPage'
@@ -124,7 +126,8 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <ConfirmProvider>
-            <AppearanceSync />
+            <FeedbackProvider>
+              <AppearanceSync />
             <HashRouter>
               <ErrorBoundary>
                 <Routes>
@@ -138,12 +141,9 @@ export default function App() {
               <Route path={ROUTES.UNITS}      element={<UnitsPage />} />
               <Route path={ROUTES.GROUPS}     element={<GroupsPage />} />
               <Route path={ROUTES.SUBJECTS}   element={<SubjectsPage />} />
-              {isPro && (
-                <>
-                  <Route path={ROUTES.TIMETABLE}  element={<TimetablePage />} />
-                  <Route path="/academics/timetable/substitutes" element={<SubstitutePage />} />
-                </>
-              )}
+              {isPro && proRoutes.map((route) => (
+                <Route key={route.path} path={route.path} element={route.element} />
+              ))}
 
               {/* ── Students ──────────────────────────────────────────── */}
               <Route path={ROUTES.STUDENT_DIRECTORY} element={<StudentDirectoryPage />} />
@@ -209,8 +209,10 @@ export default function App() {
 
             <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
                 </Routes>
+                <FeedbackModal />
               </ErrorBoundary>
             </HashRouter>
+            </FeedbackProvider>
           </ConfirmProvider>
       </ToastProvider>
     </QueryClientProvider>
@@ -285,14 +287,44 @@ export class ErrorBoundary extends Component<
           <p className="text-sm text-text-muted">
             {this.state.error?.message ?? 'An unexpected error occurred.'}
           </p>
-          <button
-            onClick={() => this.setState({ hasError: false })}
-            className="text-sm text-brand hover:text-brand-strong"
-          >
-            Try again
-          </button>
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={() => this.setState({ hasError: false })}
+              className="text-sm text-brand hover:text-brand-strong"
+            >
+              Try again
+            </button>
+            <ReportCrashButton error={this.state.error} />
+          </div>
         </div>
       </div>
     )
   }
+}
+
+function ReportCrashButton({ error }: { error?: Error }) {
+  const { openFeedback } = useFeedbackModal()
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        openFeedback({
+          type: 'bug',
+          priority: 'p0',
+          initialTitle: error?.message ? `Fatal Crash: ${error.message}` : 'Application Crash',
+          initialDescription: `The application crashed with the following error:
+
+${error?.message || 'Unknown error'}
+
+Stack:
+${error?.stack || 'N/A'}`,
+          errorStack: error?.stack,
+          area: 'General',
+        })
+      }
+      className="text-sm text-text-muted hover:text-text-primary underline underline-offset-2"
+    >
+      {__( 'Report this issue', 'codeclove-school-management' )}
+    </button>
+  )
 }

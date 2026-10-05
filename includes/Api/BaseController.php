@@ -63,6 +63,9 @@ abstract class BaseController extends WP_REST_Controller {
 			return false;
 		}
 
+		if ( ! apply_filters( 'codeclove_check_permission', true, $permission, $request ) ) {
+			return false;
+		}
 		// CSRF nonce verification for cookie-authenticated requests.
 		if ( ! $this->verify_nonce( $request ) ) {
 			return false;
@@ -140,6 +143,9 @@ abstract class BaseController extends WP_REST_Controller {
 	 */
 	protected function authenticated(): callable {
 		return function ( ?WP_REST_Request $request = null ): bool {
+			if ( ! apply_filters( 'codeclove_check_logged_in', true, $request ) ) {
+				return false;
+			}
 
 			return is_user_logged_in()
 				&& $this->verify_nonce( $request );

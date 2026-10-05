@@ -56,6 +56,7 @@ final class Assets {
 			exit;
 		}
 
+		do_action( 'codeclove_admin_spa_access' );
 
 		// Students, guardians, and users without staff permissions must never access the admin SPA.
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -180,6 +181,7 @@ final class Assets {
 			'version'     => $version,
 			'devMode'     => (bool) $is_dev_mode,
 			'isPro'       => (bool) $is_pro,
+			'license'     => \CodeClove\Modules\Settings\SystemReportService::get_sanitized_license_info(),
 			'proUrl'      => $pro_url,
 			'permissions' => $permissions,
 			'locale'      => str_replace( '_', '-', determine_locale() ),

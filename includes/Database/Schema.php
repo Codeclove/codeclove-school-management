@@ -68,10 +68,7 @@ final class Schema {
 	public static function invoices(): string              { return self::t( 'invoices' ); }
 	public static function line_items(): string            { return self::t( 'invoice_line_items' ); }
 	public static function payments(): string              { return self::t( 'payments' ); }
-
-	public static function timetable_periods(): string     { return self::t( 'timetable_periods' ); }
-	public static function timetable_slots(): string       { return self::t( 'timetable_slots' ); }
-	public static function timetable_substitutes(): string { return self::t( 'timetable_substitutes' ); }
+	public static function activity_logs(): string         { return self::t( 'audit_logs' ); }
 	// ─── All Tables Accessor ──────────────────────────────────────────────────
 
 	/**
@@ -80,7 +77,7 @@ final class Schema {
 	 * @return string[]
 	 */
 	public static function all(): array {
-		return [
+		$tables = [
 			self::sessions(),
 			self::terms(),
 			self::units(),
@@ -95,6 +92,7 @@ final class Schema {
 			self::app_documents(),
 			self::app_notes(),
 			self::app_logs(),
+			self::notifications(),
 			self::students(),
 			self::student_subjects(),
 			self::guardians(),
@@ -113,6 +111,8 @@ final class Schema {
 			self::line_items(),
 			self::payments(),
 		];
+
+		return apply_filters( 'codeclove_database_tables', $tables );
 	}
 
 	// ─── Private Helpers ─────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ final class Schema {
 	 *
 	 * @param string $name Short table name (without wp_ or codeclove_).
 	 */
-	private static function t( string $name ): string {
+	public static function t( string $name ): string {
 		global $wpdb;
 		return $wpdb->prefix . 'codeclove_' . $name;
 	}

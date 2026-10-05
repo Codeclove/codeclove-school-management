@@ -68,9 +68,6 @@ $codeclove_tables = [
 	'invoices',
 	'invoice_line_items',
 	'payments',
-	'timetable_periods',
-	'timetable_slots',
-	'timetable_substitutes',
 	'notifications',
 ];
 

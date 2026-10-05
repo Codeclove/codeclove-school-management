@@ -78,10 +78,16 @@ export default function NoticeboardPage() {
   const toast = useToast()
   const { formatDate } = useFormatter()
 
-  const audiences = useMemo(() => [
+  const formAudiences = useMemo(() => [
     { value: 'portal', label: __('Students & Guardians (Portal)', 'codeclove-school-management') },
     { value: 'staff',  label: __('Staff & Faculty', 'codeclove-school-management') },
     { value: 'all',    label: __('Everyone (Portal + Staff)', 'codeclove-school-management') },
+  ], [])
+
+  const audienceFilterOptions = useMemo(() => [
+    { value: 'all',    label: __('All Audiences', 'codeclove-school-management') },
+    { value: 'portal', label: __('Students & Guardians (Portal)', 'codeclove-school-management') },
+    { value: 'staff',  label: __('Staff & Faculty', 'codeclove-school-management') },
   ], [])
 
   const eventTypes = useMemo(() => [
@@ -265,7 +271,7 @@ export default function NoticeboardPage() {
               <Select
                 value={audienceFilter}
                 onValueChange={setAudienceFilter}
-                options={[{ value: 'all', label: __('All Audiences', 'codeclove-school-management') }, ...audiences]}
+                options={audienceFilterOptions}
                 className="text-xs w-48"
               />
 
@@ -283,7 +289,20 @@ export default function NoticeboardPage() {
       {/* ─── Data Table & Async States ───────────────────────────────────────── */}
       <Card className="border-border/80 shadow-card bg-bg-surface overflow-hidden">
         {isLoading ? (
-          <TableSkeleton columns={5} rows={5} />
+          <TableRoot responsiveMode="scroll">
+            <Thead>
+              <Tr>
+                <Th type="primary">{__('Notice', 'codeclove-school-management')}</Th>
+                <Th type="badge">{__('Audience', 'codeclove-school-management')}</Th>
+                <Th type="badge">{__('Category', 'codeclove-school-management')}</Th>
+                <Th type="date">{__('Date Posted', 'codeclove-school-management')}</Th>
+                <Th type="actions">{__('Actions', 'codeclove-school-management')}</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              <TableSkeleton columns={5} rows={5} />
+            </Tbody>
+          </TableRoot>
         ) : isError ? (
           <div className="p-6">
             <Alert variant="danger">
@@ -437,7 +456,7 @@ export default function NoticeboardPage() {
               <Select
                 value={form.audience}
                 onValueChange={(val) => setForm((f) => ({ ...f, audience: val as 'portal' | 'staff' | 'all' }))}
-                options={audiences}
+                options={formAudiences}
               />
             </FormField>
 

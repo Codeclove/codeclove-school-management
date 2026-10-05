@@ -32,6 +32,15 @@ export interface CodeCloveConfigType {
   devMode?: boolean
   /** Whether running as full Pro plugin */
   isPro?: boolean
+  /** Active license state and summary */
+  license?: {
+    status: string
+    label: string
+    type: string
+    is_valid: boolean
+    expires?: string
+    masked_key?: string
+  }
   /** Upgrade to Pro target URL */
   proUrl?: string
   /** RBAC permissions list for the current user */

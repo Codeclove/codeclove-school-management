@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AlertTriangle, CreditCard, Calendar, DollarSign, Printer, CheckCircle2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
@@ -48,7 +48,7 @@ export default function RecordPaymentPage() {
 
   const invoiceLabel = getLabel('invoice', false, __('Invoice', 'codeclove-school-management'))
 
-  const paymentMethods = useMemo(() => [
+  const allPaymentMethods = useMemo(() => [
     { value: 'cash',          label: __('Cash', 'codeclove-school-management') },
     { value: 'bank_transfer', label: __('Bank Transfer', 'codeclove-school-management') },
     { value: 'cheque',        label: __('Cheque', 'codeclove-school-management') },
@@ -56,6 +56,15 @@ export default function RecordPaymentPage() {
     { value: 'card',          label: __('Card Swipe', 'codeclove-school-management') },
     { value: 'other',         label: __('Other', 'codeclove-school-management') },
   ], [])
+
+  const paymentMethods = useMemo(() => {
+    const config = settingsData?.payment_methods
+    if (!config) return allPaymentMethods
+    const filtered = allPaymentMethods.filter(
+      (m) => config[m.value as keyof typeof config] !== false
+    )
+    return filtered.length > 0 ? filtered : allPaymentMethods
+  }, [allPaymentMethods, settingsData?.payment_methods])
 
   const { data: invoice, isLoading, isError } = useInvoice(invoiceId)
   const recordPaymentMutation = useRecordPayment()
@@ -85,6 +94,14 @@ export default function RecordPaymentPage() {
   const methodValue = watch('method')
   const paidOnValue = watch('paidOn')
 
+  useEffect(() => {
+    if (paymentMethods.length > 0 && !paymentMethods.some((m) => m.value === methodValue)) {
+      const fallback = paymentMethods[0]?.value as PaymentFormValues['method'] | undefined
+      if (fallback) {
+        setValue('method', fallback)
+      }
+    }
+  }, [paymentMethods, methodValue, setValue])
   const onSubmit = (values: PaymentFormValues) => {
     if (!invoice) return
 

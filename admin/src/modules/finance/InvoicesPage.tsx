@@ -53,6 +53,8 @@ export default function InvoicesPage() {
   const toast = useToast()
   const confirm = useConfirm()
   const entity = useEntity('invoice')
+  const invoiceLabel = entity.singular
+  const invoiceLabelPlural = entity.plural
   const { getLabel } = useLabels()
   const { formatCurrency, formatDate } = useFormatter()
   const { session } = useSession()
@@ -226,8 +228,6 @@ export default function InvoicesPage() {
     )
   }
 
-  const invoiceLabel = entity.singular
-  const invoiceLabelPlural = entity.plural
   const studentLabel = getLabel('student', false, __('Student', 'codeclove-school-management'))
   const unitLabelSingular = getLabel('academic_unit', false, __('Class Level', 'codeclove-school-management'))
   const unitLabelPlural = getLabel('academic_unit', true, __('Classes', 'codeclove-school-management'))

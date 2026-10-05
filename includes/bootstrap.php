@@ -16,13 +16,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // ─── Shared Plugin Constants ──────────────────────────────────────────────────
 
-$codeclove_file = defined( 'CODECLOVE_FILE' ) ? CODECLOVE_FILE : __FILE__;
+$codeclove_file = defined( 'CODECLOVE_FILE' ) ? CODECLOVE_FILE : dirname( __DIR__ ) . '/codeclove-school-management.php';
 
 if ( ! defined( 'CODECLOVE_FILE' ) ) {
 	define( 'CODECLOVE_FILE', $codeclove_file );
 }
 
 define( 'CODECLOVE_DIR', plugin_dir_path( CODECLOVE_FILE ) );
+if ( ! defined( 'CODECLOVE_PLUGIN_DIR' ) ) {
+	define( 'CODECLOVE_PLUGIN_DIR', CODECLOVE_DIR );
+}
 define( 'CODECLOVE_URL', plugin_dir_url( CODECLOVE_FILE ) );
 define( 'CODECLOVE_BASENAME', plugin_basename( CODECLOVE_FILE ) );
 
@@ -73,41 +76,20 @@ if ( ! function_exists( 'codeclove' ) ) {
 register_activation_hook( CODECLOVE_FILE, [ codeclove(), 'activate' ] );
 register_deactivation_hook( CODECLOVE_FILE, [ codeclove(), 'deactivate' ] );
 
+$pro_bootstrap = CODECLOVE_PLUGIN_DIR . 'pro/bootstrap.php';
+if ( ! file_exists( $pro_bootstrap ) ) {
+	$pro_bootstrap = dirname( __DIR__ ) . '/pro/bootstrap.php';
+}
+if ( file_exists( $pro_bootstrap ) ) {
+	require_once $pro_bootstrap;
+}
+
 // Kick everything off.
 codeclove()->run();
 
-// Register WP-CLI command for database seeding if WP-CLI is active.
+// Register WP-CLI commands if active.
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
-	$codeclove_seeder_class = class_exists( '\CodeClove\Database\DevSeeder' ) ? '\CodeClove\Database\DevSeeder' : null;
-	if ( $codeclove_seeder_class ) {
-		\WP_CLI::add_command(
-			'codeclove db seed',
-			static function ( array $args, array $assoc_args ) use ( $codeclove_seeder_class ): void {
-				$country = isset( $assoc_args['country'] ) ? strtoupper( $assoc_args['country'] ) : 'IN';
-				if ( ! in_array( $country, [ 'IN', 'US', 'GB' ], true ) ) {
-					$country = 'IN';
-				}
-				$res = $codeclove_seeder_class::run( $country );
-				if ( ! $res['success'] ) {
-					\WP_CLI::error( $res['message'] );
-				} else {
-					\WP_CLI::success( $res['message'] );
-				}
-			}
-		);
-
-		\WP_CLI::add_command(
-			'codeclove db clear',
-			static function ( array $args, array $assoc_args ) use ( $codeclove_seeder_class ): void {
-				$res = $codeclove_seeder_class::clear();
-				if ( ! $res['success'] ) {
-					\WP_CLI::error( $res['message'] );
-				} else {
-					\WP_CLI::success( $res['message'] );
-				}
-			}
-		);
-	}
+	do_action( 'codeclove_cli_init' );
 }
 
 // ─── Global Helper ───────────────────────────────────────────────────────────

@@ -5,21 +5,11 @@
  * currency_position, number_format) configured in the CodeClove backend.
  */
 
-import { format as dateFnsFormat } from 'date-fns'
 import type { PortalLocalization } from '../types'
+import { initials } from '@/lib/utils'
+import { formatPHPDateTime } from '@/lib/formatter'
 
-const PHP_TO_DATE_FNS: Record<string, string> = {
-  d: 'dd', j: 'd', m: 'MM', n: 'M', F: 'MMMM', M: 'MMM',
-  Y: 'yyyy', y: 'yy', D: 'EEE', l: 'EEEE',
-  H: 'HH', h: 'hh', G: 'H', g: 'h', i: 'mm', s: 'ss', A: 'a', a: 'a',
-}
-
-// Translate PHP datetime format tokens to date-fns format tokens
-export function formatPHPDateTime(d: Date, phpFormat: string): string {
-  const pattern = phpFormat.replace(/[a-zA-Z]/g, (tok) => PHP_TO_DATE_FNS[tok] || `'${tok}'`)
-  const formatted = dateFnsFormat(d, pattern)
-  return phpFormat.includes('a') && !phpFormat.includes('A') ? formatted.toLowerCase() : formatted
-}
+export { formatPHPDateTime }
 
 function getActiveLocalization(): PortalLocalization | undefined {
   return typeof window !== 'undefined' ? window.CodeClovePortalConfig?.settings?.localization : undefined
@@ -145,13 +135,7 @@ export function formatNumber(
 }
 
 export function getInitials(name: string | null | undefined): string {
-  if (!name) return '?'
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')
+  return initials(name?.trim() || '') || '?'
 }
 
 export function formatAddress(address: unknown): string {

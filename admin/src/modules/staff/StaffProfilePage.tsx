@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  User, Pencil, Trash2, Mail, Briefcase, AlertTriangle, Plus, FileText, Clock, Calendar, MapPin, IdCard, Printer, CalendarCheck,
+  User, Pencil, Trash2, Mail, Briefcase, AlertTriangle, Plus, FileText, Clock, MapPin, IdCard, Printer, CalendarCheck,
   PhoneCall, ShieldCheck
 } from 'lucide-react'
 import {
@@ -37,7 +37,7 @@ export default function StaffProfilePage() {
   const { data: attendanceHistory, isLoading: isAttendanceLoading } = useStaffAttendanceHistory(staffId)
   const deleteMutation = useDeleteStaff()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'idcard' | 'attendance' | 'leaves'>('overview')
+  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'idcard' | 'attendance'>('overview')
   const [badgeDual, setBadgeDual] = useState(true)
   const [isPrintingBadge, setIsPrintingBadge] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
@@ -215,7 +215,6 @@ export default function StaffProfilePage() {
               { id: 'overview', label: __( 'Overview', 'codeclove-school-management' ), icon: User },
               { id: 'idcard', label: __( 'Identity Card', 'codeclove-school-management' ), icon: IdCard },
               { id: 'attendance', label: __( 'Attendance History', 'codeclove-school-management' ), icon: CalendarCheck },
-              { id: 'leaves', label: __( 'Leave Requests', 'codeclove-school-management' ), icon: Calendar },
             ] as const).map((tab) => {
               const Icon = tab.icon
               const isActive = activeSubTab === tab.id
@@ -707,15 +706,6 @@ export default function StaffProfilePage() {
               </div>
             )}
 
-            {activeSubTab === 'leaves' && (
-              <div className="flex flex-col items-center justify-center py-12 space-y-3 text-center">
-                <div className="w-12 h-12 rounded-full bg-brand-dim flex items-center justify-center text-brand/80 mb-1">
-                  <Calendar size={22} />
-                </div>
-                <p className="text-sm font-bold text-text">{__( 'No leave requests found', 'codeclove-school-management' )}</p>
-                <p className="text-xs text-text-muted max-w-sm leading-normal">{__( 'Time-off applications, approval workflows, and annual leave balance tracking will populate here.', 'codeclove-school-management' )}</p>
-              </div>
-            )}
           </Card>
         </div>
       </div>

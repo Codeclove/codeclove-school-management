@@ -130,25 +130,6 @@ final class PortalController extends BaseController {
 			]
 		);
 
-		// Timetable Schedule View
-		register_rest_route(
-			$this->namespace,
-			'/portal/timetable',
-			[
-				[
-					'methods'             => 'GET',
-					'callback'            => [ $this, 'get_timetable' ],
-					'permission_callback' => [ $this, 'check_auth' ],
-					'args'                => [
-						'student_id' => [
-							'required'          => false,
-							'validate_callback' => static fn( $param ) => is_numeric( $param ),
-							'sanitize_callback' => 'absint',
-						],
-					],
-				],
-			]
-		);
 
 		// Academics & Subjects View
 		register_rest_route(
@@ -276,6 +257,8 @@ final class PortalController extends BaseController {
 				],
 			]
 		);
+
+		do_action( 'codeclove_portal_register_routes', $this->namespace, $this );
 	}
 
 	/**
@@ -286,6 +269,9 @@ final class PortalController extends BaseController {
 	 */
 	public function check_auth( WP_REST_Request $request ): bool {
 		if ( ! is_user_logged_in() ) {
+			return false;
+		}
+		if ( ! apply_filters( 'codeclove_portal_auth', true, $request ) ) {
 			return false;
 		}
 
@@ -365,18 +351,6 @@ final class PortalController extends BaseController {
 
 		$data = $this->service->get_finance( $student_id );
 		return $this->success( $data );
-	}
-
-	/**
-	 * GET /portal/timetable
-	 */
-	public function get_timetable( WP_REST_Request $request ): WP_REST_Response|WP_Error {
-		$student_id = $this->resolve_student_id( $request );
-		if ( is_wp_error( $student_id ) ) {
-			return $student_id;
-		}
-
-		return $this->success( $this->service->get_timetable( $student_id ) );
 	}
 
 	/**

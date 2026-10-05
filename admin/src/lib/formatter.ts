@@ -5,40 +5,16 @@ import { useSettings } from '@/api/settings'
 import { format } from 'date-fns'
 
 export { formatGender } from './constants'
-// Helper to translate PHP datetime format tokens to date-fns format tokens
-function formatPHPDateTime(d: Date, phpFormat: string): string {
-  let result = ''
-  for (let i = 0; i < phpFormat.length; i++) {
-    const char = phpFormat[i] || ''
-    switch (char) {
-      case 'd': result += 'dd'; break
-      case 'j': result += 'd'; break
-      case 'm': result += 'MM'; break
-      case 'F': result += 'MMMM'; break
-      case 'M': result += 'MMM'; break
-      case 'Y': result += 'yyyy'; break
-      case 'D': result += 'EEE'; break
-      case 'H': result += 'HH'; break
-      case 'h': result += 'hh'; break
-      case 'g': result += 'h'; break
-      case 'i': result += 'mm'; break
-      case 's': result += 'ss'; break
-      case 'A': result += 'a'; break
-      case 'a': result += 'a'; break
-      default:
-        if (/[a-zA-Z]/.test(char)) {
-          result += `'${char}'`
-        } else {
-          result += char
-        }
-    }
-  }
+const PHP_TO_DATE_FNS: Record<string, string> = {
+  d: 'dd', j: 'd', m: 'MM', n: 'M', F: 'MMMM', M: 'MMM',
+  Y: 'yyyy', y: 'yy', D: 'EEE', l: 'EEEE',
+  H: 'HH', h: 'hh', G: 'H', g: 'h', i: 'mm', s: 'ss', A: 'a', a: 'a',
+}
 
-  const formatted = format(d, result)
-  if (phpFormat.includes('a') && !phpFormat.includes('A')) {
-    return formatted.toLowerCase()
-  }
-  return formatted
+export function formatPHPDateTime(d: Date, phpFormat: string): string {
+  const pattern = phpFormat.replace(/[a-zA-Z]/g, (tok) => PHP_TO_DATE_FNS[tok] || `'${tok}'`)
+  const formatted = format(d, pattern)
+  return phpFormat.includes('a') && !phpFormat.includes('A') ? formatted.toLowerCase() : formatted
 }
 
 export function useFormatter() {

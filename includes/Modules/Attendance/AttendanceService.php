@@ -284,8 +284,7 @@ final class AttendanceService {
 			ARRAY_A
 		);
 
-		$absences = [];
-
+		$absences = apply_filters( 'codeclove_staff_absences', [], array_merge( $params, [ 'date' => $date, 'attendance_date' => $date ] ) );
 		// Clean null fields for JSON output consistency
 		foreach ( $results as &$row ) {
 			$row['staff_member_id'] = (int) $row['staff_member_id'];
@@ -298,9 +297,8 @@ final class AttendanceService {
 				$reason        = $absences[ $row['staff_member_id'] ] ?? '';
 				/* translators: %s: absence reason */
 				$row['note']   = $reason ? sprintf( __( 'Auto-marked: absent on timetable (%s)', 'codeclove-school-management' ), $reason ) : __( 'Auto-marked: absent on timetable', 'codeclove-school-management' );
-			} else {
-				$row['status'] = $row['status'] ?: null;
 			}
+			$row['status'] = $row['status'] ?: null;
 		}
 
 		return $results;

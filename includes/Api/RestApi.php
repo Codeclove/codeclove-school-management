@@ -33,7 +33,12 @@ final class RestApi {
 	 */
 	public function register_routes(): void {
 		foreach ( $this->get_controllers() as $controller ) {
-			$controller->register_routes();
+			if ( is_string( $controller ) && class_exists( $controller ) ) {
+				$controller = new $controller();
+			}
+			if ( is_object( $controller ) && method_exists( $controller, 'register_routes' ) ) {
+				$controller->register_routes();
+			}
 		}
 	}
 
@@ -49,9 +54,6 @@ final class RestApi {
 		$candidates = [
 			// Dashboard
 			'\CodeClove\Modules\Dashboard\DashboardController',
-
-			// Activity Logs
-			'\CodeClove\Modules\Activity\ActivityController',
 
 			// Media Uploads
 			'\CodeClove\Modules\Media\MediaController',
@@ -83,14 +85,7 @@ final class RestApi {
 
 			// Student & Guardian Portal Module
 			'\CodeClove\Modules\Portal\PortalController',
-
-			// Optional / Pro modules
-			'\CodeClove\Modules\Notifications\NotificationsController',
-			'\CodeClove\Modules\Promotion\PromotionController',
-			'\CodeClove\Modules\Timetable\TimetableController',
-			'\CodeClove\Api\DevController',
 		];
-
 		$controllers = [];
 
 		foreach ( $candidates as $class ) {
@@ -99,6 +94,6 @@ final class RestApi {
 			}
 		}
 
-		return $controllers;
+		return apply_filters( 'codeclove_rest_controllers', $controllers );
 	}
 }

@@ -34,6 +34,7 @@ import {
   RotateCcw,
   Bell,
   History,
+  CreditCard,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button, Card, PageHeader, Spinner, Modal, ModalFooter, Skeleton } from '@/components/ui'
@@ -60,9 +61,7 @@ import { AppearanceTab }       from './tabs/AppearanceTab'
 import { ShortcodesTab }       from './tabs/ShortcodesTab'
 import { SystemTab }           from './tabs/SystemTab'
 import { NotificationsTab }    from './tabs/NotificationsTab'
-import { SmsNotificationsTab } from './tabs/SmsNotificationsTab'
-import { InAppNotificationsTab } from './tabs/InAppNotificationsTab'
-import ActivityLogPage from '@/modules/activity/ActivityLogPage'
+import { proSettingsTabs } from '@/pro'
 
 // ─── Tab Config ───────────────────────────────────────────────────────────────
 
@@ -81,6 +80,7 @@ const TABS: TabDefinition[] = [
   { id: 'identifiers',          label: __( 'ID Formats', 'codeclove-school-management' ),        icon: Fingerprint   },
   { id: 'localization',         label: __( 'Region & Language', 'codeclove-school-management' ), icon: Languages     },
   { id: 'appearance',           label: __( 'Appearance', 'codeclove-school-management' ),        icon: Palette       },
+  { id: 'gateways',             label: __( 'Payment Gateways', 'codeclove-school-management' ),  icon: CreditCard, pro: true },
   { id: 'email_notifications',  label: __( 'Email Alerts', 'codeclove-school-management' ),      icon: Mail          },
   { id: 'sms_notifications',    label: __( 'SMS Alerts', 'codeclove-school-management' ),        icon: Smartphone, pro: true },
   { id: 'in_app_notifications', label: __( 'In-App Alerts', 'codeclove-school-management' ),     icon: Bell,       pro: true },
@@ -198,8 +198,9 @@ export default function SettingsPage() {
           setSelectedPreset('')
           toast.success('Curriculum preset applied successfully!')
         },
-        onError: (err: any) => {
-          toast.error(err.message || 'Failed to apply preset.')
+        onError: (err: unknown) => {
+          const msg = (err as { message?: string })?.message || 'Failed to apply preset.'
+          toast.error(msg)
         },
       }
     )
@@ -356,21 +357,22 @@ export default function SettingsPage() {
               watch={watch}
             />
           )}
-          {isPro && activeTab === 'sms_notifications' && (
-            <SmsNotificationsTab
-              register={register}
-              control={control}
-              watch={watch}
-            />
-          )}
-          {isPro && activeTab === 'in_app_notifications' && (
-            <InAppNotificationsTab
-              control={control}
-            />
-          )}
           {activeTab === 'shortcodes'   && <ShortcodesTab settings={settings} />}
           {activeTab === 'system'       && <SystemTab settings={settings} control={control} register={register} />}
-          {isPro && activeTab === 'activity_log' && <ActivityLogPage hideHeader />}
+          {isPro && proSettingsTabs[activeTab] && (
+            (() => {
+              const ProTabComponent = proSettingsTabs[activeTab]
+              if (!ProTabComponent) return null
+              return (
+                <ProTabComponent
+                  control={control}
+                  register={register}
+                  watch={watch}
+                  setValue={setValue}
+                />
+              )
+            })()
+          )}
         </div>
       </form>
 

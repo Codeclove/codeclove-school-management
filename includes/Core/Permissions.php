@@ -31,12 +31,6 @@ use CodeClove\Database\Schema;
  * Class Permissions
  */
 final class Permissions {
-	/**
-	 * Core permission keys.
-	 */
-	public const DASHBOARD_VIEW       = 'dashboard.view';
-	public const TIMETABLE_SUBSTITUTE = 'timetable.substitute';
-
 
 	/**
 	 * Per-request permission cache.

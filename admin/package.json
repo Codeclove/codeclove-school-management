@@ -1,17 +1,20 @@
 {
   "name": "codeclove-school-management-admin",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && npm run build:admin && npm run build:portal",
     "build:admin": "vite build",
     "build:portal": "vite build --config vite.portal.config.ts",
+    "build": "tsc --noEmit && npm run build:admin && npm run build:portal",
+    "build:free": "node ../scripts/build-free.mjs",
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "i18n:extract": "tsc --project tsconfig.json --outDir .i18n-temp --module esnext --target es2020 --jsx react-jsx --noEmit false --declaration false --allowImportingTsExtensions false && wp i18n make-pot .. ../languages/codeclove-school-management.pot --domain=codeclove-school-management --exclude=node_modules,vendor,admin,portal,assets/build && wp i18n make-pot .i18n-temp ../languages/codeclove-school-management.pot --domain=codeclove-school-management --merge && rm -rf .i18n-temp",
+    "i18n:json": "wp i18n make-json ../languages/ --no-purge && node scripts/consolidate-i18n.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -19,11 +22,8 @@
     "@radix-ui/react-dropdown-menu": "^2.1.2",
     "@radix-ui/react-popover": "^1.1.2",
     "@radix-ui/react-select": "^2.1.2",
-    "@radix-ui/react-slot": "^1.1.0",
-    "@radix-ui/react-tabs": "^1.1.1",
     "@radix-ui/react-tooltip": "^1.1.4",
     "@tanstack/react-query": "^5.62.7",
-    "@tanstack/react-table": "^8.20.5",
     "@wordpress/i18n": "^5.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

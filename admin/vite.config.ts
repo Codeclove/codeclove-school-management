@@ -17,6 +17,7 @@ export default defineConfig({
     outDir: path.resolve(__dirname, '../assets/build/admin'),
     emptyOutDir: true,
     cssCodeSplit: false,
+    assetsInlineLimit: 4096,
 
     rollupOptions: {
       output: {
@@ -27,7 +28,8 @@ export default defineConfig({
         entryFileNames: 'index.js',
         chunkFileNames: 'chunks/[name]-[hash].js',
         assetFileNames: (assetInfo) => {
-          if ((assetInfo as any).name?.endsWith('.css') || (assetInfo as any).names?.some((n: string) => n.endsWith('.css'))) {
+          const info = assetInfo as { name?: string; names?: string[] }
+          if (info.name?.endsWith('.css') || info.names?.some((n: string) => n.endsWith('.css'))) {
             return 'index.css';
           }
           return 'assets/[name]-[hash][extname]';

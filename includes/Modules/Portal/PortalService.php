@@ -462,13 +462,10 @@ final class PortalService {
 		);
 		// phpcs:enable
 
-		$today_timetable = [];
+		$today_timetable = apply_filters( 'codeclove_portal_today_timetable', [], $student_id, $enrollment );
 
-		// ─── 4. Recent Notifications (Pro only) ────────────────────────────────
-		$recent_notifications = class_exists( PortalNotificationsPro::class )
-			? PortalNotificationsPro::get_recent_for_dashboard( $student_id )
-			: [];
-
+		// ─── 4. Recent Notifications ──────────────────────────────────────────
+		$recent_notifications = apply_filters( 'codeclove_portal_recent_notifications', [], $student_id );
 
 		// ─── 5. Calendar Events ──────────────────────────────────────────────
 		$calendar_events = [];
@@ -837,48 +834,22 @@ final class PortalService {
 	 * @return array<string, mixed>
 	 */
 	public function get_timetable( int $student_id ): array {
-		global $wpdb;
-
-		$enroll_table = Schema::enrollments();
-		$units_table  = Schema::units();
-		$groups_table = Schema::groups();
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student timetable enrollment lookup.
-		$enrollment = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT e.academic_session_id, e.academic_unit_id, e.academic_group_id, u.name as unit_name, g.name as group_name
-				 FROM %i e
-				 LEFT JOIN %i u ON u.id = e.academic_unit_id
-				 LEFT JOIN %i g ON g.id = e.academic_group_id
-				 WHERE e.student_id = %d AND e.status = %s
-				 ORDER BY e.id DESC LIMIT 1',
-				Schema::enrollments(),
-				Schema::units(),
-				Schema::groups(),
-				$student_id,
-				'active'
-			),
-			ARRAY_A
-		);
-
-		$days = [
-			1 => [],
-			2 => [],
-			3 => [],
-			4 => [],
-			5 => [],
-			6 => [],
-			7 => [],
-		];
-
-
-		return [
-			'enrollment' => [
-				'unit_name'  => (string) ( $enrollment['unit_name'] ?? '' ),
-				'group_name' => (string) ( $enrollment['group_name'] ?? '' ),
+		return apply_filters(
+			'codeclove_portal_timetable',
+			[
+				'enrollment' => null,
+				'days'       => [
+					1 => [],
+					2 => [],
+					3 => [],
+					4 => [],
+					5 => [],
+					6 => [],
+					7 => [],
+				],
 			],
-			'days'       => $days,
-		];
+			$student_id
+		);
 	}
 
 	/**
@@ -1270,10 +1241,7 @@ final class PortalService {
 	 * @return array{notifications: array, unread_count: int, total: int}
 	 */
 	public function get_notifications( int $student_id, int $page = 1, int $per_page = 20 ): array {
-		if ( ! class_exists( PortalNotificationsPro::class ) ) {
-			return [ 'notifications' => [], 'unread_count' => 0, 'total' => 0 ];
-		}
-		return PortalNotificationsPro::get_notifications( $student_id, $page, $per_page );
+		return apply_filters( 'codeclove_portal_notifications', [ 'notifications' => [], 'unread_count' => 0, 'total' => 0 ], $student_id, $page, $per_page );
 	}
 
 	/**
@@ -1284,9 +1252,6 @@ final class PortalService {
 	 * @return bool True on success.
 	 */
 	public function mark_notification_read( int $student_id, int $notification_id = 0 ): bool {
-		if ( ! class_exists( PortalNotificationsPro::class ) ) {
-			return true;
-		}
-		return PortalNotificationsPro::mark_notification_read( $student_id, $notification_id );
+		return apply_filters( 'codeclove_portal_mark_notification_read', true, $student_id, $notification_id );
 	}
 }

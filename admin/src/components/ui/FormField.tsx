@@ -13,12 +13,14 @@ import React, { useId } from 'react'
 import { cn } from '@/lib/utils'
 
 interface FormFieldProps {
-  label: string
+  label: React.ReactNode
+  action?: React.ReactNode
   error?: string
   hint?: string
   required?: boolean
   children: React.ReactNode
   className?: string
+  labelClassName?: string
   /** spans full column width in a grid — useful for textarea or wide inputs */
   fullWidth?: boolean
   /** explicitly specify the input ID when children are wrapped in icons/divs */
@@ -27,11 +29,13 @@ interface FormFieldProps {
 
 export function FormField({
   label,
+  action,
   error,
   hint,
   required = false,
   children,
   className,
+  labelClassName,
   fullWidth = false,
   inputId: propInputId,
 }: FormFieldProps) {
@@ -55,13 +59,16 @@ export function FormField({
   }
   return (
     <div className={cn('space-y-1 min-w-0', fullWidth && 'col-span-full', className)}>
-      <label
-        htmlFor={inputId}
-        className="text-sm font-medium text-text flex items-center gap-0.5"
-      >
-        {label}
-        {required && <span className="text-danger ms-0.5">*</span>}
-      </label>
+      <div className="flex items-center justify-between gap-2">
+        <label
+          htmlFor={inputId}
+          className={cn('text-sm font-medium text-text flex items-center gap-0.5', labelClassName)}
+        >
+          {label}
+          {required && <span className="text-danger ms-0.5">*</span>}
+        </label>
+        {action}
+      </div>
       {modifiedChildren}
       {error && (
         <p id={errorId} role="alert" className="text-xs text-danger leading-tight">{error}</p>

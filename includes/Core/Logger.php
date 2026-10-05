@@ -17,8 +17,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use CodeClove\Modules\Settings\SettingsRepository;
-
 /**
  * Class Logger
  */
@@ -87,17 +85,8 @@ final class Logger {
 		}
 
 		if ( null === self::$debug_enabled ) {
-			try {
-				$repo                 = new SettingsRepository();
-				$settings             = $repo->get_settings();
-				self::$debug_enabled = (bool) ( $settings['system']['debug_logging'] ?? false );
-			} catch ( \Throwable $e ) {
-				self::$debug_enabled = false;
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-					error_log( '[CodeClove] [ERROR] Failed to read debug logging setting: ' . $e->getMessage() );
-				}
-			}
+			$settings             = get_option( 'codeclove_settings', [] );
+			self::$debug_enabled = ! empty( $settings['system']['debug_logging'] );
 		}
 
 		return self::$debug_enabled;

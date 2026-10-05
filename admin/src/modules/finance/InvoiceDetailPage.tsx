@@ -31,6 +31,7 @@ import { useLabels } from '@/lib/labels'
 import { useFormatter } from '@/lib/formatter'
 import { printElement } from '@/lib/print'
 import PrintInvoiceSheet from './PrintInvoiceSheet'
+import { UnifiedCheckoutModal } from './components/UnifiedCheckoutModal'
 import {
   Button,
   PageHeader,
@@ -63,6 +64,7 @@ export default function InvoiceDetailPage() {
 
   // Modals state
   const [isEditing, setIsEditing] = useState(false)
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false)
   const handleOpenPayment = () => navigate(`/finance/invoices/${invoiceId}/record-payment`)
 
   // Edit Form State
@@ -74,7 +76,7 @@ export default function InvoiceDetailPage() {
   })
 
   // Queries / Mutations
-  const { data: invoice, isLoading, isError } = useInvoice(invoiceId)
+  const { data: invoice, isLoading, isError, refetch } = useInvoice(invoiceId)
   const { data: student }     = useStudentDetails(invoice?.student_id ?? 0)
   const { data: settingsData } = useSettings()
   const school = settingsData?.school
@@ -261,10 +263,16 @@ export default function InvoiceDetailPage() {
                   {__('Print Invoice', 'codeclove-school-management')}
                 </Button>
                 {!isClosed && !isPaid && (
-                  <Button size="sm" onClick={handleOpenPayment} className="flex items-center gap-1.5">
-                    <Plus className="h-4 w-4" />
-                    {__('Record Payment', 'codeclove-school-management')}
-                  </Button>
+                  <>
+                    <Button size="sm" variant="secondary" onClick={() => setIsCheckoutModalOpen(true)} className="flex items-center gap-1.5">
+                      <CreditCard className="h-4 w-4 text-primary" />
+                      {__('Pay Online', 'codeclove-school-management')}
+                    </Button>
+                    <Button size="sm" onClick={handleOpenPayment} className="flex items-center gap-1.5">
+                      <Plus className="h-4 w-4" />
+                      {__('Record Payment', 'codeclove-school-management')}
+                    </Button>
+                  </>
                 )}
                 {!isClosed && (
                   <Button size="sm" variant="danger" onClick={handleVoidInvoice}>
@@ -627,6 +635,26 @@ export default function InvoiceDetailPage() {
           )}
         </div>
       </div>
+
+      {invoice && (
+        <UnifiedCheckoutModal
+          open={isCheckoutModalOpen}
+          onClose={() => setIsCheckoutModalOpen(false)}
+          onPaymentSuccess={() => {
+            refetch()
+            setIsCheckoutModalOpen(false)
+          }}
+          invoice={{
+            id: invoice.id,
+            invoice_number: invoice.invoice_number,
+            currency: invoice.currency,
+            balance_minor: invoice.balance_minor,
+            total_minor: invoice.total_minor,
+            student_name: student ? `${student.first_name} ${student.last_name}`.trim() : undefined,
+            guardian_email: invoice.guardian_email,
+          }}
+        />
+      )}
 
     </div>
   )

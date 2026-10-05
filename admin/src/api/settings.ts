@@ -190,6 +190,44 @@ export interface NotificationSettings {
   }
 }
 
+export interface OfflinePaymentSettings {
+  enabled: boolean
+  title?: string
+}
+
+export interface StripeGatewaySettings {
+  enabled: boolean
+  title?: string
+  test_mode: boolean
+  publishable_key: string
+  secret_key: string
+  webhook_secret: string
+}
+
+export interface PayPalGatewaySettings {
+  enabled: boolean
+  title?: string
+  test_mode: boolean
+  client_id: string
+  client_secret: string
+  webhook_id: string
+}
+export interface CounterPaymentMethodsSettings {
+  cash: boolean
+  bank_transfer: boolean
+  cheque: boolean
+  card: boolean
+  upi: boolean
+  other: boolean
+}
+
+export interface PaymentGatewaysSettings {
+  gateway_order?: string[]
+  offline?: OfflinePaymentSettings
+  stripe: StripeGatewaySettings
+  paypal?: PayPalGatewaySettings
+}
+
 export interface CodeCloveSettings {
   schema_version: string
   plugin_version: string
@@ -203,6 +241,8 @@ export interface CodeCloveSettings {
   appearance: AppearanceSettings
   system: SystemSettings
   notifications: NotificationSettings
+  payment_gateways?: PaymentGatewaysSettings
+  payment_methods?: CounterPaymentMethodsSettings
 }
 
 export interface CountryPreset {
@@ -377,3 +417,32 @@ export function useApiHealth() {
   })
 }
 
+export interface GatewayTestConnectionResult {
+  success: boolean
+  account_id?: string
+  business_name?: string
+  country?: string
+  default_currency?: string
+  charges_enabled?: boolean
+  mode?: string
+  app_id?: string
+  client_id?: string
+  error?: string
+}
+
+export interface GatewayTestConnectionParams {
+  gateway: string
+  secret_key?: string
+  client_id?: string
+  client_secret?: string
+  test_mode?: boolean
+}
+
+export function useTestGatewayConnection() {
+  return useMutation({
+    mutationFn: async (data: GatewayTestConnectionParams): Promise<GatewayTestConnectionResult> => {
+      const res = await api.post<GatewayTestConnectionResult>('finance/gateways/test-connection', data)
+      return res.data
+    },
+  })
+}

@@ -12,6 +12,10 @@ declare( strict_types=1 );
 
 namespace CodeClove\Modules\Media;
 
+// Prevent direct file access.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 use CodeClove\Api\BaseController;
 use CodeClove\Shared\AuditLogger;
 use WP_Error;

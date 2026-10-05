@@ -93,6 +93,10 @@ final class PortalShortcode {
 	 * @return string HTML output.
 	 */
 	public static function render_portal(): string {
+		$available = apply_filters( 'codeclove_portal_available', true );
+		if ( ! $available ) {
+			return '<div class="codeclove-portal-notice"><p>' . esc_html__( 'The student & guardian portal is currently unavailable. Please contact the school administration.', 'codeclove-school-management' ) . '</p></div>';
+		}
 
 		if ( ! is_user_logged_in() ) {
 			return self::render_login_form();

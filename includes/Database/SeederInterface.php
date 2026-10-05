@@ -3,7 +3,7 @@
  * Seeder interface definition.
  *
  * All developer seeders must implement this interface to support orchestration
- * by DevSeeder.
+ * by the database seeder runner.
  *
  * @package CodeClove\Database
  */

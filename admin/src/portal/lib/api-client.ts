@@ -5,27 +5,8 @@
  * and handling portal endpoints.
  */
 
-export interface ApiSuccessResponse<T = unknown> {
-  data: T
-  status?: string
-}
-
-export interface ApiErrorResponse {
-  code?: string
-  message?: string
-  data?: { status?: number }
-}
-
-export class ApiError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string,
-    public readonly status: number
-  ) {
-    super(message)
-    this.name = 'ApiError'
-  }
-}
+import { ApiError, type ApiSuccessResponse, type ApiErrorResponse } from '@/lib/api-client'
+export { ApiError, type ApiSuccessResponse, type ApiErrorResponse }
 
 function getBaseUrl(): string {
   const url = window.CodeClovePortalConfig?.restUrl ?? '/wp-json/codeclove/v1/portal/'
@@ -62,7 +43,7 @@ async function request<T = unknown>(
   const body = isJson ? await response.json() : await response.text()
 
   if (!response.ok) {
-    const errorObj = typeof body === 'object' && body !== null ? (body as ApiErrorResponse) : {}
+    const errorObj = (typeof body === 'object' && body !== null ? body : {}) as Partial<ApiErrorResponse>
     throw new ApiError(
       errorObj.code ?? 'portal_error',
       errorObj.message ?? `Request failed with HTTP status ${response.status}`,

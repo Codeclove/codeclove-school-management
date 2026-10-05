@@ -51,11 +51,6 @@ final class RolesController extends BaseController {
 			'subjects.add' => 'Add Subjects',
 			'subjects.edit' => 'Edit Subjects',
 			'subjects.delete' => 'Delete Subjects',
-			'timetable.view' => 'View Timetable',
-			'timetable.add' => 'Add Timetable',
-			'timetable.edit' => 'Edit Timetable',
-			'timetable.delete' => 'Delete Timetable',
-			'timetable.substitute' => 'Manage Timetable Substitutes',
 		],
 		'Students & Admissions' => [
 			'students.view' => 'View Students',
@@ -74,7 +69,6 @@ final class RolesController extends BaseController {
 			'admissions.convert' => 'Convert Applicant to Student',
 			'admission_documents.view' => 'View Admission Documents',
 			'admission_documents.edit' => 'Edit Admission Documents',
-			'students.promote' => 'Promote & Rollover Students',
 		],
 		'Attendance' => [
 			'attendance.view' => 'View Attendance',
@@ -216,8 +210,12 @@ final class RolesController extends BaseController {
 	 *
 	 * @return WP_REST_Response
 	 */
+	public function get_permission_matrix(): array {
+		return apply_filters( 'codeclove_permission_matrix', self::SYSTEM_PERMISSIONS );
+	}
+
 	public function get_system_permissions(): WP_REST_Response {
-		return $this->success( self::SYSTEM_PERMISSIONS );
+		return $this->success( $this->get_permission_matrix() );
 	}
 
 	/**

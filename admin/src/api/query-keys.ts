@@ -5,14 +5,6 @@
  * Standardises cache invalidation and query deduplication across the SPA.
  */
 
-function createKey<T extends readonly string[], P extends Record<string, unknown>>(base: T, props: P): T & P {
-  const arr = [...base] as unknown as T & P
-  for (const [k, v] of Object.entries(props)) {
-    Object.defineProperty(arr, k, { value: v, enumerable: false, writable: true, configurable: true })
-  }
-  return arr
-}
-
 export const queryKeys = {
   // ─── Academics ─────────────────────────────────────────────────────────────
   sessions: {
@@ -126,29 +118,7 @@ export const queryKeys = {
     defaulters: (filters?: unknown) =>
       [...queryKeys.finance.all, 'reports', 'defaulters', filters] as const,
   },
-  // Top-level finance aliases
-  feeTypes: {
-    all: ['codeclove', 'finance', 'fee-types'] as const,
-    lists: () => [...queryKeys.finance.feeTypes.all, 'list'] as const,
-    list: (filters?: unknown) => [...queryKeys.finance.feeTypes.lists(), filters] as const,
-    details: () => [...queryKeys.finance.feeTypes.all, 'detail'] as const,
-    detail: (id: number) => [...queryKeys.finance.feeTypes.details(), id] as const,
-    classRates: (feeTypeId: number) => [...queryKeys.finance.feeTypes.all, 'class-rates', feeTypeId] as const,
-  },
-  invoices: createKey(['invoices'] as const, {
-    all: ['codeclove', 'finance', 'invoices'] as const,
-    lists: () => [...queryKeys.finance.invoices.all, 'list'] as const,
-    list: (filters?: unknown) => [...queryKeys.finance.invoices.lists(), filters] as const,
-    details: () => [...queryKeys.finance.invoices.all, 'detail'] as const,
-    detail: (id: number) => [...queryKeys.finance.invoices.details(), id] as const,
-  }),
-  payments: {
-    all: ['codeclove', 'finance', 'payments'] as const,
-    lists: () => [...queryKeys.finance.payments.all, 'list'] as const,
-    list: (filters?: unknown) => [...queryKeys.finance.payments.lists(), filters] as const,
-    details: () => [...queryKeys.finance.payments.all, 'detail'] as const,
-    detail: (id: number) => [...queryKeys.finance.payments.details(), id] as const,
-  },
+  invoices: ['invoices'] as const,
 
   // ─── Attendance ────────────────────────────────────────────────────────────
   attendance: {

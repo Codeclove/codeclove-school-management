@@ -31,7 +31,6 @@ interface StatCardProps {
   deltaPositive?: boolean
   /** Custom badge rendered in top-right corner */
   badge?: ReactNode
-  sparkline?: number[]
   /** Show skeleton loading state */
   loading?: boolean
   /** Add hover lift and pointer cursor */
@@ -52,7 +51,6 @@ export function StatCard({
   delta,
   deltaLabel,
   deltaPositive,
-  sparkline,
   loading = false,
   clickable = false,
   onClick,
@@ -170,14 +168,6 @@ export function StatCard({
         <p className="text-xs text-text-subtle mt-1">{subtext || deltaLabel}</p>
       )}
 
-      {/* ── Sparkline ────────────────────────────────────────────── */}
-      {sparkline && sparkline.length > 1 && (
-        <Sparkline
-          data={sparkline}
-          positive={deltaPositive}
-          className="mt-3"
-        />
-      )}
     </div>
   )
 }
@@ -210,66 +200,5 @@ function DeltaBadge({
       {isPositive && '+'}
       {delta}
     </span>
-  )
-}
-
-// ─── Sparkline ───────────────────────────────────────────────────────────────
-
-function Sparkline({
-  data,
-  positive,
-  className,
-}: {
-  data: number[]
-  positive?: boolean
-  className?: string
-}) {
-  const W = 100
-  const H = 28
-  const step = W / (data.length - 1)
-  const min  = Math.min(...data)
-  const max  = Math.max(...data)
-  const range = max - min || 1
-
-  const points = data
-    .map((v, i) => {
-      const x = i * step
-      const y = H - ((v - min) / range) * (H - 4) - 2
-      return `${x},${y}`
-    })
-    .join(' ')
-
-  const color =
-    positive === true  ? 'var(--success, #16a34a)' :
-    positive === false ? 'var(--danger, #dc2626)'  :
-    'var(--brand, #4f46e5)'
-
-  // Fill area under line
-  const lastX  = (data.length - 1) * step
-  const fillPoints = `0,${H} ${points} ${lastX},${H}`
-
-  return (
-    <svg
-      width="100%"
-      height={H}
-      viewBox={`0 0 ${W} ${H}`}
-      preserveAspectRatio="none"
-      className={cn('overflow-visible', className)}
-      aria-hidden
-    >
-      <polygon
-        points={fillPoints}
-        fill={color}
-        fillOpacity="0.08"
-      />
-      <polyline
-        points={points}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   )
 }

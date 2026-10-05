@@ -31,14 +31,16 @@ final class SettingsController extends BaseController {
 	private SettingsRepository $repository;
 	private PresetsService $presets;
 	private SettingsValidator $validator;
+	private SystemReportService $report_service;
 
 	/**
 	 * Constructor.
 	 */
 	public function __construct() {
-		$this->repository = new SettingsRepository();
-		$this->presets    = new PresetsService();
-		$this->validator  = new SettingsValidator();
+		$this->repository     = new SettingsRepository();
+		$this->presets        = new PresetsService();
+		$this->validator      = new SettingsValidator();
+		$this->report_service = new SystemReportService( $this->repository );
 	}
 
 	/**
@@ -141,6 +143,90 @@ final class SettingsController extends BaseController {
 				],
 			]
 		);
+
+		register_rest_route(
+			$this->namespace,
+			'/system/diagnostics',
+			[
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_system_diagnostics' ],
+					'permission_callback' => [ $this, 'check_read_auth' ],
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/system/feedback',
+			[
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'submit_feedback' ],
+					'permission_callback' => [ $this, 'check_read_auth' ],
+					'args'                => [
+						'title'               => [
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+						],
+						'description'         => [
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_textarea_field',
+						],
+						'type'                => [
+							'required'          => false,
+							'type'              => 'string',
+							'enum'              => [ 'bug', 'feedback' ],
+							'default'           => 'bug',
+							'sanitize_callback' => 'sanitize_text_field',
+						],
+						'priority'            => [
+							'required'          => false,
+							'type'              => 'string',
+							'enum'              => [ 'p0', 'p1', 'p2', 'p3' ],
+							'default'           => 'p2',
+							'sanitize_callback' => 'sanitize_text_field',
+						],
+						'area'                => [
+							'required'          => false,
+							'type'              => 'string',
+							'default'           => 'General',
+							'sanitize_callback' => 'sanitize_text_field',
+						],
+						'expected'            => [
+							'required'          => false,
+							'type'              => 'string',
+							'default'           => '',
+							'sanitize_callback' => 'sanitize_textarea_field',
+						],
+						'include_diagnostics' => [
+							'required' => false,
+							'type'     => 'boolean',
+							'default'  => true,
+						],
+						'client_info'         => [
+							'required' => false,
+							'type'     => 'object',
+							'default'  => [],
+						],
+					],
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/system/tickets',
+			[
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_tickets' ],
+					'permission_callback' => [ $this, 'check_read_auth' ],
+				],
+			]
+		);
 	}
 
 	/**
@@ -168,6 +254,7 @@ final class SettingsController extends BaseController {
 
 		return $this->success( $settings );
 	}
+
 	/**
 	 * Updates settings.
 	 *
@@ -321,6 +408,316 @@ final class SettingsController extends BaseController {
 	}
 
 	/**
+	 * Returns sanitized system diagnostics.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response
+	 */
+	public function get_system_diagnostics( WP_REST_Request $request ): WP_REST_Response {
+		$report   = $this->report_service->get_sanitized_report();
+		$markdown = $this->report_service->format_markdown_report( $report );
+
+		return $this->success( [
+			'report'   => $report,
+			'markdown' => $markdown,
+		] );
+	}
+
+	/**
+	 * Handles bug/feedback submissions and constructs GitHub issue deep link.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function submit_feedback( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$title               = trim( (string) $request->get_param( 'title' ) );
+		$description         = trim( (string) $request->get_param( 'description' ) );
+		$type                = (string) ( $request->get_param( 'type' ) ?: 'bug' );
+		$priority            = (string) ( $request->get_param( 'priority' ) ?: 'p2' );
+		$area                = (string) ( $request->get_param( 'area' ) ?: 'General' );
+		$expected            = trim( (string) ( $request->get_param( 'expected' ) ?? '' ) );
+		$include_diagnostics = (bool) $request->get_param( 'include_diagnostics' );
+		$client_info         = (array) ( $request->get_param( 'client_info' ) ?: [] );
+
+		if ( empty( $title ) || empty( $description ) ) {
+			return $this->error( 'validation_failed', __( 'Title and description are required.', 'codeclove-school-management' ), 422 );
+		}
+
+		// Anti-spam guard 1: Limit to 5 submissions per 10-minute window per IP.
+		if ( ! $this->check_rate_limit( 'feedback_submit', 5, 600 ) ) {
+			return $this->error(
+				'rate_limit_exceeded',
+				__( 'Too many reports submitted. Please wait a few minutes before submitting again.', 'codeclove-school-management' ),
+				429
+			);
+		}
+
+		// Anti-spam guard 2: Prevent duplicate submission of identical content within 3 minutes.
+		$dup_key = 'codeclove_fb_dup_' . md5( strtolower( $title . '|' . $description ) );
+		if ( false !== get_transient( $dup_key ) ) {
+			return $this->error(
+				'duplicate_submission',
+				__( 'This report has already been submitted recently. Please wait a few minutes before resubmitting.', 'codeclove-school-management' ),
+				409
+			);
+		}
+
+		$report         = $this->report_service->get_sanitized_report();
+		$preset         = $report['codeclove']['preset'] ?? 'custom';
+		$edition        = $report['codeclove']['edition'] ?? 'free';
+		$diagnostics_md = $include_diagnostics ? $this->report_service->format_markdown_report( $report ) : '';
+
+		// Allow third-party integrations (Linear, Slack, webhooks) to handle the submission.
+		$feedback_data = [
+			'title'               => $title,
+			'description'         => $description,
+			'type'                => $type,
+			'priority'            => $priority,
+			'area'                => $area,
+			'expected'            => $expected,
+			'client_info'         => $client_info,
+			'include_diagnostics' => $include_diagnostics,
+			'diagnostics'         => $report,
+			'user_id'             => get_current_user_id(),
+		];
+		do_action( 'codeclove_feedback_submitted', $feedback_data );
+
+		// Target feedback receiver endpoint.
+		$receiver_url = $this->get_feedback_receiver_url();
+
+		// Labels mapping for GitHub issues created by receiver.
+		$labels   = [];
+		$labels[] = 'bug' === $type ? 'type:bug' : 'type:enhancement';
+		if ( 'bug' === $type ) {
+			$labels[] = match ( $priority ) {
+				'p0'    => 'p0-blocker',
+				'p1'    => 'p1-critical',
+				'p3'    => 'p3-minor',
+				default => 'p2-major',
+			};
+		}
+		$clean_area = sanitize_title( $area );
+		if ( ! empty( $clean_area ) ) {
+			$labels[] = 'area:' . $clean_area;
+		}
+		if ( 'pro' === $edition ) {
+			$labels[] = 'edition:pro';
+		}
+
+		// Build Full Markdown report.
+		$full_lines   = [];
+		$full_lines[] = '### Description';
+		$full_lines[] = $description;
+		$full_lines[] = '';
+
+		if ( 'bug' === $type && ! empty( $expected ) ) {
+			$full_lines[] = '### Expected Behavior';
+			$full_lines[] = $expected;
+			$full_lines[] = '';
+		}
+
+		if ( ! empty( $client_info ) ) {
+			$context_lines = [];
+			if ( ! empty( $client_info['route'] ) ) {
+				$context_lines[] = '- **Route:** `' . sanitize_text_field( (string) $client_info['route'] ) . '`';
+			}
+			if ( ! empty( $client_info['browser'] ) && 'Unknown' !== $client_info['browser'] ) {
+				$browser = sanitize_text_field( (string) $client_info['browser'] );
+				if ( preg_match( '/(Chrome|Firefox|Safari|Edge|Opera)\/([0-9.]+)/i', $browser, $m ) ) {
+					$browser = $m[1] . ' ' . explode( '.', $m[2] )[0];
+				}
+				$context_lines[] = '- **Browser:** ' . $browser;
+			}
+			if ( ! empty( $client_info['error_stack'] ) ) {
+				$context_lines[] = '';
+				$context_lines[] = '```';
+				$context_lines[] = $this->report_service->redact_paths( sanitize_textarea_field( (string) $client_info['error_stack'] ) );
+				$context_lines[] = '```';
+			}
+			if ( ! empty( $context_lines ) ) {
+				$full_lines[] = '### Client Context';
+				$full_lines   = array_merge( $full_lines, $context_lines );
+				$full_lines[] = '';
+			}
+		}
+
+		if ( $include_diagnostics && ! empty( $diagnostics_md ) ) {
+			$full_lines[] = $diagnostics_md;
+		}
+
+		$full_markdown = implode( "\n", $full_lines );
+
+		$title_prefix = 'bug' === $type
+			? match ( $priority ) {
+				'p0'    => '[URGENT] ',
+				'p1'    => '[HIGH] ',
+				'p3'    => '[MINOR] ',
+				default => '[BUG] ',
+			}
+			: '[FEEDBACK] ';
+
+		$remote_title = mb_substr( $title_prefix . $title, 0, 120 );
+
+		// Dispatch directly to the CodeClove feedback receiver.
+		$response = wp_remote_post(
+			$receiver_url,
+			[
+				'headers'   => [
+					'Content-Type' => 'application/json',
+					'Accept'       => 'application/json',
+					'User-Agent'   => 'CodeClove/' . ( defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0' ),
+				],
+				'body'      => wp_json_encode( [
+					'title'         => $remote_title,
+					'description'   => $description,
+					'full_markdown' => $full_markdown,
+					'labels'        => array_values( array_unique( $labels ) ),
+				] ),
+				'timeout'   => 15,
+				'sslverify' => $this->should_verify_ssl( $receiver_url ),
+			]
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return new WP_REST_Response(
+				[
+					'success'       => false,
+					'code'          => 'codeclove_feedback_submission_failed',
+					'message'       => sprintf(
+						/* translators: %s: Error message */
+						__( 'Could not connect to feedback receiver: %s', 'codeclove-school-management' ),
+						$response->get_error_message()
+					),
+					'full_markdown' => $full_markdown,
+				],
+				502
+			);
+		}
+
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		$body   = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+
+		if ( $status >= 200 && $status < 300 && ! empty( $body['ticket_id'] ) ) {
+			$ticket_id = (int) $body['ticket_id'];
+
+			// Save to local site ticket history (cap at last 20 entries).
+			$history = (array) get_option( 'codeclove_ticket_history', [] );
+			array_unshift(
+				$history,
+				[
+					'ticket_id'    => $ticket_id,
+					'title'        => $title,
+					'type'         => $type,
+					'priority'     => $priority,
+					'area'         => $area,
+					'submitted_at' => time(),
+					'state'        => 'open',
+				]
+			);
+			update_option( 'codeclove_ticket_history', array_slice( $history, 0, 20 ), false );
+			set_transient( $dup_key, 1, 180 );
+			return $this->success( [
+				'ticket_id'     => $ticket_id,
+				'full_markdown' => $full_markdown,
+				'message'       => sprintf(
+					/* translators: %d: GitHub Issue Ticket ID */
+					__( 'Issue #%d submitted successfully to the engineering team.', 'codeclove-school-management' ),
+					$ticket_id
+				),
+			] );
+		}
+
+		$error_msg = ! empty( $body['message'] )
+			? sanitize_text_field( (string) $body['message'] )
+			: __( 'Unable to submit report to feedback service. Please try again later.', 'codeclove-school-management' );
+		$err_code  = ( $status >= 400 && $status < 600 ) ? $status : 502;
+
+		return new WP_REST_Response(
+			[
+				'success'       => false,
+				'code'          => 'codeclove_remote_submission_failed',
+				'message'       => $error_msg,
+				'full_markdown' => $full_markdown,
+			],
+			$err_code
+		);
+	}
+
+	/**
+	 * Returns the locally stored support tickets and checks their live resolution status.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response
+	 */
+	public function get_tickets( WP_REST_Request $request ): WP_REST_Response {
+		$history = (array) get_option( 'codeclove_ticket_history', [] );
+		if ( empty( $history ) ) {
+			return $this->success( [ 'tickets' => [] ] );
+		}
+
+		$status_endpoint = str_replace( '/feedback', '/feedback/status', $this->get_feedback_receiver_url() );
+		$updated_any     = false;
+
+		foreach ( $history as &$item ) {
+			$ticket_id = (int) ( $item['ticket_id'] ?? 0 );
+			if ( ! $ticket_id || 'closed' === ( $item['state'] ?? 'open' ) ) {
+				continue;
+			}
+
+			$status_res = wp_remote_get(
+				add_query_arg( 'ticket_id', $ticket_id, $status_endpoint ),
+				[
+					'timeout'   => 5,
+					'sslverify' => $this->should_verify_ssl( $status_endpoint ),
+				]
+			);
+
+			if ( ! is_wp_error( $status_res ) && 200 === wp_remote_retrieve_response_code( $status_res ) ) {
+				$status_body = json_decode( (string) wp_remote_retrieve_body( $status_res ), true );
+				if ( ! empty( $status_body['data']['state'] ) ) {
+					$item['state']        = $status_body['data']['state'];
+					$item['state_reason'] = $status_body['data']['state_reason'] ?? null;
+					$updated_any          = true;
+				}
+			}
+		}
+		unset( $item );
+
+		if ( $updated_any ) {
+			update_option( 'codeclove_ticket_history', $history, false );
+		}
+
+		return $this->success( [ 'tickets' => $history ] );
+	}
+
+	/**
+	 * Returns the feedback receiver endpoint URL.
+	 *
+	 * @return string
+	 */
+	private function get_feedback_receiver_url(): string {
+		$default = ( defined( 'CODECLOVE_FEEDBACK_API_URL' ) && CODECLOVE_FEEDBACK_API_URL )
+			? CODECLOVE_FEEDBACK_API_URL
+			: 'https://codeclove.com/wp-json/codeclove/v1/feedback';
+
+		return (string) apply_filters( 'codeclove_feedback_api_url', $default );
+	}
+
+	/**
+	 * Determines if SSL verification should be enforced for remote receiver calls.
+	 *
+	 * @param string $url Target endpoint URL.
+	 * @return bool
+	 */
+	private function should_verify_ssl( string $url ): bool {
+		if ( 'development' === wp_get_environment_type() ) {
+			return false;
+		}
+		$host = (string) wp_parse_url( $url, PHP_URL_HOST );
+		return ! in_array( $host, [ 'localhost', '127.0.0.1' ], true );
+	}
+
+	/**
 	 * Returns changed top-level setting sections without logging sensitive values.
 	 *
 	 * @param array $before Previous settings.
@@ -349,6 +746,9 @@ final class SettingsController extends BaseController {
 	 */
 	public function check_read_auth( WP_REST_Request $request ): bool {
 		if ( ! is_user_logged_in() ) {
+			return false;
+		}
+		if ( ! apply_filters( 'codeclove_settings_auth', true, $request ) ) {
 			return false;
 		}
 		// Security: CSRF Nonce Verification for Cookie-Authenticated Requests (Defense-in-depth).

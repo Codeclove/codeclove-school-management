@@ -66,13 +66,13 @@ const COLUMN_TYPE_CONFIG: Record<TableColumnType, {
 
 export interface TableRootProps extends React.HTMLAttributes<HTMLTableElement> {
   containerClassName?: string
-  responsiveMode?: 'scroll' | 'stack'
+  responsiveMode?: 'scroll'
 }
 
 export function TableRoot({
   className,
   containerClassName,
-  responsiveMode = 'scroll',
+  responsiveMode,
   ...props
 }: TableRootProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -105,7 +105,7 @@ export function TableRoot({
       )}
     >
       {/* Scroll indicator shadows (only active in scroll mode) */}
-      {responsiveMode === 'scroll' && (
+      {true && (
         <>
           <div
             className={cn(
@@ -126,14 +126,12 @@ export function TableRoot({
         ref={scrollRef}
         onScroll={checkScroll}
         className={cn(
-          'w-full overflow-x-auto scrollbar-thin',
-          responsiveMode === 'stack' && 'max-md:overflow-x-visible'
+          'w-full overflow-x-auto scrollbar-thin'
         )}
       >
         <table
           className={cn(
             'w-full text-sm border-collapse',
-            responsiveMode === 'stack' && 'max-md:block',
             className
           )}
           {...props}
@@ -199,7 +197,6 @@ export interface ThProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
   sorted?: 'asc' | 'desc' | false
   onSort?: () => void
   priority?: 'high' | 'medium' | 'low'
-  sticky?: 'left' | 'right' | boolean
   align?: 'left' | 'center' | 'right'
 }
 
@@ -211,7 +208,6 @@ export function Th({
   sorted,
   onSort,
   priority = 'high',
-  sticky,
   align,
   ...props
 }: ThProps) {
@@ -222,13 +218,6 @@ export function Th({
       ? 'hidden sm:table-cell'
       : priority === 'low'
       ? 'hidden lg:table-cell'
-      : ''
-
-  const stickyClass =
-    sticky === 'left' || sticky === true
-      ? 'sticky left-0 rtl:right-0 rtl:left-auto z-20 bg-bg-base shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] rtl:shadow-[-1px_0_0_0_rgba(0,0,0,0.05)] rtl:dark:shadow-[-1px_0_0_0_rgba(255,255,255,0.05)]'
-      : sticky === 'right'
-      ? 'sticky right-0 rtl:left-0 rtl:right-auto z-20 bg-bg-base shadow-[-1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[-1px_0_0_0_rgba(255,255,255,0.05)] rtl:shadow-[1px_0_0_0_rgba(0,0,0,0.05)] rtl:dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]'
       : ''
 
   const isRight = effectiveAlign === 'right'
@@ -242,7 +231,6 @@ export function Th({
         isRight ? 'text-end' : isCenter ? 'text-center' : 'text-start',
         sortable && 'cursor-pointer hover:text-text transition-colors',
         priorityClass,
-        stickyClass,
         typeCfg?.thClass,
         className
       )}
@@ -279,18 +267,14 @@ export function Th({
 export interface TdProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
   type?: TableColumnType
   priority?: 'high' | 'medium' | 'low'
-  sticky?: 'left' | 'right' | boolean
   align?: 'left' | 'center' | 'right'
-  label?: string
 }
 
 export function Td({
   type,
   className,
   priority = 'high',
-  sticky,
   align,
-  label,
   children,
   ...props
 }: TdProps) {
@@ -303,30 +287,17 @@ export function Td({
       ? 'hidden lg:table-cell'
       : ''
 
-  const stickyClass =
-    sticky === 'left' || sticky === true
-      ? 'sticky left-0 rtl:right-0 rtl:left-auto z-10 bg-bg-surface group-hover:bg-hover-bg/80 shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] rtl:shadow-[-1px_0_0_0_rgba(0,0,0,0.05)] rtl:dark:shadow-[-1px_0_0_0_rgba(255,255,255,0.05)] transition-colors duration-150'
-      : sticky === 'right'
-      ? 'sticky right-0 rtl:left-0 rtl:right-auto z-10 bg-bg-surface group-hover:bg-hover-bg/80 shadow-[-1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[-1px_0_0_0_rgba(255,255,255,0.05)] rtl:shadow-[1px_0_0_0_rgba(0,0,0,0.05)] rtl:dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] transition-colors duration-150'
-      : ''
-
   return (
     <td
       className={cn(
         'px-3 py-3 sm:px-4 sm:py-3.5 text-xs sm:text-sm text-text-muted align-middle transition-colors duration-150',
         effectiveAlign === 'right' ? 'text-end' : effectiveAlign === 'center' ? 'text-center' : effectiveAlign === 'left' ? 'text-start' : undefined,
         priorityClass,
-        stickyClass,
         typeCfg?.tdClass,
         className
       )}
       {...props}
     >
-      {label && (
-        <span className="font-semibold text-text-subtle text-xs uppercase md:hidden block mb-0.5">
-          {label}
-        </span>
-      )}
       {children}
     </td>
   )

@@ -297,6 +297,8 @@ final class FinanceController extends BaseController {
 				],
 			]
 		);
+
+		do_action( 'codeclove_finance_register_routes', $this->namespace, $this );
 	}
 
 	// ─── Summary Callback ───────────────────────────────────────────────────

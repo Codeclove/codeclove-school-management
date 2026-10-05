@@ -65,7 +65,8 @@ final class Plugin {
 		// Migrations must run first — RolesSeeder reads codeclove_roles which doesn't
 		// exist until the schema is created.
 		if ( class_exists( Migrations::class ) ) {
-			Migrations::run();
+			$target_version = defined( 'CODECLOVE_DB_VERSION' ) ? CODECLOVE_DB_VERSION : '1.0.0';
+			$this->run_migrations( '0.0.0', $target_version );
 		}
 
 		// Load codeclove_settings once and pass it down — avoids a double get_option
@@ -87,6 +88,8 @@ final class Plugin {
 			wp_schedule_event( time(), 'daily', 'codeclove_update_overdue_invoices' );
 		}
 
+		do_action( 'codeclove_activate' );
+
 		flush_rewrite_rules();
 	}
 
@@ -96,6 +99,7 @@ final class Plugin {
 	 */
 	public function deactivate(): void {
 		wp_clear_scheduled_hook( 'codeclove_update_overdue_invoices' );
+		do_action( 'codeclove_deactivate' );
 		flush_rewrite_rules();
 	}
 
@@ -104,7 +108,9 @@ final class Plugin {
 	public function run(): void {
 		$rest = new RestApi();
 
+		add_action( 'init', [ $this, 'init' ] );
 		add_action( 'admin_menu', [ $this, 'register_admin_menu' ] );
+		add_action( 'admin_notices', static fn() => do_action( 'codeclove_admin_notices' ) );
 
 		// Register the REST API namespace and all routes.
 		add_action( 'rest_api_init', [ $rest, 'register_routes' ] );
@@ -112,9 +118,8 @@ final class Plugin {
 		// Run migrations when the plugin's DB version is outdated.
 		add_action( 'plugins_loaded', [ $this, 'maybe_run_migrations' ] );
 
-		// Daily cron + license heartbeat listeners.
+		// Daily cron listeners.
 		add_action( 'codeclove_update_overdue_invoices', [ $this, 'update_overdue_invoices' ] );
-
 
 		if ( class_exists( '\CodeClove\Modules\Notifications\NotificationsService' ) ) {
 			( new \CodeClove\Modules\Notifications\NotificationsService() )->init();
@@ -182,7 +187,17 @@ final class Plugin {
 		add_action( 'load-' . $page_hook, [ $assets, 'render_fullscreen_spa' ] );
 	}
 
-	// ─── License Notice ──────────────────────────────────────────────────────
+	/**
+	 * Initializes plugin components and textdomain.
+	 */
+	public function init(): void {
+		load_plugin_textdomain(
+			'codeclove-school-management',
+			false,
+			dirname( plugin_basename( defined( 'CODECLOVE_FILE' ) ? CODECLOVE_FILE : __FILE__ ) ) . '/languages'
+		);
+		do_action( 'codeclove_init' );
+	}
 
 	/**
 	 * Shows a reassuring welcome notice when Pro is active alongside Free.
@@ -198,10 +213,12 @@ final class Plugin {
 			esc_html__( 'All your existing school data, students, and settings are active in Pro. You may safely deactivate and remove the Free version at your convenience.', 'codeclove-school-management' )
 		);
 	}
+
 	/**
 	 * Shows an admin notice if Pro is active without a valid license key.
 	 */
 	public function maybe_show_license_notice(): void {
+		do_action( 'codeclove_license_notice' );
 	}
 
 	// ─── Migrations ──────────────────────────────────────────────────────────
@@ -211,16 +228,21 @@ final class Plugin {
 	 */
 	public function maybe_run_migrations(): void {
 		$settings       = get_option( 'codeclove_settings', [] );
-		$stored_version = $settings['schema_version'] ?? '0.0.0';
+		$stored_version = (string) ( $settings['schema_version'] ?? '0.0.0' );
 
 		$db_version = defined( 'CODECLOVE_DB_VERSION' ) ? CODECLOVE_DB_VERSION : '1.0.0';
 
-		if (
-			version_compare( $stored_version, $db_version, '<' )
-			|| ! Migrations::is_schema_installed()
-		) {
-			Migrations::run();
+		if ( version_compare( $stored_version, $db_version, '<' ) ) {
+			$this->run_migrations( $stored_version, $db_version );
 		}
+	}
+
+	public function run_migrations( string $installed_version = '0.0.0', string $target_version = '' ): void {
+		if ( empty( $target_version ) ) {
+			$target_version = defined( 'CODECLOVE_DB_VERSION' ) ? CODECLOVE_DB_VERSION : '1.0.0';
+		}
+		Migrations::run();
+		do_action( 'codeclove_run_migrations', $installed_version, $target_version );
 	}
 
 	// ─── Seeding ─────────────────────────────────────────────────────────────

@@ -5,8 +5,8 @@
  * and payment receipts history using shared CodeClove Modal and UI primitives.
  */
 
-import React, { useRef } from 'react'
-import { Printer } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Printer, CreditCard, Wallet } from 'lucide-react'
 import type { Invoice, InvoicePayment } from '../../types'
 import type { Invoice as FinanceInvoice } from '@/api/finance'
 import { formatCurrency, formatDate } from '../../lib/formatter'
@@ -30,6 +30,34 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
 }) => {
   const { school, currentStudent } = usePortal()
   const printRef = useRef<HTMLDivElement>(null)
+  const [loadingCheckout, setLoadingCheckout] = useState(false)
+  const [activeGateway, setActiveGateway] = useState<string | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [availableGateways, setAvailableGateways] = useState<string[]>(['stripe'])
+
+  useEffect(() => {
+    const fetchGateways = async () => {
+      try {
+        const restBase = window.CodeClovePortalConfig?.restUrl ?? '/wp-json/codeclove/v1/'
+        const cleanBase = restBase.replace(/\/portal\/?$/, '').replace(/\/$/, '')
+        const res = await fetch(`${cleanBase}/finance/gateways/config`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data?.data?.gateways) {
+            const enabledList = Object.entries(data.data.gateways)
+              .filter(([, cfg]) => (cfg as { enabled?: boolean })?.enabled)
+              .map(([id]) => id)
+            if (enabledList.length > 0) {
+              setAvailableGateways(enabledList)
+            }
+          }
+        }
+      } catch {
+        // Fallback to default
+      }
+    }
+    fetchGateways()
+  }, [])
 
   if (!invoice) return null
   const lineItems = invoice.line_items ?? []
@@ -38,6 +66,51 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
   const handlePrint = () => {
     if (printRef.current) {
       printElement(printRef.current)
+    }
+  }
+
+  const isPayable = invoice ? invoice.status !== 'paid' && invoice.status !== 'cancelled' && invoice.status !== 'void' && invoice.balance > 0 : false
+
+  const handleStartCheckout = async (gateway = 'stripe') => {
+    if (!invoice) return
+    setLoadingCheckout(true)
+    setActiveGateway(gateway)
+    setCheckoutError(null)
+    try {
+      const restBase = window.CodeClovePortalConfig?.restUrl ?? '/wp-json/codeclove/v1/'
+      const cleanBase = restBase.replace(/\/portal\/?$/, '').replace(/\/$/, '')
+      const url = `${cleanBase}/finance/gateways/checkout-session`
+      const nonce = window.CodeClovePortalConfig?.nonce ?? ''
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(nonce ? { 'X-WP-Nonce': nonce } : {}),
+        },
+        body: JSON.stringify({
+          invoice_id: invoice.id,
+          gateway,
+          amount_minor: Math.round(invoice.balance * 100),
+          success_url: `${window.location.href.split('?')[0]}?payment_status=success&gateway=${gateway}`,
+          cancel_url: `${window.location.href.split('?')[0]}?payment_status=cancelled&gateway=${gateway}`,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.message || __( 'Failed to initialize checkout session.', 'codeclove-school-management' ))
+      }
+
+      if (data?.data?.url) {
+        window.location.href = data.data.url
+      }
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string }
+      setCheckoutError(errorObj?.message || __( 'Payment initiation failed.', 'codeclove-school-management' ))
+    } finally {
+      setLoadingCheckout(false)
+      setActiveGateway(null)
     }
   }
   const printableInvoice = {
@@ -176,10 +249,53 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
           <Printer className="w-3.5 h-3.5 text-text-subtle" />
           <span>{__( 'Print Statement', 'codeclove-school-management' )}</span>
         </Button>
+        {isPayable && (
+          <div className="flex items-center gap-1.5">
+            {availableGateways.includes('stripe') && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => handleStartCheckout('stripe')}
+                disabled={loadingCheckout}
+                className="h-8 text-xs font-semibold gap-1.5"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>
+                  {loadingCheckout && activeGateway === 'stripe'
+                    ? __( 'Connecting to Stripe...', 'codeclove-school-management' )
+                    : __( 'Pay via Stripe', 'codeclove-school-management' )}
+                </span>
+              </Button>
+            )}
+            {availableGateways.includes('paypal') && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => handleStartCheckout('paypal')}
+                disabled={loadingCheckout}
+                className="h-8 text-xs font-semibold gap-1.5 bg-[#0070BA] hover:bg-[#003087] text-white"
+              >
+                <Wallet className="w-3.5 h-3.5" />
+                <span>
+                  {loadingCheckout && activeGateway === 'paypal'
+                    ? __( 'Connecting to PayPal...', 'codeclove-school-management' )
+                    : __( 'Pay via PayPal', 'codeclove-school-management' )}
+                </span>
+              </Button>
+            )}
+          </div>
+        )}
         <Button variant="default" size="sm" onClick={onClose} className="h-8 text-xs">
           {__( 'Close', 'codeclove-school-management' )}
         </Button>
       </ModalFooter>
+      {checkoutError && (
+        <div className="px-6 pb-4">
+          <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">
+            {checkoutError}
+          </p>
+        </div>
+      )}
 
       {/* Hidden container for printElement execution */}
       <div className="hidden">
