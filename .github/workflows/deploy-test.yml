@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version tag to test (e.g. 1.0.4)'
+        description: 'Version tag to test (e.g. 1.0.5)'
         required: true
-        default: '1.0.4'
+        default: '1.0.5'
 
 jobs:
   dry-run-deploy:
@@ -35,6 +35,6 @@ jobs:
           dry-run: true
         env:
           SLUG: codeclove-school-management
-          VERSION: ${{ inputs.version || '1.0.4' }}
+          VERSION: ${{ inputs.version || '1.0.5' }}
           SVN_USERNAME: ${{ secrets.WPORG_USERNAME || secrets.SVN_USERNAME || 'codeclove' }}
           SVN_PASSWORD: ${{ secrets.WPORG_PASSWORD || secrets.SVN_PASSWORD }}
