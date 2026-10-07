@@ -112,7 +112,11 @@ final class StudentsService {
 				'academic_session_id' => $validated['academic_session_id'],
 				'academic_unit_id'    => $validated['academic_unit_id'],
 			] );
-			$roll_number = 'R' . str_pad( (string) ( $total_enrolled + 1 ), 2, '0', STR_PAD_LEFT );
+			$roll_number = ! empty( $validated['roll_number'] )
+				? $validated['roll_number']
+				: ( ( ! is_wp_error( $r = IdentifierService::generate( 'roll_number' ) ) && '' !== $r )
+					? $r
+					: 'R' . str_pad( (string) ( $total_enrolled + 1 ), 2, '0', STR_PAD_LEFT ) );
 
 			$enrollment_id = $this->db_create_enrollment( [
 				'student_id'          => $student_id,
@@ -713,6 +717,7 @@ final class StudentsService {
 		$clean['admission_date'] = isset( $payload['admission_date'] ) ? sanitize_text_field( $payload['admission_date'] ) : null;
 		$clean['graduation_year'] = isset( $payload['graduation_year'] ) ? (int) $payload['graduation_year'] : null;
 		$clean['admission_number'] = isset( $payload['admission_number'] ) ? sanitize_text_field( $payload['admission_number'] ) : '';
+		$clean['roll_number']      = isset( $payload['roll_number'] ) ? sanitize_text_field( $payload['roll_number'] ) : '';
 
 		if ( ! empty( $clean['admission_number'] ) ) {
 			$existing = $this->db_get_student_by_admission_number( $clean['admission_number'] );

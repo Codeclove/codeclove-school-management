@@ -8,7 +8,7 @@
  * an interactive payment dock, and 1-click official statement printing.
  */
 
-import React, { useRef } from 'react'
+import React, { useRef, useMemo } from 'react'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -20,7 +20,6 @@ import {
   GraduationCap,
   Printer,
   Receipt,
-  ShieldCheck,
   Wallet,
   XCircle,
 } from 'lucide-react'
@@ -33,6 +32,7 @@ import { usePortalLabels } from '../../lib/labels'
 import { Badge, Button, Card, CardContent, TableRoot, Thead, Tbody, Tr, Th, Td } from '@/components/ui'
 import { PrintInvoiceSheet, printElement } from '@/components/print'
 import { PortalPaymentMethodSelector, type PortalPaymentSuccessResult } from './PortalPaymentMethodSelector'
+import { useGatewaysConfig } from '@/api/gateways'
 import { cn } from '@/lib/utils'
 import { __, sprintf } from '@/lib/i18n'
 
@@ -49,7 +49,7 @@ export interface InvoiceStatementViewProps {
 /**
  * Returns human-readable label and styling badge for invoice status.
  */
-function getInvoiceStatusMeta(status: string) {
+export function getInvoiceStatusMeta(status: string, isUS = false) {
   const norm = status.toLowerCase()
   switch (norm) {
     case 'paid':
@@ -70,19 +70,30 @@ function getInvoiceStatusMeta(status: string) {
       }
     case 'overdue':
       return {
-        label: __( 'Past Due / Overdue', 'codeclove-school-management' ),
+        label: isUS
+          ? __( 'Past Due', 'codeclove-school-management' )
+          : __( 'Overdue', 'codeclove-school-management' ),
         variant: 'danger' as const,
         icon: AlertTriangle,
-        desc: __( 'Payment for this fee statement is past due. Please settle immediately.', 'codeclove-school-management' ),
+        desc: isUS
+          ? __( 'Payment for this fee statement is past due. Please settle immediately.', 'codeclove-school-management' )
+          : __( 'Payment for this fee statement is overdue. Please settle immediately.', 'codeclove-school-management' ),
         badgeClass: 'bg-danger-dim text-danger border-danger/30',
       }
     case 'cancelled':
-    case 'void':
       return {
-        label: __( 'Cancelled / Void', 'codeclove-school-management' ),
+        label: __( 'Cancelled', 'codeclove-school-management' ),
         variant: 'default' as const,
         icon: XCircle,
-        desc: __( 'This invoice has been voided or cancelled by school administration.', 'codeclove-school-management' ),
+        desc: __( 'This invoice has been cancelled by school administration.', 'codeclove-school-management' ),
+        badgeClass: 'bg-bg-base text-text-muted border-border',
+      }
+    case 'void':
+      return {
+        label: __( 'Void', 'codeclove-school-management' ),
+        variant: 'default' as const,
+        icon: XCircle,
+        desc: __( 'This invoice has been voided by school administration.', 'codeclove-school-management' ),
         badgeClass: 'bg-bg-base text-text-muted border-border',
       }
     case 'pending':
@@ -154,15 +165,23 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
   const paymentDockRef = useRef<HTMLDivElement>(null)
 
   const currency = currencyProp || localization?.currency || 'USD'
+  const isPro = typeof window === 'undefined' || window.CodeClovePortalConfig?.isPro !== false
+  const { data: gatewaysConfig } = useGatewaysConfig({ enabled: isPro })
+  const activeGateways = useMemo(() => {
+    if (!isPro || !gatewaysConfig?.gateways) return []
+    return Object.values(gatewaysConfig.gateways).filter((g) => g.enabled)
+  }, [isPro, gatewaysConfig])
+
+  const isOnlinePaymentAvailable = isPro && activeGateways.length > 0
   const isPayable =
     invoice.status !== 'paid' &&
     invoice.status !== 'cancelled' &&
     invoice.status !== 'void' &&
     invoice.balance > 0
 
-  const statusMeta = getInvoiceStatusMeta(invoice.status)
+  const isUS = localization?.currency === 'USD' && localization?.number_format === 'standard'
+  const statusMeta = getInvoiceStatusMeta(invoice.status, isUS)
   const StatusIcon = statusMeta.icon
-
   // Student & Academic Labels
   const studentName =
     currentStudent?.full_name ||
@@ -210,6 +229,7 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
   const schoolSettings: SchoolSettings | undefined = school
     ? {
         name: school.name || siteName,
+        code: school.code,
         address: school.address,
         phone: school.phone,
         email: school.email,
@@ -218,6 +238,8 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
       }
     : undefined
 
+  const totalMinor = invoice.total_minor ?? Math.round(invoice.total * 100)
+
   const printableInvoice = {
     ...invoice,
     student_first_name: currentStudent?.first_name || '',
@@ -225,9 +247,15 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
     student_number: studentNumber !== '—' ? studentNumber : '',
     academic_unit_name: currentStudent?.unit_name || '',
     academic_group_name: currentStudent?.group_name || '',
-    total_minor: invoice.total_minor ?? Math.round(invoice.total * 100),
+    subtotal_minor: totalMinor,
+    discount_minor: 0,
+    total_minor: totalMinor,
     paid_minor: invoice.paid_minor ?? Math.round(invoice.paid * 100),
     balance_minor: invoice.balance_minor ?? Math.round(invoice.balance * 100),
+    payments: (invoice.payments || []).map((p) => ({
+      ...p,
+      amount_minor: p.amount_minor ?? Math.round(p.amount * 100),
+    })),
   } as unknown as FinanceInvoice
 
   return (
@@ -257,14 +285,6 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
           <span className="text-xs font-bold text-text font-mono">
             {invoice.invoice_number}
           </span>
-
-          <Badge
-            variant={statusMeta.variant}
-            className={cn('ml-2 text-2xs font-semibold px-2 py-0.5 inline-flex items-center gap-1', statusMeta.badgeClass)}
-          >
-            <StatusIcon className="w-3 h-3" />
-            <span>{statusMeta.label}</span>
-          </Badge>
         </div>
 
         {/* Action Controls */}
@@ -286,80 +306,104 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
         {/* Institutional Letterhead Top Banner */}
         <div className="p-6 border-b border-border/70 bg-gradient-to-b from-bg-base/30 to-transparent">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5">
-            {/* School Info */}
-            <div className="flex items-start gap-3.5">
+            {/* School Identity (Left) */}
+            <div className="flex items-start gap-4 min-w-0">
               {logoUrl ? (
                 <img
                   src={logoUrl}
                   alt={school?.name || siteName}
-                  className="w-11 h-11 rounded-lg object-contain border border-border/60 bg-bg-surface p-1 shadow-xs shrink-0"
+                  className="w-14 h-14 rounded-lg object-contain bg-white dark:bg-bg-elevated p-1 border border-border/60 shadow-2xs shrink-0"
                 />
               ) : (
-                <div className="w-11 h-11 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand shrink-0">
-                  <GraduationCap className="w-5 h-5" />
+                <div className="w-14 h-14 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand shrink-0">
+                  <GraduationCap className="w-7 h-7" />
                 </div>
               )}
-              <div>
-                <h2 className="text-base font-bold text-text tracking-tight">
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-xl font-bold text-text tracking-tight leading-tight">
                   {school?.name || siteName}
                 </h2>
                 {school?.address && (
-                  <p className="text-xs text-text-muted mt-0.5 line-clamp-1">
+                  <p className="text-xs text-text-muted mt-1 leading-relaxed max-w-lg">
                     {school.address}
                   </p>
                 )}
-                <div className="flex items-center gap-2.5 text-2xs text-text-subtle mt-0.5 flex-wrap">
-                  {school?.phone && <span>{school.phone}</span>}
-                  {school?.phone && school?.email && <span>•</span>}
-                  {school?.email && <span>{school.email}</span>}
-                </div>
+                {(school?.phone || school?.email) && (
+                  <div className="flex items-center gap-2 text-2xs sm:text-xs text-text-subtle mt-1 flex-wrap">
+                    {school?.phone && <span>{school.phone}</span>}
+                    {school?.phone && school?.email && <span className="text-border" aria-hidden="true">•</span>}
+                    {school?.email && <span>{school.email}</span>}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Document Header & Dates */}
-            <div className="text-left sm:text-right shrink-0 space-y-1">
-              <span className="text-2xs font-bold uppercase tracking-wider text-text-muted block">
-                {__( 'Official Fee Statement & Tax Invoice', 'codeclove-school-management' )}
-              </span>
-              <div className="flex items-center sm:justify-end gap-2">
-                <span className="text-xl sm:text-2xl font-black text-text font-mono tracking-tight">
-                  {invoice.invoice_number}
+            {/* Invoice Identification */}
+            <div className="text-left sm:text-right shrink-0 flex flex-col justify-between sm:items-end">
+              <div>
+                <span className="text-3xs uppercase font-bold text-text-subtle tracking-wider block">
+                  {__( 'Official Fee Statement & Tax Invoice', 'codeclove-school-management' )}
                 </span>
-                <Badge
-                  variant={statusMeta.variant}
-                  className={cn('text-2xs font-semibold px-2 py-0.5 inline-flex items-center gap-1', statusMeta.badgeClass)}
-                >
-                  <StatusIcon className="w-3 h-3" />
-                  <span>{statusMeta.label}</span>
-                </Badge>
+                <span className="font-mono text-lg sm:text-xl font-bold text-text block mt-0.5 tracking-tight">
+                  #{invoice.invoice_number}
+                </span>
               </div>
-              <div className="flex items-center sm:justify-end gap-3 text-xs text-text-muted">
-                <span>{sprintf( __( 'Issued: %s', 'codeclove-school-management' ), formatDate(invoice.issue_date) )}</span>
-                <span>•</span>
-                <span className={cn('font-medium', invoice.status === 'overdue' && 'text-danger font-semibold')}>
-                  {sprintf( __( 'Due: %s', 'codeclove-school-management' ), formatDate(invoice.due_date) )}
+
+              <div className="mt-2 flex items-center sm:justify-end gap-2 text-2xs text-text-muted flex-wrap">
+                <span className="tabular-nums">
+                  <span className="text-text-subtle font-medium">{__( 'Issued:', 'codeclove-school-management' )}</span>{' '}
+                  <span className="font-semibold text-text">{formatDate(invoice.issue_date)}</span>
                 </span>
+                {invoice.due_date && (
+                  <>
+                    <span className="text-border" aria-hidden="true">•</span>
+                    <span className={cn('tabular-nums', invoice.status === 'overdue' && 'text-danger font-semibold')}>
+                      <span className={cn('font-medium', invoice.status === 'overdue' ? 'text-danger/80' : 'text-text-subtle')}>
+                        {__( 'Due:', 'codeclove-school-management' )}
+                      </span>{' '}
+                      <span className={cn('font-semibold', invoice.status === 'overdue' ? 'text-danger' : 'text-text')}>
+                        {formatDate(invoice.due_date)}
+                      </span>
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Compact Student & Account Bar */}
+          {/* Compact Student, Payer & Billing Status Bar */}
           <div className="mt-5 pt-4 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-text-muted">{__( 'Student:', 'codeclove-school-management' )}</span>
+            <div className="flex items-center gap-2 flex-wrap text-text-muted">
+              <span>{__( 'Student:', 'codeclove-school-management' )}</span>
               <span className="font-semibold text-text">{studentName}</span>
               <span className="text-text-subtle">•</span>
               <span className="font-mono text-text-muted">{studentNumber}</span>
               <span className="text-text-subtle">•</span>
-              <span className="text-text-muted">{classUnitName}</span>
+              <span>{classUnitName}</span>
+              {guardianName && (
+                <>
+                  <span className="text-text-subtle hidden sm:inline">|</span>
+                  <span>{__( 'Payer:', 'codeclove-school-management' )}</span>
+                  <span className="font-medium text-text">{guardianName}</span>
+                  {guardianEmail && <span className="font-mono text-text-subtle">({guardianEmail})</span>}
+                </>
+              )}
             </div>
-            {guardianName && (
-              <div className="flex items-center gap-2 text-text-muted">
-                <span>{__( 'Payer:', 'codeclove-school-management' )}</span>
-                <span className="font-medium text-text">{guardianName}</span>
-                {guardianEmail && <span className="font-mono text-text-subtle">({guardianEmail})</span>}
-              </div>
-            )}
+
+            <div className="flex items-center gap-2 sm:justify-end shrink-0">
+              <span className="text-2xs font-bold uppercase tracking-wider text-text-muted">
+                {__( 'Billing Status:', 'codeclove-school-management' )}
+              </span>
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-bold uppercase tracking-wider border',
+                  statusMeta.badgeClass
+                )}
+              >
+                <StatusIcon className="w-3 h-3" />
+                {statusMeta.label}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -524,8 +568,10 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
                 </p>
               </div>
             </div>
-            <Badge variant="default" className="text-2xs font-semibold text-text-muted">
-              {sprintf( __( '%d Receipt(s)', 'codeclove-school-management' ), payments.length )}
+            <Badge variant="default" size="sm" className="font-medium text-text-subtle">
+              {payments.length === 1
+                ? __( '1 Receipt', 'codeclove-school-management' )
+                : sprintf( __( '%d Receipts', 'codeclove-school-management' ), payments.length )}
             </Badge>
           </div>
 
@@ -533,14 +579,14 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
             <TableRoot responsiveMode="scroll" className="w-full">
               <Thead>
                 <Tr className="border-b border-border/70 bg-bg-base/40 text-left">
-                  <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted py-3">
+                  <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted py-3 whitespace-nowrap">
                     {__( 'Receipt #', 'codeclove-school-management' )}
                   </Th>
-                  <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted py-3">
+                  <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted py-3 whitespace-nowrap">
                     {__( 'Settlement Date', 'codeclove-school-management' )}
                   </Th>
                   <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted py-3">
-                    {__( 'Payment Gateway / Method', 'codeclove-school-management' )}
+                    {__( 'Payment Method', 'codeclove-school-management' )}
                   </Th>
                   <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted py-3 text-center">
                     {__( 'Status', 'codeclove-school-management' )}
@@ -548,8 +594,8 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
                   <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted py-3 text-right">
                     {__( 'Amount Paid', 'codeclove-school-management' )}
                   </Th>
-                  <Th className="w-28 text-right text-2xs uppercase tracking-wider font-semibold text-text-muted py-3 pr-6">
-                    {__( 'Receipt Slip', 'codeclove-school-management' )}
+                  <Th className="w-28 text-right text-2xs uppercase tracking-wider font-semibold text-text-muted py-3 pr-6 whitespace-nowrap">
+                    {__( 'Action', 'codeclove-school-management' )}
                   </Th>
                 </Tr>
               </Thead>
@@ -561,30 +607,27 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
 
                   return (
                     <Tr key={pmt.id ?? idx} className="hover:bg-bg-base/30 transition-colors">
-                      <Td className="py-3.5 font-mono font-semibold text-text">
+                      <Td className="py-3.5 font-mono font-semibold text-text whitespace-nowrap">
                         {receiptNumber}
                       </Td>
-                      <Td className="py-3.5 text-text-muted">
+                      <Td className="py-3.5 text-text-muted whitespace-nowrap">
                         {formatDate(pmt.paid_on)}
                       </Td>
                       <Td className="py-3.5">
-                        <div className="inline-flex items-center gap-1.5 font-medium text-text">
-                          <MethodIconComponent className="w-3.5 h-3.5 text-text-subtle" />
+                        <div className="inline-flex items-center gap-1.5 font-medium text-text whitespace-nowrap">
+                          <MethodIconComponent className="w-3.5 h-3.5 text-text-subtle shrink-0" />
                           <span>{methodInfo.label}</span>
                         </div>
                       </Td>
                       <Td className="py-3.5 text-center">
-                        <Badge
-                          variant="success"
-                          className="bg-success-dim text-success border-success/30 text-3xs font-semibold px-2 py-0.5"
-                        >
+                        <Badge variant="paid" size="sm">
                           {__( 'Completed', 'codeclove-school-management' )}
                         </Badge>
                       </Td>
-                      <Td className="py-3.5 text-right font-bold text-success tabular-nums">
+                      <Td className="py-3.5 text-right font-mono font-bold text-success tabular-nums whitespace-nowrap">
                         +{formatCurrency(pmt.amount, currency)}
                       </Td>
-                      <Td className="py-3.5 text-right pr-6">
+                      <Td className="py-3.5 text-right pr-6 whitespace-nowrap">
                         <Button
                           variant="secondary"
                           size="sm"
@@ -592,14 +635,14 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
                             if (onViewReceipt) {
                               onViewReceipt({
                                 ...pmt,
-                                invoice,
-                                invoice_number: invoice.invoice_number,
-                              })
-                            }
-                          }}
-                          className="h-7 px-2.5 text-xs font-semibold rounded-lg gap-1 border border-border/80 hover:border-border hover:bg-bg-base"
+                                 invoice,
+                                 invoice_number: invoice.invoice_number,
+                               })
+                             }
+                           }}
+                          className="h-8 px-3 text-xs font-medium gap-1.5 border-border/80 text-text hover:bg-bg-base/70 shadow-2xs"
                         >
-                          <Receipt className="w-3 h-3 text-text-subtle" />
+                          <Receipt className="w-3.5 h-3.5 text-brand" />
                           <span>{__( 'View Slip', 'codeclove-school-management' )}</span>
                         </Button>
                       </Td>
@@ -613,8 +656,8 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
       )}
 
       {/* ─── 6. INTERACTIVE PAYMENT DOCK ─────────────────────────────────────── */}
-      <div id="payment-dock" ref={paymentDockRef} tabIndex={-1} className="outline-hidden scroll-mt-6">
-        {isPayable ? (
+      {isOnlinePaymentAvailable && isPayable && (
+        <div id="payment-dock" ref={paymentDockRef} tabIndex={-1} className="outline-hidden scroll-mt-6">
           <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface overflow-hidden">
             <div className="p-5 border-b border-border/70 bg-gradient-to-r from-brand/5 via-transparent to-transparent">
               <div className="flex items-center gap-3">
@@ -652,40 +695,8 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
               />
             </CardContent>
           </Card>
-        ) : invoice.status === 'paid' || invoice.balance <= 0 ? (
-          <Card className="rounded-xl border border-success/30 bg-success-dim/20 p-6 shadow-card">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-success-dim border border-success/40 flex items-center justify-center text-success shrink-0">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-text tracking-tight">
-                  {__( 'Invoice Fully Settled — No Payment Due', 'codeclove-school-management' )}
-                </h4>
-                <p className="text-xs text-text-muted">
-                  {__( 'Thank you! All fees for this term invoice have been cleared. You can view, download, or print your official statement and receipt slips above at any time.', 'codeclove-school-management' )}
-                </p>
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <Card className="rounded-xl border border-border/70 bg-bg-base/40 p-6 shadow-card">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-bg-base border border-border flex items-center justify-center text-text-muted shrink-0">
-                <XCircle className="w-5 h-5" />
-              </div>
-              <div className="space-y-0.5">
-                <h4 className="text-sm font-bold text-text">
-                  {__( 'Invoice Cancelled or Voided', 'codeclove-school-management' )}
-                </h4>
-                <p className="text-xs text-text-muted">
-                  {__( 'This invoice has been voided by school administration. Online payment is disabled for this record.', 'codeclove-school-management' )}
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ─── 7. HIDDEN PRINT CONTAINER (STANDALONE OFFICIAL STATEMENT) ────────── */}
       <div className="hidden" aria-hidden="true">

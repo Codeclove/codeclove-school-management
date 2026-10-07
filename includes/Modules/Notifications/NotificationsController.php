@@ -63,6 +63,18 @@ final class NotificationsController extends BaseController {
 				],
 			]
 		);
+		register_rest_route(
+			$this->namespace,
+			'/settings/notifications/test-whatsapp',
+			[
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'send_test_whatsapp' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'notifications.manage', $request ); },
+				],
+			]
+		);
+
 
 		register_rest_route(
 			$this->namespace,
@@ -188,6 +200,45 @@ final class NotificationsController extends BaseController {
 
 		if ( ! $sent ) {
 			return $this->error( 'send_failed', __( 'Failed to send test SMS. Please check your SMS provider configuration and logs.', 'codeclove-school-management' ), 500 );
+		}
+
+		return $this->success( [ 'sent' => true ] );
+	}
+
+	/**
+	 * Sends a test WhatsApp message.
+	 */
+	public function send_test_whatsapp( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$params = $this->json_body( $request );
+		if ( is_wp_error( $params ) ) {
+			return $params;
+		}
+
+		$phone = isset( $params['phone'] ) ? sanitize_text_field( $params['phone'] ) : '';
+		if ( empty( $phone ) ) {
+			return $this->error( 'invalid_phone', __( 'Please provide a valid recipient phone number.', 'codeclove-school-management' ), 400 );
+		}
+
+		$sent = $this->service->send_test_whatsapp( $phone );
+
+		if ( ! $sent ) {
+			$last_error = get_transient( 'codeclove_last_whatsapp_error' );
+			if ( ! empty( $last_error ) ) {
+				delete_transient( 'codeclove_last_whatsapp_error' );
+				return $this->error( 'send_failed', (string) $last_error, 400 );
+			}
+			return $this->error( 'send_failed', __( 'Failed to send test WhatsApp message. Please check your WhatsApp provider configuration and logs.', 'codeclove-school-management' ), 400 );
+		}
+		$simulated_payload = get_transient( 'codeclove_last_simulated_whatsapp' );
+		if ( false !== $simulated_payload && is_array( $simulated_payload ) ) {
+			delete_transient( 'codeclove_last_simulated_whatsapp' );
+			return $this->success(
+				[
+					'sent'      => true,
+					'simulated' => true,
+					'preview'   => $simulated_payload,
+				]
+			);
 		}
 
 		return $this->success( [ 'sent' => true ] );

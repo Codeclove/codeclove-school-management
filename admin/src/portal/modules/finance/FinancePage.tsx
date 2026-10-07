@@ -5,7 +5,8 @@
  * with detail inspection modal, using shared CodeClove design system primitives.
  */
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   AlertCircle,
   CheckCircle2,
@@ -13,7 +14,9 @@ import {
   Eye,
   FileText,
   Receipt,
+  X,
 } from 'lucide-react'
+import { useVerifyStripeSession, useCapturePayPalOrder } from '@/api/gateways'
 import { usePortal } from '../../lib/portal-context'
 import { useFinance } from '../../api/portal'
 import { formatCurrency, formatDate } from '../../lib/formatter'
@@ -42,6 +45,107 @@ export const FinancePage: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [selectedPayment, setSelectedPayment] = useState<(InvoicePayment & { invoice_number?: string; invoice?: Invoice }) | null>(null)
   const [activeTab, setActiveTab] = useState<'invoices' | 'receipts'>('invoices')
+  const [returnBanner, setReturnBanner] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null)
+  const queryClient = useQueryClient()
+  const verifyStripeMutation = useVerifyStripeSession()
+  const capturePaypalMutation = useCapturePayPalOrder()
+
+  // Handle automatic payment return verification from Stripe or PayPal
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const isPro = window.CodeClovePortalConfig?.isPro !== false
+    if (!isPro) return
+    const searchParams = new URLSearchParams(window.location.search)
+    const hashIndex = window.location.hash.indexOf('?')
+    const hashParams = new URLSearchParams(hashIndex >= 0 ? window.location.hash.substring(hashIndex + 1) : '')
+
+    const paymentStatus = searchParams.get('payment_status') || hashParams.get('payment_status')
+    if (!paymentStatus) return
+
+    const gateway = searchParams.get('gateway') || hashParams.get('gateway') || 'stripe'
+    const sessionId = searchParams.get('session_id') || hashParams.get('session_id')
+    const invoiceId = searchParams.get('invoice_id') || hashParams.get('invoice_id')
+    const token = searchParams.get('token') || hashParams.get('token')
+
+    const cleanPaymentUrlParams = () => {
+      if (typeof window === 'undefined' || !window.history?.replaceState) return
+      const url = new URL(window.location.href)
+      url.searchParams.delete('payment_status')
+      url.searchParams.delete('session_id')
+      url.searchParams.delete('gateway')
+      url.searchParams.delete('invoice_id')
+      url.searchParams.delete('token')
+      url.searchParams.delete('PayerID')
+      if (url.hash.includes('?')) {
+        const [hashPath] = url.hash.split('?')
+        url.hash = hashPath ?? ''
+      }
+      window.history.replaceState({}, document.title, url.toString())
+    }
+
+    if (paymentStatus === 'success') {
+      if (gateway === 'stripe') {
+        verifyStripeMutation.mutate(
+          {
+            session_id: sessionId || '',
+            invoice_id: invoiceId ? Number(invoiceId) : undefined,
+          },
+          {
+            onSuccess: () => {
+              setReturnBanner({
+                type: 'success',
+                message: __('Payment captured successfully! Your invoice ledger has been updated.', 'codeclove-school-management'),
+              })
+              queryClient.invalidateQueries({ queryKey: ['portal', 'finance'] })
+              cleanPaymentUrlParams()
+            },
+            onError: (err: unknown) => {
+              const errMsg = err instanceof Error ? err.message : null
+              setReturnBanner({
+                type: 'info',
+                message: errMsg || __('Payment received. Please review your updated invoices below.', 'codeclove-school-management'),
+              })
+              queryClient.invalidateQueries({ queryKey: ['portal', 'finance'] })
+              cleanPaymentUrlParams()
+            },
+          }
+        )
+      } else if (gateway === 'paypal' && token) {
+        capturePaypalMutation.mutate(
+          {
+            order_id: token,
+            invoice_id: invoiceId ? Number(invoiceId) : undefined,
+          },
+          {
+            onSuccess: () => {
+              setReturnBanner({
+                type: 'success',
+                message: __('PayPal payment captured successfully! Your invoice ledger has been updated.', 'codeclove-school-management'),
+              })
+              queryClient.invalidateQueries({ queryKey: ['portal', 'finance'] })
+              cleanPaymentUrlParams()
+            },
+            onError: (err: unknown) => {
+              const errMsg = err instanceof Error ? err.message : null
+              setReturnBanner({
+                type: 'error',
+                message: errMsg || __('Unable to capture PayPal payment.', 'codeclove-school-management'),
+              })
+              cleanPaymentUrlParams()
+            },
+          }
+        )
+      }
+    } else if (paymentStatus === 'cancelled') {
+      setReturnBanner({
+        type: 'info',
+        message: __('Payment was cancelled. You can retry payment anytime.', 'codeclove-school-management'),
+      })
+      cleanPaymentUrlParams()
+    }
+  }, [])
+
   const summary = financeData?.summary
   const invoices = financeData?.invoices ?? []
   const currency = summary?.currency ?? localization?.currency ?? 'USD'
@@ -104,6 +208,37 @@ export const FinancePage: React.FC = () => {
   }
   return (
     <div className="space-y-6">
+      {/* Payment Return Notification Banner */}
+      {returnBanner && (
+        <div
+          className={cn(
+            'rounded-xl border p-4 flex items-start justify-between gap-3 transition-all',
+            returnBanner.type === 'success' && 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200',
+            returnBanner.type === 'info' && 'bg-blue-500/10 border-blue-500/30 text-blue-900 dark:text-blue-200',
+            returnBanner.type === 'error' && 'bg-destructive/10 border-destructive/30 text-destructive dark:text-red-200'
+          )}
+        >
+          <div className="flex items-start gap-2.5">
+            {returnBanner.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            ) : returnBanner.type === 'error' ? (
+              <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            )}
+            <p className="text-sm font-medium leading-relaxed">{returnBanner.message}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReturnBanner(null)}
+            className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+            aria-label={__( 'Dismiss', 'codeclove-school-management' )}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <PageHeader
         title={__( 'Fee & Payment Records', 'codeclove-school-management' )}

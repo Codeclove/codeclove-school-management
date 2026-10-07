@@ -62,10 +62,13 @@ export function EducationTab({
     { key: 'assessment',         label: __( 'Assessment', 'codeclove-school-management' )         },
     { key: 'student',            label: __( 'Student', 'codeclove-school-management' )            },
     { key: 'staff_member',       label: __( 'Staff Member', 'codeclove-school-management' )       },
-    { key: 'guardian',           label: __( 'Guardian', 'codeclove-school-management' )           },
-    { key: 'invoice',            label: __( 'Invoice', 'codeclove-school-management' )            },
-    { key: 'payment',            label: __( 'Payment', 'codeclove-school-management' )            },
-    { key: 'attendance_record',  label: __( 'Attendance Record', 'codeclove-school-management' )  },
+    { key: 'guardian',              label: __( 'Guardian', 'codeclove-school-management' )              },
+    { key: 'admission_application', label: __( 'Admission Application', 'codeclove-school-management' ) },
+    { key: 'staff_application',     label: __( 'Staff Application', 'codeclove-school-management' )     },
+    { key: 'fee_type',              label: __( 'Fee Type', 'codeclove-school-management' )              },
+    { key: 'invoice',               label: __( 'Invoice', 'codeclove-school-management' )               },
+    { key: 'payment',               label: __( 'Payment', 'codeclove-school-management' )               },
+    { key: 'attendance_record',     label: __( 'Attendance Record', 'codeclove-school-management' )     },
   ], [])
 
   const presetMetadata = useMemo<Record<string, { flag: string; country: string; subtitle: string; features: string }>>(() => ({
@@ -222,6 +225,19 @@ export function EducationTab({
           name="education_system.grading_default"
           register={register}
           options={gradingSchemes}
+        />
+        <FormSelect
+          label={__( 'Default Terms Per Session', 'codeclove-school-management' )}
+          name="education_system.default_number_terms"
+          register={register}
+          options={[
+            { value: '1', label: __( '1 Term (Annual)', 'codeclove-school-management' ) },
+            { value: '2', label: __( '2 Terms (Semesters)', 'codeclove-school-management' ) },
+            { value: '3', label: __( '3 Terms (Trimesters)', 'codeclove-school-management' ) },
+            { value: '4', label: __( '4 Terms (Quarters)', 'codeclove-school-management' ) },
+            { value: '5', label: __( '5 Terms', 'codeclove-school-management' ) },
+            { value: '6', label: __( '6 Terms (Bimesters)', 'codeclove-school-management' ) },
+          ]}
         />
         <FormSelect
           label={__( 'Class Seeding Strategy', 'codeclove-school-management' )}

@@ -167,7 +167,9 @@ final class AdmissionsService {
 		];
 
 		$is_inquiry  = ( $payload['status'] ?? '' ) === 'inquiry';
-		$status      = $is_inquiry ? 'inquiry' : 'submitted';
+		$status      = ! empty( $payload['status'] )
+			? sanitize_key( (string) $payload['status'] )
+			: (string) ( ( new \CodeClove\Modules\Settings\SettingsRepository() )->get_settings()['admissions']['default_status'] ?? 'submitted' );
 		$source      = ! empty( $payload['source'] ) ? sanitize_text_field( $payload['source'] ) : ( $is_inquiry ? 'inquiry_form' : 'public_form' );
 
 		$insert_data = [
@@ -376,6 +378,25 @@ final class AdmissionsService {
 		$mapped_app = $this->map_application( $new_app );
 
 		do_action( 'codeclove_admission_status_changed', $id, $to_status, $from_status, $mapped_app );
+		// Auto-convert to student record if setting enabled and status transitioned to accepted
+		if ( 'accepted' === $to_status && empty( $new_app['converted_student_id'] ) ) {
+			$settings = ( new \CodeClove\Modules\Settings\SettingsRepository() )->get_settings();
+			if ( ! empty( $settings['admissions']['auto_convert'] ) && ! empty( $new_app['academic_session_id'] ) && ! empty( $new_app['academic_unit_id'] ) ) {
+				$conversion_result = $this->convert_application( $id, [
+					'session_id' => (int) $new_app['academic_session_id'],
+					'unit_id'    => (int) $new_app['academic_unit_id'],
+					'group_id'   => ! empty( $new_app['academic_group_id'] ) ? (int) $new_app['academic_group_id'] : null,
+				] );
+				if ( ! is_wp_error( $conversion_result ) ) {
+					$refreshed_app = $this->db_get_application( $id );
+					if ( $refreshed_app ) {
+						$mapped_app = $this->map_application( $refreshed_app );
+					}
+				} else {
+					Logger::info( 'Admission auto-convert skipped: ' . $conversion_result->get_error_message() );
+				}
+			}
+		}
 
 		return $mapped_app;
 	}
@@ -615,7 +636,9 @@ final class AdmissionsService {
 				'academic_session_id' => $session_id,
 				'academic_unit_id'    => $unit_id,
 			] );
-			$roll_number = 'R' . str_pad( (string) ( $total_enrolled + 1 ), 2, '0', STR_PAD_LEFT );
+			$roll_number = ( ! is_wp_error( $r = IdentifierService::generate( 'roll_number' ) ) && '' !== $r )
+				? $r
+				: 'R' . str_pad( (string) ( $total_enrolled + 1 ), 2, '0', STR_PAD_LEFT );
 
 			$enrollment_id = $students_service->db_create_enrollment( [
 				'student_id'          => $student_id,

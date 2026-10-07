@@ -31,6 +31,7 @@ import {
   AlertTriangle,
   Mail,
   Smartphone,
+  MessageCircle,
   RotateCcw,
   Bell,
   History,
@@ -82,8 +83,9 @@ const TABS: TabDefinition[] = [
   { id: 'appearance',           label: __( 'Appearance', 'codeclove-school-management' ),        icon: Palette       },
   { id: 'gateways',             label: __( 'Payment Gateways', 'codeclove-school-management' ),  icon: CreditCard, pro: true },
   { id: 'email_notifications',  label: __( 'Email Alerts', 'codeclove-school-management' ),      icon: Mail          },
-  { id: 'sms_notifications',    label: __( 'SMS Alerts', 'codeclove-school-management' ),        icon: Smartphone, pro: true },
-  { id: 'in_app_notifications', label: __( 'In-App Alerts', 'codeclove-school-management' ),     icon: Bell,       pro: true },
+  { id: 'sms_notifications',    label: __( 'SMS Alerts', 'codeclove-school-management' ),        icon: Smartphone,    pro: true },
+  { id: 'whatsapp_notifications', label: __( 'WhatsApp Alerts', 'codeclove-school-management' ), icon: MessageCircle, pro: true },
+  { id: 'in_app_notifications', label: __( 'In-App Alerts', 'codeclove-school-management' ),     icon: Bell,          pro: true },
   { id: 'shortcodes',           label: __( 'Shortcodes', 'codeclove-school-management' ),        icon: CodeIcon      },
   { id: 'system',               label: __( 'System', 'codeclove-school-management' ),            icon: Server        },
   { id: 'activity_log',         label: __( 'Activity Log', 'codeclove-school-management' ),      icon: History,    pro: true },
@@ -162,13 +164,12 @@ export default function SettingsPage() {
     setSaveStatus('saving')
     try {
       await updateSettingsMutation.mutateAsync(data)
-      setSaveStatus('saved')
-      toast.success('Settings saved successfully!')
+      setSaveStatus('idle')
+      toast.success(__( 'Settings saved successfully!', 'codeclove-school-management' ))
       reset(data) // reset dirty state to new values
-      setTimeout(() => setSaveStatus('idle'), 3000)
     } catch {
       setSaveStatus('error')
-      toast.error('Failed to save settings.')
+      toast.error(__( 'Failed to save settings.', 'codeclove-school-management' ))
       setTimeout(() => setSaveStatus('idle'), 4000)
     }
   }
@@ -377,16 +378,12 @@ export default function SettingsPage() {
       </form>
 
       {/* ── Sticky Floating Save Bar ───────────────────────────────── */}
-      {(isDirty || saveStatus === 'saving' || saveStatus === 'saved') && (
+      {(isDirty || saveStatus === 'saving') && (
         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 md:right-10 z-[120] flex items-center justify-between gap-4 p-2.5 px-4 sm:px-5 w-auto max-w-[calc(100vw-2rem)] sm:max-w-none bg-bg-overlay/95 backdrop-blur-md border border-border/80 rounded-2xl shadow-modal animate-slide-up">
           <div className="flex items-center gap-2.5 shrink-0">
-            {saveStatus === 'saved' ? (
-              <Check size={16} className="text-emerald-500 shrink-0" />
-            ) : (
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-            )}
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
             <span className="text-xs font-semibold text-text whitespace-nowrap">
-              {saveStatus === 'saved' ? __( 'Settings saved successfully!', 'codeclove-school-management' ) : __( 'Unsaved settings changes', 'codeclove-school-management' )}
+              {__( 'Unsaved settings changes', 'codeclove-school-management' )}
             </span>
           </div>
           <div className="flex items-center gap-2 pl-3 border-l border-border/60 shrink-0">

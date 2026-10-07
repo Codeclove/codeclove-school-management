@@ -75,6 +75,29 @@ final class Assets {
 		}
 
 
+		$config_json = wp_json_encode( $this->build_config(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
+
+		// Dev server: if Vite dev server is running on localhost, load directly for live HMR.
+		if ( $this->is_vite_dev_active() ) {
+			$head_extras = implode( "\n\t\t", [
+				'<script type="module">',
+				"\timport RefreshRuntime from 'http://localhost:5174/@react-refresh';",
+				"\tRefreshRuntime.injectIntoGlobalHook(window);",
+				"\twindow.\$RefreshReg$ = () => {};",
+				"\twindow.\$RefreshSig$ = () => (type) => type;",
+				"\twindow.__vite_plugin_react_preamble_installed__ = true;",
+				'</script>',
+				'<script type="module" src="http://localhost:5174/@vite/client"></script>',
+				'<script>',
+				"\twindow.CodeCloveConfig = {$config_json};",
+				'</script>',
+			] );
+			$body_scripts = '<script type="module" src="http://localhost:5174/src/main.tsx"></script>';
+
+			$this->render_html( $head_extras, $body_scripts );
+			return;
+		}
+
 		$build_dir = self::get_build_dir();
 		$build_url = self::get_build_url();
 		$version   = defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0';
@@ -95,16 +118,38 @@ final class Assets {
 		wp_enqueue_script( self::JS_HANDLE, $build_url . 'index.js', [], $version, true );
 
 		// Inline config — output is wp_json_encode()'d with full HEX escaping; safe.
-		$config_json = wp_json_encode( $this->build_config(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
 		wp_add_inline_script( self::JS_HANDLE, 'window.CodeCloveConfig = ' . $config_json . ';', 'before' );
 
 		$this->render_html();
 	}
 
 	/**
-	 * Renders the fullscreen HTML shell using WP's enqueue queue, then exits.
+	 * Checks if Vite dev server is running on localhost for live development.
+	 *
+	 * @return bool
 	 */
-	private function render_html(): void {
+	private function is_vite_dev_active(): bool {
+		if ( defined( 'CODECLOVE_DEV' ) && ! CODECLOVE_DEV ) {
+			return false;
+		}
+
+		$ctx = @stream_context_create( [ 'http' => [ 'timeout' => 0.05 ] ] );
+		$fp  = @fopen( 'http://127.0.0.1:5174/@vite/client', 'r', false, $ctx );
+		if ( is_resource( $fp ) ) {
+			fclose( $fp );
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Renders the fullscreen HTML shell using WP's enqueue queue, then exits.
+	 *
+	 * @param string $head_extras  Dev-only raw HTML for <head> (Vite HMR preamble).
+	 * @param string $body_scripts Dev-only raw HTML before </body> (Vite app entry).
+	 */
+	private function render_html( string $head_extras = '', string $body_scripts = '' ): void {
 		$plugin_url = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
 
 		// WordPress 6.4+ deprecated print_emoji_styles() on wp_print_styles/admin_print_styles.
@@ -123,10 +168,16 @@ final class Assets {
 			<link rel="icon" type="image/svg+xml" href="<?php echo esc_url( $plugin_url . 'assets/defaults/logo.svg' ); ?>">
 			<link rel="shortcut icon" href="<?php echo esc_url( $plugin_url . 'assets/defaults/logo.svg' ); ?>">
 			<?php wp_print_styles(); wp_print_head_scripts(); ?>
+			<?php if ( $head_extras ) : ?>
+				<?php echo $head_extras; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dev-only Vite preamble ?>
+			<?php endif; ?>
 		</head>
 		<body>
 			<div id="codeclove-root"></div>
 			<?php wp_print_footer_scripts(); ?>
+			<?php if ( $body_scripts ) : ?>
+				<?php echo $body_scripts; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dev-only Vite entry ?>
+			<?php endif; ?>
 		</body>
 		</html>
 		<?php

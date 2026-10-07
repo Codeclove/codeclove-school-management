@@ -37,6 +37,10 @@ vi.mock('@/api/gateways', () => ({
     mutateAsync: vi.fn(),
     isPending: false,
   }),
+  useVerifyStripeSession: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
 }))
 
 // Mock portal formatter
@@ -91,7 +95,32 @@ describe('PortalPaymentMethodSelector Component', () => {
     expect(html).toContain('Sandbox')
   })
 
-  it('renders payment amount selection modes (Full Balance vs Custom/Partial)', () => {
+  it('renders clean full-balance card when partial payments are disabled (default)', () => {
+    const html = renderToString(
+      <PortalPaymentMethodSelector invoice={sampleInvoice} />
+    )
+
+    expect(html).toContain('Full Balance Outstanding')
+    expect(html).toContain('Settles invoice in full')
+    expect(html).not.toContain('Pay Custom / Partial Amount')
+  })
+
+  it('renders dual amount selection modes when partial payments are enabled in settings', () => {
+    const originalWindow = globalThis.window
+    const env = globalThis as unknown as { window?: { CodeClovePortalConfig?: unknown } }
+    env.window = {
+      CodeClovePortalConfig: {
+        restUrl: '',
+        nonce: '',
+        settings: {
+          finance: {
+            allow_partial_payments: true,
+            min_partial_amount: 10,
+          },
+        },
+      },
+    }
+
     const html = renderToString(
       <PortalPaymentMethodSelector invoice={sampleInvoice} />
     )
@@ -100,6 +129,8 @@ describe('PortalPaymentMethodSelector Component', () => {
     expect(html).toContain('Pay Custom / Partial Amount')
     expect(html).toContain('Settles all outstanding dues on this invoice')
     expect(html).toContain('Specify a partial payment amount')
+
+    env.window = originalWindow as unknown as { CodeClovePortalConfig?: unknown }
   })
 
   it('renders payer confirmation email input prefilled with guardian email', () => {
@@ -178,5 +209,45 @@ describe('PortalPaymentMethodSelector Component', () => {
 
     expect(html).toContain('disabled=""')
     expect(html).toContain('Pay $0.00 via Stripe')
+  })
+
+  it('renders clean notice and hides amount/email/CTA when no gateways are configured', () => {
+    const prev = mockGatewaysConfig
+    mockGatewaysConfig = { gateways: {} }
+
+    const html = renderToString(
+      <PortalPaymentMethodSelector invoice={sampleInvoice} />
+    )
+
+    expect(html).toContain('Online Payments Not Available')
+    expect(html).not.toContain('Pay Full Balance')
+    expect(html).not.toContain('Pay Custom / Partial Amount')
+    expect(html).not.toContain('Receipt &amp; Confirmation Email')
+    expect(html).not.toContain('Pay $450.00 via Stripe')
+
+    mockGatewaysConfig = prev
+  })
+
+  it('displays free version notice when CodeClovePortalConfig.isPro is false', () => {
+    const prev = mockGatewaysConfig
+    mockGatewaysConfig = { gateways: {} }
+    const originalWindow = globalThis.window
+    const env = globalThis as unknown as { window?: { CodeClovePortalConfig?: unknown } }
+    env.window = {
+      CodeClovePortalConfig: {
+        isPro: false,
+      },
+    }
+
+    const html = renderToString(
+      <PortalPaymentMethodSelector invoice={sampleInvoice} />
+    )
+
+    expect(html).toContain('Online Payments Not Available')
+    expect(html).toContain('Online tuition payments are not supported in the free version')
+    expect(html).not.toContain('Pay $450.00 via Stripe')
+
+    env.window = originalWindow as unknown as { CodeClovePortalConfig?: unknown }
+    mockGatewaysConfig = prev
   })
 })

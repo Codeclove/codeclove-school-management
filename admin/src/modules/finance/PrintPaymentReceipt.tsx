@@ -53,6 +53,7 @@ export default function PrintPaymentReceipt({ payment, invoice, school }: PrintP
         school={school}
         documentType={__( 'Fee Receipt', 'codeclove-school-management' )}
         documentNumber={payment.payment_number}
+        showCode={false}
         metaRows={[
           { label: __( 'Date', 'codeclove-school-management' ), value: formatDate(payment.paid_on) },
         ]}
@@ -64,20 +65,20 @@ export default function PrintPaymentReceipt({ payment, invoice, school }: PrintP
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
-          gap: '14px',
+          gap: '16px',
           marginBottom: '12px',
           paddingBottom: '12px',
           borderBottom: '1px solid #e5e7eb',
         }}
       >
         <div>
-          <div style={{ fontSize: '0.63rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280', marginBottom: '2px' }}>
+          <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280', marginBottom: '2px' }}>
             {__( 'Student', 'codeclove-school-management' )}
           </div>
-          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#111827' }}>
+          <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827' }}>
             {invoice.student_first_name} {invoice.student_last_name}
           </div>
-          <div style={{ marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '1px', fontSize: '0.73rem' }}>
+          <div style={{ marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '1.5px', fontSize: '0.78rem' }}>
             <div>
               <span style={{ color: '#6b7280' }}>{__( 'Student ID:', 'codeclove-school-management' )} </span>
               <span style={{ fontWeight: 600, color: '#111827', fontFamily: 'monospace' }}>{invoice.student_number || '—'}</span>
@@ -92,23 +93,39 @@ export default function PrintPaymentReceipt({ payment, invoice, school }: PrintP
         </div>
 
         <div>
-          <div style={{ fontSize: '0.63rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280', marginBottom: '2px' }}>
-            {__( 'Parent / Guardian', 'codeclove-school-management' )}
-          </div>
-          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#111827' }}>
-            {invoice.guardian_name || '—'}
-          </div>
-          <div style={{ marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '1px', fontSize: '0.73rem' }}>
-            <div>
-              <span style={{ color: '#6b7280' }}>{__( 'Email:', 'codeclove-school-management' )} </span>
-              <span style={{ color: '#111827' }}>{invoice.guardian_email || '—'}</span>
-            </div>
-          </div>
+          {invoice.guardian_name ? (
+            <>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280', marginBottom: '2px' }}>
+                {__( 'Parent / Guardian', 'codeclove-school-management' )}
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827' }}>
+                {invoice.guardian_name}
+              </div>
+              {invoice.guardian_email && (
+                <div style={{ marginTop: '2px', fontSize: '0.78rem' }}>
+                  <span style={{ color: '#6b7280' }}>{__( 'Email:', 'codeclove-school-management' )} </span>
+                  <span style={{ color: '#111827' }}>{invoice.guardian_email}</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280', marginBottom: '2px' }}>
+                {__( 'Fee Status', 'codeclove-school-management' )}
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '0.92rem', color: invoice.balance_minor === 0 ? '#15803d' : '#b91c1c' }}>
+                {invoice.balance_minor === 0 ? __( 'Settled in Full', 'codeclove-school-management' ) : __( 'Outstanding Balance Due', 'codeclove-school-management' )}
+              </div>
+              <div style={{ marginTop: '2px', fontSize: '0.78rem', color: '#6b7280' }}>
+                <span>{sprintf( __( 'Receipt Ref: %s', 'codeclove-school-management' ), payment.payment_number )}</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* ─── 3. PAYMENT DETAILS ────────────────────────────────────────── */}
-      <div style={{ marginBottom: '12px', borderBottom: '1px solid #f3f4f6', paddingBottom: '4px', fontSize: '0.78rem' }}>
+      <div style={{ marginBottom: '12px', borderBottom: '1px solid #f3f4f6', paddingBottom: '4px', fontSize: '0.82rem' }}>
         {([
           [__( 'Invoice No.', 'codeclove-school-management' ), invoice.invoice_number],
           [__( 'Payment Method', 'codeclove-school-management' ), methodLabels[payment.method] ?? payment.method],
@@ -122,7 +139,7 @@ export default function PrintPaymentReceipt({ payment, invoice, school }: PrintP
       </div>
 
       {/* ─── 4. FINANCIAL SUMMARY ──────────────────────────────────────── */}
-      <div style={{ marginBottom: '12px', fontSize: '0.8rem' }}>
+      <div style={{ marginBottom: '12px', fontSize: '0.82rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
           <span style={{ color: '#4b5563' }}>{__( 'Total Invoice Amount', 'codeclove-school-management' )}</span>
           <span style={{ fontWeight: 600, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
@@ -139,11 +156,11 @@ export default function PrintPaymentReceipt({ payment, invoice, school }: PrintP
         )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e5e7eb', padding: '6px 0 3px', fontWeight: 700, fontSize: '0.88rem', color: '#111827' }}>
           <span>{__( 'Amount Received Now', 'codeclove-school-management' )}</span>
-          <span style={{ fontWeight: 900, fontSize: '1.05rem', color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontWeight: 800, fontSize: '1rem', color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
             {formatCurrency(payment.amount_minor)}
           </span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid #111827', borderBottom: '1px solid #111827', padding: '5px 0', fontWeight: 800, fontSize: '0.82rem', color: '#111827' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid #111827', borderBottom: '1px solid #111827', padding: '5px 0', fontWeight: 700, fontSize: '0.82rem', color: '#111827' }}>
           <span>{__( 'Balance Outstanding', 'codeclove-school-management' )}</span>
           <span style={{ fontWeight: 800, fontSize: '0.88rem', color: invoice.balance_minor > 0 ? '#b91c1c' : '#15803d', fontVariantNumeric: 'tabular-nums' }}>
             {formatCurrency(invoice.balance_minor)}
@@ -159,7 +176,7 @@ export default function PrintPaymentReceipt({ payment, invoice, school }: PrintP
 
       {/* ─── 5. FOOTER ─────────────────────────────────────────────────── */}
       <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '10px', marginTop: '14px', textAlign: 'center' }}>
-        <p style={{ margin: 0, fontSize: '0.68rem', color: '#4b5563', fontWeight: 500 }}>
+        <p style={{ margin: 0, fontSize: '0.7rem', color: '#4b5563', fontWeight: 500 }}>
           {__( 'This is a computer-generated fee receipt. Please retain for your records.', 'codeclove-school-management' )}
         </p>
         <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: '#6b7280' }}>

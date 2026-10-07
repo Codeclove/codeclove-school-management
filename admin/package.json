@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:watch": "vite build --watch",
+    "dev:portal": "vite build --config vite.portal.config.ts --watch",
     "build:admin": "vite build",
     "build:portal": "vite build --config vite.portal.config.ts",
     "build": "tsc --noEmit && npm run build:admin && npm run build:portal",

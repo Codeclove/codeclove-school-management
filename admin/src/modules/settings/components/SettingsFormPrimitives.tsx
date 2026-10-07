@@ -7,7 +7,7 @@
  */
 import { useState } from 'react'
 import { useController, useWatch } from 'react-hook-form'
-import { Plus, Trash2, Image, Upload, X, type LucideIcon } from 'lucide-react'
+import { Plus, Trash2, Image, Upload, X, Eye, EyeOff, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button, Card, Spinner } from '@/components/ui'
 import { api } from '@/lib/api-client'
@@ -118,26 +118,96 @@ export function FormInput({
 }: FormInputProps) {
   const id = `settings-input-${name}`
   const errorId = error ? `${id}-error` : undefined
+  const [showPassword, setShowPassword] = useState(false)
+  const isPassword = type === 'password'
+  const inputType = isPassword ? (showPassword ? 'text' : 'password') : type
+
   return (
     <div className={cn('space-y-1', fullWidth && 'col-span-full')}>
       <label htmlFor={id} className="block text-sm font-medium text-text">
         {label}
         {required && <span className="text-danger ms-0.5">*</span>}
       </label>
-      <input
+      <div className={cn(isPassword && 'relative')}>
+        <input
+          id={id}
+          type={inputType}
+          placeholder={placeholder}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
+          {...register(name)}
+          className={cn(
+            'w-full h-8 px-3 rounded border bg-bg-surface text-sm text-text transition-colors duration-100',
+            'placeholder:text-text-subtle',
+            isPassword && 'pr-9 font-mono',
+            error
+              ? 'border-danger focus:ring-1 focus:ring-danger/50 focus:border-danger'
+              : 'border-border hover:border-border-strong focus:outline-none focus:ring-1 focus:ring-brand-ring focus:border-brand',
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+            className
+          )}
+          {...props}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-text-subtle hover:text-text hover:bg-bg-overlay/50 transition-colors focus:outline-none focus:ring-1 focus:ring-brand-ring"
+            aria-label={showPassword ? __( 'Hide value', 'codeclove-school-management' ) : __( 'Show value', 'codeclove-school-management' )}
+          >
+            {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+        )}
+      </div>
+      {description && !error && (
+        <p className="text-xs text-text-muted leading-normal pt-0.5">{description}</p>
+      )}
+      {error && (
+        <p id={errorId} role="alert" className="text-xs text-danger leading-normal pt-0.5">{error}</p>
+      )}
+    </div>
+  )
+}
+
+// ─── FormTextarea ────────────────────────────────────────────────────────────
+
+interface FormTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label: string
+  name: string
+  register: Register
+  placeholder?: string
+  description?: string
+  error?: string
+  fullWidth?: boolean
+}
+
+export function FormTextarea({
+  label,
+  name,
+  register,
+  placeholder,
+  description,
+  error,
+  fullWidth = true,
+  rows = 3,
+  className,
+  ...props
+}: FormTextareaProps) {
+  const id = name.replace(/\./g, '-')
+  return (
+    <div className={cn('space-y-1', fullWidth && 'col-span-full')}>
+      <label htmlFor={id} className="text-xs font-semibold text-text-muted">{label}</label>
+      <textarea
         id={id}
-        type={type}
         placeholder={placeholder}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={errorId}
+        rows={rows}
         {...register(name)}
         className={cn(
-          'w-full h-8 px-3 rounded border bg-bg-surface text-sm text-text transition-colors duration-100',
+          'w-full p-3 rounded border border-border bg-bg-surface text-sm text-text transition-colors duration-100',
           'placeholder:text-text-subtle',
-          error
-            ? 'border-danger focus:ring-1 focus:ring-danger/50 focus:border-danger'
-            : 'border-border hover:border-border-strong focus:outline-none focus:ring-1 focus:ring-brand-ring focus:border-brand',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
+          'hover:border-border-strong',
+          'focus:outline-none focus:ring-1 focus:ring-brand-ring focus:border-brand',
+          error && 'border-danger focus:ring-danger/20 focus:border-danger',
           className
         )}
         {...props}
@@ -146,7 +216,7 @@ export function FormInput({
         <p className="text-xs text-text-muted leading-normal pt-0.5">{description}</p>
       )}
       {error && (
-        <p id={errorId} role="alert" className="text-xs text-danger leading-normal pt-0.5">{error}</p>
+        <p role="alert" className="text-xs text-danger leading-normal pt-0.5">{error}</p>
       )}
     </div>
   )

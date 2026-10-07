@@ -40,6 +40,7 @@ final class NotificationsService {
 		// Hook event listeners.
 		add_action( 'codeclove_admission_received', [ $this, 'on_admission_created' ], 10, 2 );
 		add_action( 'codeclove_admission_status_changed', [ $this, 'on_admission_status_changed' ], 10, 4 );
+		add_action( 'codeclove_staff_application_received', [ $this, 'on_staff_application_received' ], 10, 3 );
 		add_action( 'codeclove_payment_recorded', [ $this, 'on_payment_recorded' ], 10, 1 );
 		add_action( 'codeclove_student_attendance_marked', [ $this, 'on_attendance_marked' ], 10, 3 );
 		add_action( 'codeclove_invoice_issued', [ $this, 'on_invoice_issued' ], 10, 1 );
@@ -282,6 +283,165 @@ final class NotificationsService {
 	}
 
 	/**
+	 * Send a WhatsApp notification with placeholder substitutions.
+	 */
+	public function send_whatsapp( string $event, string $recipient_phone, array $placeholders ): bool {
+		if ( empty( $recipient_phone ) ) {
+			return false;
+		}
+
+		$settings      = ( new SettingsRepository() )->get_settings();
+		$notifications = $settings['notifications'] ?? [];
+
+		if ( empty( $notifications['whatsapp_enabled'] ) ) {
+			return false;
+		}
+
+		$templates = $notifications['whatsapp_templates'] ?? [];
+		if ( empty( $templates[ $event ] ) ) {
+			return false;
+		}
+
+		$template = $templates[ $event ];
+		if ( empty( $template['enabled'] ) ) {
+			return false;
+		}
+
+		$body = $template['body'] ?? '';
+		if ( empty( $body ) ) {
+			return false;
+		}
+
+		// Add global placeholders.
+		$placeholders['{school_name}']  = $settings['school']['name'] ?? get_bloginfo( 'name' );
+		$placeholders['{school_email}'] = $settings['school']['email'] ?? get_bloginfo( 'admin_email' );
+
+		// Perform substitutions.
+		$keys       = array_keys( $placeholders );
+		$values     = array_values( $placeholders );
+		$final_body = str_replace( $keys, $values, $body );
+
+		// Truncate WhatsApp message body to 1024 characters max
+		if ( mb_strlen( $final_body ) > 1024 ) {
+			$final_body = mb_substr( $final_body, 0, 1021 ) . '...';
+		}
+
+		$driver = $this->get_whatsapp_driver( $notifications );
+		if ( ! $driver ) {
+			$provider = $notifications['whatsapp_provider'] ?? 'none';
+			$err      = 'none' === $provider
+				? 'WhatsApp notifications are disabled or no provider is selected.'
+				: "Unable to initialize WhatsApp driver for '{$provider}'.";
+			AuditLogger::log(
+				'notification.whatsapp_failed',
+				[
+					'event'     => $event,
+					'recipient' => $recipient_phone,
+					'error'     => $err,
+				]
+			);
+			set_transient( 'codeclove_last_whatsapp_error', $err, 60 );
+			return false;
+		}
+
+		$context = [
+			'event'         => $event,
+			'template_name' => $template['template_name'] ?? '',
+			'placeholders'  => $placeholders,
+		];
+
+		$sent = $driver->send( $recipient_phone, $final_body, $context );
+
+		if ( $sent ) {
+			AuditLogger::log(
+				'notification.whatsapp_sent',
+				[
+					'event'     => $event,
+					'recipient' => $recipient_phone,
+				]
+			);
+		} else {
+			AuditLogger::log(
+				'notification.whatsapp_failed',
+				[
+					'event'     => $event,
+					'recipient' => $recipient_phone,
+					'error'     => 'Driver send failed.',
+				]
+			);
+		}
+
+		return $sent;
+	}
+
+	/**
+	 * Instantiates the selected WhatsApp driver.
+	 */
+	private function get_whatsapp_driver( array $notifications ): ?object {
+		$provider = $notifications['whatsapp_provider'] ?? 'none';
+		return apply_filters( 'codeclove_whatsapp_driver', null, $provider, $notifications );
+	}
+
+	/**
+	 * Dispatches SMS and WhatsApp notifications to guardian and/or student if configured.
+	 *
+	 * @param string               $event         Event key.
+	 * @param array<string, mixed> $notifications Notifications configuration.
+	 * @param array<string, mixed> $info          Student and guardian data containing phones.
+	 * @param array<string, mixed> $placeholders  Replacement variables.
+	 */
+	private function dispatch_phone_notifications( string $event, array $notifications, array $info, array $placeholders ): void {
+		$guardian_phone = $info['guardian_phone'] ?? '';
+		$student_phone  = $info['student_phone'] ?? '';
+
+		$sms = $notifications['sms_templates'][ $event ] ?? [];
+		if ( ! empty( $sms['send_to_guardian'] ) && ! empty( $guardian_phone ) ) {
+			$this->send_sms( $event, $guardian_phone, $placeholders );
+		}
+		if ( ! empty( $sms['send_to_student'] ) && ! empty( $student_phone ) ) {
+			$this->send_sms( $event, $student_phone, $placeholders );
+		}
+
+		$wa = $notifications['whatsapp_templates'][ $event ] ?? [];
+		if ( ! empty( $wa['send_to_guardian'] ) && ! empty( $guardian_phone ) ) {
+			$this->send_whatsapp( $event, $guardian_phone, $placeholders );
+		}
+		if ( ! empty( $wa['send_to_student'] ) && ! empty( $student_phone ) ) {
+			$this->send_whatsapp( $event, $student_phone, $placeholders );
+		}
+	}
+
+	/**
+	 * Triggers test WhatsApp dispatch for diagnostics.
+	 */
+	public function send_test_whatsapp( string $recipient_phone ): bool {
+		$settings      = ( new SettingsRepository() )->get_settings();
+		$notifications = $settings['notifications'] ?? [];
+		$driver        = $this->get_whatsapp_driver( $notifications );
+
+		if ( ! $driver ) {
+			$provider = $notifications['whatsapp_provider'] ?? 'none';
+			$err      = 'none' === $provider
+				? __( 'WhatsApp notifications are disabled or no provider is selected. Please select a provider and save settings.', 'codeclove-school-management' )
+				: sprintf( __( "Unable to initialize WhatsApp driver for '%s'. Please verify your credentials.", 'codeclove-school-management' ), $provider );
+			AuditLogger::log(
+				'notification.whatsapp_failed',
+				[
+					'event'     => 'test',
+					'recipient' => $recipient_phone,
+					'error'     => $err,
+				]
+			);
+			set_transient( 'codeclove_last_whatsapp_error', $err, 60 );
+			return false;
+		}
+
+		$school_name = $settings['school']['name'] ?? get_bloginfo( 'name' );
+		$message     = "CodeClove WhatsApp Test: If you are reading this, your WhatsApp configuration is working correctly!\n— " . $school_name;
+		return $driver->send( $recipient_phone, $message, [ 'event' => 'test' ] );
+	}
+
+	/**
 	 * Callback for codeclove_admission_received hook.
 	 */
 	public function on_admission_created( $app_id, array $mapped_app = [] ): void {
@@ -323,21 +483,53 @@ final class NotificationsService {
 			}
 		}
 
-		// SMS template student / guardian routing
-		$sms_tpl = $notifications['sms_templates']['admission_received'] ?? [];
-		if ( ! empty( $sms_tpl['send_to_guardian'] ) ) {
-			$guardian_phone = $mapped_app['guardian_phone'] ?? '';
-			if ( ! empty( $guardian_phone ) ) {
-				$this->send_sms( 'admission_received', $guardian_phone, $placeholders );
-			}
-		}
-		if ( ! empty( $sms_tpl['send_to_student'] ) ) {
-			$student_phone = $mapped_app['student_phone'] ?? '';
-			if ( ! empty( $student_phone ) ) {
-				$this->send_sms( 'admission_received', $student_phone, $placeholders );
-			}
-		}
+		$this->dispatch_phone_notifications( 'admission_received', $notifications, $mapped_app, $placeholders );
 	}
+	/**
+	 * Callback for codeclove_staff_application_received hook.
+	 *
+	 * Dispatches alert email to configured staff onboarding notification recipients.
+	 *
+	 * @param int    $app_id
+	 * @param string $ref_number
+	 * @param array  $app_data
+	 */
+	public function on_staff_application_received( int $app_id, string $ref_number, array $app_data = [] ): void {
+		$settings       = ( new SettingsRepository() )->get_settings();
+		$recipients_str = ! empty( $settings['staff_onboarding']['notification_recipients'] )
+			? $settings['staff_onboarding']['notification_recipients']
+			: get_bloginfo( 'admin_email' );
+
+		$applicant   = trim( ( $app_data['first_name'] ?? '' ) . ' ' . ( $app_data['last_name'] ?? '' ) );
+		$role        = $app_data['desired_role'] ?? 'Staff';
+		$email       = $app_data['email'] ?? '';
+		$school_name = $settings['school']['name'] ?? get_bloginfo( 'name' );
+
+		/* translators: 1: application reference number */
+		$subject = sprintf( __( 'New Staff Application Received — %s', 'codeclove-school-management' ), $ref_number );
+		$body    = sprintf(
+			/* translators: 1: school name, 2: applicant name, 3: reference number, 4: role, 5: email */
+			__( "Dear %1\$s Team,\n\nA new staff employment application has been received.\n\nApplicant: %2\$s\nReference: %3\$s\nRole: %4\$s\nEmail: %5\$s\n\nPlease log in to review the application.\n\nRegards,\n%1\$s", 'codeclove-school-management' ),
+			$school_name,
+			$applicant,
+			$ref_number,
+			$role,
+			$email
+		);
+
+		foreach ( array_filter( array_map( 'trim', explode( ',', $recipients_str ) ), 'is_email' ) as $target_email ) {
+			wp_mail( $target_email, $subject, $body );
+		}
+
+		$this->notify_permission(
+			'staff.view',
+			__( 'New Staff Application Received', 'codeclove-school-management' ),
+			sprintf( __( 'A new staff application has been submitted by %1$s for %2$s (Ref: %3$s).', 'codeclove-school-management' ), $applicant, $role, $ref_number ),
+			'staff_application',
+			'/staff'
+		);
+	}
+
 
 	/**
 	 * Callback for codeclove_admission_status_changed hook.
@@ -370,20 +562,7 @@ final class NotificationsService {
 			}
 		}
 
-		// SMS Configuration Check
-		$sms_tpl = $notifications['sms_templates']['admission_status_changed'] ?? [];
-		if ( ! empty( $sms_tpl['send_to_guardian'] ) ) {
-			$recipient_phone = $mapped_app['guardian_phone'] ?? '';
-			if ( ! empty( $recipient_phone ) ) {
-				$this->send_sms( 'admission_status_changed', $recipient_phone, $placeholders );
-			}
-		}
-		if ( ! empty( $sms_tpl['send_to_student'] ) ) {
-			$student_phone = $mapped_app['student_phone'] ?? '';
-			if ( ! empty( $student_phone ) ) {
-				$this->send_sms( 'admission_status_changed', $student_phone, $placeholders );
-			}
-		}
+		$this->dispatch_phone_notifications( 'admission_status_changed', $notifications, $mapped_app, $placeholders );
 	}
 
 	/**
@@ -419,8 +598,7 @@ final class NotificationsService {
 		$settings      = ( new SettingsRepository() )->get_settings();
 		$notifications = $settings['notifications'] ?? [];
 
-		$tpl     = $notifications['templates']['payment_recorded'] ?? [];
-		$sms_tpl = $notifications['sms_templates']['payment_recorded'] ?? [];
+		$tpl = $notifications['templates']['payment_recorded'] ?? [];
 
 		// Guardian email
 		if ( ! empty( $tpl['send_to_guardian'] ) ) {
@@ -439,15 +617,7 @@ final class NotificationsService {
 				$this->send( 'payment_recorded', $info['student_email'], $placeholders );
 			}
 
-			// Guardian SMS
-			if ( ! empty( $sms_tpl['send_to_guardian'] ) && ! empty( $info['guardian_phone'] ) ) {
-				$this->send_sms( 'payment_recorded', $info['guardian_phone'], $placeholders );
-			}
-
-			// Student SMS
-			if ( ! empty( $sms_tpl['send_to_student'] ) && ! empty( $info['student_phone'] ) ) {
-				$this->send_sms( 'payment_recorded', $info['student_phone'], $placeholders );
-			}
+			$this->dispatch_phone_notifications( 'payment_recorded', $notifications, $info, $placeholders );
 		}
 	}
 
@@ -458,8 +628,7 @@ final class NotificationsService {
 		$settings      = ( new SettingsRepository() )->get_settings();
 		$notifications = $settings['notifications'] ?? [];
 
-		$tpl     = $notifications['templates']['attendance_alert'] ?? [];
-		$sms_tpl = $notifications['sms_templates']['attendance_alert'] ?? [];
+		$tpl = $notifications['templates']['attendance_alert'] ?? [];
 
 		$info = $this->get_student_and_guardian( $student_id );
 
@@ -480,15 +649,7 @@ final class NotificationsService {
 			$this->send( 'attendance_alert', $info['student_email'], $placeholders );
 		}
 
-		// Guardian SMS
-		if ( ! empty( $sms_tpl['send_to_guardian'] ) && ! empty( $info['guardian_phone'] ) ) {
-			$this->send_sms( 'attendance_alert', $info['guardian_phone'], $placeholders );
-		}
-
-		// Student SMS
-		if ( ! empty( $sms_tpl['send_to_student'] ) && ! empty( $info['student_phone'] ) ) {
-			$this->send_sms( 'attendance_alert', $info['student_phone'], $placeholders );
-		}
+		$this->dispatch_phone_notifications( 'attendance_alert', $notifications, $info, $placeholders );
 
 		if ( $status === 'absent' || $status === 'late' ) {
 			$this->create_portal_notification(
@@ -527,7 +688,8 @@ final class NotificationsService {
 		$notifications = $settings['notifications'] ?? [];
 
 		$tpl     = $notifications['templates']['fee_reminder'] ?? [];
-		$sms_tpl = $notifications['sms_templates']['fee_reminder'] ?? [];
+$sms_tpl = $notifications['sms_templates']['fee_reminder'] ?? [];
+$wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 
 		$email_sent = false;
 		$student_id = isset( $invoice['student_id'] ) ? intval( $invoice['student_id'] ) : 0;
@@ -547,6 +709,7 @@ final class NotificationsService {
 		}
 
 		$sms_sent = false;
+		$wa_sent  = false;
 		if ( $info ) {
 			// Guardian SMS
 			if ( ! empty( $sms_tpl['send_to_guardian'] ) && ! empty( $info['guardian_phone'] ) ) {
@@ -557,9 +720,19 @@ final class NotificationsService {
 			if ( ! empty( $sms_tpl['send_to_student'] ) && ! empty( $info['student_phone'] ) ) {
 				$sms_sent = $this->send_sms( 'fee_reminder', $info['student_phone'], $placeholders ) || $sms_sent;
 			}
+
+			// Guardian WhatsApp
+			if ( ! empty( $wa_tpl['send_to_guardian'] ) && ! empty( $info['guardian_phone'] ) ) {
+				$wa_sent = $this->send_whatsapp( 'fee_reminder', $info['guardian_phone'], $placeholders ) || $wa_sent;
+			}
+
+			// Student WhatsApp
+			if ( ! empty( $wa_tpl['send_to_student'] ) && ! empty( $info['student_phone'] ) ) {
+				$wa_sent = $this->send_whatsapp( 'fee_reminder', $info['student_phone'], $placeholders ) || $wa_sent;
+			}
 		}
 
-		return $email_sent || $sms_sent;
+		return $email_sent || $sms_sent || $wa_sent;
 	}
 
 	/**
@@ -645,8 +818,7 @@ final class NotificationsService {
 		$settings      = ( new SettingsRepository() )->get_settings();
 		$notifications = $settings['notifications'] ?? [];
 
-		$tpl     = isset( $notifications['templates']['invoice_issued'] ) ? $notifications['templates']['invoice_issued'] : [];
-		$sms_tpl = isset( $notifications['sms_templates']['invoice_issued'] ) ? $notifications['sms_templates']['invoice_issued'] : [];
+		$tpl = isset( $notifications['templates']['invoice_issued'] ) ? $notifications['templates']['invoice_issued'] : [];
 
 		// Guardian email
 		if ( ! empty( $tpl['send_to_guardian'] ) ) {
@@ -665,15 +837,7 @@ final class NotificationsService {
 				$this->send( 'invoice_issued', $info['student_email'], $placeholders );
 			}
 
-			// Guardian SMS
-			if ( ! empty( $sms_tpl['send_to_guardian'] ) && ! empty( $info['guardian_phone'] ) ) {
-				$this->send_sms( 'invoice_issued', $info['guardian_phone'], $placeholders );
-			}
-
-			// Student SMS
-			if ( ! empty( $sms_tpl['send_to_student'] ) && ! empty( $info['student_phone'] ) ) {
-				$this->send_sms( 'invoice_issued', $info['student_phone'], $placeholders );
-			}
+			$this->dispatch_phone_notifications( 'invoice_issued', $notifications, $info, $placeholders );
 		}
 	}
 
@@ -699,8 +863,7 @@ final class NotificationsService {
 		$settings      = ( new SettingsRepository() )->get_settings();
 		$notifications = $settings['notifications'] ?? [];
 
-		$tpl     = isset( $notifications['templates']['invoice_overdue'] ) ? $notifications['templates']['invoice_overdue'] : [];
-		$sms_tpl = isset( $notifications['sms_templates']['invoice_overdue'] ) ? $notifications['sms_templates']['invoice_overdue'] : [];
+		$tpl = isset( $notifications['templates']['invoice_overdue'] ) ? $notifications['templates']['invoice_overdue'] : [];
 
 		// Guardian email
 		if ( ! empty( $tpl['send_to_guardian'] ) ) {
@@ -719,15 +882,7 @@ final class NotificationsService {
 				$this->send( 'invoice_overdue', $info['student_email'], $placeholders );
 			}
 
-			// Guardian SMS
-			if ( ! empty( $sms_tpl['send_to_guardian'] ) && ! empty( $info['guardian_phone'] ) ) {
-				$this->send_sms( 'invoice_overdue', $info['guardian_phone'], $placeholders );
-			}
-
-			// Student SMS
-			if ( ! empty( $sms_tpl['send_to_student'] ) && ! empty( $info['student_phone'] ) ) {
-				$this->send_sms( 'invoice_overdue', $info['student_phone'], $placeholders );
-			}
+			$this->dispatch_phone_notifications( 'invoice_overdue', $notifications, $info, $placeholders );
 		}
 	}
 
@@ -762,8 +917,7 @@ final class NotificationsService {
 		$settings      = ( new SettingsRepository() )->get_settings();
 		$notifications = $settings['notifications'] ?? [];
 
-		$tpl     = isset( $notifications['templates']['payment_reversed'] ) ? $notifications['templates']['payment_reversed'] : [];
-		$sms_tpl = isset( $notifications['sms_templates']['payment_reversed'] ) ? $notifications['sms_templates']['payment_reversed'] : [];
+		$tpl = isset( $notifications['templates']['payment_reversed'] ) ? $notifications['templates']['payment_reversed'] : [];
 
 		// Guardian email
 		if ( ! empty( $tpl['send_to_guardian'] ) ) {
@@ -782,15 +936,7 @@ final class NotificationsService {
 				$this->send( 'payment_reversed', $info['student_email'], $placeholders );
 			}
 
-			// Guardian SMS
-			if ( ! empty( $sms_tpl['send_to_guardian'] ) && ! empty( $info['guardian_phone'] ) ) {
-				$this->send_sms( 'payment_reversed', $info['guardian_phone'], $placeholders );
-			}
-
-			// Student SMS
-			if ( ! empty( $sms_tpl['send_to_student'] ) && ! empty( $info['student_phone'] ) ) {
-				$this->send_sms( 'payment_reversed', $info['student_phone'], $placeholders );
-			}
+			$this->dispatch_phone_notifications( 'payment_reversed', $notifications, $info, $placeholders );
 		}
 	}
 

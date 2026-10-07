@@ -339,6 +339,9 @@ final class AdmissionsController extends BaseController {
 	 * Handles public status lookups with mandatory secondary DOB verification and rate limiting.
 	 */
 	public function public_lookup_status( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		if ( empty( get_option( 'codeclove_settings', [] )['admissions']['enable_status_lookup'] ?? true ) ) {
+			return $this->error( 'lookup_disabled', __( 'Status lookup service is currently unavailable.', 'codeclove-school-management' ), 403 );
+		}
 		if ( ! $this->check_rate_limit( 'admissions_status_lookup', 20, 600 ) ) {
 			return $this->error( 'rate_limit_exceeded', __( 'Too many lookup requests. Please try again in a few minutes.', 'codeclove-school-management' ), 429 );
 		}

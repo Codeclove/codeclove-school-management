@@ -425,9 +425,9 @@ final class Shortcodes {
 		$is_staff = 'staff' === $type;
 		$repo     = new SettingsRepository();
 		$settings = $repo->get_settings();
-		$enabled  = (bool) ( $settings['admissions']['enable_status_lookup'] ?? true );
+		$enabled  = (bool) ( $settings[ $is_staff ? 'staff_onboarding' : 'admissions' ]['enable_status_lookup'] ?? true );
 
-		if ( ! $is_staff && ! $enabled ) {
+		if ( ! $enabled ) {
 			return '<div class="codeclove-shortcode-msg codeclove-warning"><p>' . esc_html__( 'Status lookup service is currently unavailable.', 'codeclove-school-management' ) . '</p></div>';
 		}
 		$status_url = esc_url( rest_url( $is_staff ? 'codeclove/v1/public/staff-applications/status' : 'codeclove/v1/public/admissions/status' ) );

@@ -20,20 +20,20 @@ import {
   Lock,
   RefreshCw,
   ShieldCheck,
+  Wallet,
 } from 'lucide-react'
 import {
   useGatewaysConfig,
   useCreateCheckoutSession,
+  useVerifyStripeSession,
   type GatewayClientConfig,
   type CheckoutSessionResponse,
 } from '@/api/gateways'
 import { formatCurrency } from '../../lib/formatter'
+import { usePortal } from '../../lib/portal-context'
 import { Button, Badge, Card, CardContent, Input, Spinner, Alert } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { __, sprintf } from '@/lib/i18n'
-import stripeLogo from '@/assets/gateways/stripe.svg'
-import paypalLogo from '@/assets/gateways/paypal.svg'
-
 export interface PortalPaymentInvoice {
   id: number
   invoice_number: string
@@ -68,12 +68,11 @@ export interface PortalPaymentMethodSelectorProps {
 interface GatewayVisualMeta {
   title: string
   subtitle: string
-  logo?: string
-  icon?: React.ComponentType<{ className?: string }>
+  icon: React.ComponentType<{ className?: string }>
 }
 
 /**
- * Returns brand metadata (title, subtitle, logo/icon) for a given gateway id.
+ * Returns brand metadata (title, subtitle, icon) for a given gateway id.
  */
 function getGatewayMeta(gatewayId: string, defaultName?: string): GatewayVisualMeta {
   switch (gatewayId) {
@@ -81,13 +80,13 @@ function getGatewayMeta(gatewayId: string, defaultName?: string): GatewayVisualM
       return {
         title: (defaultName && defaultName !== 'Stripe') ? defaultName : __('Credit / Debit Card', 'codeclove-school-management'),
         subtitle: __('Visa, Mastercard, Amex, Apple Pay, Google Pay', 'codeclove-school-management'),
-        logo: stripeLogo,
+        icon: CreditCard,
       }
     case 'paypal':
       return {
         title: (defaultName && defaultName !== 'PayPal') ? defaultName : __('PayPal & Pay Later', 'codeclove-school-management'),
         subtitle: __('PayPal Wallet, Pay in 4, or Venmo', 'codeclove-school-management'),
-        logo: paypalLogo,
+        icon: Wallet,
       }
     default:
       return {
@@ -126,9 +125,15 @@ export function PortalPaymentMethodSelector({
   const balanceMajor = balanceMinor / 100
 
   // Gateways configuration query
-  const { data: configData, isLoading: isLoadingConfig, isError: isConfigError, refetch: refetchConfig } = useGatewaysConfig()
+  const isPro = typeof window === 'undefined' || (
+    window.CodeCloveConfig?.isPro !== false &&
+    window.CodeClovePortalConfig?.isPro !== false
+  )
+  const { data: configData, isLoading: isLoadingConfig, isError: isConfigError, refetch: refetchConfig } = useGatewaysConfig({ enabled: isPro })
   const checkoutMutation = useCreateCheckoutSession()
-
+  const verifyStripeMutation = useVerifyStripeSession()
+  const [verifySuccess, setVerifySuccess] = useState<boolean>(false)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
   // Filter active/enabled gateways
   const activeGateways = useMemo<GatewayClientConfig[]>(() => {
     if (!configData?.gateways) return []
@@ -186,21 +191,36 @@ export function PortalPaymentMethodSelector({
     setCheckoutError(null)
   }, [invoice.id, balanceMajor, invoice.guardian_email])
 
+  // School finance policy: partial payments and minimum floor
+  let portalFinance
+  try {
+    const portal = usePortal()
+    portalFinance = portal?.finance
+  } catch {
+    portalFinance = undefined
+  }
+  const financeSettings = portalFinance || (typeof window !== 'undefined' ? window.CodeClovePortalConfig?.settings?.finance : undefined)
+  const allowPartialPayments = Boolean(financeSettings?.allow_partial_payments)
+  const minPartialUnit = typeof financeSettings?.min_partial_amount === 'number' && financeSettings.min_partial_amount > 0
+    ? financeSettings.min_partial_amount
+    : 5.0
+  const minPartialMinor = Math.round(minPartialUnit * 100)
+
   // Calculate effective amount in minor units
   const parsedCustomMajor = parseFloat(customAmountStr) || 0
   const customAmountMinor = Math.round(parsedCustomMajor * 100)
-  const effectiveAmountMinor = amountMode === 'full' ? balanceMinor : customAmountMinor
+  const effectiveAmountMinor = (!allowPartialPayments || amountMode === 'full') ? balanceMinor : customAmountMinor
   const effectiveAmountMajor = effectiveAmountMinor / 100
 
-  // Minimum payment threshold (50 cents minor or 0.50 major)
-  const minAllowedMinor = Math.min(50, balanceMinor > 0 ? balanceMinor : 50)
+  // Minimum payment threshold
+  const minAllowedMinor = Math.min(minPartialMinor, balanceMinor > 0 ? balanceMinor : minPartialMinor)
 
   // Amount validation error
   const amountError = useMemo<string | null>(() => {
     if (balanceMinor <= 0) {
       return __('This invoice has no outstanding balance.', 'codeclove-school-management')
     }
-    if (amountMode === 'custom') {
+    if (allowPartialPayments && amountMode === 'custom') {
       if (isNaN(parsedCustomMajor) || customAmountMinor <= 0) {
         return __('Please enter a valid payment amount greater than zero.', 'codeclove-school-management')
       }
@@ -220,7 +240,7 @@ export function PortalPaymentMethodSelector({
       }
     }
     return null
-  }, [amountMode, parsedCustomMajor, customAmountMinor, balanceMinor, balanceMajor, minAllowedMinor, currency])
+  }, [allowPartialPayments, amountMode, parsedCustomMajor, customAmountMinor, balanceMinor, balanceMajor, minAllowedMinor, currency])
 
   // Email validation check
   const isEmailValid = useMemo<boolean>(() => {
@@ -308,6 +328,36 @@ export function PortalPaymentMethodSelector({
     }
   }
 
+  // Verify completed payment directly with gateway upon user return
+  const handleVerifyPayment = async () => {
+    if (!sessionResult) return
+    setVerifyError(null)
+    try {
+      if (sessionResult.gateway === 'stripe') {
+        const res = await verifyStripeMutation.mutateAsync({
+          session_id: sessionResult.session_id,
+          invoice_id: invoice.id,
+        })
+        if (res?.success) {
+          setVerifySuccess(true)
+          onSuccess?.({
+            gateway: 'stripe',
+            session_id: sessionResult.session_id,
+            url: sessionResult.url,
+            amount_minor: sessionResult.amount_minor,
+            invoice_id: invoice.id,
+          })
+        }
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : null
+      setVerifyError(
+        msg ||
+        __('Payment has not yet completed on Stripe. Please complete the card payment in the checkout window.', 'codeclove-school-management')
+      )
+    }
+  }
+
   // Active Session Created View (In-Page Reassurance & External Link Dock)
   if (sessionResult) {
     const gatewayMeta = getGatewayMeta(sessionResult.gateway)
@@ -386,6 +436,40 @@ export function PortalPaymentMethodSelector({
                 </>
               )}
             </Button>
+
+            {sessionResult.gateway === 'stripe' && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="lg"
+                className="w-full gap-2 h-11 text-sm font-semibold border-emerald-600/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                onClick={handleVerifyPayment}
+                disabled={verifyStripeMutation.isPending || verifySuccess}
+              >
+                {verifySuccess ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>{__('Payment Verified & Recorded!', 'codeclove-school-management')}</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className={cn('w-4 h-4', verifyStripeMutation.isPending && 'animate-spin')} />
+                    <span>
+                      {verifyStripeMutation.isPending
+                        ? __('Verifying with Stripe...', 'codeclove-school-management')
+                        : __('I Have Completed Payment', 'codeclove-school-management')}
+                    </span>
+                  </>
+                )}
+              </Button>
+            )}
+
+            {verifyError && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+                <span>{verifyError}</span>
+              </div>
+            )}
 
             <div className="pt-2 flex items-center justify-between text-xs">
               <button
@@ -474,22 +558,21 @@ export function PortalPaymentMethodSelector({
       {/* Section 1: Payment Method Selection (Vertical Radio Cards) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-xs sm:text-sm font-semibold text-foreground flex items-center gap-2">
+          <label className="text-xs sm:text-sm font-semibold text-text flex items-center gap-2">
             <span>{__('Select Payment Method', 'codeclove-school-management')}</span>
           </label>
 
           {isTestMode && (
-            <Badge variant="warning" className="text-[10px] font-medium tracking-wide">
+            <Badge variant="warning" size="sm" className="font-medium">
               {__('Sandbox / Test Mode', 'codeclove-school-management')}
             </Badge>
           )}
         </div>
-
         {/* Loading State */}
         {isLoadingConfig ? (
-          <div className="flex items-center justify-center p-8 border rounded-xl bg-card space-x-3">
-            <Spinner className="w-5 h-5 text-primary" />
-            <span className="text-xs text-muted-foreground font-medium">
+          <div className="flex items-center justify-center p-8 border border-border/80 rounded-xl bg-bg-surface space-x-3">
+            <Spinner className="w-5 h-5 text-brand" />
+            <span className="text-xs text-text-muted font-medium">
               {__('Loading available payment gateways...', 'codeclove-school-management')}
             </span>
           </div>
@@ -519,10 +602,15 @@ export function PortalPaymentMethodSelector({
               {__('Online Payments Not Available', 'codeclove-school-management')}
             </p>
             <p className="text-[11px] text-muted-foreground max-w-sm mx-auto leading-relaxed">
-              {__(
-                'Online tuition payment gateways are currently disabled. Please contact the school finance administration to settle your dues.',
-                'codeclove-school-management'
-              )}
+              {isPro
+                ? __(
+                    'Online tuition payment gateways are currently disabled. Please contact the school finance administration to settle your dues.',
+                    'codeclove-school-management'
+                  )
+                : __(
+                    'Online tuition payments are not supported in the free version. Please contact the school administration to settle your dues.',
+                    'codeclove-school-management'
+                  )}
             </p>
           </div>
         ) : (
@@ -551,39 +639,30 @@ export function PortalPaymentMethodSelector({
                     }
                   }}
                   className={cn(
-                    'relative group flex items-start sm:items-center justify-between p-4 rounded-xl border cursor-pointer transition-all duration-150 select-none outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                    'relative group flex items-start sm:items-center justify-between p-3.5 sm:p-4 rounded-xl border cursor-pointer transition-all duration-150 select-none outline-none focus-visible:ring-2 focus-visible:ring-brand',
                     isSelected
-                      ? 'border-primary ring-2 ring-primary/20 bg-primary/[0.03] dark:bg-primary/[0.06] shadow-xs'
-                      : 'border-border/80 hover:border-border-strong hover:bg-muted/15'
+                      ? 'border-brand ring-1 ring-brand/20 bg-brand-dim/40 shadow-2xs'
+                      : 'border-border/80 hover:border-border hover:bg-bg-base/40'
                   )}
                 >
                   <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-                    {/* Visual Brand Logo / Icon Box */}
-                    <div className="h-10 w-14 shrink-0 rounded-lg border border-border/80 bg-background flex items-center justify-center p-1.5 shadow-2xs">
-                      {meta.logo ? (
-                        <img
-                          src={meta.logo}
-                          alt={meta.title}
-                          className="max-h-7 max-w-full object-contain"
-                        />
-                      ) : (
-                        <GatewayIcon className="w-5 h-5 text-muted-foreground" />
-                      )}
+                    {/* Visual Brand Icon Box */}
+                    <div className="h-10 w-10 shrink-0 rounded-lg bg-brand-dim text-brand flex items-center justify-center border border-brand/10">
+                      <GatewayIcon className="w-5 h-5" />
                     </div>
-
                     {/* Titles and Subtitle */}
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs sm:text-sm font-semibold text-foreground tracking-tight">
+                        <span className="text-xs sm:text-sm font-semibold text-text tracking-tight">
                           {meta.title}
                         </span>
                         {gateway.test_mode && (
-                          <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
+                          <Badge variant="warning" size="sm" className="text-3xs font-semibold">
                             {__('Sandbox', 'codeclove-school-management')}
-                          </span>
+                          </Badge>
                         )}
                       </div>
-                      <p className="text-[11px] sm:text-xs text-muted-foreground line-clamp-1 leading-normal">
+                      <p className="text-2xs sm:text-xs text-text-subtle line-clamp-1 leading-normal">
                         {meta.subtitle}
                       </p>
                     </div>
@@ -595,8 +674,8 @@ export function PortalPaymentMethodSelector({
                       className={cn(
                         'w-5 h-5 rounded-full border flex items-center justify-center transition-colors duration-150',
                         isSelected
-                          ? 'border-primary bg-primary text-primary-foreground shadow-2xs'
-                          : 'border-muted-foreground/40 group-hover:border-muted-foreground'
+                          ? 'border-brand bg-brand text-white shadow-2xs'
+                          : 'border-border-strong group-hover:border-text-subtle'
                       )}
                     >
                       {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
@@ -609,91 +688,109 @@ export function PortalPaymentMethodSelector({
         )}
       </div>
 
-      {/* Section 2: Payment Amount Mode (Full Balance vs Custom/Partial Amount) */}
+      {/* Interactive payment form controls: only when active gateways exist */}
+      {activeGateways.length > 0 && (
+        <>
+          {/* Section 2: Payment Amount Mode (Full Balance vs Custom/Partial Amount) */}
       <div className="space-y-3 pt-1">
-        <label className="text-xs sm:text-sm font-semibold text-foreground block">
+        <label className="text-xs sm:text-sm font-semibold text-text block">
           {__('Payment Amount', 'codeclove-school-management')}
         </label>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {/* Option A: Full Balance */}
-          <button
-            type="button"
-            onClick={() => setAmountMode('full')}
-            className={cn(
-              'flex flex-col p-3 rounded-xl border text-left transition-all duration-150 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
-              amountMode === 'full'
-                ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-2xs'
-                : 'border-border/80 hover:border-border-strong hover:bg-muted/15'
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-foreground">
-                {__('Pay Full Balance', 'codeclove-school-management')}
-              </span>
-              <div
-                className={cn(
-                  'w-4 h-4 rounded-full border flex items-center justify-center',
-                  amountMode === 'full'
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-muted-foreground/40'
-                )}
-              >
-                {amountMode === 'full' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+        {allowPartialPayments ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* Option A: Full Balance */}
+            <button
+              type="button"
+              onClick={() => setAmountMode('full')}
+              className={cn(
+                'flex flex-col p-3.5 rounded-xl border text-left transition-all duration-150 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                amountMode === 'full'
+                  ? 'border-brand bg-brand-dim/30 ring-1 ring-brand/20 shadow-2xs'
+                  : 'border-border/80 hover:border-border hover:bg-bg-base/40'
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-text">
+                  {__('Pay Full Balance', 'codeclove-school-management')}
+                </span>
+                <div
+                  className={cn(
+                    'w-4 h-4 rounded-full border flex items-center justify-center',
+                    amountMode === 'full'
+                      ? 'border-brand bg-brand text-white'
+                      : 'border-border-strong'
+                  )}
+                >
+                  {amountMode === 'full' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                </div>
               </div>
-            </div>
-            <span className="text-sm font-mono font-bold text-foreground mt-1">
-              {formatCurrency(balanceMajor, currency)}
-            </span>
-            <span className="text-[10px] text-muted-foreground mt-0.5">
-              {__('Settles all outstanding dues on this invoice', 'codeclove-school-management')}
-            </span>
-          </button>
-
-          {/* Option B: Custom / Partial Amount */}
-          <button
-            type="button"
-            onClick={() => {
-              setAmountMode('custom')
-            }}
-            className={cn(
-              'flex flex-col p-3 rounded-xl border text-left transition-all duration-150 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
-              amountMode === 'custom'
-                ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-2xs'
-                : 'border-border/80 hover:border-border-strong hover:bg-muted/15'
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-foreground">
-                {__('Pay Custom / Partial Amount', 'codeclove-school-management')}
+              <span className="text-sm font-mono font-bold text-text mt-1.5 tabular-nums">
+                {formatCurrency(balanceMajor, currency)}
               </span>
-              <div
-                className={cn(
-                  'w-4 h-4 rounded-full border flex items-center justify-center',
-                  amountMode === 'custom'
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-muted-foreground/40'
-                )}
-              >
-                {amountMode === 'custom' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-              </div>
-            </div>
-            <span className="text-sm font-mono font-bold text-foreground mt-1">
-              {amountMode === 'custom' && !isNaN(parsedCustomMajor) && parsedCustomMajor > 0
-                ? formatCurrency(parsedCustomMajor, currency)
-                : __('Custom Amount', 'codeclove-school-management')}
-            </span>
-            <span className="text-[10px] text-muted-foreground mt-0.5">
-              {__('Specify a partial payment amount', 'codeclove-school-management')}
-            </span>
-          </button>
-        </div>
+              <span className="text-2xs text-text-subtle mt-0.5">
+                {__('Settles all outstanding dues on this invoice', 'codeclove-school-management')}
+              </span>
+            </button>
 
-        {/* Custom Amount Input & Quick Percentages */}
-        {amountMode === 'custom' && (
-          <div className="p-3.5 rounded-xl border border-primary/20 bg-muted/20 space-y-3 animate-in fade-in-50 duration-150">
+            {/* Option B: Custom / Partial Amount */}
+            <button
+              type="button"
+              onClick={() => {
+                setAmountMode('custom')
+              }}
+              className={cn(
+                'flex flex-col p-3.5 rounded-xl border text-left transition-all duration-150 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                amountMode === 'custom'
+                  ? 'border-brand bg-brand-dim/30 ring-1 ring-brand/20 shadow-2xs'
+                  : 'border-border/80 hover:border-border hover:bg-bg-base/40'
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-text">
+                  {__('Pay Custom / Partial Amount', 'codeclove-school-management')}
+                </span>
+                <div
+                  className={cn(
+                    'w-4 h-4 rounded-full border flex items-center justify-center',
+                    amountMode === 'custom'
+                      ? 'border-brand bg-brand text-white'
+                      : 'border-border-strong'
+                  )}
+                >
+                  {amountMode === 'custom' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                </div>
+              </div>
+              <span className="text-sm font-mono font-bold text-text mt-1.5 tabular-nums">
+                {amountMode === 'custom' && !isNaN(parsedCustomMajor) && parsedCustomMajor > 0
+                  ? formatCurrency(parsedCustomMajor, currency)
+                  : __('Specify Amount', 'codeclove-school-management')}
+              </span>
+              <span className="text-2xs text-text-subtle mt-0.5">
+                {__('Specify a partial payment amount', 'codeclove-school-management')}
+              </span>
+            </button>
+          </div>
+        ) : (
+          <div className="p-3.5 rounded-xl border border-border/80 bg-bg-base/30 flex items-center justify-between">
             <div>
-              <label htmlFor={customInputId} className="text-xs font-medium text-foreground block mb-1">
+              <span className="text-2xs font-semibold uppercase tracking-wider text-text-muted block">
+                {__('Full Balance Outstanding', 'codeclove-school-management')}
+              </span>
+              <span className="text-base font-bold font-mono text-text mt-0.5 block">
+                {formatCurrency(balanceMajor, currency)}
+              </span>
+            </div>
+            <span className="text-2xs font-medium text-text-subtle">
+              {__('Settles invoice in full', 'codeclove-school-management')}
+            </span>
+          </div>
+        )}
+        {/* Custom Amount Input & Quick Percentages */}
+        {allowPartialPayments && amountMode === 'custom' && (
+          <div className="p-4 rounded-xl border border-border/80 bg-bg-base/40 space-y-3.5 animate-in fade-in-50 duration-150">
+            <div>
+              <label htmlFor={customInputId} className="text-xs font-semibold text-text block mb-1.5">
                 {sprintf(
                   /* translators: %s: currency code */
                   __('Amount to Pay (%s)', 'codeclove-school-management'),
@@ -712,14 +809,14 @@ export function PortalPaymentMethodSelector({
                   onChange={(e) => setCustomAmountStr(e.target.value)}
                   placeholder="0.00"
                   className={cn(
-                    'h-10 text-sm font-mono font-medium pl-3',
+                    'h-10 text-sm font-mono font-semibold pl-3 bg-bg-surface',
                     amountError ? 'border-danger focus-visible:ring-danger/30' : ''
                   )}
                 />
               </div>
 
               {amountError && (
-                <p className="text-[11px] text-danger mt-1.5 flex items-center gap-1 font-medium">
+                <p className="text-2xs text-danger mt-1.5 flex items-center gap-1 font-medium">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                   {amountError}
                 </p>
@@ -728,39 +825,28 @@ export function PortalPaymentMethodSelector({
 
             {/* Quick Percentage Presets */}
             {balanceMinor > 0 && (
-              <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground font-medium block">
+              <div className="space-y-1.5">
+                <span className="text-3xs uppercase font-bold tracking-wider text-text-subtle block">
                   {__('Quick Presets:', 'codeclove-school-management')}
                 </span>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setPercentageAmount(25)}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-background border border-border hover:bg-muted transition-colors"
-                  >
-                    25% ({formatCurrency((balanceMajor * 0.25), currency)})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPercentageAmount(50)}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-background border border-border hover:bg-muted transition-colors"
-                  >
-                    50% ({formatCurrency((balanceMajor * 0.5), currency)})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPercentageAmount(75)}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-background border border-border hover:bg-muted transition-colors"
-                  >
-                    75% ({formatCurrency((balanceMajor * 0.75), currency)})
-                  </button>
+                  {[25, 50, 75].map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setPercentageAmount(pct)}
+                      className="px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-bg-surface border border-border/80 text-text hover:bg-bg-base/70 hover:border-border transition-colors shadow-2xs"
+                    >
+                      {pct}% ({formatCurrency(balanceMajor * (pct / 100), currency)})
+                    </button>
+                  ))}
                   <button
                     type="button"
                     onClick={() => {
                       setCustomAmountStr(balanceMajor.toFixed(2))
                       setAmountMode('full')
                     }}
-                    className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-background border border-border hover:bg-muted transition-colors"
+                    className="px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-bg-surface border border-border/80 text-text hover:bg-bg-base/70 hover:border-border transition-colors shadow-2xs"
                   >
                     100% ({__('Full', 'codeclove-school-management')})
                   </button>
@@ -773,9 +859,9 @@ export function PortalPaymentMethodSelector({
 
       {/* Section 3: Payer / Confirmation Email */}
       <div className="space-y-1.5 pt-1">
-        <label htmlFor={emailInputId} className="text-xs sm:text-sm font-semibold text-foreground flex items-center justify-between">
+        <label htmlFor={emailInputId} className="text-xs sm:text-sm font-semibold text-text flex items-center justify-between">
           <span>{__('Receipt & Confirmation Email', 'codeclove-school-management')}</span>
-          <span className="text-[11px] text-muted-foreground font-normal">
+          <span className="text-2xs text-text-subtle font-normal">
             {__('Optional', 'codeclove-school-management')}
           </span>
         </label>
@@ -786,16 +872,16 @@ export function PortalPaymentMethodSelector({
           onChange={(e) => setPayerEmail(e.target.value)}
           placeholder="parent@example.com"
           className={cn(
-            'h-10 text-xs sm:text-sm',
+            'h-10 text-xs sm:text-sm bg-bg-surface',
             !isEmailValid ? 'border-danger focus-visible:ring-danger/30' : ''
           )}
         />
         {!isEmailValid ? (
-          <p className="text-[11px] text-danger">
+          <p className="text-2xs text-danger">
             {__('Please enter a valid email address format.', 'codeclove-school-management')}
           </p>
         ) : (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-2xs text-text-subtle">
             {__('An official payment slip and transaction receipt will be emailed here once settled.', 'codeclove-school-management')}
           </p>
         )}
@@ -823,7 +909,7 @@ export function PortalPaymentMethodSelector({
               size="lg"
               disabled={isDisabled}
               onClick={handleInitiateCheckout}
-              className="w-full h-12 text-sm sm:text-base font-semibold shadow-xs gap-2 transition-all"
+              className="w-full h-11 text-sm font-semibold shadow-xs gap-2 transition-all"
             >
               {isSubmitting ? (
                 <>
@@ -858,6 +944,8 @@ export function PortalPaymentMethodSelector({
           </span>
         </div>
       </div>
+        </>
+      )}
     </div>
   )
 }

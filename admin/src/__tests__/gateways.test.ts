@@ -163,4 +163,24 @@ describe('Payment Gateways Integration & Config', () => {
       expect(settings.paypal?.webhook_id).toBe('wh_id_123')
     })
   })
+
+  describe('Free Edition Gateway Suppression', () => {
+    it('suppresses gateways when isPro is false or no gateways are enabled', () => {
+      const isPro = false
+      const config: GatewaysConfigResponse = { gateways: {} }
+      const hasActiveGateways = isPro && Object.values(config.gateways).some((g) => g.enabled)
+      expect(hasActiveGateways).toBe(false)
+    })
+
+    it('enables gateways only when isPro is true and at least one gateway is enabled', () => {
+      const isPro = true
+      const config: GatewaysConfigResponse = {
+        gateways: {
+          stripe: { id: 'stripe', name: 'Stripe', enabled: true, test_mode: false },
+        },
+      }
+      const hasActiveGateways = isPro && Object.values(config.gateways).some((g) => g.enabled)
+      expect(hasActiveGateways).toBe(true)
+    })
+  })
 })

@@ -420,6 +420,16 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
         keywords: 'sms twilio fast2sms msg91 vonage text alerts phone gateway',
         pro: true,
       },
+      {
+        id: 'settings-whatsapp',
+        title: __('Settings: WhatsApp Notifications', 'codeclove-school-management'),
+        subtitle: __('Configure WhatsApp Business API credentials and event templates', 'codeclove-school-management'),
+        category: 'Settings',
+        to: `${ROUTES.SETTINGS}?tab=whatsapp_notifications`,
+        icon: Settings,
+        keywords: 'whatsapp twilio fast2sms msg91 vonage meta cloud alerts messages phone gateway',
+        pro: true,
+      },
 
       // Quick Actions Category
       {

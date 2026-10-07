@@ -41,7 +41,13 @@ export interface CheckoutSessionResponse {
 /**
  * Retrieves public configurations for active gateways.
  */
-export function useGatewaysConfig() {
+export function useGatewaysConfig(options?: { enabled?: boolean }) {
+  const isPro = typeof window === 'undefined' || (
+    window.CodeCloveConfig?.isPro !== false &&
+    window.CodeClovePortalConfig?.isPro !== false
+  )
+  const isEnabled = options?.enabled !== undefined ? options.enabled : isPro
+
   return useQuery<GatewaysConfigResponse, Error>({
     queryKey: ['gateways-config'],
     queryFn: async () => {
@@ -49,6 +55,7 @@ export function useGatewaysConfig() {
       return res.data
     },
     staleTime: 60000,
+    enabled: isEnabled,
   })
 }
 
@@ -84,6 +91,32 @@ export function useCapturePayPalOrder() {
   return useMutation({
     mutationFn: async (params: PayPalCaptureParams): Promise<PayPalCaptureResponse> => {
       const res = await api.post<PayPalCaptureResponse>('finance/gateways/paypal/capture', params)
+      return res.data
+    },
+  })
+}
+
+export interface StripeVerifyParams {
+  session_id: string
+  invoice_id?: number
+}
+
+export interface StripeVerifyResponse {
+  success: boolean
+  data?: {
+    status: string
+    session_id: string
+    payment_id: number
+  }
+}
+
+/**
+ * Hook to verify and capture a completed Stripe checkout session upon customer return.
+ */
+export function useVerifyStripeSession() {
+  return useMutation({
+    mutationFn: async (params: StripeVerifyParams): Promise<StripeVerifyResponse> => {
+      const res = await api.post<StripeVerifyResponse>('finance/gateways/stripe/verify', params)
       return res.data
     },
   })

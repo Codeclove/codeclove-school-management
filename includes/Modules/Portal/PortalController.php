@@ -285,7 +285,7 @@ final class PortalController extends BaseController {
 	 * @param WP_REST_Request $request
 	 * @return int|WP_Error Student ID or WP_Error on failure.
 	 */
-	private function resolve_student_id( WP_REST_Request $request ): int|WP_Error {
+	public function resolve_student_id( WP_REST_Request $request ): int|WP_Error {
 		$user_id    = get_current_user_id();
 		$student_id = (int) $request->get_param( 'student_id' );
 
@@ -350,6 +350,18 @@ final class PortalController extends BaseController {
 		}
 
 		$data = $this->service->get_finance( $student_id );
+		return $this->success( $data );
+	}
+	/**
+	 * GET /portal/timetable
+	 */
+	public function get_timetable( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$student_id = $this->resolve_student_id( $request );
+		if ( is_wp_error( $student_id ) ) {
+			return $student_id;
+		}
+
+		$data = $this->service->get_timetable( $student_id );
 		return $this->success( $data );
 	}
 

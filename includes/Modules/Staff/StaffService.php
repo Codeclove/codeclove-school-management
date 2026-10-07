@@ -974,7 +974,7 @@ final class StaffService {
 			'address_json'       => wp_json_encode( $address_data ),
 			'experience_json'    => wp_json_encode( $experience_data ),
 			'custom_fields_json' => wp_json_encode( $custom_data ),
-			'status'             => 'submitted',
+			'status'             => (string) ( get_option( 'codeclove_settings', [] )['staff_onboarding']['default_status'] ?? 'submitted' ),
 			'submitted_at'       => $now,
 			'created_at'         => $now,
 			'updated_at'         => $now,
@@ -998,7 +998,7 @@ final class StaffService {
 			[
 				'staff_application_id' => $app_id,
 				'from_status'          => null,
-				'to_status'            => 'submitted',
+				'to_status'            => $insert_data['status'],
 				'reason'               => 'Public Submission',
 				'message'              => 'Application submitted via public website careers form.',
 				'visibility'           => 'public',
@@ -1007,7 +1007,7 @@ final class StaffService {
 		);
 		// phpcs:enable
 
-		do_action( 'codeclove_staff_application_received', $app_id, $ref_number );
+		do_action( 'codeclove_staff_application_received', $app_id, $ref_number, $insert_data );
 
 		return [
 			'id'               => $app_id,
@@ -1015,7 +1015,7 @@ final class StaffService {
 			'first_name'       => $first_name,
 			'last_name'        => $last_name,
 			'desired_role'     => $insert_data['desired_role'],
-			'status'           => 'submitted',
+			'status'           => $insert_data['status'],
 			'submitted_at'     => $now,
 		];
 	}

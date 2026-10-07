@@ -363,7 +363,11 @@ final class Plugin {
 			$user->has_cap( 'codeclove_guardian' )
 			|| $user->has_cap( 'codeclove_student' )
 		) {
-			return home_url( '/portal' );
+			$target = ! empty( $request ) ? $request : $redirect_to;
+			if ( ! empty( $target ) && ! str_contains( $target, 'wp-admin' ) && ! str_contains( $target, 'wp-login.php' ) ) {
+				return $target;
+			}
+			return function_exists( 'codeclove_get_portal_url' ) ? codeclove_get_portal_url() : home_url( '/student-portal/' );
 		}
 
 		return $redirect_to;
@@ -402,7 +406,8 @@ final class Plugin {
 			current_user_can( 'codeclove_guardian' )
 			|| current_user_can( 'codeclove_student' )
 		) {
-			wp_safe_redirect( home_url( '/portal' ) );
+			$target = function_exists( 'codeclove_get_portal_url' ) ? codeclove_get_portal_url() : home_url( '/student-portal/' );
+			wp_safe_redirect( $target );
 			exit;
 		}
 	}

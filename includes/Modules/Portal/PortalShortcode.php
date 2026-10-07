@@ -143,15 +143,38 @@ final class PortalShortcode {
 			'siteName'    => $site_name,
 			'logoUrl'     => esc_url( $logo_url ),
 			'version'     => CODECLOVE_VERSION,
-			'isPro'       => false, // Free version — pro features locked.
+			'isPro'       => (bool) ( ( defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO ) || ( defined( 'CODECLOVE_PRO_ACTIVE' ) && CODECLOVE_PRO_ACTIVE ) ),
 			'settings'    => [
 				'school'       => $settings['school'] ?? [],
 				'appearance'   => $settings['appearance'] ?? [],
 				'localization' => $settings['localization'] ?? [],
 				'labels'       => $settings['labels'] ?? [],
+				'finance'      => [
+					'allow_partial_payments' => (bool) ( $settings['finance']['allow_partial_payments'] ?? false ),
+					'min_partial_amount'     => (float) ( $settings['finance']['min_partial_amount'] ?? 5.0 ),
+				],
 			],
 		];
 		$config_json = wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
+
+		// Dev server: if Vite dev server is running on localhost, load directly for live HMR.
+		if ( self::is_vite_dev_active() ) {
+			return implode( "\n", [
+				'<script type="module">',
+				"\timport RefreshRuntime from 'http://localhost:5174/@react-refresh';",
+				"\tRefreshRuntime.injectIntoGlobalHook(window);",
+				"\twindow.\$RefreshReg$ = () => {};",
+				"\twindow.\$RefreshSig$ = () => (type) => type;",
+				"\twindow.__vite_plugin_react_preamble_installed__ = true;",
+				'</script>',
+				'<script type="module" src="http://localhost:5174/@vite/client"></script>',
+				'<script>',
+				"\twindow.CodeClovePortalConfig = {$config_json};",
+				'</script>',
+				'<div id="codeclove-portal-root" class="codeclove-portal-app"></div>',
+				'<script type="module" src="http://localhost:5174/src/portal/main.tsx"></script>',
+			] );
+		}
 
 		$build_dir = CODECLOVE_DIR . 'assets/build/portal/';
 		$build_url = CODECLOVE_URL . 'assets/build/portal/';
@@ -269,5 +292,24 @@ final class PortalShortcode {
 		</div>
 		<?php
 		return (string) ob_get_clean();
+	}
+	/**
+	 * Checks if Vite dev server is running on localhost for live development.
+	 *
+	 * @return bool
+	 */
+	private static function is_vite_dev_active(): bool {
+		if ( defined( 'CODECLOVE_DEV' ) && ! CODECLOVE_DEV ) {
+			return false;
+		}
+
+		$ctx = @stream_context_create( [ 'http' => [ 'timeout' => 0.05 ] ] );
+		$fp  = @fopen( 'http://127.0.0.1:5174/@vite/client', 'r', false, $ctx );
+		if ( is_resource( $fp ) ) {
+			fclose( $fp );
+			return true;
+		}
+
+		return false;
 	}
 }

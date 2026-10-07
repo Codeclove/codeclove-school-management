@@ -1,9 +1,19 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderToString } from 'react-dom/server'
 import { ReceiptSlipView } from '../modules/finance/ReceiptSlipView'
 import type { Invoice, InvoicePayment } from '../types'
 
 // Mock portal context
+const { mockPortalSchool } = vi.hoisted(() => ({
+  mockPortalSchool: {
+    name: 'Springdale International Academy',
+    address: '123 Education Boulevard, New Delhi',
+    phone: '+91 11 2345 6789',
+    email: 'bursar@springdale.edu',
+    code: undefined as string | undefined,
+  },
+}))
+
 vi.mock('../lib/portal-context', () => ({
   usePortal: () => ({
     currentStudent: {
@@ -19,12 +29,7 @@ vi.mock('../lib/portal-context', () => ({
     },
     siteName: 'Springdale International Academy',
     logoUrl: 'https://example.com/logo.png',
-    school: {
-      name: 'Springdale International Academy',
-      address: '123 Education Boulevard, New Delhi',
-      phone: '+91 11 2345 6789',
-      email: 'bursar@springdale.edu',
-    },
+    school: mockPortalSchool,
     localization: {
       currency: 'USD',
     },
@@ -53,8 +58,11 @@ vi.mock('@/lib/formatter', () => ({
 }))
 
 describe('ReceiptSlipView Component', () => {
+  beforeEach(() => {
+    mockPortalSchool.code = undefined
+  })
+
   const mockPayment: InvoicePayment & { invoice_number?: string; invoice?: Invoice } = {
-    id: 42,
     payment_number: 'PAY-2026-9901',
     amount: 350,
     amount_minor: 35000,
@@ -79,7 +87,7 @@ describe('ReceiptSlipView Component', () => {
     ],
   }
 
-  it('renders official receipt header with school branding, receipt number, and cleared badge', () => {
+  it('renders official receipt header with school branding and receipt number', () => {
     const html = renderToString(
       <ReceiptSlipView
         payment={mockPayment}
@@ -91,7 +99,6 @@ describe('ReceiptSlipView Component', () => {
     expect(html).toContain('Springdale International Academy')
     expect(html).toContain('Official Fee Collection Slip')
     expect(html).toContain('PAY-2026-9901')
-    expect(html).toContain('Cleared &amp; Settled')
   })
 
   it('renders student and academic enrollment metadata correctly', () => {
@@ -141,7 +148,7 @@ describe('ReceiptSlipView Component', () => {
     expect(html).toContain('Science Lab Fee')
   })
 
-  it('renders official electronic verification seal and verification code', () => {
+  it('does not render bottom electronic verification card on clean receipt slip', () => {
     const html = renderToString(
       <ReceiptSlipView
         payment={mockPayment}
@@ -149,8 +156,8 @@ describe('ReceiptSlipView Component', () => {
       />
     )
 
-    expect(html).toContain('Official Electronic Receipt &amp; Verification')
-    expect(html).toContain('CC-VERIFIED-PAY20269901')
+    expect(html).not.toContain('Official Electronic Receipt &amp; Verification')
+    expect(html).not.toContain('CC-VERIFIED-')
   })
 
   it('includes 1-click print receipt buttons and hidden printable letterhead container', () => {
@@ -178,6 +185,41 @@ describe('ReceiptSlipView Component', () => {
 
     expect(html).toContain('Back to Invoice #INV-2026-1044')
     expect(html).toContain('Back to Invoice')
+    expect(html).toContain('Copy Receipt ID')
     expect(html).toContain('Copy #')
   })
+
+  it('renders school.code in a styled badge with font-mono text when present', () => {
+    mockPortalSchool.code = 'SCH-2026-DEL'
+    const html = renderToString(
+      <ReceiptSlipView
+        payment={mockPayment}
+        invoice={mockInvoice}
+      />
+    )
+
+    expect(html).toContain('SCH-2026-DEL')
+    expect(html).toContain('text-2xs font-mono font-semibold px-2 py-0.5 rounded bg-bg-subtle text-text-muted border border-border')
+  })
+
+  it('does not render school.code badge when code is empty string or absent', () => {
+    mockPortalSchool.code = ''
+    const htmlEmpty = renderToString(
+      <ReceiptSlipView
+        payment={mockPayment}
+        invoice={mockInvoice}
+      />
+    )
+    expect(htmlEmpty).not.toContain('text-2xs font-mono font-semibold')
+
+    mockPortalSchool.code = undefined
+    const htmlUndefined = renderToString(
+      <ReceiptSlipView
+        payment={mockPayment}
+        invoice={mockInvoice}
+      />
+    )
+    expect(htmlUndefined).not.toContain('text-2xs font-mono font-semibold')
+  })
+
 })

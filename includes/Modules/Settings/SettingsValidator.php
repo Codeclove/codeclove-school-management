@@ -81,6 +81,8 @@ final class SettingsValidator {
 			'system',
 			'notifications',
 			'payment_gateways',
+			'payment_methods',
+			'finance',
 		];
 		$error = $this->reject_unknown_keys( $payload, $allowed_sections, 'settings' );
 		if ( $error ) {
@@ -110,6 +112,7 @@ final class SettingsValidator {
 				'notifications'    => $this->validate_notifications( $values ),
 				'payment_methods'  => $this->validate_payment_methods( $values ),
 				'payment_gateways' => $this->validate_payment_gateways( $values ),
+				'finance'          => $this->validate_finance( $values ),
 				default            => [],
 			};
 
@@ -1012,6 +1015,37 @@ final class SettingsValidator {
 
 		return $validated;
 	}
+
+	/**
+	 * Validates finance settings.
+	 *
+	 * @param array $values Raw section values.
+	 * @return array|WP_Error
+	 */
+	private function validate_finance( array $values ): array|WP_Error {
+		$allowed_keys = [ 'allow_partial_payments', 'min_partial_amount' ];
+		$error        = $this->reject_unknown_keys( $values, $allowed_keys, 'finance' );
+		if ( $error ) {
+			return $error;
+		}
+
+		$validated = [];
+
+		if ( isset( $values['allow_partial_payments'] ) ) {
+			$validated['allow_partial_payments'] = (bool) $values['allow_partial_payments'];
+		}
+
+		if ( isset( $values['min_partial_amount'] ) ) {
+			$amount = (float) $values['min_partial_amount'];
+			if ( $amount < 0.50 ) {
+				return $this->invalid( 'finance.min_partial_amount', 'must be at least 0.50.' );
+			}
+			$validated['min_partial_amount'] = round( $amount, 2 );
+		}
+
+		return $validated;
+	}
+
 	/**
 	 * Creates a consistent REST validation error.
 	 */

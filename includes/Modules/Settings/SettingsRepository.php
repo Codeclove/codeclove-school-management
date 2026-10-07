@@ -298,10 +298,15 @@ final class SettingsRepository {
 			'payment_gateways' => [
 				'gateway_order' => [],
 			],
+			'finance'          => [
+				'allow_partial_payments' => false,
+				'min_partial_amount'     => 5.0,
+			],
 		];
 
 		$defaults['notifications']    = apply_filters( 'codeclove_notification_settings_defaults', $defaults['notifications'] );
 		$defaults['payment_gateways'] = apply_filters( 'codeclove_payment_gateway_settings_defaults', $defaults['payment_gateways'] );
+		$defaults['finance']          = apply_filters( 'codeclove_finance_settings_defaults', $defaults['finance'] );
 
 		return $defaults;
 	}

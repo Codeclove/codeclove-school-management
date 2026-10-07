@@ -33,9 +33,12 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
   const [loadingCheckout, setLoadingCheckout] = useState(false)
   const [activeGateway, setActiveGateway] = useState<string | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
-  const [availableGateways, setAvailableGateways] = useState<string[]>(['stripe'])
+  const [availableGateways, setAvailableGateways] = useState<string[]>([])
 
   useEffect(() => {
+    const isPro = typeof window === 'undefined' || window.CodeClovePortalConfig?.isPro !== false
+    if (!isPro) return
+
     const fetchGateways = async () => {
       try {
         const restBase = window.CodeClovePortalConfig?.restUrl ?? '/wp-json/codeclove/v1/'

@@ -15,6 +15,7 @@ import { formatRoomName, getBreakBetweenSlots, getSlotStatus } from '../../lib/s
 import type { TimetableSlot } from '../../types'
 import {
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -43,7 +44,7 @@ const getDays = (): DayTab[] => [
 export const TimetablePage: React.FC = () => {
   const { currentStudent, localization } = usePortal()
   const { getLabel } = usePortalLabels()
-  const { data: timetableData, isLoading } = useTimetable(currentStudent?.id)
+  const { data: timetableData, isLoading, isError, refetch } = useTimetable(currentStudent?.id)
   const daysList = useMemo<DayTab[]>(() => {
     const baseDays = getDays()
     if (localization?.week_start_day === 0) {
@@ -180,6 +181,19 @@ export const TimetablePage: React.FC = () => {
         <div className="flex h-64 items-center justify-center">
           <Spinner size="lg" />
         </div>
+      ) : isError ? (
+        <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface overflow-hidden p-8 text-center">
+          <EmptyState
+            icon={Clock}
+            title={__( 'Unable to load timetable', 'codeclove-school-management' )}
+            description={__( 'There was an issue fetching the schedule. Please try again.', 'codeclove-school-management' )}
+            action={
+              <Button size="sm" variant="secondary" onClick={() => refetch()}>
+                {__( 'Retry', 'codeclove-school-management' )}
+              </Button>
+            }
+          />
+        </Card>
       ) : viewMode === 'week' ? (
         <WeeklyScheduleMatrix timetable={timetableData} />
       ) : (

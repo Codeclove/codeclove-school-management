@@ -139,6 +139,9 @@ export interface NotificationTemplate {
   send_to_guardian?: boolean
 }
 
+export interface WhatsAppNotificationTemplate extends Omit<NotificationTemplate, 'subject'> {
+  template_name?: string
+}
 export interface NotificationSettings {
   in_app_events: {
     notify_admission_received: boolean
@@ -188,6 +191,22 @@ export interface NotificationSettings {
     invoice_overdue: Omit<NotificationTemplate, 'subject'>
     payment_reversed: Omit<NotificationTemplate, 'subject'>
   }
+  whatsapp_enabled?: boolean
+  whatsapp_provider?: 'none' | 'same_as_sms' | 'twilio' | 'msg91' | 'fast2sms' | 'vonage' | 'meta_cloud'
+  whatsapp_from_number?: string
+  whatsapp_meta_token?: string
+  whatsapp_meta_phone_id?: string
+  whatsapp_meta_business_account_id?: string
+  whatsapp_templates?: {
+    admission_received: WhatsAppNotificationTemplate
+    admission_status_changed: WhatsAppNotificationTemplate
+    payment_recorded: WhatsAppNotificationTemplate
+    attendance_alert: WhatsAppNotificationTemplate
+    fee_reminder: WhatsAppNotificationTemplate
+    invoice_issued: WhatsAppNotificationTemplate
+    invoice_overdue: WhatsAppNotificationTemplate
+    payment_reversed: WhatsAppNotificationTemplate
+  }
 }
 
 export interface OfflinePaymentSettings {
@@ -228,6 +247,11 @@ export interface PaymentGatewaysSettings {
   paypal?: PayPalGatewaySettings
 }
 
+export interface FinanceSettings {
+  allow_partial_payments: boolean
+  min_partial_amount: number
+}
+
 export interface CodeCloveSettings {
   schema_version: string
   plugin_version: string
@@ -243,6 +267,7 @@ export interface CodeCloveSettings {
   notifications: NotificationSettings
   payment_gateways?: PaymentGatewaysSettings
   payment_methods?: CounterPaymentMethodsSettings
+  finance?: FinanceSettings
 }
 
 export interface CountryPreset {
@@ -389,6 +414,29 @@ export function useSendTestSms() {
     mutationFn: async ({ phone }) => {
       const response = await api.post<{ sent: boolean }>('settings/notifications/test-sms', { phone })
       return response.data.sent
+    },
+  })
+}
+
+export interface TestWhatsAppResult {
+  sent: boolean
+  simulated?: boolean
+  preview?: {
+    recipient: string
+    message: string
+    timestamp_ui?: string
+    event?: string
+  }
+}
+
+/**
+ * Hook to send a diagnostic test WhatsApp message.
+ */
+export function useSendTestWhatsApp() {
+  return useMutation<TestWhatsAppResult, Error, { phone: string }>({
+    mutationFn: async ({ phone }) => {
+      const response = await api.post<TestWhatsAppResult>('settings/notifications/test-whatsapp', { phone })
+      return response.data
     },
   })
 }

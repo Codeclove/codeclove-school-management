@@ -1,9 +1,24 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderToString } from 'react-dom/server'
-import { InvoiceStatementView } from '../modules/finance/InvoiceStatementView'
+import { InvoiceStatementView, getInvoiceStatusMeta } from '../modules/finance/InvoiceStatementView'
 import type { Invoice } from '../types'
-
 // Mock portal context
+const { mockPortalLocalization, mockPortalSchool } = vi.hoisted(() => ({
+  mockPortalLocalization: {
+    currency: 'USD',
+    date_format: 'Y-m-d',
+  },
+  mockPortalSchool: {
+    name: 'CodeClove International Academy',
+    address: '742 Evergreen Terrace, Springfield, OR',
+    phone: '+1 (555) 019-2834',
+    email: 'bursar@codeclove-academy.edu',
+    website: 'https://codeclove-academy.edu',
+    logo: 'https://example.com/logo.png',
+    code: undefined as string | undefined,
+  },
+}))
+
 vi.mock('../lib/portal-context', () => ({
   usePortal: () => ({
     currentStudent: {
@@ -20,18 +35,8 @@ vi.mock('../lib/portal-context', () => ({
     },
     siteName: 'CodeClove International Academy',
     logoUrl: 'https://example.com/logo.png',
-    school: {
-      name: 'CodeClove International Academy',
-      address: '742 Evergreen Terrace, Springfield, OR',
-      phone: '+1 (555) 019-2834',
-      email: 'bursar@codeclove-academy.edu',
-      website: 'https://codeclove-academy.edu',
-      logo: 'https://example.com/logo.png',
-    },
-    localization: {
-      currency: 'USD',
-      date_format: 'Y-m-d',
-    },
+    school: mockPortalSchool,
+    localization: mockPortalLocalization,
     user: {
       id: 50,
       name: 'Eleanor Pendelton',
@@ -88,9 +93,19 @@ vi.mock('@/api/gateways', () => ({
     mutateAsync: vi.fn(),
     isPending: false,
   }),
+  useVerifyStripeSession: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
 }))
 
 describe('InvoiceStatementView Component', () => {
+  beforeEach(() => {
+    mockPortalLocalization.currency = 'USD'
+    mockPortalLocalization.date_format = 'Y-m-d'
+    mockPortalSchool.code = undefined
+  })
+
   const mockInvoice: Invoice = {
     id: 42,
     invoice_number: 'INV-2026-0042',
@@ -116,7 +131,7 @@ describe('InvoiceStatementView Component', () => {
     ],
   }
 
-  it('renders official statement header with school branding, invoice number, and status badge', () => {
+  it('renders official statement header with school branding and invoice number', () => {
     const html = renderToString(
       <InvoiceStatementView
         invoice={mockInvoice}
@@ -128,7 +143,6 @@ describe('InvoiceStatementView Component', () => {
     expect(html).toContain('INV-2026-0042')
     expect(html).toContain('CodeClove International Academy')
     expect(html).toContain('Official Fee Statement &amp; Tax Invoice')
-    expect(html).toContain('Partially Paid')
   })
 
   it('renders student and academic enrollment details', () => {
@@ -208,7 +222,29 @@ describe('InvoiceStatementView Component', () => {
     expect(html).toContain('Pay Invoice Online')
   })
 
-  it('renders full settlement completion banner when invoice is paid in full', () => {
+  it('does not render online payment dock in the free edition (isPro: false)', () => {
+    const originalWindow = globalThis.window
+    const env = globalThis as unknown as { window?: { CodeClovePortalConfig?: unknown } }
+    env.window = {
+      CodeClovePortalConfig: {
+        isPro: false,
+      },
+    }
+
+    const html = renderToString(
+      <InvoiceStatementView
+        invoice={mockInvoice}
+        currency="USD"
+        onBack={() => {}}
+      />
+    )
+
+    expect(html).not.toContain('id="payment-dock"')
+    expect(html).not.toContain('Pay Invoice Online')
+
+    env.window = originalWindow as unknown as { CodeClovePortalConfig?: unknown }
+  })
+  it('does not render payment dock or settled card when invoice is settled in full', () => {
     const paidInvoice: Invoice = {
       ...mockInvoice,
       balance: 0,
@@ -224,9 +260,8 @@ describe('InvoiceStatementView Component', () => {
       />
     )
 
-    expect(html).toContain('Paid in Full')
-    expect(html).toContain('Invoice Fully Settled — No Payment Due')
     expect(html).not.toContain('Pay Invoice Online')
+    expect(html).not.toContain('Invoice Fully Settled — No Payment Due')
   })
 
   it('includes 1-click print statement controls and hidden printable sheet', () => {
@@ -240,5 +275,66 @@ describe('InvoiceStatementView Component', () => {
 
     expect(html).toContain('Print Statement')
     expect(html).toContain('data-print-area')
+  })
+  it('renders clean breadcrumb navigation bar with document trail', () => {
+    const html = renderToString(
+      <InvoiceStatementView
+        invoice={mockInvoice}
+        currency="USD"
+        onBack={() => {}}
+      />
+    )
+
+    // Verify breadcrumb exists with navigation trail
+    expect(html).toContain('Fee Records')
+    expect(html).toContain('Invoices')
+    expect(html).toContain('INV-2026-0042')
+  })
+
+  it('does not render school.code badge on fee statement headers to keep stationery clean', () => {
+    mockPortalSchool.code = 'CC-ACAD-01'
+    const html = renderToString(
+      <InvoiceStatementView
+        invoice={mockInvoice}
+        currency="USD"
+      />
+    )
+
+    // Rendered on-screen letterhead should be clean and unencumbered by internal codes
+    expect(html).not.toContain('text-3xs font-mono font-semibold px-1.5 py-0.5 rounded bg-bg-subtle text-text-muted border border-border')
+    // Rendered in printable sheet letterhead
+    expect(html).not.toContain('text-3xs font-mono font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200')
+  })
+
+  it('does not render school.code badge when code is empty string or absent', () => {
+    mockPortalSchool.code = ''
+    const htmlEmpty = renderToString(
+      <InvoiceStatementView
+        invoice={mockInvoice}
+        currency="USD"
+      />
+    )
+    expect(htmlEmpty).not.toContain('text-3xs font-mono font-semibold px-1.5 py-0.5 rounded bg-bg-subtle')
+
+    mockPortalSchool.code = undefined
+    const htmlUndefined = renderToString(
+      <InvoiceStatementView
+        invoice={mockInvoice}
+        currency="USD"
+      />
+    )
+    expect(htmlUndefined).not.toContain('text-3xs font-mono font-semibold px-1.5 py-0.5 rounded bg-bg-subtle')
+  })
+
+})
+describe('getInvoiceStatusMeta helper', () => {
+  it('returns country-aware labels for overdue status', () => {
+    expect(getInvoiceStatusMeta('overdue', true).label).toBe('Past Due')
+    expect(getInvoiceStatusMeta('overdue', false).label).toBe('Overdue')
+  })
+
+  it('returns clean single labels for cancelled and void statuses without slashes', () => {
+    expect(getInvoiceStatusMeta('cancelled').label).toBe('Cancelled')
+    expect(getInvoiceStatusMeta('void').label).toBe('Void')
   })
 })

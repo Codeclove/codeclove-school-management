@@ -25,6 +25,11 @@ export default function PrintInvoiceSheet({ invoice, school }: PrintInvoiceSheet
     ? `Class ${invoice.academic_unit_id}`
     : null
 
+  const subtotalMinor = invoice.subtotal_minor ?? invoice.total_minor ?? 0
+  const discountMinor = invoice.discount_minor ?? 0
+  const totalMinor = invoice.total_minor ?? 0
+  const paidMinor = invoice.paid_minor ?? 0
+  const balanceMinor = invoice.balance_minor ?? 0
   return (
     <div
       data-print-area
@@ -78,6 +83,7 @@ export default function PrintInvoiceSheet({ invoice, school }: PrintInvoiceSheet
         school={school}
         documentType={__( 'Fee Invoice', 'codeclove-school-management' )}
         documentNumber={invoice.invoice_number}
+        showCode={false}
         metaRows={[
           { label: __( 'Issue Date', 'codeclove-school-management' ), value: formatDate(invoice.issue_date) },
           ...(invoice.due_date ? [{ label: __( 'Due Date', 'codeclove-school-management' ), value: formatDate(invoice.due_date) }] : []),
@@ -96,13 +102,13 @@ export default function PrintInvoiceSheet({ invoice, school }: PrintInvoiceSheet
         }}
       >
         <div>
-          <p style={{ margin: '0 0 0.35rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280' }}>
+          <p style={{ margin: '0 0 0.35rem', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280' }}>
             {__( 'Student Details', 'codeclove-school-management' )}
           </p>
           <p style={{ margin: 0, fontWeight: 700, color: '#111827', fontSize: '0.95rem' }}>
             {invoice.student_first_name} {invoice.student_last_name}
           </p>
-          <div style={{ marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.75rem' }}>
+          <div style={{ marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.78rem' }}>
             <p style={{ margin: 0 }}>
               <span style={{ color: '#6b7280' }}>{__( 'Student ID:', 'codeclove-school-management' )} </span>
               <span style={{ fontWeight: 600, color: '#111827', fontFamily: 'monospace' }}>{invoice.student_number || '—'}</span>
@@ -117,18 +123,39 @@ export default function PrintInvoiceSheet({ invoice, school }: PrintInvoiceSheet
         </div>
 
         <div>
-          <p style={{ margin: '0 0 0.35rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280' }}>
-            {__( 'Parent / Guardian', 'codeclove-school-management' )}
-          </p>
-          <p style={{ margin: 0, fontWeight: 700, color: '#111827', fontSize: '0.95rem' }}>
-            {invoice.guardian_name || '—'}
-          </p>
-          <div style={{ marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.75rem' }}>
-            <p style={{ margin: 0 }}>
-              <span style={{ color: '#6b7280' }}>{__( 'Email:', 'codeclove-school-management' )} </span>
-              <span style={{ color: '#111827' }}>{invoice.guardian_email || '—'}</span>
-            </p>
-          </div>
+          {invoice.guardian_name ? (
+            <>
+              <p style={{ margin: '0 0 0.35rem', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280' }}>
+                {__( 'Parent / Guardian', 'codeclove-school-management' )}
+              </p>
+              <p style={{ margin: 0, fontWeight: 700, color: '#111827', fontSize: '0.95rem' }}>
+                {invoice.guardian_name}
+              </p>
+              {invoice.guardian_email && (
+                <div style={{ marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.78rem' }}>
+                  <p style={{ margin: 0 }}>
+                    <span style={{ color: '#6b7280' }}>{__( 'Email:', 'codeclove-school-management' )} </span>
+                    <span style={{ color: '#111827' }}>{invoice.guardian_email}</span>
+                  </p>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <p style={{ margin: '0 0 0.35rem', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280' }}>
+                {__( 'Invoice Summary', 'codeclove-school-management' )}
+              </p>
+              <p style={{ margin: 0, fontWeight: 700, color: '#111827', fontSize: '0.95rem' }}>
+                {invoice.status === 'paid' ? __( 'Paid in Full', 'codeclove-school-management' ) : __( 'Payment Pending', 'codeclove-school-management' )}
+              </p>
+              <div style={{ marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.78rem' }}>
+                <p style={{ margin: 0 }}>
+                  <span style={{ color: '#6b7280' }}>{__( 'Invoice Ref:', 'codeclove-school-management' )} </span>
+                  <span style={{ fontWeight: 600, color: '#111827', fontFamily: 'monospace' }}>{invoice.invoice_number}</span>
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -187,19 +214,19 @@ export default function PrintInvoiceSheet({ invoice, school }: PrintInvoiceSheet
                 {__( 'Total Fees', 'codeclove-school-management' )}
               </td>
               <td style={{ borderTop: '1px solid #e5e7eb', padding: '0.75rem 0 0.35rem', textAlign: 'right', fontSize: '0.85rem', fontWeight: 600, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
-                {formatCurrency(invoice.subtotal_minor)}
+                {formatCurrency(subtotalMinor)}
               </td>
             </tr>
 
             {/* Concession if applicable */}
-            {invoice.discount_minor > 0 && (
+            {discountMinor > 0 && (
               <tr>
                 <td style={{ padding: '0.35rem 0' }} />
                 <td style={{ padding: '0.35rem 0', textAlign: 'right', fontSize: '0.85rem', color: '#059669' }}>
                   {sprintf( __( 'Concession (%s)', 'codeclove-school-management' ), invoice.discount_note || __( 'Waiver', 'codeclove-school-management' ) )}
                 </td>
                 <td style={{ padding: '0.35rem 0', textAlign: 'right', fontSize: '0.85rem', fontWeight: 600, color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
-                  -{formatCurrency(invoice.discount_minor)}
+                  -{formatCurrency(discountMinor)}
                 </td>
               </tr>
             )}
@@ -211,7 +238,7 @@ export default function PrintInvoiceSheet({ invoice, school }: PrintInvoiceSheet
                 {__( 'Net Payable', 'codeclove-school-management' )}
               </td>
               <td style={{ borderTop: '1px solid #e5e7eb', padding: '0.5rem 0 0.35rem', textAlign: 'right', fontSize: '0.9rem', fontWeight: 700, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
-                {formatCurrency(invoice.total_minor)}
+                {formatCurrency(totalMinor)}
               </td>
             </tr>
 
@@ -222,7 +249,7 @@ export default function PrintInvoiceSheet({ invoice, school }: PrintInvoiceSheet
                 {__( 'Amount Received', 'codeclove-school-management' )}
               </td>
               <td style={{ padding: '0.35rem 0', textAlign: 'right', fontSize: '0.8rem', fontWeight: 600, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
-                {formatCurrency(invoice.paid_minor)}
+                {formatCurrency(paidMinor)}
               </td>
             </tr>
 
@@ -233,7 +260,7 @@ export default function PrintInvoiceSheet({ invoice, school }: PrintInvoiceSheet
                 {__( 'Balance Outstanding', 'codeclove-school-management' )}
               </td>
               <td style={{ borderTop: '2px solid #111827', borderBottom: '1px solid #111827', padding: '0.6rem 0 0.5rem', textAlign: 'right', fontSize: '0.95rem', fontWeight: 800, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
-                {formatCurrency(invoice.balance_minor)}
+                {formatCurrency(balanceMinor)}
               </td>
             </tr>
           </tfoot>
@@ -288,7 +315,7 @@ export default function PrintInvoiceSheet({ invoice, school }: PrintInvoiceSheet
                       fontVariantNumeric: 'tabular-nums',
                     }}
                   >
-                    {formatCurrency(p.amount_minor)}
+                    {formatCurrency(p.amount_minor ?? 0)}
                     {p.status === 'cancelled' && (
                       <span style={{ marginLeft: '4px', fontSize: '0.65rem', fontWeight: 400, color: '#991b1b' }}>{__( '(Void)', 'codeclove-school-management' )}</span>
                     )}

@@ -20,8 +20,6 @@ import { useFormatter } from '@/lib/formatter'
 import { useToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { __, sprintf } from '@/lib/i18n'
-import stripeLogo from '@/assets/gateways/stripe.svg'
-import paypalLogo from '@/assets/gateways/paypal.svg'
 
 export interface UnifiedCheckoutModalProps {
   open: boolean
@@ -48,8 +46,9 @@ export function UnifiedCheckoutModal({
 }: UnifiedCheckoutModalProps) {
   const toast = useToast()
   const { formatCurrency } = useFormatter()
+  const isPro = typeof window === 'undefined' || window.CodeCloveConfig?.isPro !== false
 
-  const { data: configData, isLoading: isLoadingConfig } = useGatewaysConfig()
+  const { data: configData, isLoading: isLoadingConfig } = useGatewaysConfig({ enabled: isPro })
   const checkoutMutation = useCreateCheckoutSession()
 
   const [amountMinor, setAmountMinor] = useState<number>(invoice.balance_minor)
@@ -258,10 +257,15 @@ export function UnifiedCheckoutModal({
                     {__('No Payment Gateways Configured', 'codeclove-school-management')}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
-                    {__(
-                      'Please configure and enable Stripe or PayPal in Settings → Payment Gateways to accept online payments.',
-                      'codeclove-school-management'
-                    )}
+                    {isPro
+                      ? __(
+                          'Please configure and enable Stripe or PayPal in Settings → Payment Gateways to accept online payments.',
+                          'codeclove-school-management'
+                        )
+                      : __(
+                          'Online payment gateways are available in CodeClove Pro.',
+                          'codeclove-school-management'
+                        )}
                   </p>
                 </div>
               ) : (
@@ -279,12 +283,8 @@ export function UnifiedCheckoutModal({
                       )}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <div className="h-6 w-16 flex items-center shrink-0">
-                          <img
-                            src={stripeLogo}
-                            alt="Stripe"
-                            className="max-h-5 max-w-full object-contain"
-                          />
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                          <CreditCard className="w-4 h-4" />
                         </div>
                         <div
                           className={cn(
@@ -319,12 +319,8 @@ export function UnifiedCheckoutModal({
                       )}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <div className="h-6 w-18 flex items-center shrink-0">
-                          <img
-                            src={paypalLogo}
-                            alt="PayPal"
-                            className="max-h-5 max-w-full object-contain"
-                          />
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                          <Wallet className="w-4 h-4" />
                         </div>
                         <div
                           className={cn(

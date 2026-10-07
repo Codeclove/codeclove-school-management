@@ -80,6 +80,10 @@ export interface CodeClovePortalConfigType {
     appearance?: Record<string, any>
     localization?: Record<string, any>
     labels?: Record<string, any>
+    finance?: {
+      allow_partial_payments?: boolean
+      min_partial_amount?: number
+    }
   }
 }
 

@@ -15,7 +15,6 @@ import {
   Building2,
   Calendar,
   Check,
-  CheckCircle2,
   Copy,
   CreditCard,
   FileText,
@@ -24,7 +23,6 @@ import {
   Printer,
   Receipt,
   School,
-  ShieldCheck,
   User,
 } from 'lucide-react'
 import type { Invoice, InvoicePayment } from '../../types'
@@ -185,19 +183,16 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
     balance_minor: targetInvoice?.balance_minor ?? Math.round((targetInvoice?.balance ?? 0) * 100),
   } as unknown as FinanceInvoice
 
-  // Verification code representation
-  const verificationHash = `CC-VERIFIED-${receiptNum.replace(/[^a-zA-Z0-9]/g, '')}`
-
   return (
     <div className={cn('space-y-6 max-w-4xl mx-auto pb-12', className)}>
       {/* ─── 1. Breadcrumb & Navigation Bar ──────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
-        <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-4">
+        <div className="flex items-center gap-2 text-xs text-text-muted">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleBack}
-            className="h-8 px-2.5 text-xs font-semibold text-text hover:text-brand gap-1.5 -ml-2.5"
+            className="h-8 px-2 text-xs font-semibold text-text hover:text-brand gap-1.5 -ml-2"
             title={__( 'Go back', 'codeclove-school-management' )}
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -207,36 +202,16 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
                 : __( 'Back to Fee Records', 'codeclove-school-management' )}
             </span>
           </Button>
-
-          <span className="text-text-subtle hidden sm:inline">•</span>
-
-          <div className="flex items-center gap-1.5 font-medium text-text-subtle hidden sm:flex">
-            <span>{__( 'Fee Records', 'codeclove-school-management' )}</span>
-            <span>/</span>
-            {targetInvoice && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleViewInvoice}
-                  className="hover:text-brand transition-colors font-mono"
-                >
-                  #{invoiceNum}
-                </button>
-                <span>/</span>
-              </>
-            )}
-            <span className="text-text font-bold font-mono">#{receiptNum}</span>
-          </div>
         </div>
 
         {/* Action Toolbar */}
         <div className="flex items-center gap-2 self-end sm:self-auto">
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             onClick={handleCopyReceipt}
-            className="h-8 px-2.5 text-xs text-text-muted hover:text-text gap-1.5 border border-border/60"
-            title={__( 'Copy Receipt Number', 'codeclove-school-management' )}
+            className="h-8 px-2.5 text-xs font-medium text-text hover:text-brand gap-1.5 border-border/80 shadow-2xs"
+            title={__( 'Copy Receipt ID', 'codeclove-school-management' )}
           >
             {copied ? (
               <>
@@ -246,7 +221,8 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5 text-text-subtle" />
-                <span>{__( 'Copy #', 'codeclove-school-management' )}</span>
+                <span className="hidden sm:inline">{__( 'Copy Receipt ID', 'codeclove-school-management' )}</span>
+                <span className="sm:hidden">{__( 'Copy #', 'codeclove-school-management' )}</span>
               </>
             )}
           </Button>
@@ -256,10 +232,10 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
               variant="secondary"
               size="sm"
               onClick={handleViewInvoice}
-              className="h-8 px-2.5 text-xs font-medium gap-1.5 border-border/80 text-text hover:bg-bg-base/70"
+              className="h-8 px-2.5 text-xs font-medium gap-1.5 border-border/80 text-text hover:bg-bg-base/70 shadow-2xs"
             >
               <FileText className="w-3.5 h-3.5 text-brand" />
-              <span className="hidden sm:inline">{__( 'View Invoice Statement', 'codeclove-school-management' )}</span>
+              <span className="hidden sm:inline">{__( 'View Invoice', 'codeclove-school-management' )}</span>
               <span className="sm:hidden">{__( 'Invoice', 'codeclove-school-management' )}</span>
             </Button>
           )}
@@ -269,7 +245,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
             variant="default"
             size="sm"
             onClick={handlePrint}
-            className="h-8 px-3.5 text-xs font-semibold gap-1.5 shadow-xs"
+            className="h-8 px-3 text-xs font-semibold gap-1.5 shadow-xs"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>{__( 'Print Receipt', 'codeclove-school-management' )}</span>
@@ -279,9 +255,6 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
 
       {/* ─── 2. Official Receipt Presentation Card ────────────────────────── */}
       <Card className="rounded-2xl border border-border/80 bg-bg-surface shadow-card overflow-hidden">
-        {/* Top Status Accent Bar */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-success via-brand to-success" />
-
         <div className="p-6 sm:p-8 space-y-7">
           {/* Header & Letterhead Section */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-border/70">
@@ -301,45 +274,40 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
                 <span className="text-3xs uppercase tracking-widest font-extrabold text-brand block mb-1">
                   {__( 'Official Fee Collection Slip', 'codeclove-school-management' )}
                 </span>
-                <h2 className="text-xl sm:text-2xl font-black text-text tracking-tight leading-tight">
-                  {school?.name || siteName}
-                </h2>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl sm:text-2xl font-black text-text tracking-tight leading-tight">
+                    {school?.name || siteName}
+                  </h2>
+                  {school?.code && (
+                    <span className="text-2xs font-mono font-semibold px-2 py-0.5 rounded bg-bg-subtle text-text-muted border border-border">
+                      {school.code}
+                    </span>
+                  )}
+                </div>
                 {(school?.address || school?.email || school?.phone) && (
                   <p className="text-xs text-text-subtle mt-1.5 leading-relaxed max-w-md">
-                    {[
-                      typeof school.address === 'string' ? school.address : null,
-                      school.phone,
-                      school.email,
-                    ]
-                      .filter(Boolean)
-                      .join(' • ')}
+                    {[school?.address, school?.phone, school?.email].filter(Boolean).join(' • ')}
                   </p>
                 )}
               </div>
             </div>
 
             {/* Receipt Identification Stamp */}
-            <div className="bg-bg-base/70 border border-border/70 rounded-xl p-4 sm:text-right shrink-0 min-w-[200px] flex flex-col justify-between">
+            <div className="border border-border/80 bg-bg-base/40 rounded-xl p-3.5 sm:text-right shrink-0 min-w-[200px] flex flex-col justify-between">
               <div>
-                <div className="flex items-center gap-1.5 sm:justify-end mb-1">
-                  <Badge variant="paid" size="sm" className="gap-1 font-bold">
-                    <CheckCircle2 className="w-3 h-3" />
-                    <span>{__( 'Cleared & Settled', 'codeclove-school-management' )}</span>
-                  </Badge>
-                </div>
                 <span className="text-3xs uppercase font-bold text-text-subtle tracking-wider block">
                   {__( 'Receipt Number', 'codeclove-school-management' )}
                 </span>
-                <span className="font-mono text-base font-extrabold text-brand block mt-0.5 tracking-tight">
+                <span className="font-mono text-base font-bold text-text block mt-0.5 tracking-tight">
                   #{receiptNum}
                 </span>
               </div>
 
-              <div className="mt-3 pt-2.5 border-t border-border/50 text-xs">
+              <div className="mt-2.5 pt-2 border-t border-border/60 text-xs">
                 <span className="text-3xs uppercase font-semibold text-text-subtle tracking-wider block">
                   {__( 'Settlement Date', 'codeclove-school-management' )}
                 </span>
-                <div className="flex items-center gap-1 sm:justify-end font-semibold text-text mt-0.5">
+                <div className="flex items-center gap-1 sm:justify-end font-medium text-text mt-0.5">
                   <Calendar className="w-3 h-3 text-text-subtle" />
                   <span>{paidDate ? formatDate(paidDate) : __( 'Cleared', 'codeclove-school-management' )}</span>
                 </div>
@@ -394,15 +362,15 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
           </div>
 
           {/* ─── 4. Payment Amount Hero Section ────────────────────────────── */}
-          <div className="rounded-2xl border border-success/30 bg-gradient-to-br from-success-dim/50 via-success-dim/30 to-bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div className="rounded-xl border border-border/80 bg-bg-base/30 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <div className="space-y-1">
-              <span className="text-3xs uppercase font-extrabold text-success tracking-widest block">
+              <span className="text-3xs uppercase font-bold text-text-subtle tracking-wider block">
                 {__( 'Total Amount Received & Cleared', 'codeclove-school-management' )}
               </span>
-              <div className="text-3xl sm:text-4xl font-black text-success tabular-nums tracking-tight">
+              <div className="text-3xl sm:text-4xl font-mono font-bold text-text tabular-nums tracking-tight">
                 {formatCurrency(payment.amount, currency)}
               </div>
-              <p className="text-xs text-text-muted pt-1">
+              <p className="text-xs text-text-muted pt-0.5">
                 {sprintf(
                   __( 'Verified payment credited towards %s account on %s', 'codeclove-school-management' ),
                   studentName,
@@ -416,8 +384,8 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
                 <span className="text-xs text-text-subtle font-medium">
                   {__( 'Payment Method:', 'codeclove-school-management' )}
                 </span>
-                <Badge variant="default" size="default" className="gap-1.5 px-3 py-1 font-semibold bg-bg-surface border-border">
-                  <MethodIcon className="w-3.5 h-3.5 text-brand" />
+                <Badge variant="default" size="default" className="gap-1.5 px-2.5 py-1 font-medium bg-bg-surface border-border text-text">
+                  <MethodIcon className="w-3.5 h-3.5 text-text-subtle" />
                   <span>{methodConfig.label}</span>
                 </Badge>
               </div>
@@ -519,52 +487,21 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
             </div>
           )}
 
-          {/* ─── 6. Official Digital Certification & Stamp ─────────────────── */}
-          <div className="rounded-xl border border-brand/20 bg-brand-dim/20 p-4 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 text-center sm:text-left">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-brand text-white shadow-xs shrink-0">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-text uppercase tracking-wider">
-                  {__( 'Official Electronic Receipt & Verification', 'codeclove-school-management' )}
-                </h4>
-                <p className="text-xs text-text-muted mt-0.5 leading-relaxed max-w-lg">
-                  {sprintf(
-                    __(
-                      'This is an official system-generated electronic receipt issued by %s. No physical signature is required. Keep this document for your tuition tax credits, bursary, and personal accounting records.',
-                      'codeclove-school-management'
-                    ),
-                    school?.name || siteName
-                  )}
-                </p>
-              </div>
-            </div>
-
-            <div className="text-center sm:text-right shrink-0">
-              <span className="text-3xs uppercase font-mono font-bold text-text-subtle tracking-wider block">
-                {__( 'Verification Code', 'codeclove-school-management' )}
-              </span>
-              <span className="font-mono text-3xs font-bold text-brand bg-brand-dim/50 px-2 py-0.5 rounded border border-brand/30 mt-1 inline-block">
-                {verificationHash}
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* ─── 7. Slip Action Dock (Footer) ──────────────────────────────── */}
-        <div className="bg-bg-base/70 border-t border-border/70 p-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-text-subtle text-center sm:text-left">
+        <div className="bg-bg-base/40 border-t border-border/70 p-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-text-subtle">
+          <div className="text-center sm:text-left">
             {sprintf( __( 'Receipt #%s • Issued for %s', 'codeclove-school-management' ), receiptNum, studentName )}
           </div>
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2">
             <Button
               variant="secondary"
               size="sm"
               onClick={handleBack}
-              className="h-9 px-4 text-xs font-medium border-border/80 text-text flex-1 sm:flex-none justify-center"
+              className="h-8 px-3 text-xs font-medium border-border/80 text-text"
             >
-              <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+              <ArrowLeft className="w-3.5 h-3.5 mr-1" />
               <span>
                 {targetInvoice && onBackToInvoice
                   ? __( 'Back to Invoice', 'codeclove-school-management' )
@@ -576,9 +513,9 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
               variant="default"
               size="sm"
               onClick={handlePrint}
-              className="h-9 px-5 text-xs font-semibold gap-1.5 flex-1 sm:flex-none justify-center shadow-xs"
+              className="h-8 px-3.5 text-xs font-semibold gap-1.5 shadow-xs"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-3.5 h-3.5" />
               <span>{__( 'Print Official Receipt', 'codeclove-school-management' )}</span>
             </Button>
           </div>

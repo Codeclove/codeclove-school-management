@@ -119,3 +119,53 @@ if ( ! function_exists( 'codeclove_user_can' ) ) {
 		return false;
 	}
 }
+
+if ( ! function_exists( 'codeclove_get_portal_url' ) ) {
+	/**
+	 * Resolves the public URL for the CodeClove Student & Parent Portal.
+	 *
+	 * Checks filters, published pages containing the [codeclove_portal] shortcode
+	 * or portal meta, common slugs, and falls back to a clean permalink.
+	 *
+	 * @return string Portal URL.
+	 */
+	function codeclove_get_portal_url(): string {
+		$custom = apply_filters( 'codeclove_portal_url', null );
+		if ( ! empty( $custom ) ) {
+			return (string) $custom;
+		}
+
+		global $wpdb;
+		if ( isset( $wpdb->posts ) ) {
+			$page_id = (int) $wpdb->get_var(
+				"SELECT p.ID FROM {$wpdb->posts} p
+				 LEFT JOIN {$wpdb->postmeta} pm ON (p.ID = pm.post_id AND pm.meta_key = '_codeclove_shortcode_key')
+				 WHERE p.post_type = 'page'
+				   AND p.post_status = 'publish'
+				   AND (pm.meta_value = 'portal' OR p.post_content LIKE '%[codeclove_portal%')
+				 ORDER BY (pm.meta_value = 'portal') DESC, p.ID ASC
+				 LIMIT 1"
+			);
+
+			if ( $page_id > 0 ) {
+				$permalink = get_permalink( $page_id );
+				if ( ! empty( $permalink ) ) {
+					return $permalink;
+				}
+			}
+		}
+
+		// Fallback check for common page slugs if direct query yielded nothing.
+		foreach ( [ 'student-portal', 'portal' ] as $slug ) {
+			$page = get_page_by_path( $slug );
+			if ( $page && 'publish' === $page->post_status ) {
+				$permalink = get_permalink( $page->ID );
+				if ( ! empty( $permalink ) ) {
+					return $permalink;
+				}
+			}
+		}
+
+		return home_url( '/student-portal/' );
+	}
+}

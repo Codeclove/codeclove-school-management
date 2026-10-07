@@ -627,9 +627,9 @@ final class SettingsController extends BaseController {
 			] );
 		}
 
-		$error_msg = ! empty( $body['message'] )
+		$error_msg = ! empty( $body['message'] ) && ! str_contains( (string) $body['message'], 'No route was found' )
 			? sanitize_text_field( (string) $body['message'] )
-			: __( 'Unable to submit report to feedback service. Please try again later.', 'codeclove-school-management' );
+			: __( 'Unable to reach the CodeClove feedback service. Please try again later.', 'codeclove-school-management' );
 		$err_code  = ( $status >= 400 && $status < 600 ) ? $status : 502;
 
 		return new WP_REST_Response(
@@ -698,11 +698,10 @@ final class SettingsController extends BaseController {
 	private function get_feedback_receiver_url(): string {
 		$default = ( defined( 'CODECLOVE_FEEDBACK_API_URL' ) && CODECLOVE_FEEDBACK_API_URL )
 			? CODECLOVE_FEEDBACK_API_URL
-			: 'https://codeclove.com/wp-json/codeclove/v1/feedback';
+			: 'https://codeclove.com/wp-json/nexora/v1/feedback';
 
 		return (string) apply_filters( 'codeclove_feedback_api_url', $default );
 	}
-
 	/**
 	 * Determines if SSL verification should be enforced for remote receiver calls.
 	 *

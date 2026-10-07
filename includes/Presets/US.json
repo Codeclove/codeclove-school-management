@@ -31,7 +31,7 @@
     "staff_member": { "singular": "Staff / Faculty", "plural": "Staff / Faculty" },
     "fee_type": { "singular": "Fee Type", "plural": "Fee Types" },
     "invoice_line_item": { "singular": "Invoice Line Item", "plural": "Invoice Line Items" },
-    "invoice": { "singular": "Invoice / Bill", "plural": "Invoices / Bills" },
+    "invoice": { "singular": "Invoice", "plural": "Invoices" },
     "payment": { "singular": "Payment", "plural": "Payments" },
     "attendance_record": { "singular": "Attendance Record", "plural": "Attendance Records" }
   },

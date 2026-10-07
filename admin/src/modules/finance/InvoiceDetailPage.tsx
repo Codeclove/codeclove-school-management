@@ -32,6 +32,7 @@ import { useFormatter } from '@/lib/formatter'
 import { printElement } from '@/lib/print'
 import PrintInvoiceSheet from './PrintInvoiceSheet'
 import { UnifiedCheckoutModal } from './components/UnifiedCheckoutModal'
+import { useGatewaysConfig } from '@/api/gateways'
 import {
   Button,
   PageHeader,
@@ -81,7 +82,13 @@ export default function InvoiceDetailPage() {
   const { data: settingsData } = useSettings()
   const school = settingsData?.school
   const printRef = useRef<HTMLDivElement>(null)
-
+  const isPro = typeof window === 'undefined' || window.CodeCloveConfig?.isPro !== false
+  const { data: gatewaysConfig } = useGatewaysConfig({ enabled: isPro })
+  const hasActiveGateways = Boolean(
+    isPro &&
+    gatewaysConfig?.gateways &&
+    Object.values(gatewaysConfig.gateways).some((g) => g.enabled)
+  )
   // Resolve unit + group names for the student panel
   const { data: unitsData }  = useUnits({ per_page: 100 })
   const { data: groupsData } = useGroups(
@@ -264,10 +271,12 @@ export default function InvoiceDetailPage() {
                 </Button>
                 {!isClosed && !isPaid && (
                   <>
-                    <Button size="sm" variant="secondary" onClick={() => setIsCheckoutModalOpen(true)} className="flex items-center gap-1.5">
-                      <CreditCard className="h-4 w-4 text-primary" />
-                      {__('Pay Online', 'codeclove-school-management')}
-                    </Button>
+                    {hasActiveGateways && (
+                      <Button size="sm" variant="secondary" onClick={() => setIsCheckoutModalOpen(true)} className="flex items-center gap-1.5">
+                        <CreditCard className="h-4 w-4 text-primary" />
+                        {__('Pay Online', 'codeclove-school-management')}
+                      </Button>
+                    )}
                     <Button size="sm" onClick={handleOpenPayment} className="flex items-center gap-1.5">
                       <Plus className="h-4 w-4" />
                       {__('Record Payment', 'codeclove-school-management')}
@@ -636,7 +645,7 @@ export default function InvoiceDetailPage() {
         </div>
       </div>
 
-      {invoice && (
+      {hasActiveGateways && invoice && (
         <UnifiedCheckoutModal
           open={isCheckoutModalOpen}
           onClose={() => setIsCheckoutModalOpen(false)}

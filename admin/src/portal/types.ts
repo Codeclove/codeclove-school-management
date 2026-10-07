@@ -81,13 +81,18 @@ export interface PortalSchool {
 
 export type PortalLabels = Record<string, { singular?: string; plural?: string }>
 
+export interface PortalFinanceSettings {
+  allow_partial_payments?: boolean
+  min_partial_amount?: number
+}
+
 export interface PortalSettings {
   appearance?: PortalAppearance
   localization?: PortalLocalization
   school?: PortalSchool
   labels?: PortalLabels
+  finance?: PortalFinanceSettings
 }
-
 export interface PortalMeResponse {
   role: UserRole
   user: PortalUser

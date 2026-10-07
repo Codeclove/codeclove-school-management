@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { useNotifications, usePortalMe } from '../api/portal'
 import type {
+  PortalFinanceSettings,
   PortalLabels,
   PortalLocalization,
   PortalMeResponse,
@@ -34,6 +35,7 @@ export interface PortalContextValue {
   school?: PortalSchool
   localization?: PortalLocalization
   labels?: PortalLabels
+  finance?: PortalFinanceSettings
 }
 const PortalContext = createContext<PortalContextValue | undefined>(undefined)
 
@@ -41,8 +43,17 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
   const initialContext = (window.CodeClovePortalConfig?.context ?? undefined) as PortalMeResponse | undefined
   const { data: meData, isLoading: isMeLoading } = usePortalMe(initialContext)
 
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null)
-
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      const parsed = saved ? parseInt(saved, 10) : null
+      if (parsed) return parsed
+    } catch {
+      // Ignore localStorage access errors
+    }
+    return initialContext?.default_student_id ?? initialContext?.students?.[0]?.id ?? null
+  })
   const students = useMemo<PortalStudent[]>(() => meData?.students ?? initialContext?.students ?? [], [meData?.students, initialContext?.students])
   const userRole: UserRole = meData?.role ?? initialContext?.role ?? 'student'
   const user = meData?.user ?? initialContext?.user ?? null
@@ -56,21 +67,20 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
   // Initialize or validate selected student ID
   useEffect(() => {
     if (students.length === 0) {
-      setSelectedStudentId(null)
+      if (selectedStudentId !== null) setSelectedStudentId(null)
       return
     }
 
-    const savedIdStr = localStorage.getItem(STORAGE_KEY)
-    const savedId = savedIdStr ? parseInt(savedIdStr, 10) : null
-
-    if (savedId && students.some((s) => s.id === savedId)) {
-      setSelectedStudentId(savedId)
-    } else if (meData?.default_student_id && students.some((s) => s.id === meData.default_student_id)) {
-      setSelectedStudentId(meData.default_student_id)
-    } else if (students[0]) {
-      setSelectedStudentId(students[0].id)
+    // Keep existing selected ID if it belongs to available students
+    if (selectedStudentId && students.some((s) => s.id === selectedStudentId)) {
+      return
     }
-  }, [students, meData?.default_student_id])
+
+    const fallbackId = meData?.default_student_id && students.some((s) => s.id === meData.default_student_id)
+      ? meData.default_student_id
+      : students[0]?.id ?? null
+    setSelectedStudentId(fallbackId)
+  }, [students, meData?.default_student_id, selectedStudentId])
 
   const switchStudent = (studentId: number) => {
     setSelectedStudentId(studentId)
@@ -84,7 +94,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
   const school = settings?.school
   const localization = settings?.localization
   const labels = settings?.labels
-
+  const finance = settings?.finance
   const siteName = school?.name || window.CodeClovePortalConfig?.siteName || 'School Portal'
   const logoUrl = school?.logo || window.CodeClovePortalConfig?.logoUrl
   const logoutUrl = window.CodeClovePortalConfig?.logoutUrl ?? '/wp-login.php?action=logout'
@@ -116,6 +126,7 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     school,
     localization,
     labels,
+    finance,
   }
   return <PortalContext.Provider value={value}>{children}</PortalContext.Provider>
 }
