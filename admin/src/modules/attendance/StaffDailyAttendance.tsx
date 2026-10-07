@@ -37,7 +37,11 @@ export default function StaffDailyAttendance() {
     refetch: refetchDaily,
   } = useStaffAttendanceRegister(date)
   const saveMutation = useSaveStaffAttendance()
-
+  // Check if attendance for this day has already been saved to the database
+  const isAlreadySubmitted = useMemo(() => {
+    if (!registerRecords || registerRecords.length === 0) return false
+    return registerRecords.some((r) => r.attendance_id !== null)
+  }, [registerRecords])
   // Track if user has made unsaved changes by comparing directly against server data
   const isDirty = useMemo(() => {
     if (!registerRecords || registerRecords.length === 0) return false
@@ -194,8 +198,6 @@ export default function StaffDailyAttendance() {
     })
   }, [recordsList, searchQuery, departmentFilter, designationFilter])
 
-  // Check if attendance for this day has already been saved to the database
-  const isAlreadySubmitted = Boolean(registerRecords?.some((r) => r.attendance_id !== null))
 
   return (
     <div className={`space-y-3 ${isDirty ? 'pb-20 sm:pb-0' : ''}`}>
@@ -399,7 +401,7 @@ export default function StaffDailyAttendance() {
                       variant="default"
                       size="sm"
                       onClick={handleSave}
-                      disabled={saveMutation.isPending || recordsList.length === 0 || !isDirty}
+                      disabled={saveMutation.isPending || recordsList.length === 0 || (isAlreadySubmitted && !isDirty)}
                       className="h-8 text-2xs font-semibold gap-1.5 min-w-[76px]"
                     >
                       {saveMutation.isPending ? (
@@ -410,7 +412,9 @@ export default function StaffDailyAttendance() {
                       ) : (
                         <>
                           <Save size={12} />
-                          {__('Save', 'codeclove-school-management')}
+                          {isAlreadySubmitted && isDirty
+                            ? __('Save Changes', 'codeclove-school-management')
+                            : __('Save', 'codeclove-school-management')}
                         </>
                       )}
                     </Button>
