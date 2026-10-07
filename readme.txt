@@ -116,8 +116,9 @@ All bundled libraries are open-source and GPL-compatible.
 == Changelog ==
 = 1.0.5 =
 * Feature: Enhanced student admissions and portal workflow.
+* Fix: Allow initial staff attendance submission with default present statuses.
+* Tweak: Modernized fee stationery letterhead and statement header layout.
 * Tweak: Updated compatibility and core asset optimizations.
-
 = 1.0.3 =
 * Tweak: Improved readme short description to fit WordPress.org 150-character limit.
 * Tweak: Corrected "Tested up to" version to 7.1.2.
