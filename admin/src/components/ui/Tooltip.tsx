@@ -49,7 +49,7 @@ export const Tooltip = React.forwardRef<
           side={side}
           sideOffset={6}
           className={cn(
-            'z-[10010] max-w-xs px-2.5 py-1.5 rounded text-xs font-medium',
+            'z-[100060] max-w-xs px-2.5 py-1.5 rounded text-xs font-medium',
             'bg-bg-overlay border border-border shadow-modal text-text',
             'animate-fade-in select-none',
             className
@@ -57,7 +57,7 @@ export const Tooltip = React.forwardRef<
         >
           {content}
           <TooltipPrimitive.Arrow
-            className="fill-border"
+            className="fill-bg-overlay"
             width={8}
             height={4}
           />

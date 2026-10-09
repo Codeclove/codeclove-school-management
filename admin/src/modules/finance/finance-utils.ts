@@ -1,10 +1,9 @@
 /**
  * finance-utils.ts — Shared display helpers for the finance module.
  */
-import type { BadgeProps } from '@/components/ui'
+import { resolveBadgeVariant } from '@/components/ui'
 
-export const getStatusVariant = (s: string): BadgeProps['variant'] =>
-  (s || 'default') as BadgeProps['variant']
+export const getStatusVariant = resolveBadgeVariant
 
 const METHOD_LABELS: Record<string, string> = {
   cash: 'Cash', bank_transfer: 'Bank Transfer', cheque: 'Cheque',

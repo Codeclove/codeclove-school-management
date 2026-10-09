@@ -20,6 +20,7 @@ const config: Config = {
           elevated: 'var(--bg-elevated)',
           overlay:  'var(--bg-overlay)',
         },
+        'hover-bg': 'var(--hover-bg)',
         border: {
           DEFAULT: 'var(--border)',
           subtle:  'var(--border-subtle)',
@@ -35,12 +36,13 @@ const config: Config = {
           DEFAULT: 'var(--brand)',
           strong:  'var(--brand-strong)',
           dim:     'var(--brand-dim)',
+          border:  'var(--brand-border)',
           ring:    'var(--brand-ring)',
         },
-        success: { DEFAULT: 'var(--success)', dim: 'var(--success-dim)' },
-        warning: { DEFAULT: 'var(--warning)', dim: 'var(--warning-dim)' },
-        danger:  { DEFAULT: 'var(--danger)',  dim: 'var(--danger-dim)'  },
-        info:    { DEFAULT: 'var(--info)',    dim: 'var(--info-dim)'    },
+        success: { DEFAULT: 'var(--success)', dim: 'var(--success-dim)', border: 'var(--success-border)' },
+        warning: { DEFAULT: 'var(--warning)', dim: 'var(--warning-dim)', border: 'var(--warning-border)' },
+        danger:  { DEFAULT: 'var(--danger)',  dim: 'var(--danger-dim)',  border: 'var(--danger-border)'  },
+        info:    { DEFAULT: 'var(--info)',    dim: 'var(--info-dim)',    border: 'var(--info-border)'    },
 
         // Status badge foreground colours — same semantic meaning across modes,
         // CSS vars let us slightly adjust saturation per mode.
@@ -140,15 +142,53 @@ const config: Config = {
           from: { opacity: '0', transform: 'translateX(24px)' },
           to:   { opacity: '1', transform: 'translateX(0)' },
         },
+        'fade-out': {
+          from: { opacity: '1' },
+          to:   { opacity: '0' },
+        },
+        'slide-in-from-right': {
+          from: { transform: 'translateX(100%)' },
+          to:   { transform: 'translateX(0)' },
+        },
+        'slide-out-to-right': {
+          from: { transform: 'translateX(0)' },
+          to:   { transform: 'translateX(100%)' },
+        },
+        'slide-in-from-left': {
+          from: { transform: 'translateX(-100%)' },
+          to:   { transform: 'translateX(0)' },
+        },
+        'slide-out-to-left': {
+          from: { transform: 'translateX(0)' },
+          to:   { transform: 'translateX(-100%)' },
+        },
       },
 
       animation: {
         'slide-down': 'slide-down 150ms ease-out',
         'slide-up':   'slide-up 150ms ease-out',
         'fade-in':    'fade-in 150ms ease-out',
+        'fade-out':   'fade-out 150ms ease-in',
         'scale-in':   'scale-in 150ms ease-out',
         shimmer:      'shimmer 1.5s infinite linear',
         'slide-left': 'slide-left 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+        'slide-in-from-right': 'slide-in-from-right 250ms cubic-bezier(0.16, 1, 0.3, 1)',
+        'slide-out-to-right':  'slide-out-to-right 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+        'slide-in-from-left':  'slide-in-from-left 250ms cubic-bezier(0.16, 1, 0.3, 1)',
+        'slide-out-to-left':   'slide-out-to-left 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+      },
+
+      // ── Z-Index Token Hierarchy (WordPress Chrome & Overlay Aware) ─────────
+      zIndex: {
+        sticky:           '20',
+        banner:           '40',
+        drawer:           '100000',
+        'modal-backdrop': '100010',
+        modal:            '100020',
+        popover:          '100050',
+        dropdown:         '100050',
+        tooltip:          '100060',
+        toast:            '100070',
       },
     },
   },

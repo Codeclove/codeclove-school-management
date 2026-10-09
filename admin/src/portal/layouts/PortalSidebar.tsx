@@ -84,8 +84,8 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
               className={({ isActive }) =>
                 `group flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   isActive
-                    ? 'bg-brand text-white shadow-xs'
-                    : 'text-text-muted hover:bg-bg-base hover:text-text'
+                    ? 'bg-brand text-text-inverted shadow-xs'
+                    : 'text-text-muted hover:bg-hover-bg hover:text-text'
                 }`
               }
             >
@@ -94,7 +94,7 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
                   <div className="flex items-center gap-3">
                     <Icon
                       className={`w-4 h-4 transition-colors ${
-                        isActive ? 'text-white' : 'text-text-subtle group-hover:text-text'
+                        isActive ? 'text-text-inverted' : 'text-text-subtle group-hover:text-text'
                       }`}
                     />
                     <span>{item.label}</span>
@@ -104,8 +104,8 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
                     <span
                       className={`text-3xs font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider ml-auto shrink-0 ${
                         isActive
-                          ? 'bg-white/20 text-white'
-                          : 'border border-border/60 bg-bg-base text-text-subtle'
+                          ? 'bg-black/15 text-text-inverted'
+                          : 'border border-border bg-bg-surface text-text-subtle'
                       }`}
                     >
                       {item.badge}
@@ -116,7 +116,7 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
                     <span
                       className={`text-3xs font-bold px-1.5 py-0.5 rounded-full min-w-5 text-center ${
                         isActive
-                          ? 'bg-white text-brand'
+                          ? 'bg-text-inverted text-brand'
                           : 'bg-danger text-white'
                       }`}
                     >
@@ -138,7 +138,7 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
     <>
       {/* Desktop Persistent Sidebar */}
       <aside
-        className={`hidden lg:flex lg:w-56 xl:w-60 lg:flex-col lg:border-r lg:border-border/70 lg:bg-bg-surface shrink-0 ${
+        className={`hidden lg:flex lg:w-56 xl:w-60 lg:flex-col lg:border-r lg:border-border lg:bg-bg-surface shrink-0 ${
           isMaximized ? 'h-full overflow-y-auto' : ''
         }`}
       >
@@ -148,7 +148,7 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
       {/* Mobile Drawer Backdrop */}
       {isMobileOpen && (
         <div
-          className="codeclove-portal-backdrop fixed inset-0 bg-slate-900/50 backdrop-blur-xs lg:hidden animate-in fade-in-50"
+          className="codeclove-portal-backdrop fixed inset-0 bg-black/60 backdrop-blur-xs lg:hidden animate-in fade-in-50"
           onClick={onCloseMobile}
         />
       )}
@@ -159,17 +159,17 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
         role="dialog"
         aria-modal="true"
         aria-label={__( 'Navigation menu', 'codeclove-school-management' )}
-        className={`codeclove-portal-drawer fixed inset-y-0 left-0 w-64 bg-bg-surface shadow-2xl transition-transform duration-200 ease-in-out lg:hidden flex flex-col overflow-y-auto border-r border-border/70 ${
+        className={`codeclove-portal-drawer fixed inset-y-0 left-0 w-64 bg-bg-surface shadow-2xl transition-transform duration-200 ease-in-out lg:hidden flex flex-col overflow-y-auto border-r border-border ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}
       >
-        <div className="flex h-14 sm:h-16 items-center justify-between border-b border-border/70 px-4 shrink-0 bg-bg-surface">
+        <div className="flex h-14 sm:h-16 items-center justify-between border-b border-border px-4 shrink-0 bg-bg-surface">
           <span className="text-sm font-bold text-text">{__( 'Navigation', 'codeclove-school-management' )}</span>
           <button
             type="button"
             onClick={onCloseMobile}
             aria-label={__( 'Close navigation menu', 'codeclove-school-management' )}
-            className="rounded-lg p-1.5 text-text-subtle hover:text-text hover:bg-bg-base transition-colors cursor-pointer"
+            className="rounded-lg p-1.5 text-text-subtle hover:text-text hover:bg-hover-bg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>

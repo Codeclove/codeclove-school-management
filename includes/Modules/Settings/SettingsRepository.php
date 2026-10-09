@@ -105,6 +105,9 @@ final class SettingsRepository {
 
 		update_option( self::OPTION_NAME, $merged, false );
 
+		if ( isset( $merged['localization'] ) && is_array( $merged['localization'] ) ) {
+			$this->sync_with_wordpress_core( $merged['localization'] );
+		}
 		return $merged;
 	}
 
@@ -187,11 +190,11 @@ final class SettingsRepository {
 			],
 			'identifiers'      => $this->get_default_identifiers(),
 			'localization'     => [
-				'language'          => 'en',
+				'language'          => 'site_default',
 				'date_format'       => 'd/m/Y',
 				'time_format'       => 'H:i',
-				'week_start_day'    => 1, // Monday
-				'timezone'          => 'UTC',
+				'week_start_day'    => (int) get_option( 'start_of_week', 1 ),
+				'timezone'          => function_exists( 'wp_timezone_string' ) ? wp_timezone_string() : 'UTC',
 				'currency'          => 'USD',
 				'currency_position' => 'left',
 				'decimal_precision' => 2,
@@ -579,5 +582,45 @@ final class SettingsRepository {
 	 */
 	public function detect_customizations_for( array $settings ): bool {
 		return $this->detect_customizations( $settings );
+	}
+
+	/**
+	 * Synchronizes relevant localization settings with WordPress core options.
+	 *
+	 * Keeps WordPress core timezone_string, start_of_week, and WPLANG aligned with
+	 * CodeClove localization settings so administrators don't have to configure both.
+	 *
+	 * @param array $localization
+	 */
+	private function sync_with_wordpress_core( array $localization ): void {
+		if ( ! current_user_can( 'manage_options' ) && ! ( defined( 'WP_RUNNING_TESTS' ) && WP_RUNNING_TESTS ) ) {
+			return;
+		}
+
+		if ( ! empty( $localization['timezone'] ) && 'site_default' !== $localization['timezone'] ) {
+			try {
+				new \DateTimeZone( (string) $localization['timezone'] );
+				update_option( 'timezone_string', (string) $localization['timezone'] );
+			} catch ( \Throwable ) {
+				// Invalid timezone, leave WordPress option unchanged.
+			}
+		}
+
+		if ( isset( $localization['week_start_day'] ) ) {
+			$start_of_week = (int) $localization['week_start_day'];
+			if ( $start_of_week >= 0 && $start_of_week <= 6 ) {
+				update_option( 'start_of_week', $start_of_week );
+			}
+		}
+
+		if ( ! empty( $localization['language'] ) && 'site_default' !== $localization['language'] ) {
+			$lang      = sanitize_key( (string) $localization['language'] );
+			$available = get_available_languages();
+			if ( in_array( $lang, $available, true ) ) {
+				update_option( 'WPLANG', $lang );
+			} elseif ( in_array( $lang, [ 'en', 'en_US' ], true ) ) {
+				update_option( 'WPLANG', '' );
+			}
+		}
 	}
 }

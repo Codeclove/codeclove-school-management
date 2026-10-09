@@ -32,7 +32,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       theme={resolvedTheme}
       position="bottom-right"
       closeButton
-      style={{ zIndex: 99999 }}
+      style={{ zIndex: 100050 }}
       icons={{
         success: <CheckCircle2 className="h-5 w-5 text-success shrink-0" />,
         error: <AlertCircle className="h-5 w-5 text-danger shrink-0" />,
@@ -55,10 +55,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function useToast() {
+export function useToast(): ToastContextType {
   const context = useContext(ToastContext)
   if (!context) {
-    throw new Error('useToast must be used within a ToastProvider')
+    return {
+      success: (msg: string) => sonnerToast.success(msg),
+      error: (msg: string) => sonnerToast.error(msg),
+      info: (msg: string) => sonnerToast.info(msg),
+    }
   }
   return context
 }

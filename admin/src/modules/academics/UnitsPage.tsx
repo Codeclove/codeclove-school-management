@@ -26,17 +26,19 @@ import {
 import { useSession } from '@/lib/session-context'
 import { useLabels } from '@/lib/labels'
 import { useToast } from '@/lib/toast'
+import { onFormError } from '@/lib/form-errors'
 import { useConfirm } from '@/lib/confirm'
 import { useEntity } from '@/lib/useEntity'
 import { AcademicsNav } from './components/AcademicsNav'
-import { TablePagination } from '@/components/ui/TablePagination'
 import { useTableState } from '@/lib/useTableState'
 import { useDebounce } from '@/lib/useDebounce'
 import {
-  Button, Badge, Card, CardContent,
+  DataTable,
+  type DataTableColumn,
+  Button, Badge, Card,
   Modal, ModalFooter, FormField, Input, Select,
-  TableRoot, Thead, Tbody, Tr, Th, Td, TableEmpty, TableSkeleton,
-  PageHeader, Spinner, EmptyState, FormGroupHeader,
+  TableRoot, Thead, Tbody, Tr, Th, Td, TableSkeleton,
+  PageHeader, Spinner,
   type BadgeProps,
 } from '@/components/ui'
 import { __, sprintf } from '@/lib/i18n'
@@ -115,10 +117,115 @@ export default function UnitsPage() {
   })
   const allUnits = allUnitsData?.data ?? []
 
-  // Reset page when session, status, or search changes
+  const statusConfig = useMemo(() => getStatusConfig(), [])
+  const subjectLabelPlural = getLabel('subject', true, __( 'Subjects', 'codeclove-school-management' ))
+
+  const columns = useMemo<DataTableColumn<AcademicUnit>[]>(
+    () => [
+      {
+        key: 'name',
+        header: __( 'Name', 'codeclove-school-management' ),
+        type: 'primary',
+        sortable: true,
+        render: (unit) => <span className="font-semibold text-text">{unit.name}</span>,
+      },
+      {
+        key: 'code',
+        header: __( 'Code', 'codeclove-school-management' ),
+        type: 'code',
+        sortable: true,
+        render: (unit) =>
+          unit.code ? (
+            <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text-muted">
+              {unit.code}
+            </span>
+          ) : (
+            <span className="text-text-subtle">—</span>
+          ),
+      },
+      {
+        key: 'order',
+        header: __( 'Order / Level', 'codeclove-school-management' ),
+        type: 'number',
+        sortable: true,
+        render: (unit) => unit.order,
+      },
+      {
+        key: 'groups_count',
+        header: groupLabelPlural,
+        type: 'number',
+        sortable: true,
+        render: (unit) => unit.groups_count,
+      },
+      {
+        key: 'students_count',
+        header: __( 'Active Students', 'codeclove-school-management' ),
+        type: 'number',
+        sortable: true,
+        render: (unit) => unit.students_count,
+      },
+      {
+        key: 'status',
+        header: __( 'Status', 'codeclove-school-management' ),
+        type: 'badge',
+        sortable: true,
+        render: (unit) => {
+          const cfg = statusConfig[unit.status] ?? statusConfig.inactive
+          return (
+            <Badge variant={cfg.variant} size="sm" dot>
+              {cfg.label}
+            </Badge>
+          )
+        },
+      },
+      {
+        key: 'actions',
+        header: __( 'Actions', 'codeclove-school-management' ),
+        type: 'actions',
+        render: (unit) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSubjectsTarget(unit)}
+              className="h-8 w-8 text-text-muted hover:text-brand hover:bg-brand-dim/50"
+              title={sprintf( __( 'Manage %s', 'codeclove-school-management' ), subjectLabelPlural )}
+            >
+              <BookOpen size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setEditTarget(unit)
+                setShowModal(true)
+              }}
+              className="h-8 w-8 text-text-muted hover:text-brand hover:bg-brand-dim/50"
+              title={sprintf( __( 'Edit %s', 'codeclove-school-management' ), unitLabelSingular )}
+            >
+              <Pencil size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDelete(unit)}
+              className="h-8 w-8 text-text-muted hover:text-danger hover:bg-danger-dim/50"
+              title={sprintf( __( 'Delete %s', 'codeclove-school-management' ), unitLabelSingular )}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [statusConfig, groupLabelPlural, subjectLabelPlural, unitLabelSingular]
+  )
+
+  // Reset page and selection when session, status, or search changes
   useEffect(() => {
     table.resetPage()
-  }, [session_id, status, debouncedSearch, table.resetPage])
+    table.clearSelection()
+  }, [session_id, status, debouncedSearch, table.resetPage, table.clearSelection])
 
   return (
     <div className="space-y-5 w-full">
@@ -186,6 +293,7 @@ export default function UnitsPage() {
                   setSearch('')
                   setStatus('')
                   table.resetPage()
+                  table.clearSelection()
                 }}
                 className="text-xs text-text-muted hover:text-text gap-1"
               >
@@ -197,103 +305,51 @@ export default function UnitsPage() {
         </div>
       </Card>
 
-      <Card className="shadow-sm">
-        <CardContent className="p-0 overflow-hidden">
-          {isError ? (
-            <div className="p-6">
-              <EmptyState
-                title={sprintf( __( 'Could not load %s', 'codeclove-school-management' ), unitLabelPlural.toLowerCase() )}
-                description={sprintf( __( 'An error occurred while fetching %s from the backend REST API.', 'codeclove-school-management' ), unitLabelPlural.toLowerCase() )}
-                icon={AlertTriangle}
-                action={
+      <DataTable<AcademicUnit>
+        data={units}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        emptyState={
+          isError
+            ? {
+                icon: AlertTriangle,
+                message: sprintf( __( 'Could not load %s', 'codeclove-school-management' ), unitLabelPlural.toLowerCase() ),
+                description: sprintf( __( 'An error occurred while fetching %s from the backend REST API.', 'codeclove-school-management' ), unitLabelPlural.toLowerCase() ),
+                action: (
                   <Button variant="secondary" size="sm" onClick={() => refetch()} className="gap-1.5">
                     <RefreshCw size={13} />
                     {__( 'Try again', 'codeclove-school-management' )}
                   </Button>
-                }
-              />
-            </div>
-          ) : (
-            <TableRoot>
-              <Thead>
-                <Tr>
-                  <Th type="primary" {...table.getSortProps('name')}>
-                    {__( 'Name', 'codeclove-school-management' )}
-                  </Th>
-                  <Th type="code" {...table.getSortProps('code')}>
-                    {__( 'Code', 'codeclove-school-management' )}
-                  </Th>
-                  <Th type="number" {...table.getSortProps('order')}>
-                    {__( 'Order / Level', 'codeclove-school-management' )}
-                  </Th>
-                  <Th type="number" {...table.getSortProps('groups_count')}>
-                    {groupLabelPlural}
-                  </Th>
-                  <Th type="number" {...table.getSortProps('students_count')}>
-                    {__( 'Active Students', 'codeclove-school-management' )}
-                  </Th>
-                  <Th type="badge" {...table.getSortProps('status')}>
-                    {__( 'Status', 'codeclove-school-management' )}
-                  </Th>
-                  <Th type="actions">{__( 'Actions', 'codeclove-school-management' )}</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {isLoading ? (
-                  <TableSkeleton columns={7} rows={5} />
-                ) : units.length === 0 ? (
-                  <TableEmpty
-                    colSpan={7}
-                    icon={entity.icon}
-                    message={
-                      search || status
-                        ? __( 'No Class Levels Match Filters', 'codeclove-school-management' )
-                        : !session_id
-                        ? __( 'Session Not Selected', 'codeclove-school-management' )
-                        : sprintf( __( 'No %s Found', 'codeclove-school-management' ), unitLabelPlural )
-                    }
-                    description={
-                      search || status
-                        ? __( 'Try adjusting your search query or status filter.', 'codeclove-school-management' )
-                        : !session_id
-                        ? sprintf( __( 'Select an active %1$s in the header to view %2$s.', 'codeclove-school-management' ), sessionLabelSingular.toLowerCase(), unitLabelPlural.toLowerCase() )
-                        : sprintf( __( 'Get started by creating your first reusable school %s level template.', 'codeclove-school-management' ), unitLabelSingular.toLowerCase() )
-                    }
-                    action={
-                      !search && !status && session_id && (
-                        <Button size="sm" onClick={() => { setEditTarget(null); setShowModal(true); }}>
-                          {sprintf( __( 'New %s', 'codeclove-school-management' ), unitLabelSingular )}
-                        </Button>
-                      )
-                    }
-                  />
-                ) : (
-                  units.map((unit) => (
-                    <UnitRow
-                      key={unit.id}
-                      unit={unit}
-                      onEdit={() => {
-                        setEditTarget(unit)
-                        setShowModal(true)
-                      }}
-                      onDelete={() => handleDelete(unit)}
-                      onManageSubjects={() => setSubjectsTarget(unit)}
-                    />
-                  ))
-                )}
-              </Tbody>
-            </TableRoot>
-          )}
-
-          {/* Pagination */}
-          {!isLoading && !isError && (
-            <TablePagination
-              {...table.paginationProps}
-              total={total}
-            />
-          )}
-        </CardContent>
-      </Card>
+                ),
+              }
+            : {
+                icon: entity.icon,
+                message:
+                  search || status
+                    ? __( 'No Class Levels Match Filters', 'codeclove-school-management' )
+                    : !session_id
+                    ? __( 'Session Not Selected', 'codeclove-school-management' )
+                    : sprintf( __( 'No %s Found', 'codeclove-school-management' ), unitLabelPlural ),
+                description:
+                  search || status
+                    ? __( 'Try adjusting your search query or status filter.', 'codeclove-school-management' )
+                    : !session_id
+                    ? sprintf( __( 'Select an active %1$s in the header to view %2$s.', 'codeclove-school-management' ), sessionLabelSingular.toLowerCase(), unitLabelPlural.toLowerCase() )
+                    : sprintf( __( 'Get started by creating your first reusable school %s level template.', 'codeclove-school-management' ), unitLabelSingular.toLowerCase() ),
+                action:
+                  !search && !status && session_id ? (
+                    <Button size="sm" onClick={() => { setEditTarget(null); setShowModal(true); }}>
+                      {sprintf( __( 'New %s', 'codeclove-school-management' ), unitLabelSingular )}
+                    </Button>
+                  ) : undefined,
+              }
+        }
+        keyExtractor={(unit) => unit.id}
+      />
 
       {/* Unit Modal */}
       <UnitModal
@@ -317,81 +373,6 @@ export default function UnitsPage() {
   )
 }
 
-// ─── Table Row ────────────────────────────────────────────────────────────────
-
-function UnitRow({
-  unit,
-  onEdit,
-  onDelete,
-  onManageSubjects,
-}: {
-  unit: AcademicUnit
-  onEdit: () => void
-  onDelete: () => void
-  onManageSubjects: () => void
-}) {
-  const { getLabel } = useLabels()
-  const unitLabelSingular = getLabel('academic_unit', false, __( 'Academic Unit', 'codeclove-school-management' ))
-  const subjectLabelPlural = getLabel('subject', true, __( 'Subjects', 'codeclove-school-management' ))
-  const statusConfig = useMemo(() => getStatusConfig(), [])
-  const cfg = statusConfig[unit.status] ?? statusConfig.inactive
-
-  return (
-    <Tr className="table-row-hover">
-      <Td type="primary">
-        <span className="font-semibold text-text">{unit.name}</span>
-      </Td>
-      <Td type="code">
-        {unit.code ? (
-          <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-bg-base border border-border text-text-muted">
-            {unit.code}
-          </span>
-        ) : (
-          <span className="text-text-subtle">—</span>
-        )}
-      </Td>
-      <Td type="number">{unit.order}</Td>
-      <Td type="number">{unit.groups_count}</Td>
-      <Td type="number">{unit.students_count}</Td>
-      <Td type="badge">
-        <Badge variant={cfg.variant} size="sm" dot>
-          {cfg.label}
-        </Badge>
-      </Td>
-      <Td type="actions">
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onManageSubjects}
-            className="h-8 w-8 text-text-muted hover:text-brand hover:bg-brand-dim/50"
-            title={sprintf( __( 'Manage %s', 'codeclove-school-management' ), subjectLabelPlural )}
-          >
-            <BookOpen size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onEdit}
-            className="h-8 w-8 text-text-muted hover:text-brand hover:bg-brand-dim/50"
-            title={sprintf( __( 'Edit %s', 'codeclove-school-management' ), unitLabelSingular )}
-          >
-            <Pencil size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onDelete}
-            className="h-8 w-8 text-text-muted hover:text-danger hover:bg-danger-dim/50"
-            title={sprintf( __( 'Delete %s', 'codeclove-school-management' ), unitLabelSingular )}
-          >
-            <Trash2 size={14} />
-          </Button>
-        </div>
-      </Td>
-    </Tr>
-  )
-}
 
 // ─── Unit Modal (Create & Edit) ─────────────────────────────────────────────
 
@@ -513,12 +494,7 @@ function UnitModal({
       }
       size="lg"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <FormGroupHeader
-          title={sprintf( __( '%s Details', 'codeclove-school-management' ), unitLabelSingular )}
-          description={sprintf( __( 'Set the name, short code, and display order for this %s.', 'codeclove-school-management' ), unitLabelSingular.toLowerCase() )}
-          icon={BookOpen}
-        />
+      <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-4">
         <FormField label={sprintf( __( '%s/Grade Name', 'codeclove-school-management' ), unitLabelSingular )} error={errors.name?.message} required>
           <Input
             {...register('name')}
@@ -683,7 +659,7 @@ function ManageSubjectsModal({
         )}
 
         {/* Assignment Form */}
-        <div className="p-3.5 rounded-xl bg-bg-light border border-border/80 space-y-3">
+        <div className="p-3.5 rounded-xl bg-bg-surface border border-border space-y-3">
           <p className="text-xs font-semibold text-text uppercase tracking-wider">{sprintf( __( 'Assign %s', 'codeclove-school-management' ), subjectLabelSingular )}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label={subjectLabelSingular} required>

@@ -30,6 +30,7 @@ import {
   PersonAvatar,
   Badge,
   Skeleton,
+  StatCard,
   Card,
   CardHeader,
   CardContent,
@@ -146,16 +147,10 @@ export default function FinanceDashboard() {
           description={__('School fee billings, collections, and student account balances.', 'codeclove-school-management')}
           breadcrumbs={[{ label: __('Finance', 'codeclove-school-management') }, { label: __('Dashboard', 'codeclove-school-management') }]}
         />
-        <div className="rounded-2xl border border-border/70 bg-bg-surface p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="space-y-2.5">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-8 w-40" />
-                <Skeleton className="h-3 w-32" />
-              </div>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <StatCard key={i} label="" value="" loading />
+          ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <Skeleton className="lg:col-span-2 h-80 rounded-2xl" />
@@ -215,7 +210,7 @@ export default function FinanceDashboard() {
         actions={
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Timeframe pill selector */}
-            <div className="inline-flex rounded-lg bg-bg-base border border-border/80 p-0.5">
+            <div className="inline-flex rounded-lg bg-bg-surface border border-border p-0.5">
               {ranges.map((r) => (
                 <button
                   key={r.key}
@@ -224,7 +219,7 @@ export default function FinanceDashboard() {
                   className={cn(
                     'px-3 py-1.5 text-xs font-medium rounded-md transition-all select-none',
                     range === r.key
-                      ? 'bg-bg-surface text-brand font-semibold shadow-xs'
+                      ? 'bg-bg-elevated text-brand font-semibold shadow-xs'
                       : 'text-text-muted hover:text-text'
                   )}
                 >
@@ -267,146 +262,138 @@ export default function FinanceDashboard() {
       />
 
       {/* ── 2. Executive Financial Overview (Mercury Style) ─────────── */}
-      <div className="rounded-2xl border border-border/70 bg-bg-surface shadow-xs overflow-hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border/60">
-          {/* Cell 1: Total Collected */}
-          <div className="p-5 flex flex-col justify-between space-y-3 bg-gradient-to-b from-transparent to-success/5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-text-muted">
-                {__('Total Collected', 'codeclove-school-management')}
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-success-dim text-success tabular-nums">
-                <TrendingUp className="h-3 w-3" />
-                {collectionRate}%
-              </span>
-            </div>
-            <div>
-              <p className="text-3xl font-bold tracking-tight text-text tabular-nums">
-                {formatCurrency(summary.total_collected)}
-              </p>
-              <div className="mt-2.5 flex items-center gap-2">
-                <div className="flex-1 h-1.5 rounded-full bg-bg-base overflow-hidden border border-border/40">
-                  <div
-                    className="h-full rounded-full bg-success transition-all duration-500"
-                    style={{ width: `${Math.min(100, parseFloat(collectionRate))}%` }}
-                  />
-                </div>
-                <span className="text-xs font-medium text-text-muted tabular-nums">
-                  {sprintf(__('of %s', 'codeclove-school-management'), formatCurrency(summary.total_billed))}
-                </span>
-              </div>
-            </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Cell 1: Total Collected */}
+        <StatCard
+          label={__('Total Collected', 'codeclove-school-management')}
+          value={formatCurrency(summary.total_collected)}
+          icon={CheckCircle2}
+          iconColor="text-success"
+          iconBg="bg-success-dim"
+          badge={
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-success-dim text-success tabular-nums">
+              <TrendingUp className="h-3 w-3" />
+              {collectionRate}%
+            </span>
+          }
+          footer={
             <p className="text-xs text-text-subtle">
               {__('Active academic session revenue', 'codeclove-school-management')}
             </p>
+          }
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-1.5 rounded-full bg-bg-surface overflow-hidden border border-border">
+              <div
+                className="h-full rounded-full bg-success transition-all duration-500"
+                style={{ width: `${Math.min(100, parseFloat(collectionRate))}%` }}
+              />
+            </div>
+            <span className="text-xs font-medium text-text-muted tabular-nums">
+              {sprintf(__('of %s', 'codeclove-school-management'), formatCurrency(summary.total_billed))}
+            </span>
           </div>
+        </StatCard>
 
-          {/* Cell 2: Total Invoiced / Billed */}
-          <div className="p-5 flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-text-muted">
-                {isUS ? __('Total Invoiced', 'codeclove-school-management') : __('Total Billed', 'codeclove-school-management')}
-              </span>
-              <span className="p-1.5 rounded-lg bg-brand-dim text-brand">
-                <Receipt className="h-4 w-4" />
-              </span>
-            </div>
-            <div>
-              <p className="text-3xl font-bold tracking-tight text-text tabular-nums">
-                {formatCurrency(summary.total_billed)}
-              </p>
-              <p className="text-xs text-text-muted mt-1.5">
-                {__('Full session charges issued', 'codeclove-school-management')}
-              </p>
-            </div>
+        {/* Cell 2: Total Invoiced / Billed */}
+        <StatCard
+          label={isUS ? __('Total Invoiced', 'codeclove-school-management') : __('Total Billed', 'codeclove-school-management')}
+          value={formatCurrency(summary.total_billed)}
+          icon={Receipt}
+          iconColor="text-brand"
+          iconBg="bg-brand-dim"
+          subtext={__('Full session charges issued', 'codeclove-school-management')}
+          footer={
             <p className="text-xs text-text-subtle">
               {__('Cumulative student fee billings', 'codeclove-school-management')}
             </p>
-          </div>
+          }
+        />
 
-          {/* Cell 3: Outstanding Receivables */}
-          <div className="p-5 flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-text-muted">
-                {__('Outstanding Balance', 'codeclove-school-management')}
-              </span>
-              <span className={cn(
+        {/* Cell 3: Outstanding Receivables */}
+        <StatCard
+          label={__('Outstanding Balance', 'codeclove-school-management')}
+          value={formatCurrency(summary.total_outstanding)}
+          valueClassName={summary.total_outstanding > 0 ? 'text-danger' : undefined}
+          icon={CalendarClock}
+          iconColor={summary.total_outstanding > 0 ? 'text-danger' : 'text-text-muted'}
+          iconBg={summary.total_outstanding > 0 ? 'bg-danger-dim' : 'bg-bg-surface'}
+          badge={
+            <span
+              className={cn(
                 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums',
-                summary.total_outstanding > 0 ? 'bg-danger-dim text-danger' : 'bg-bg-base text-text-muted'
-              )}>
-                {sprintf(__('%s%% unpaid', 'codeclove-school-management'), outstandingRate)}
-              </span>
-            </div>
-            <div>
-              <p className={cn(
-                'text-3xl font-bold tracking-tight tabular-nums',
-                summary.total_outstanding > 0 ? 'text-danger' : 'text-text'
-              )}>
-                {formatCurrency(summary.total_outstanding)}
-              </p>
-              <p className="text-xs text-text-muted mt-1.5">
-                {__('Remaining session balance', 'codeclove-school-management')}
-              </p>
-            </div>
-            <p className="text-xs text-text-subtle">
-              {summary.total_outstanding > 0 ? __('Pending student payments', 'codeclove-school-management') : __('All accounts settled', 'codeclove-school-management')}
-            </p>
-          </div>
-
-          {/* Cell 4: Overdue Invoices */}
-          <div
-            onClick={() => summary.overdue_count > 0 && navigate('/finance/invoices?status=overdue')}
-            className={cn(
-              'p-5 flex flex-col justify-between space-y-3 transition-colors',
-              summary.overdue_count > 0
-                ? 'cursor-pointer hover:bg-warning-dim/20 bg-warning-dim/5'
-                : 'bg-transparent'
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-text-muted">
-                {__('Past Due Invoices', 'codeclove-school-management')}
-              </span>
-              {summary.overdue_count > 0 ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-warning/15 text-warning">
-                  <AlertCircle className="h-3 w-3" />
-                  {__('Action needed', 'codeclove-school-management')}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-success-dim text-success">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {__('On schedule', 'codeclove-school-management')}
-                </span>
+                summary.total_outstanding > 0
+                  ? 'bg-danger-dim text-danger'
+                  : 'bg-bg-surface border border-border text-text-muted'
               )}
-            </div>
-            <div>
-              <p className="text-3xl font-bold tracking-tight text-text tabular-nums flex items-baseline gap-2">
-                {summary.overdue_count}
-                <span className="text-xs font-normal text-text-muted">
-                  {summary.overdue_count === 1 ? invoiceLabel.toLowerCase() : invoiceLabelPlural.toLowerCase()}
-                </span>
-              </p>
-              <p className="text-xs text-text-muted mt-1.5">
-                {summary.overdue_count > 0 ? __('Accounts past due deadline', 'codeclove-school-management') : __('No overdue accounts', 'codeclove-school-management')}
-              </p>
-            </div>
+            >
+              {sprintf(__('%s%% unpaid', 'codeclove-school-management'), outstandingRate)}
+            </span>
+          }
+          subtext={__('Remaining session balance', 'codeclove-school-management')}
+          footer={
+            <p className="text-xs text-text-subtle">
+              {summary.total_outstanding > 0
+                ? __('Pending student payments', 'codeclove-school-management')
+                : __('All accounts settled', 'codeclove-school-management')}
+            </p>
+          }
+        />
+
+        {/* Cell 4: Overdue Invoices */}
+        <StatCard
+          label={__('Past Due Invoices', 'codeclove-school-management')}
+          value={
+            <span className="inline-flex items-baseline gap-2">
+              {summary.overdue_count}
+              <span className="text-xs font-normal text-text-muted">
+                {summary.overdue_count === 1 ? invoiceLabel.toLowerCase() : invoiceLabelPlural.toLowerCase()}
+              </span>
+            </span>
+          }
+          icon={AlertCircle}
+          iconColor={summary.overdue_count > 0 ? 'text-warning' : 'text-success'}
+          iconBg={summary.overdue_count > 0 ? 'bg-warning-dim' : 'bg-success-dim'}
+          clickable={summary.overdue_count > 0}
+          onClick={() => summary.overdue_count > 0 && navigate('/finance/invoices?status=overdue')}
+          badge={
+            summary.overdue_count > 0 ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-warning-dim text-warning">
+                <AlertCircle className="h-3 w-3" />
+                {__('Action needed', 'codeclove-school-management')}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-success-dim text-success">
+                <CheckCircle2 className="h-3 w-3" />
+                {__('On schedule', 'codeclove-school-management')}
+              </span>
+            )
+          }
+          subtext={
+            summary.overdue_count > 0
+              ? __('Accounts past due deadline', 'codeclove-school-management')
+              : __('No overdue accounts', 'codeclove-school-management')
+          }
+          footer={
             <div className="flex items-center justify-between text-xs font-medium">
               <span className={summary.overdue_count > 0 ? 'text-warning' : 'text-text-subtle'}>
-                {summary.overdue_count > 0 ? __('Review overdue accounts', 'codeclove-school-management') : __('Clean collection record', 'codeclove-school-management')}
+                {summary.overdue_count > 0
+                  ? __('Review overdue accounts', 'codeclove-school-management')
+                  : __('Clean collection record', 'codeclove-school-management')}
               </span>
               {summary.overdue_count > 0 && (
                 <ArrowRight className="h-3.5 w-3.5 text-warning" />
               )}
             </div>
-          </div>
-        </div>
+          }
+        />
       </div>
 
       {/* ── 3. Integrated Analytics & Cycle Performance ─────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left (2 cols): Inflow & Revenue Trajectory Area Chart */}
         <Card className="lg:col-span-2 flex flex-col justify-between">
-          <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border/60">
+          <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border">
             <div>
               <h3 className="text-base font-semibold text-text">{__('Inflow & Collections', 'codeclove-school-management')}</h3>
               <p className="text-xs text-text-muted mt-0.5">
@@ -505,7 +492,7 @@ export default function FinanceDashboard() {
 
         {/* Right (1 col): Cycle Performance Companion Card */}
         <Card className="flex flex-col justify-between">
-          <CardHeader className="border-b border-border/60 pb-3">
+          <CardHeader className="border-b border-border pb-3">
             <div>
               <h3 className="text-base font-semibold text-text">{__('Cycle Performance', 'codeclove-school-management')}</h3>
               <p className="text-xs text-text-muted mt-0.5">{summary.period_label}</p>
@@ -515,7 +502,7 @@ export default function FinanceDashboard() {
           <CardContent className="py-4 space-y-4 flex-1 flex flex-col justify-between">
             {/* Real-time Inflow Metrics */}
             <div className="space-y-2.5">
-              <div className="p-3 rounded-xl bg-bg-base border border-border/60 flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-bg-surface border border-border flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-text-muted">{__("Today's Inflow", 'codeclove-school-management')}</p>
                   <p className="text-lg font-bold text-text tabular-nums mt-0.5">
@@ -527,7 +514,7 @@ export default function FinanceDashboard() {
                 </span>
               </div>
 
-              <div className="p-3 rounded-xl bg-bg-base border border-border/60 flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-bg-surface border border-border flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-text-muted">{__('30-Day Collections', 'codeclove-school-management')}</p>
                   <p className="text-lg font-bold text-text tabular-nums mt-0.5">
@@ -541,7 +528,7 @@ export default function FinanceDashboard() {
             </div>
 
             {/* Cycle Recovery Meter */}
-            <div className="pt-3 border-t border-border/60 space-y-2">
+            <div className="pt-3 border-t border-border space-y-2">
               <div className="flex items-center justify-between text-xs font-medium">
                 <span className="text-text-muted">{__('Period Recovery', 'codeclove-school-management')}</span>
                 <span className={cn(
@@ -551,7 +538,7 @@ export default function FinanceDashboard() {
                   {recoveryRate}%
                 </span>
               </div>
-              <div className="h-2 w-full bg-bg-base border border-border/60 rounded-full overflow-hidden">
+              <div className="h-2 w-full bg-bg-surface border border-border rounded-full overflow-hidden">
                 <div
                   className={cn(
                     'h-full rounded-full transition-all duration-500',
@@ -584,9 +571,9 @@ export default function FinanceDashboard() {
       </div>
 
       {/* ── 4. High-Density Activity Ledger (Stripe Style) ─────────── */}
-      <div className="rounded-2xl border border-border/70 bg-bg-surface shadow-xs overflow-hidden">
+      <div className="rounded-2xl border border-border bg-bg-elevated shadow-xs overflow-hidden">
         {/* Ledger Header & Tab Switcher */}
-        <div className="p-4 sm:p-5 border-b border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-semibold text-text">{__('Activity Ledger', 'codeclove-school-management')}</h3>
             <p className="text-xs text-text-muted mt-0.5">
@@ -596,45 +583,27 @@ export default function FinanceDashboard() {
 
           <div className="flex items-center gap-3">
             {/* Tabs: All Activity / Invoices / Payments */}
-            <div className="inline-flex rounded-lg bg-bg-base border border-border/80 p-0.5">
-              <button
-                type="button"
-                onClick={() => setLedgerTab('all')}
-                className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-md transition-all select-none',
-                  ledgerTab === 'all'
-                    ? 'bg-bg-surface text-text font-semibold shadow-xs'
-                    : 'text-text-muted hover:text-text'
-                )}
-              >
-                {__('All Activity', 'codeclove-school-management')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setLedgerTab('invoices')}
-                className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-md transition-all select-none flex items-center gap-1.5',
-                  ledgerTab === 'invoices'
-                    ? 'bg-bg-surface text-brand font-semibold shadow-xs'
-                    : 'text-text-muted hover:text-text'
-                )}
-              >
-                <Receipt className="h-3.5 w-3.5" />
-                {invoiceLabelPlural}
-              </button>
-              <button
-                type="button"
-                onClick={() => setLedgerTab('payments')}
-                className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-md transition-all select-none flex items-center gap-1.5',
-                  ledgerTab === 'payments'
-                    ? 'bg-bg-surface text-success font-semibold shadow-xs'
-                    : 'text-text-muted hover:text-text'
-                )}
-              >
-                <HandCoins className="h-3.5 w-3.5" />
-                {paymentLabelPlural}
-              </button>
+            <div className="inline-flex rounded-lg bg-bg-surface border border-border p-0.5">
+              {([
+                { key: 'all' as const, label: __('All Activity', 'codeclove-school-management'), icon: null, activeColor: 'text-text' },
+                { key: 'invoices' as const, label: invoiceLabelPlural, icon: Receipt, activeColor: 'text-brand' },
+                { key: 'payments' as const, label: paymentLabelPlural, icon: HandCoins, activeColor: 'text-success' },
+              ]).map(({ key, label, icon: Icon, activeColor }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setLedgerTab(key)}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-medium rounded-md transition-all select-none flex items-center gap-1.5',
+                    ledgerTab === key
+                      ? cn('bg-bg-elevated font-semibold shadow-xs', activeColor)
+                      : 'text-text-muted hover:text-text'
+                  )}
+                >
+                  {Icon && <Icon className="h-3.5 w-3.5" />}
+                  {label}
+                </button>
+              ))}
             </div>
 
             {/* View Full Ledger Shortcut */}
@@ -675,7 +644,7 @@ export default function FinanceDashboard() {
                 <Tr
                   key={item.id}
                   onClick={() => navigate(item.targetUrl)}
-                  className="cursor-pointer hover:bg-bg-subtle/60 transition-colors"
+                  className="cursor-pointer hover:bg-hover-bg transition-colors"
                 >
                   {/* Reference & Type Badge */}
                   <Td>
@@ -725,7 +694,7 @@ export default function FinanceDashboard() {
                   {/* Payment Channel / Method */}
                   <Td>
                     {item.method ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-bg-base border border-border/60 text-text-muted">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-bg-surface border border-border text-text-muted">
                         {getMethodLabel(item.method)}
                       </span>
                     ) : (

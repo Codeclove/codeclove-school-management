@@ -12,7 +12,7 @@
  * All dropdowns use the Radix-backed <Dropdown> component for proper
  * a11y and keyboard navigation. Icon-only buttons use <Tooltip>.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search, Plus, LogOut, User, Bell,
@@ -36,6 +36,7 @@ import {
   DropdownSeparator,
   Badge,
   Skeleton,
+  Avatar,
 } from '@/components/ui'
 import { __ } from '@/lib/i18n'
 // ─── Header Component ─────────────────────────────────────────────────────────
@@ -542,48 +543,17 @@ function UserMenu() {
 function UserAvatar({
   name,
   avatar,
-  size = 32,
 }: {
   name: string
   avatar?: string
   size?: number
 }) {
-  const initials = name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '')
-    .join('')
-
-  const [imgError, setImgError] = useState(false)
-
-  if (avatar && !imgError) {
-    return (
-      <img
-        src={avatar}
-        alt=""
-        aria-hidden="true"
-        width={size}
-        height={size}
-        className="rounded-full object-cover flex-shrink-0"
-        style={{ width: size, height: size }}
-        onError={() => setImgError(true)}
-      />
-    )
-  }
-
   return (
-    <div
-      aria-hidden="true"
-      className="rounded-full bg-gradient-to-br from-brand to-brand-strong flex items-center justify-center flex-shrink-0"
-      style={{ width: size, height: size }}
-    >
-      <span
-        className="text-white font-semibold"
-        style={{ fontSize: size * 0.38 }}
-      >
-        {initials}
-      </span>
-    </div>
+    <Avatar
+      name={name}
+      photoUrl={avatar}
+      size="sm"
+      shape="circle"
+    />
   )
 }

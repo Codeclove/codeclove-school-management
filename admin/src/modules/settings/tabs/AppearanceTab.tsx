@@ -1,6 +1,6 @@
 /** Tab: Appearance — settings section for theme mode and UI density options */
 
-import { Palette, Maximize2, Sun, Moon, Monitor } from 'lucide-react'
+import { Palette, Maximize2, Sun, Moon, Monitor, Check } from 'lucide-react'
 import type { UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form'
 import type { CodeCloveSettings, AppearanceSettings } from '@/api/settings'
 import { FormGroup, FormGroupHeader, FormSelect } from '../components/SettingsFormPrimitives'
@@ -96,9 +96,9 @@ export function AppearanceTab({ register, setValue, watch, setTheme }: Appearanc
               onClick={() => handleModeChange(value)}
               className={cn(
                 'flex-1 min-w-[90px] h-9 px-4 rounded-lg border text-sm font-medium transition-all duration-150',
-                'flex items-center justify-center gap-2',
+                'flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring',
                 currentMode === value
-                  ? 'border-brand bg-brand/10 text-brand'
+                  ? 'border-brand bg-brand-dim text-brand font-semibold shadow-2xs'
                   : 'border-border bg-bg-surface text-text-muted hover:border-border-strong hover:text-text',
               )}
             >
@@ -128,15 +128,20 @@ export function AppearanceTab({ register, setValue, watch, setTheme }: Appearanc
               onClick={() => handleColorChange(value)}
               className={cn(
                 'flex flex-col items-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all duration-150',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring',
                 currentColor === value
-                  ? 'border-brand bg-brand/5 ring-1 ring-brand'
+                  ? 'border-brand bg-brand-dim/30 ring-1 ring-brand text-text font-semibold'
                   : 'border-border bg-bg-surface hover:border-border-strong text-text-muted hover:text-text',
               )}
             >
               <span
-                className="h-6 w-6 rounded-full border border-black/10 shrink-0"
+                className="relative h-6 w-6 rounded-full border border-black/10 dark:border-white/20 shrink-0 flex items-center justify-center"
                 style={{ backgroundColor: hex }}
-              />
+              >
+                {currentColor === value && (
+                  <Check size={12} className="text-white drop-shadow-sm" strokeWidth={2.5} />
+                )}
+              </span>
               <span className="text-xs truncate max-w-full">{label}</span>
             </button>
           ))}

@@ -92,6 +92,12 @@ final class StudentsService {
 			if ( isset( $validated['photo_id'] ) ) {
 				$student_data['photo_id'] = $validated['photo_id'];
 			}
+			if ( ! empty( $validated['email'] ) ) {
+				$student_data['email'] = $validated['email'];
+			}
+			if ( ! empty( $validated['phone'] ) ) {
+				$student_data['phone'] = $validated['phone'];
+			}
 
 			$student_id = $this->db_create_student( $student_data );
 
@@ -177,6 +183,12 @@ final class StudentsService {
 			}
 			if ( array_key_exists( 'photo_id', $validated ) ) {
 				$student_data['photo_id'] = $validated['photo_id'];
+			}
+			if ( array_key_exists( 'email', $validated ) ) {
+				$student_data['email'] = $validated['email'];
+			}
+			if ( array_key_exists( 'phone', $validated ) ) {
+				$student_data['phone'] = $validated['phone'];
 			}
 
 			$this->db_update_student( $id, $student_data );
@@ -488,6 +500,7 @@ final class StudentsService {
 			'updated_at'       => $row['updated_at'],
 			'email'            => $row['email'] ?? '',
 			'phone'            => $row['phone'] ?? '',
+			'address_json'     => $row['address_json'] ?? null,
 		];
 
 		// Decode address
@@ -726,6 +739,22 @@ final class StudentsService {
 			}
 		}
 
+		// Student direct contact info
+		if ( ! empty( $payload['email'] ) ) {
+			if ( ! is_email( $payload['email'] ) ) {
+				return new WP_Error( 'validation_failed', __( 'Student email address is invalid.', 'codeclove-school-management' ), 400 );
+			}
+			$clean['email'] = sanitize_email( $payload['email'] );
+		} elseif ( array_key_exists( 'email', $payload ) ) {
+			$clean['email'] = null;
+		}
+
+		if ( ! empty( $payload['phone'] ) ) {
+			$clean['phone'] = sanitize_text_field( $payload['phone'] );
+		} elseif ( array_key_exists( 'phone', $payload ) ) {
+			$clean['phone'] = null;
+		}
+
 		// Address fields -> serialized as address_json
 		if ( isset( $payload['address'] ) || isset( $payload['city'] ) || isset( $payload['state'] ) || isset( $payload['postal_code'] ) || isset( $payload['zip_code'] ) || isset( $payload['country'] ) ) {
 			$p_code = isset( $payload['postal_code'] ) ? sanitize_text_field( $payload['postal_code'] ) : ( isset( $payload['zip_code'] ) ? sanitize_text_field( $payload['zip_code'] ) : '' );
@@ -737,6 +766,8 @@ final class StudentsService {
 				'country'     => isset( $payload['country'] ) ? sanitize_text_field( $payload['country'] ) : '',
 			];
 			$clean['address_json'] = wp_json_encode( $address_data );
+		} elseif ( ! empty( $payload['address_json'] ) && is_string( $payload['address_json'] ) ) {
+			$clean['address_json'] = $payload['address_json'];
 		} else {
 			$clean['address_json'] = null;
 		}
@@ -1793,6 +1824,10 @@ final class StudentsService {
 		$clean['admission_number'] = $map['admission_number'] ?? $map['adm_no'] ?? '';
 		$clean['admission_date']   = $map['admission_date'] ?? '';
 
+		// Student direct contact info
+		$clean['email'] = $map['student_email'] ?? $map['email'] ?? '';
+		$clean['phone'] = $map['student_phone'] ?? $map['phone'] ?? $map['mobile'] ?? '';
+
 		// Father
 		if ( empty( $map['father_first_name'] ) && ! empty( $map['father_name'] ) ) {
 			$f_parts                    = explode( ' ', (string) $map['father_name'], 2 );
@@ -1800,7 +1835,7 @@ final class StudentsService {
 			$clean['father_last_name']  = $f_parts[1] ?? $clean['last_name'];
 		} else {
 			$clean['father_first_name'] = $map['father_first_name'] ?? '';
-			$clean['father_last_name']  = $map['father_last_name'] ?? '';
+			$clean['father_last_name']  = ! empty( $map['father_last_name'] ) ? $map['father_last_name'] : ( ! empty( $clean['father_first_name'] ) ? $clean['last_name'] : '' );
 		}
 		$clean['father_email'] = $map['father_email'] ?? '';
 		$clean['father_phone'] = $map['father_phone'] ?? $map['father_mobile'] ?? '';
@@ -1812,26 +1847,31 @@ final class StudentsService {
 			$clean['mother_last_name']  = $m_parts[1] ?? $clean['last_name'];
 		} else {
 			$clean['mother_first_name'] = $map['mother_first_name'] ?? '';
-			$clean['mother_last_name']  = $map['mother_last_name'] ?? '';
+			$clean['mother_last_name']  = ! empty( $map['mother_last_name'] ) ? $map['mother_last_name'] : ( ! empty( $clean['mother_first_name'] ) ? $clean['last_name'] : '' );
 		}
 		$clean['mother_email'] = $map['mother_email'] ?? '';
 		$clean['mother_phone'] = $map['mother_phone'] ?? $map['mother_mobile'] ?? '';
 
 		// Guardian / Other
 		$clean['guardian_first_name'] = $map['guardian_first_name'] ?? $map['guardian_name'] ?? '';
-		$clean['guardian_last_name']  = $map['guardian_last_name'] ?? '';
+		$clean['guardian_last_name']  = ! empty( $map['guardian_last_name'] ) ? $map['guardian_last_name'] : ( ! empty( $clean['guardian_first_name'] ) ? $clean['last_name'] : '' );
 		$clean['guardian_email']      = $map['guardian_email'] ?? '';
 		$clean['guardian_phone']      = $map['guardian_phone'] ?? '';
 		$clean['relationship']        = $map['relationship'] ?? 'guardian';
 
 		// Address mapping (US zip, UK postcode, IN pincode)
 		$postal = $map['postal_code'] ?? $map['zip_code'] ?? $map['zip'] ?? $map['postcode'] ?? $map['pincode'] ?? '';
+		$clean['address']     = $map['address'] ?? $map['street'] ?? '';
+		$clean['city']        = $map['city'] ?? $map['town'] ?? '';
+		$clean['state']       = $map['state'] ?? $map['province'] ?? $map['county'] ?? '';
+		$clean['postal_code'] = $postal;
+		$clean['country']     = $map['country'] ?? '';
 		$clean['address_json'] = json_encode( [
-			'address'     => $map['address'] ?? $map['street'] ?? '',
-			'city'        => $map['city'] ?? $map['town'] ?? '',
-			'state'       => $map['state'] ?? $map['province'] ?? $map['county'] ?? '',
+			'address'     => $clean['address'],
+			'city'        => $clean['city'],
+			'state'       => $clean['state'],
 			'postal_code' => $postal,
-			'country'     => $map['country'] ?? '',
+			'country'     => $clean['country'],
 		] );
 
 		return $clean;

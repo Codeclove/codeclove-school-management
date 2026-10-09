@@ -395,6 +395,7 @@ final class StudentsController extends BaseController {
 	public function get_import_template( WP_REST_Request $request ): WP_REST_Response {
 		$headers = [
 			'first_name', 'middle_name', 'last_name', 'date_of_birth', 'gender',
+			'email', 'phone',
 			'admission_number', 'admission_date',
 			'father_first_name', 'father_last_name', 'father_email', 'father_phone',
 			'mother_first_name', 'mother_last_name', 'mother_email', 'mother_phone',
@@ -403,6 +404,7 @@ final class StudentsController extends BaseController {
 		];
 		$sample_us = [
 			'John', 'Robert', 'Smith', '2012-05-14', 'male',
+			'john.smith@example.com', '+1-555-0100',
 			'ADM-2026-001', '2026-06-01',
 			'Michael', 'Smith', 'michael.smith@example.com', '+1-555-0199',
 			'Sarah', 'Smith', 'sarah.smith@example.com', '+1-555-0198',
@@ -411,6 +413,7 @@ final class StudentsController extends BaseController {
 		];
 		$sample_in = [
 			'Aarav', '', 'Sharma', '2013-08-22', 'male',
+			'aarav.sharma@example.com', '+91-9876500000',
 			'ADM-2026-002', '2026-06-01',
 			'Rajesh', 'Sharma', 'rajesh.sharma@example.com', '+91-9876543210',
 			'Priya', 'Sharma', 'priya.sharma@example.com', '+91-9876543211',

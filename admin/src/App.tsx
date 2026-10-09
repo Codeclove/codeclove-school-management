@@ -144,6 +144,9 @@ export default function App() {
               {isPro && proRoutes.map((route) => (
                 <Route key={route.path} path={route.path} element={route.element} />
               ))}
+              {!isPro && (
+                <Route path={ROUTES.TIMETABLE} element={<Navigate to="/pro-upgrade?feature=timetable" replace />} />
+              )}
 
               {/* ── Students ──────────────────────────────────────────── */}
               <Route path={ROUTES.STUDENT_DIRECTORY} element={<StudentDirectoryPage />} />
@@ -189,7 +192,7 @@ export default function App() {
               <Route path="/finance/invoices/:id"         element={<InvoiceDetailPage />} />
               <Route path="/finance/invoices/:id/record-payment" element={<RecordPaymentPage />} />
               <Route path="/finance/payments"             element={<PaymentsPage />} />
-              {isPro && <Route path="/finance/reports/defaulters" element={<DefaultersReportPage />} />}
+              <Route path="/finance/reports/defaulters" element={<DefaultersReportPage />} />
 
               {/* ── Communication & Noticeboard ─────────────────────── */}
               {/* ── Communication & Noticeboard (Pro only) ───────────── */}

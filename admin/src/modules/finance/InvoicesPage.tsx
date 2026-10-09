@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Trash2, AlertTriangle, X, Printer, SlidersHorizontal, Wallet, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Plus, Search, Trash2, X, Printer, SlidersHorizontal, Wallet, CheckCircle2, AlertCircle } from 'lucide-react'
 import { __, sprintf } from '@/lib/i18n'
 import { getStatusVariant } from './finance-utils'
 import {
@@ -20,23 +20,15 @@ import { useEntity } from '@/lib/useEntity'
 import { api } from '@/lib/api-client'
 import { printElement } from '@/lib/print'
 import PrintInvoiceSheet from './PrintInvoiceSheet'
-import { TablePagination } from '@/components/ui/TablePagination'
 import { useTableState } from '@/lib/useTableState'
 import { useDebounce } from '@/lib/useDebounce'
 import {
   Button,
   PageHeader,
   Spinner,
-  TableRoot,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  TableSkeleton,
-  TableEmpty,
+  DataTable,
+  type DataTableColumn,
   Card,
-  CardContent,
   Badge,
   FormField,
   Input,
@@ -90,7 +82,7 @@ export default function InvoicesPage() {
     defaultOrderBy: 'created_at',
     defaultOrder: 'desc',
   })
-  const { selectedIds, setSelectedIds, toggleSelect, toggleSelectAll, isSelected, isAllSelected, clearSelection } = table
+  const { selectedIds, clearSelection } = table
   const [discountModalOpen, setDiscountModalOpen] = useState(false)
   const [discountAmount, setDiscountAmount] = useState('')
   const [discountNote, setDiscountNote] = useState('')
@@ -211,7 +203,7 @@ export default function InvoicesPage() {
       },
       {
         onSuccess: (res) => {
-          setSelectedIds([])
+          clearSelection()
           setDiscountModalOpen(false)
           setDiscountAmount('')
           setDiscountNote('')
@@ -260,7 +252,13 @@ export default function InvoicesPage() {
     setEndDate('')
     setDateType('issue_date')
     table.resetPage()
-  }, [session?.id, table.resetPage])
+    clearSelection()
+  }, [session?.id, table.resetPage, clearSelection])
+
+  // Clear selection when debounced search changes
+  useEffect(() => {
+    clearSelection()
+  }, [debouncedSearch, clearSelection])
 
   // Show advanced if start or end date is set initially
   useEffect(() => {
@@ -287,8 +285,8 @@ export default function InvoicesPage() {
 
   // Reset selection on data change
   useEffect(() => {
-    setSelectedIds([])
-  }, [invoicesData])
+    clearSelection()
+  }, [invoicesData, clearSelection])
 
   const metrics = useMemo(() => {
     let totalInvoiced = 0
@@ -330,7 +328,145 @@ export default function InvoicesPage() {
       }
     })
   }
+  // Clear selection when filters change
+  useEffect(() => {
+    clearSelection()
+  }, [unitId, termId, status, startDate, endDate, dateType, clearSelection])
 
+  const columns: DataTableColumn<Invoice>[] = useMemo(
+    () => [
+      {
+        key: 'invoice_number',
+        header: __('Invoice #', 'codeclove-school-management'),
+        type: 'code',
+        sortable: true,
+        render: (row) => row.invoice_number,
+      },
+      {
+        key: 'student_name',
+        header: studentLabel,
+        type: 'primary',
+        sortable: true,
+        render: (row) => (
+          <PersonAvatar
+            name={`${row.student_first_name} ${row.student_last_name}`}
+            subtitle={row.student_number || undefined}
+          />
+        ),
+      },
+      {
+        key: 'due_date',
+        header: __('Due Date', 'codeclove-school-management'),
+        type: 'date',
+        sortable: true,
+        render: (row) => formatDate(row.due_date),
+      },
+      {
+        key: 'total',
+        header: __('Total', 'codeclove-school-management'),
+        type: 'number',
+        sortable: true,
+        render: (row) => formatCurrency(row.total_minor),
+      },
+      {
+        key: 'balance',
+        header: __('Balance', 'codeclove-school-management'),
+        type: 'number',
+        sortable: true,
+        render: (row) => (
+          <span className={row.balance_minor > 0 ? 'text-danger' : 'text-text-muted'}>
+            {formatCurrency(row.balance_minor)}
+          </span>
+        ),
+      },
+      {
+        key: 'status',
+        header: __('Status', 'codeclove-school-management'),
+        type: 'badge',
+        render: (row) => (
+          <Badge variant={getStatusVariant(row.status)}>
+            {row.status.replace('_', ' ')}
+          </Badge>
+        ),
+      },
+      {
+        key: 'actions',
+        header: __('Actions', 'codeclove-school-management'),
+        type: 'actions',
+        render: (row) => (
+          <div className="flex items-center justify-end gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => handlePrintInvoice(row.id, e)}
+              disabled={isPrintLoading === row.id}
+              className="h-8 w-8 text-text-subtle hover:text-brand"
+              title={__('Print Invoice', 'codeclove-school-management')}
+            >
+              {isPrintLoading === row.id ? (
+                <Spinner size="xs" />
+              ) : (
+                <Printer size={14} />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => handleDelete(row.id, e)}
+              disabled={deleteInvoiceMutation.isPending}
+              className="h-8 w-8 text-text-subtle hover:text-danger"
+              title={__('Cancel/Void Invoice', 'codeclove-school-management')}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [studentLabel, formatDate, formatCurrency, isPrintLoading, deleteInvoiceMutation.isPending]
+  )
+
+  const bulkActions = useMemo(
+    () => (
+      <>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={handleBulkPrintInvoices}
+          disabled={isBulkPrintLoading}
+          className="h-7 text-xs"
+        >
+          {isBulkPrintLoading ? <Spinner size="xs" /> : <Printer size={12} className="mr-1" />}
+          {__('Print Selected', 'codeclove-school-management')}
+        </Button>
+        <Select
+          value=""
+          onValueChange={(val) => {
+            if (val === 'cancel') {
+              handleBulkCancel()
+            } else if (val === 'void') {
+              handleBulkVoid()
+            } else if (val === 'send_reminders') {
+              handleBulkSendReminders()
+            } else if (val === 'discount') {
+              setDiscountModalOpen(true)
+            }
+          }}
+          placeholder={__('Bulk Actions', 'codeclove-school-management')}
+          options={[
+            { value: '', label: __('Bulk Actions', 'codeclove-school-management') },
+            { value: 'send_reminders', label: __('Send Reminders', 'codeclove-school-management') },
+            { value: 'discount', label: __('Apply Concession / Waiver', 'codeclove-school-management') },
+            { value: 'cancel', label: __('Cancel Selected', 'codeclove-school-management') },
+            { value: 'void', label: __('Void Selected', 'codeclove-school-management') },
+          ]}
+          className="h-7 text-xs w-full sm:w-48 bg-bg-surface border border-border"
+        />
+      </>
+    ),
+    [isBulkPrintLoading, selectedIds]
+  )
   return (
     <div className="space-y-6">
       <PageHeader
@@ -359,16 +495,16 @@ export default function InvoicesPage() {
           label={__('Total Collected', 'codeclove-school-management')}
           value={formatCurrency(metrics.totalCollected)}
           icon={CheckCircle2}
-          iconColor="text-emerald-500"
-          iconBg="bg-emerald-500/10"
+          iconColor="text-success"
+          iconBg="bg-success-dim"
           compact={true}
         />
         <StatCard
           label={__('Overdue Balance', 'codeclove-school-management')}
           value={formatCurrency(metrics.totalOverdue)}
           icon={AlertCircle}
-          iconColor="text-amber-500"
-          iconBg="bg-amber-500/10"
+          iconColor="text-warning"
+          iconBg="bg-warning-dim"
           compact={true}
         />
       </div>
@@ -389,6 +525,7 @@ export default function InvoicesPage() {
                     onChange={(e) => {
                       setSearch(e.target.value)
                       table.resetPage()
+                      clearSelection()
                     }}
                     className="pl-9"
                   />
@@ -402,6 +539,7 @@ export default function InvoicesPage() {
                   onValueChange={(val) => {
                     setUnitId(val)
                     table.resetPage()
+                    clearSelection()
                   }}
                   placeholder={sprintf(__('All %s', 'codeclove-school-management'), unitLabelPlural.toLowerCase())}
                   options={[
@@ -418,6 +556,7 @@ export default function InvoicesPage() {
                   onValueChange={(val) => {
                     setTermId(val)
                     table.resetPage()
+                    clearSelection()
                   }}
                   placeholder={__('All Terms', 'codeclove-school-management')}
                   options={[
@@ -434,6 +573,7 @@ export default function InvoicesPage() {
                   onValueChange={(val) => {
                     setStatus(val)
                     table.resetPage()
+                    clearSelection()
                   }}
                   placeholder={__('All Statuses', 'codeclove-school-management')}
                   options={[
@@ -448,22 +588,42 @@ export default function InvoicesPage() {
                 />
               </FormField>
             </div>
-            <div className="flex items-end h-9">
+            <div className="flex items-center gap-2 flex-shrink-0 h-9">
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className={"text-xs gap-1.5 h-9 " + (showAdvanced ? 'bg-bg-base text-brand border-brand/30' : 'text-text-muted hover:text-text')}
+                className={`text-xs gap-1.5 h-9 ${showAdvanced ? 'bg-bg-surface text-brand border border-border' : 'text-text-muted hover:text-text'}`}
               >
                 <SlidersHorizontal size={12} />
                 {showAdvanced ? __('Hide Dates', 'codeclove-school-management') : __('Date Range', 'codeclove-school-management')}
               </Button>
+              {(search || status || unitId || termId || startDate || endDate) && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setSearch('')
+                    setStatus('')
+                    setUnitId('')
+                    setTermId('')
+                    setStartDate('')
+                    setEndDate('')
+                    setDateType('issue_date')
+                    table.resetPage()
+                    clearSelection()
+                  }}
+                  className="text-xs text-text-muted hover:text-text gap-1"
+                >
+                  <X size={12} />
+                  {__('Clear Filters', 'codeclove-school-management')}
+                </Button>
+              )}
             </div>
           </div>
 
           {/* Date Range Filters */}
           {showAdvanced && (
-            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3 border-t border-border/40 pt-3 animate-in fade-in duration-200">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3 border-t border-border pt-3 animate-in fade-in duration-200">
               <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
                 <FormField label={__('Start Date', 'codeclove-school-management')}>
                   <DatePicker
@@ -471,6 +631,7 @@ export default function InvoicesPage() {
                     onChange={(val) => {
                       setStartDate(val)
                       table.resetPage()
+                      clearSelection()
                     }}
                   />
                 </FormField>
@@ -482,6 +643,7 @@ export default function InvoicesPage() {
                     onChange={(val) => {
                       setEndDate(val)
                       table.resetPage()
+                      clearSelection()
                     }}
                   />
                 </FormField>
@@ -495,6 +657,7 @@ export default function InvoicesPage() {
                       onValueChange={(val) => {
                         setDateType(val as 'issue_date' | 'due_date')
                         table.resetPage()
+                        clearSelection()
                       }}
                       options={[
                         { value: 'issue_date', label: __('Issue Date', 'codeclove-school-management') },
@@ -505,197 +668,39 @@ export default function InvoicesPage() {
                 </div>
               )}
 
-              <div className="flex items-center gap-2 ml-auto h-9">
-                {(search || status || unitId || termId || startDate || endDate) && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setSearch('')
-                      setStatus('')
-                      setUnitId('')
-                      setTermId('')
-                      setStartDate('')
-                      setEndDate('')
-                      setDateType('issue_date')
-                      table.resetPage()
-                    }}
-                    className="text-xs text-text-muted hover:text-text gap-1"
-                  >
-                    <X size={12} />
-                    {__('Clear Filters', 'codeclove-school-management')}
-                  </Button>
-                )}
-              </div>
             </div>
           )}
         </div>
       </Card>
 
       {/* Main List */}
-      <Card>
-        {selectedIds.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 flex-wrap px-4 py-2 bg-brand-dim/10 border-b border-border/60 text-xs font-semibold text-brand rounded-t-lg">
-            <span>{sprintf(__('%d invoice(s) selected', 'codeclove-school-management'), selectedIds.length)}</span>
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" onClick={handleBulkPrintInvoices} disabled={isBulkPrintLoading}>
-                {isBulkPrintLoading ? <Spinner size="xs" /> : <Printer size={12} className="mr-1" />} {__('Print Selected', 'codeclove-school-management')}
+      <DataTable<Invoice>
+        data={list}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        errorMessage={__('Error Loading Invoices', 'codeclove-school-management')}
+        onRetry={() => refetch()}
+        selectable
+        bulkActions={bulkActions}
+        onRowClick={(row) => navigate(`/finance/invoices/${row.id}`)}
+        keyExtractor={(row) => row.id}
+        emptyState={{
+          message: sprintf(__('No %s found', 'codeclove-school-management'), invoiceLabelPlural),
+          description: session
+            ? __('Get started by creating your first student invoice.', 'codeclove-school-management')
+            : __('Please select an academic session to manage invoices.', 'codeclove-school-management'),
+          icon: entity.icon,
+          action:
+            session ? (
+              <Button size="sm" onClick={handleOpenAdd}>
+                {sprintf(__('Create %s', 'codeclove-school-management'), invoiceLabel)}
               </Button>
-              <Select
-                value=""
-                onValueChange={(val) => {
-                  if (val === 'cancel') {
-                    handleBulkCancel()
-                  } else if (val === 'void') {
-                    handleBulkVoid()
-                  } else if (val === 'send_reminders') {
-                    handleBulkSendReminders()
-                  } else if (val === 'discount') {
-                    setDiscountModalOpen(true)
-                  }
-                }}
-                placeholder={__('Bulk Actions', 'codeclove-school-management')}
-                options={[
-                  { value: '', label: __('Bulk Actions', 'codeclove-school-management') },
-                  { value: 'send_reminders', label: __('Send Reminders', 'codeclove-school-management') },
-                  { value: 'discount', label: __('Apply Concession / Waiver', 'codeclove-school-management') },
-                  { value: 'cancel', label: __('Cancel Selected', 'codeclove-school-management') },
-                  { value: 'void', label: __('Void Selected', 'codeclove-school-management') },
-                ]}
-                className="h-7 text-xs w-full sm:w-48 bg-bg-base"
-              />
-            </div>
-          </div>
-        )}
-        <CardContent className="p-0">
-          <TableRoot>
-            <Thead>
-              <Tr>
-                <Th className="w-10">
-                  <input
-                    type="checkbox"
-                    checked={list.length > 0 && isAllSelected(list.map(row => row.id))}
-                    onChange={() => toggleSelectAll(list.map(row => row.id))}
-                    aria-label={__('Select all invoices', 'codeclove-school-management')}
-                    className="rounded border-border text-brand focus:ring-brand"
-                  />
-                </Th>
-                <Th type="code" {...table.getSortProps('invoice_number')}>
-                  {__('Invoice #', 'codeclove-school-management')}
-                </Th>
-                <Th type="primary" {...table.getSortProps('student_name')}>
-                  {studentLabel}
-                </Th>
-                <Th type="date" {...table.getSortProps('due_date')}>
-                  {__('Due Date', 'codeclove-school-management')}
-                </Th>
-                <Th type="number" {...table.getSortProps('total')}>
-                  {__('Total', 'codeclove-school-management')}
-                </Th>
-                <Th type="number" {...table.getSortProps('balance')}>
-                  {__('Balance', 'codeclove-school-management')}
-                </Th>
-                <Th type="badge">{__('Status', 'codeclove-school-management')}</Th>
-                <Th type="actions">{__('Actions', 'codeclove-school-management')}</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {isLoading ? (
-                <TableSkeleton columns={8} rows={5} />
-              ) : isError ? (
-                <TableEmpty
-                  colSpan={8}
-                  message={__('Error Loading Invoices', 'codeclove-school-management')}
-                  description={sprintf(__("We couldn't load the %s directory. Please check filters or retry.", 'codeclove-school-management'), invoiceLabelPlural.toLowerCase())}
-                  icon={AlertTriangle}
-                  action={<Button size="sm" onClick={() => refetch()}>{__('Retry', 'codeclove-school-management')}</Button>}
-                />
-              ) : list.length === 0 ? (
-                <TableEmpty
-                  colSpan={8}
-                  message={sprintf(__('No %s found', 'codeclove-school-management'), invoiceLabelPlural)}
-                  description={session ? __('Get started by creating your first student invoice.', 'codeclove-school-management') : __('Please select an academic session to manage invoices.', 'codeclove-school-management')}
-                  icon={entity.icon}
-                  action={
-                    session && (
-                      <Button size="sm" onClick={handleOpenAdd}>
-                        {sprintf(__('Create %s', 'codeclove-school-management'), invoiceLabel)}
-                      </Button>
-                    )
-                  }
-                />
-              ) : (
-                list.map((row) => (
-                  <Tr
-                    key={row.id}
-                    onClick={() => navigate(`/finance/invoices/${row.id}`)}
-                    className="cursor-pointer hover:bg-bg-base/20 transition-colors"
-                  >
-                    <Td className="w-10" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={isSelected(row.id)}
-                        onChange={() => toggleSelect(row.id)}
-                        aria-label={sprintf(__('Select invoice %s', 'codeclove-school-management'), row.invoice_number)}
-                        className="rounded border-border text-brand focus:ring-brand"
-                      />
-                    </Td>
-                    <Td type="code">{row.invoice_number}</Td>
-                    <Td type="primary">
-                      <PersonAvatar
-                        name={`${row.student_first_name} ${row.student_last_name}`}
-                        subtitle={row.student_number || undefined}
-                      />
-                    </Td>
-                    <Td type="date">{formatDate(row.due_date)}</Td>
-                    <Td type="number">{formatCurrency(row.total_minor)}</Td>
-                    <Td type="number" className={row.balance_minor > 0 ? 'text-danger' : 'text-text-muted'}>{formatCurrency(row.balance_minor)}</Td>
-                    <Td type="badge">
-                      <Badge variant={getStatusVariant(row.status)}>
-                        {row.status.replace('_', ' ')}
-                      </Badge>
-                    </Td>
-                    <Td type="actions" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => handlePrintInvoice(row.id, e)}
-                          disabled={isPrintLoading === row.id}
-                          className="h-8 w-8 text-text-subtle hover:text-brand"
-                          title={__('Print Invoice', 'codeclove-school-management')}
-                        >
-                          {isPrintLoading === row.id ? (
-                            <Spinner size="xs" />
-                          ) : (
-                            <Printer size={14} />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => handleDelete(row.id, e)}
-                          disabled={deleteInvoiceMutation.isPending}
-                          className="h-8 w-8 text-text-subtle hover:text-danger"
-                          title={__('Cancel/Void Invoice', 'codeclove-school-management')}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    </Td>
-                  </Tr>
-                ))
-              )}
-            </Tbody>
-          </TableRoot>
-
-          {!isLoading && !isError && (
-            <TablePagination
-              {...table.paginationProps}
-              total={total}
-            />
-          )}
-        </CardContent>
-      </Card>
+            ) : undefined,
+        }}
+      />
 
       {/* Hidden print container */}
       {printingInvoice && (
@@ -749,6 +754,7 @@ export default function InvoicesPage() {
               value={discountAmount}
               onChange={(e) => setDiscountAmount(e.target.value)}
               placeholder="0.00"
+              className="font-mono text-sm"
             />
           </FormField>
           <FormField label={__('Reason / Note', 'codeclove-school-management')}>

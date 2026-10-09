@@ -202,7 +202,7 @@ export default function StaffDailyAttendance() {
   return (
     <div className={`space-y-3 ${isDirty ? 'pb-20 sm:pb-0' : ''}`}>
       {/* ── Tier 1: Filters Toolbar ── */}
-      <div className="p-3 bg-bg-surface border border-border rounded-xl shadow-xs">
+      <div className="p-3 bg-bg-elevated border border-border rounded-xl shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
           {/* Controls: Department, Role/Designation, Date Stepper */}
           <div className="flex flex-wrap items-center gap-2 flex-1">
@@ -241,7 +241,7 @@ export default function StaffDailyAttendance() {
               <button
                 type="button"
                 onClick={() => shiftDate(-1)}
-                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-bg-subtle text-text-subtle hover:text-text transition-colors shrink-0"
+                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-hover-bg text-text-subtle hover:text-text transition-colors shrink-0"
                 title={__('Previous Day', 'codeclove-school-management')}
                 aria-label={__('Previous Day', 'codeclove-school-management')}
               >
@@ -262,7 +262,7 @@ export default function StaffDailyAttendance() {
               <button
                 type="button"
                 onClick={() => shiftDate(1)}
-                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-bg-subtle text-text-subtle hover:text-text transition-colors shrink-0"
+                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-hover-bg text-text-subtle hover:text-text transition-colors shrink-0"
                 title={__('Next Day', 'codeclove-school-management')}
                 aria-label={__('Next Day', 'codeclove-school-management')}
               >
@@ -272,7 +272,7 @@ export default function StaffDailyAttendance() {
               <button
                 type="button"
                 onClick={setTodayDate}
-                className="h-9 px-2.5 text-2xs font-semibold rounded-lg border border-border bg-bg-surface hover:bg-bg-subtle text-text-subtle hover:text-text transition-colors shrink-0"
+                className="h-9 px-2.5 text-2xs font-semibold rounded-lg border border-border bg-bg-surface hover:bg-hover-bg text-text-subtle hover:text-text transition-colors shrink-0"
                 title={__('Jump to Today', 'codeclove-school-management')}
               >
                 {__('Today', 'codeclove-school-management')}
@@ -342,7 +342,7 @@ export default function StaffDailyAttendance() {
                       </span>
                     )}
 
-                    <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md bg-bg-subtle text-text-muted border border-border text-3xs sm:text-2xs font-medium">
+                    <span className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md bg-bg-surface text-text-muted border border-border text-3xs sm:text-2xs font-medium">
                       <Users size={12} className="text-text-subtle" />
                       {searchQuery || departmentFilter || designationFilter
                         ? sprintf(__('%1$d of %2$d Staff', 'codeclove-school-management'), filteredRecordsList.length, totalCount)
@@ -425,7 +425,7 @@ export default function StaffDailyAttendance() {
                 <div className="hidden md:block overflow-x-auto">
                   <TableRoot className="min-w-[700px]">
                     <Thead>
-                      <Tr className="border-b border-border bg-bg-subtle/50 text-2xs uppercase tracking-wider text-text-subtle font-semibold">
+                      <Tr className="border-b border-border bg-bg-surface text-2xs uppercase tracking-wider text-text-subtle font-semibold">
                         <Th className="py-2.5 px-4 sm:px-6 text-left">{__('Staff Member', 'codeclove-school-management')}</Th>
                         <Th className="py-2.5 px-4 text-center w-[340px]">{__('Status', 'codeclove-school-management')}</Th>
                         <Th className="py-2.5 px-4 sm:px-6 text-right w-[140px] sm:w-[180px]">{__('Remarks / Note', 'codeclove-school-management')}</Th>
@@ -438,7 +438,7 @@ export default function StaffDailyAttendance() {
                         const subtitleText = `${r.designation || staffLabelSingular}${r.department ? ` • ${r.department}` : ''}`
 
                         return (
-                          <Tr key={r.staff_member_id} className="hover:bg-bg-overlay/5 transition-colors">
+                          <Tr key={r.staff_member_id} className="hover:bg-hover-bg transition-colors">
                             <Td className="py-2.5 px-4 sm:px-6 text-left">
                               <PersonAvatar
                                 name={staffName}
@@ -476,7 +476,7 @@ export default function StaffDailyAttendance() {
                     const subtitleText = `${r.designation || staffLabelSingular}${r.department ? ` • ${r.department}` : ''}`
 
                     return (
-                      <div key={r.staff_member_id} className="p-3 space-y-2 hover:bg-bg-overlay/5 transition-colors">
+                      <div key={r.staff_member_id} className="p-3 space-y-2 hover:bg-hover-bg transition-colors">
                         <div className="flex items-center justify-between gap-2 min-w-0">
                           <div className="min-w-0 flex-1">
                             <PersonAvatar

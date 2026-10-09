@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { AlertTriangle, CreditCard, Calendar, DollarSign, Printer, CheckCircle2 } from 'lucide-react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { AlertTriangle, CreditCard, Calendar, DollarSign, Printer, CheckCircle2, QrCode } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { __, sprintf } from '@/lib/i18n'
@@ -16,6 +16,8 @@ import { useLabels } from '@/lib/labels'
 import { useFormatter } from '@/lib/formatter'
 import { printElement } from '@/lib/print'
 import PrintPaymentReceipt from './PrintPaymentReceipt'
+import { getStatusVariant } from './finance-utils'
+import { onFormError } from '@/lib/form-errors'
 import {
   Button,
   PageHeader,
@@ -31,14 +33,11 @@ import {
   Skeleton,
 } from '@/components/ui'
 
-const STATUS_VARIANT: Record<string, string> = {
-  draft: 'draft', issued: 'issued', partially_paid: 'partially_paid',
-  paid: 'paid', overdue: 'overdue', cancelled: 'cancelled', void: 'void',
-}
 
 export default function RecordPaymentPage() {
   const { id } = useParams<{ id: string }>()
   const invoiceId = Number(id)
+  const isPro = window.CodeCloveConfig?.isPro ?? false
   const navigate = useNavigate()
   const toast = useToast()
   const { getLabel } = useLabels()
@@ -193,7 +192,7 @@ export default function RecordPaymentPage() {
         <div className="max-w-lg mx-auto">
           <Card>
             <CardContent className="py-8 flex flex-col items-center gap-4 text-center">
-              <div className="h-14 w-14 rounded-full bg-success/10 flex items-center justify-center">
+              <div className="h-14 w-14 rounded-full bg-success-dim flex items-center justify-center">
                 <CheckCircle2 className="h-7 w-7 text-success" />
               </div>
               <div>
@@ -270,7 +269,7 @@ export default function RecordPaymentPage() {
             >
               {__('Cancel', 'codeclove-school-management')}
             </Button>
-            <Button size="sm" onClick={handleSubmit(onSubmit)} disabled={recordPaymentMutation.isPending}>
+            <Button size="sm" onClick={handleSubmit(onSubmit, onFormError)} disabled={recordPaymentMutation.isPending}>
               {recordPaymentMutation.isPending ? __('Saving…', 'codeclove-school-management') : __('Record Payment', 'codeclove-school-management')}
             </Button>
           </div>
@@ -285,7 +284,7 @@ export default function RecordPaymentPage() {
               <p className="text-xs font-semibold text-text uppercase tracking-wider pb-3 border-b border-border mb-5">
                 {__('Payment Details', 'codeclove-school-management')}
               </p>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     label={sprintf(__('Amount Received (%s)', 'codeclove-school-management'), invoice.currency)}
@@ -302,7 +301,7 @@ export default function RecordPaymentPage() {
                         placeholder="0.00"
                         {...register('amount')}
                         autoFocus
-                        className="flex-1"
+                        className="flex-1 font-mono text-sm"
                       />
                       <Button
                         type="button"
@@ -345,6 +344,24 @@ export default function RecordPaymentPage() {
                     />
                   </FormField>
                 </div>
+
+                {!isPro && (methodValue === 'upi' || methodValue === 'card') && (
+                  <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-text flex items-start gap-2.5 animate-in fade-in duration-150">
+                    <QrCode className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      {__(
+                        'Want automated UPI collection? In CodeClove Pro, parents scan dynamic UPI QR codes and payments reconcile automatically without manual receipt entry.',
+                        'codeclove-school-management'
+                      )}{' '}
+                      <Link
+                        to="/pro-upgrade?feature=payment_gateways"
+                        className="font-semibold text-brand hover:underline inline-flex items-center gap-0.5"
+                      >
+                        {__('Learn about Razorpay & UPI Integration →', 'codeclove-school-management')}
+                      </Link>
+                    </p>
+                  </div>
+                )}
 
                 <FormField label={__('Notes', 'codeclove-school-management')} error={errors.note?.message}>
                   <Textarea
@@ -400,7 +417,7 @@ export default function RecordPaymentPage() {
 
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-xs text-text-muted">{__('Status', 'codeclove-school-management')}</span>
-                  <Badge variant={(STATUS_VARIANT[invoice.status] || 'default') as any}>
+                  <Badge variant={getStatusVariant(invoice.status)}>
                     {invoice.status.replace('_', ' ')}
                   </Badge>
                 </div>
@@ -409,17 +426,17 @@ export default function RecordPaymentPage() {
               <div className="border-t border-border pt-3 space-y-2 text-xs">
                 <div className="flex justify-between text-text-muted">
                   <span>{__('Total Fees', 'codeclove-school-management')}</span>
-                  <span className="text-text font-medium">{formatCurrency(invoice.total_minor)}</span>
+                  <span className="text-text font-medium tabular-nums">{formatCurrency(invoice.total_minor)}</span>
                 </div>
                 <div className="flex justify-between text-success">
                   <span>{__('Already Paid', 'codeclove-school-management')}</span>
-                  <span className="font-medium">{formatCurrency(invoice.paid_minor)}</span>
+                  <span className="font-medium tabular-nums">{formatCurrency(invoice.paid_minor)}</span>
                 </div>
                 <div className="flex justify-between text-sm font-bold text-text border-t border-border pt-2">
                   <span className="flex items-center gap-1">
                     <DollarSign className="h-3.5 w-3.5 text-danger" /> {__('Balance Due', 'codeclove-school-management')}
                   </span>
-                  <span className="text-danger">{formatCurrency(invoice.balance_minor)}</span>
+                  <span className="text-danger tabular-nums">{formatCurrency(invoice.balance_minor)}</span>
                 </div>
               </div>
             </CardContent>

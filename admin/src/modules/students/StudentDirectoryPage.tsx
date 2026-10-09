@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '@/lib/session-context'
 import { __, sprintf } from '@/lib/i18n'
@@ -9,6 +9,7 @@ import {
   useStudents,
   useBulkStudentsAction,
   type FullStudent,
+  type FullStudent as Student,
 } from '@/api/students'
 import {
   useUnits,
@@ -24,12 +25,11 @@ import { useFormatter } from '@/lib/formatter'
 import { useEntity } from '@/lib/useEntity'
 import { useSettings } from '@/api/settings'
 import {
-  Button, Badge, Card, CardContent,
+  Button, Badge, Card,
   FormField, Input, Select,
-  TableRoot, Thead, Tbody, Tr, Th, Td, TableEmpty, TableSkeleton,
-  PageHeader, Alert, PersonAvatar, Modal, ModalFooter
+  PageHeader, PersonAvatar, Modal, ModalFooter,
+  DataTable, type DataTableColumn
 } from '@/components/ui'
-import { TablePagination } from '@/components/ui/TablePagination'
 import { useTableState } from '@/lib/useTableState'
 import { useDebounce } from '@/lib/useDebounce'
 import { StudentIdCard } from './components/StudentIdCard'
@@ -64,19 +64,21 @@ export default function StudentDirectoryPage() {
   const debouncedSearch = useDebounce(search, 350)
 
   const table = useTableState()
-  const { selectedIds, setSelectedIds, toggleSelect, toggleSelectAll, isSelected, isAllSelected, clearSelection } = table
+  const { selectedIds, setSelectedIds, clearSelection } = table
 
   // Reset class level and section filters if the globally active session changes
   useEffect(() => {
     setUnitId('')
     setGroupId('')
     table.resetPage()
-  }, [sessionId, table.resetPage])
+    table.clearSelection()
+  }, [sessionId, table.resetPage, table.clearSelection])
 
-  // Reset page when filters change
+  // Reset page and selection when filters change
   useEffect(() => {
     table.resetPage()
-  }, [unitId, groupId, status, debouncedSearch, table.resetPage])
+    table.clearSelection()
+  }, [unitId, groupId, status, debouncedSearch, table.resetPage, table.clearSelection])
 
   const { data: unitData } = useUnits({ session_id: Number(sessionId) })
   const { data: groupData } = useGroups({
@@ -305,13 +307,104 @@ export default function StudentDirectoryPage() {
   const students = studentData?.data ?? []
   const total = studentData?.total ?? 0
 
-  const statusBadgeLabels: Record<string, string> = {
-    active: __( 'Active', 'codeclove-school-management' ),
-    inactive: __( 'Inactive', 'codeclove-school-management' ),
-    graduated: __( 'Graduated', 'codeclove-school-management' ),
-    withdrawn: __( 'Withdrawn', 'codeclove-school-management' ),
-    suspended: __( 'Suspended', 'codeclove-school-management' ),
-  }
+
+  const columns: DataTableColumn<Student>[] = useMemo(
+    () => [
+      {
+        key: 'first_name',
+        header: studentLabelSingular,
+        type: 'primary',
+        sortable: true,
+        sortKey: 'first_name',
+        render: (student) => (
+          <PersonAvatar
+            name={`${student.first_name} ${student.last_name}`}
+            subtitle={student.student_number || undefined}
+            photoUrl={student.photo_url}
+          />
+        ),
+      },
+      {
+        key: 'admission_number',
+        header: __( 'Admission No.', 'codeclove-school-management' ),
+        type: 'code',
+        sortable: true,
+        sortKey: 'admission_number',
+        render: (student) => student.admission_number || '—',
+      },
+      {
+        key: 'unit_name',
+        header: unitLabelSingular,
+        render: (student) => student.enrollment?.unit_name || '—',
+      },
+      {
+        key: 'group_name',
+        header: groupLabelSingular,
+        render: (student) => student.enrollment?.group_name || '—',
+      },
+      {
+        key: 'primary_guardian',
+        header: sprintf(__( 'Primary %s', 'codeclove-school-management' ), guardianLabelSingular),
+        render: (student) =>
+          student.primary_guardian
+            ? `${student.primary_guardian.first_name} ${student.primary_guardian.last_name}`.trim()
+            : '—',
+      },
+      {
+        key: 'status',
+        header: __( 'Status', 'codeclove-school-management' ),
+        type: 'badge',
+        sortable: true,
+        sortKey: 'status',
+        render: (student) => (
+          <Badge variant={student.status}>{student.status}</Badge>
+        ),
+      },
+      {
+        key: 'actions',
+        header: __( 'Actions', 'codeclove-school-management' ),
+        type: 'actions',
+        render: (student) => (
+          <div className="flex items-center justify-end gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/students/${student.id}`)}
+              className="h-8 w-8 text-text-subtle hover:text-brand"
+              title={__( 'View Profile', 'codeclove-school-management' )}
+            >
+              <Eye size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/students/${student.id}/edit`)}
+              className="h-8 w-8 text-text-subtle hover:text-brand"
+              title={__( 'Edit Profile', 'codeclove-school-management' )}
+            >
+              <Pencil size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleSingleDelete(student.id, `${student.first_name} ${student.last_name}`)}
+              className="h-8 w-8 text-text-subtle hover:text-danger"
+              title={__( 'Delete Record', 'codeclove-school-management' )}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [
+      studentLabelSingular,
+      unitLabelSingular,
+      groupLabelSingular,
+      guardianLabelSingular,
+      navigate,
+    ]
+  )
 
   return (
     <div className="space-y-5 w-full">
@@ -409,8 +502,8 @@ export default function StudentDirectoryPage() {
                   setGroupId('')
                   setStatus('')
                   setSearch('')
+                  table.clearSelection()
                 }}
-                className="text-xs text-text-muted hover:text-text gap-1"
               >
                 <X size={12} />
                 {__( 'Clear Filters', 'codeclove-school-management' )}
@@ -420,199 +513,74 @@ export default function StudentDirectoryPage() {
         </div>
       </Card>
 
-      {/* Students List */}
-      <Card className="shadow-sm">
-        {selectedIds.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 flex-wrap px-4 py-2 bg-brand-dim/10 border-b border-border/60 text-xs font-semibold text-brand rounded-t-lg">
-            <span>{sprintf(__( '%1$d %2$s(s) selected', 'codeclove-school-management' ), selectedIds.length, studentLabelSingular.toLowerCase())}</span>
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" onClick={handleBulkPrintIdCards} className="h-7 text-xs flex items-center gap-1">
-                <Printer size={12} /> {__( 'Print ID Cards', 'codeclove-school-management' )}
+      {/* Students Data Table */}
+      <DataTable<Student>
+        data={students}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        errorMessage={sprintf(__( 'Could not load %s list', 'codeclove-school-management' ), studentLabelSingular.toLowerCase())}
+        onRetry={() => refetch()}
+        selectable
+        onRowClick={(student) => navigate(`/students/${student.id}`)}
+        bulkActions={
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleBulkPrintIdCards}
+              className="h-7 text-xs flex items-center gap-1"
+            >
+              <Printer size={12} /> {__( 'Print ID Cards', 'codeclove-school-management' )}
+            </Button>
+            <Select
+              value=""
+              onValueChange={(val) => {
+                if (val === 'delete') {
+                  handleBulkDelete()
+                } else if (val === 'promote') {
+                  setPromoteModalOpen(true)
+                } else if (val === 'assign_section') {
+                  setAssignModalOpen(true)
+                } else if (val.startsWith('status:')) {
+                  handleBulkStatus(val.replace('status:', ''))
+                }
+              }}
+              placeholder={__( 'Bulk Actions', 'codeclove-school-management' )}
+              options={[
+                { value: '', label: __( 'Bulk Actions', 'codeclove-school-management' ) },
+                { value: 'status:active', label: __( 'Mark Active', 'codeclove-school-management' ) },
+                { value: 'status:inactive', label: __( 'Mark Inactive', 'codeclove-school-management' ) },
+                { value: 'status:graduated', label: __( 'Mark Graduated', 'codeclove-school-management' ) },
+                { value: 'status:withdrawn', label: __( 'Mark Withdrawn', 'codeclove-school-management' ) },
+                { value: 'promote', label: __( 'Promote Selected', 'codeclove-school-management' ) },
+                { value: 'assign_section', label: __( 'Assign Class & Section', 'codeclove-school-management' ) },
+                { value: 'delete', label: __( 'Delete Selected', 'codeclove-school-management' ) },
+              ]}
+              className="h-7 text-xs w-full sm:w-48 bg-bg-surface"
+            />
+          </>
+        }
+        emptyState={{
+          icon: entity.icon,
+          message:
+            debouncedSearch || status || unitId || groupId
+              ? __( 'No Students Match Filters', 'codeclove-school-management' )
+              : sprintf(__( 'No %s Found', 'codeclove-school-management' ), studentLabelPlural),
+          description:
+            debouncedSearch || status || unitId || groupId
+              ? __( 'Try adjusting your search query, class level, or section filter.', 'codeclove-school-management' )
+              : sprintf(__( 'Admit your first %s to configure their academic record.', 'codeclove-school-management' ), studentLabelSingular.toLowerCase()),
+          action:
+            !debouncedSearch && !status && !unitId && !groupId ? (
+              <Button size="sm" onClick={() => navigate('/students/new')}>
+                {sprintf(__( 'Admit %s', 'codeclove-school-management' ), studentLabelSingular)}
               </Button>
-              <Select
-                value=""
-                onValueChange={(val) => {
-                  if (val === 'delete') {
-                    handleBulkDelete()
-                  } else if (val === 'promote') {
-                    setPromoteModalOpen(true)
-                  } else if (val === 'assign_section') {
-                    setAssignModalOpen(true)
-                  } else if (val.startsWith('status:')) {
-                    handleBulkStatus(val.replace('status:', ''))
-                  }
-                }}
-                placeholder={__( 'Bulk Actions', 'codeclove-school-management' )}
-                options={[
-                  { value: '', label: __( 'Bulk Actions', 'codeclove-school-management' ) },
-                  { value: 'status:active', label: __( 'Mark Active', 'codeclove-school-management' ) },
-                  { value: 'status:inactive', label: __( 'Mark Inactive', 'codeclove-school-management' ) },
-                  { value: 'status:graduated', label: __( 'Mark Graduated', 'codeclove-school-management' ) },
-                  { value: 'status:withdrawn', label: __( 'Mark Withdrawn', 'codeclove-school-management' ) },
-                  { value: 'promote', label: __( 'Promote Selected', 'codeclove-school-management' ) },
-                  { value: 'assign_section', label: __( 'Assign Class & Section', 'codeclove-school-management' ) },
-                  { value: 'delete', label: __( 'Delete Selected', 'codeclove-school-management' ) },
-                ]}
-                className="h-7 text-xs w-full sm:w-48 bg-bg-base"
-              />
-            </div>
-          </div>
-        )}
-        <CardContent className="p-0 overflow-hidden">
-          {isError ? (
-            <div className="p-6">
-              <Alert
-                variant="danger"
-                title={sprintf(__( 'Could not load %s list', 'codeclove-school-management' ), studentLabelSingular.toLowerCase())}
-              >
-                <div className="flex items-center justify-between gap-4 mt-1">
-                  <span>{__( 'An error occurred while communicating with the database.', 'codeclove-school-management' )}</span>
-                  <Button size="sm" variant="secondary" onClick={() => refetch()}>
-                    {__( 'Try again', 'codeclove-school-management' )}
-                  </Button>
-                </div>
-              </Alert>
-            </div>
-          ) : (
-            <TableRoot>
-              <Thead>
-                <Tr>
-                  <Th className="w-10">
-                    <input
-                      type="checkbox"
-                      checked={students.length > 0 && isAllSelected(students.map(s => s.id))}
-                      onChange={() => toggleSelectAll(students.map(s => s.id))}
-                      className="rounded border-border text-brand focus:ring-brand"
-                    />
-                  </Th>
-                  <Th type="primary" {...table.getSortProps('first_name')}>
-                    {studentLabelSingular}
-                  </Th>
-                  <Th type="code" {...table.getSortProps('admission_number')}>
-                    {__( 'Admission No.', 'codeclove-school-management' )}
-                  </Th>
-                  <Th>{unitLabelSingular}</Th>
-                  <Th>{groupLabelSingular}</Th>
-                  <Th>{sprintf(__( 'Primary %s', 'codeclove-school-management' ), guardianLabelSingular)}</Th>
-                  <Th type="badge" {...table.getSortProps('status')}>
-                    {__( 'Status', 'codeclove-school-management' )}
-                  </Th>
-                  <Th type="actions">{__( 'Actions', 'codeclove-school-management' )}</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {isLoading ? (
-                  <TableSkeleton columns={8} rows={5} />
-                ) : students.length === 0 ? (
-                  <TableEmpty
-                    colSpan={8}
-                    icon={entity.icon}
-                    message={
-                      debouncedSearch || status || unitId || groupId
-                        ? __( 'No Students Match Filters', 'codeclove-school-management' )
-                        : sprintf(__( 'No %s Found', 'codeclove-school-management' ), studentLabelPlural)
-                    }
-                    description={
-                      debouncedSearch || status || unitId || groupId
-                        ? __( 'Try adjusting your search query, class level, or section filter.', 'codeclove-school-management' )
-                        : sprintf(__( 'Admit your first %s to configure their academic record.', 'codeclove-school-management' ), studentLabelSingular.toLowerCase())
-                    }
-                    action={
-                      !debouncedSearch && !status && !unitId && !groupId && (
-                        <Button size="sm" onClick={() => navigate('/students/new')}>
-                          {sprintf(__( 'Admit %s', 'codeclove-school-management' ), studentLabelSingular)}
-                        </Button>
-                      )
-                    }
-                  />
-                ) : (
-                  students.map((student) => {
-                    return (
-                      <Tr key={student.id} className="table-row-hover">
-                        <Td className="w-10">
-                          <input
-                            type="checkbox"
-                            checked={isSelected(student.id)}
-                            onChange={() => toggleSelect(student.id)}
-                            className="rounded border-border text-brand focus:ring-brand"
-                          />
-                        </Td>
-                        <Td type="primary">
-                          <PersonAvatar
-                            name={`${student.first_name} ${student.last_name}`}
-                            subtitle={student.student_number || undefined}
-                            photoUrl={student.photo_url}
-                          />
-                        </Td>
-                        <Td type="code">{student.admission_number || '—'}</Td>
-                        <Td>{student.enrollment?.unit_name || '—'}</Td>
-                        <Td>{student.enrollment?.group_name || '—'}</Td>
-                        <Td>
-                          {student.primary_guardian ? `${student.primary_guardian.first_name} ${student.primary_guardian.last_name}`.trim() : '—'}
-                        </Td>
-                        <Td type="badge">
-                          <Badge
-                            variant={
-                              student.status === 'active'
-                                ? 'success'
-                                : student.status === 'inactive'
-                                ? 'inactive'
-                                : student.status === 'graduated'
-                                ? 'graduated'
-                                : 'suspended'
-                            }
-                          >
-                            {statusBadgeLabels[student.status] || student.status}
-                          </Badge>
-                        </Td>
-                        <Td type="actions">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => navigate(`/students/${student.id}`)}
-                              className="h-8 w-8 text-text-subtle hover:text-brand"
-                              title={__( 'View Profile', 'codeclove-school-management' )}
-                            >
-                              <Eye size={14} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => navigate(`/students/${student.id}/edit`)}
-                              className="h-8 w-8 text-text-subtle hover:text-brand"
-                              title={__( 'Edit Profile', 'codeclove-school-management' )}
-                            >
-                              <Pencil size={14} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleSingleDelete(student.id, `${student.first_name} ${student.last_name}`)}
-                              className="h-8 w-8 text-text-subtle hover:text-danger"
-                              title={__( 'Delete Record', 'codeclove-school-management' )}
-                            >
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
-                        </Td>
-                      </Tr>
-                    )
-                  })
-                )}
-              </Tbody>
-            </TableRoot>
-          )}
-        </CardContent>
-
-        {/* Pagination & Page Size */}
-        {!isLoading && !isError && (
-          <TablePagination
-            {...table.paginationProps}
-            total={total}
-          />
-        )}
-      </Card>
+            ) : undefined,
+        }}
+      />
 
       {/* Bulk Promotion Modal */}
       <Modal

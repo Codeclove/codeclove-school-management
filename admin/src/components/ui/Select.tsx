@@ -67,6 +67,8 @@ export function Select({
   const selectedLabel = allGroups
     .flatMap((g) => g.options)
     .find((opt) => opt.value === value)?.label
+  const isError = Boolean(error || ariaInvalid === true || ariaInvalid === 'true')
+
   return (
     <SelectPrimitive.Root
       key={`${value ?? ''}-${options.length}`}
@@ -77,16 +79,16 @@ export function Select({
     >
       <SelectPrimitive.Trigger
         id={id}
-        aria-invalid={ariaInvalid ?? (error ? true : undefined)}
+        aria-invalid={isError ? true : undefined}
         aria-describedby={ariaDescribedBy}
         aria-label={ariaLabel}
         title={selectedLabel}
         className={cn(
-          'flex h-8 w-full items-center justify-between gap-2 rounded px-3 text-sm min-w-0 [&>span]:truncate [&>span]:block [&>span]:min-w-0 [&>span]:text-start whitespace-nowrap',
-          'bg-bg-surface border transition-colors duration-100',
-          error
-            ? 'border-danger focus:ring-danger/50'
-            : 'border-border hover:border-border-strong focus:border-brand',
+          'flex h-8 w-full items-center justify-between gap-2 rounded px-3 text-sm min-w-0 [&>span]:truncate [&>span]:block [&>span]:text-start whitespace-nowrap',
+          'bg-bg-surface border transition-colors duration-100 text-text',
+          isError
+            ? 'border-danger focus:ring-danger'
+            : 'border-border hover:border-border-strong focus:border-brand focus:ring-1 focus:ring-brand-ring',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           'data-[placeholder]:text-text-subtle',
           className
@@ -102,7 +104,7 @@ export function Select({
           position="popper"
           sideOffset={4}
           className={cn(
-            'z-[10000] overflow-hidden rounded-lg outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
+            'z-[100050] overflow-hidden rounded-lg outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
             'bg-bg-overlay border border-border shadow-modal',
             'animate-slide-down',
             'min-w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] w-auto',
@@ -129,8 +131,8 @@ export function Select({
                     className={cn(
                       'relative flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-default select-none',
                       'outline-none transition-colors duration-100',
-                      'text-text-muted data-[highlighted]:bg-[var(--hover-bg)] data-[highlighted]:text-text',
-                      'data-[state=checked]:text-brand data-[state=checked]:bg-brand-dim',
+                      'text-text-muted data-[highlighted]:bg-hover-bg data-[highlighted]:text-text',
+                      'data-[state=checked]:text-text data-[state=checked]:font-semibold data-[state=checked]:bg-brand-dim',
                       'data-[disabled]:opacity-50 data-[disabled]:pointer-events-none'
                     )}
                   >

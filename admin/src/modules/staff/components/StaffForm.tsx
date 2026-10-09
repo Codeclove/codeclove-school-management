@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { staffSchema, type StaffFormValues } from '@/schemas/staff'
-import { User, FileText, X, Globe, GraduationCap, PhoneCall } from 'lucide-react'
+import { FileText, X, Globe, GraduationCap, PhoneCall } from 'lucide-react'
 import { useRoles } from '@/api/roles'
 import type { Staff } from '@/api/staff'
 import { useSettings } from '@/api/settings'
@@ -14,6 +14,8 @@ import {
 } from '@/components/ui'
 import { api } from '@/lib/api-client'
 import { __, sprintf } from '@/lib/i18n'
+import { AvatarUpload, AddressFields } from '@/components/ui/form'
+import { onFormError } from '@/lib/form-errors'
 
 interface StaffDoc {
   label: string
@@ -170,7 +172,8 @@ export default function StaffForm({
   isPending = false,
 }: StaffFormProps) {
   const toast = useToast()
-  const { data: roles = [] } = useRoles()
+  const { data: rawRoles } = useRoles()
+  const roles = Array.isArray(rawRoles) ? rawRoles : []
   const { data: settings } = useSettings()
   const { getLabel } = useLabels()
   const staffLabelSingular = getLabel('staff_member', false, __( 'Staff Member', 'codeclove-school-management' ))
@@ -182,7 +185,6 @@ export default function StaffForm({
 
   // Local state for photo and documents list
   const [photoUrl, setPhotoUrl] = useState<string>('')
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState<boolean>(false)
   const [documents, setDocuments] = useState<StaffDoc[]>([])
   const [docLabel, setDocLabel] = useState<string>('')
   const [isUploadingDoc, setIsUploadingDoc] = useState<boolean>(false)
@@ -269,7 +271,9 @@ export default function StaffForm({
         emergency_contact_phone: initialData.emergency_contact_phone || '',
         highest_qualification: initialData.highest_qualification || '',
         specialization: initialData.specialization || '',
-        metadata: initialData.metadata || {},
+        metadata: initialData.metadata && typeof initialData.metadata === 'object' && !Array.isArray(initialData.metadata)
+          ? initialData.metadata
+          : {},
         user_id: initialData.user_id || null,
         create_user: false,
         username: initialData.username || '',
@@ -286,26 +290,6 @@ export default function StaffForm({
     }
   }, [initialData, reset, roles.length])
 
-  // Profile photo upload handler
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setIsUploadingPhoto(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await api.post<{ id: number; url: string }>('media/upload', formData)
-      if (res.success) {
-        setValue('photo_id', res.data.id, { shouldDirty: true })
-        setPhotoUrl(res.data.url)
-        toast.success(__( 'Profile photo uploaded successfully!', 'codeclove-school-management' ))
-      }
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : __( 'Failed to upload image', 'codeclove-school-management' ))
-    } finally {
-      setIsUploadingPhoto(false)
-    }
-  }
 
   // Document upload handler
   const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -340,80 +324,27 @@ export default function StaffForm({
     })
   }
 
+
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onFormSubmit, onFormError)} className="space-y-6">
       {/* ─── CARD 1: Identity & Demographics ──────────────────────────────── */}
-      <Card className="overflow-hidden border border-border/60 bg-bg-surface shadow-xs rounded-xl p-5 space-y-4">
-        <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/60">
+      <Card className="overflow-hidden border border-border bg-bg-elevated shadow-xs rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2.5 pb-2.5 border-b border-border">
           <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
           <h3 className="text-sm font-bold text-text tracking-tight uppercase">{__( 'Identity & Demographics', 'codeclove-school-management' )}</h3>
         </div>
 
         {/* Profile Photo Uploader */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-bg-light/30 rounded-lg p-3 border border-border/40">
-          <div className="flex items-center gap-3">
-            <input
-              type="file"
-              id="staff-photo-input"
-              className="hidden"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              disabled={isUploadingPhoto || isPending}
-            />
-            {isUploadingPhoto ? (
-              <div className="w-11 h-11 rounded-full border border-border bg-bg-surface flex items-center justify-center flex-shrink-0">
-                <Spinner size="sm" />
-              </div>
-            ) : photoUrl ? (
-              <div className="relative group w-11 h-11 rounded-full border border-border overflow-hidden flex items-center justify-center bg-bg-surface flex-shrink-0">
-                <img src={photoUrl} alt={staffLabelSingular} className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setValue('photo_id', null, { shouldDirty: true })
-                    setPhotoUrl('')
-                  }}
-                  className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white rounded-full"
-                  title={__( 'Remove photo', 'codeclove-school-management' )}
-                  disabled={isPending}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <div className="w-11 h-11 rounded-full border border-dashed border-border bg-bg-surface flex items-center justify-center text-text-subtle flex-shrink-0">
-                <User size={16} />
-              </div>
-            )}
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-text">{sprintf( __( '%s Photo', 'codeclove-school-management' ), staffLabelSingular )}</p>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  onClick={() => document.getElementById('staff-photo-input')?.click()}
-                  size="sm"
-                  variant="secondary"
-                  disabled={isUploadingPhoto || isPending}
-                  className="h-6 text-2xs px-2"
-                >
-                  {photoUrl ? __( 'Change Photo', 'codeclove-school-management' ) : __( 'Choose Photo', 'codeclove-school-management' )}
-                </Button>
-                {photoUrl && !isUploadingPhoto && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setValue('photo_id', null, { shouldDirty: true })
-                      setPhotoUrl('')
-                    }}
-                    className="text-text-muted hover:text-danger text-2xs"
-                    disabled={isPending}
-                  >
-                    {__( 'Remove', 'codeclove-school-management' )}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-bg-surface rounded-lg p-3 border border-border">
+          <AvatarUpload
+            photoUrl={photoUrl}
+            onPhotoChange={(id, url) => {
+              setValue('photo_id', id, { shouldDirty: true })
+              setPhotoUrl(url)
+            }}
+            disabled={isPending}
+            label={sprintf( __( '%s Photo', 'codeclove-school-management' ), staffLabelSingular )}
+          />
 
           {/* Staff ID Number */}
           <div className="w-full sm:w-auto min-w-[200px]">
@@ -421,7 +352,7 @@ export default function StaffForm({
               <Input
                 {...register('staff_number')}
                 placeholder={mode === 'add' ? __( 'Auto-generated if blank', 'codeclove-school-management' ) : 'e.g. STF-001'}
-                className="h-8 text-xs font-mono"
+                className="h-9 text-sm font-mono"
                 disabled={isPending}
               />
             </FormField>
@@ -506,8 +437,8 @@ export default function StaffForm({
       </Card>
 
       {/* ─── CARD 2: Contact & Emergency Information ───────────────────────── */}
-      <Card className="overflow-hidden border border-border/60 bg-bg-surface shadow-xs rounded-xl p-5 space-y-4">
-        <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/60">
+      <Card className="overflow-hidden border border-border bg-bg-elevated shadow-xs rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2.5 pb-2.5 border-b border-border">
           <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
           <h3 className="text-sm font-bold text-text tracking-tight uppercase">{__( 'Contact & Emergency Details', 'codeclove-school-management' )}</h3>
         </div>
@@ -522,35 +453,16 @@ export default function StaffForm({
           </FormField>
         </div>
 
-        {/* Street Address */}
-        <FormField label={__( 'Residential Street Address', 'codeclove-school-management' )} error={errors.address?.message}>
-          <Input {...register('address')} placeholder="e.g. 123 Main St, Apt 4B" disabled={isPending} className="h-9" />
-        </FormField>
-
-        {/* Location Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <FormField label={__( 'City', 'codeclove-school-management' )} error={errors.city?.message}>
-            <Input {...register('city')} placeholder="e.g. Springfield" disabled={isPending} className="h-9" />
-          </FormField>
-          <FormField label={__( 'State / Province', 'codeclove-school-management' )} error={errors.state?.message}>
-            <Input {...register('state')} placeholder="e.g. Illinois" disabled={isPending} className="h-9" />
-          </FormField>
-          <FormField label={__( 'ZIP / Postal Code', 'codeclove-school-management' )} error={errors.postal_code?.message}>
-            <Input
-              {...register('postal_code')}
-              placeholder="e.g. 62701"
-              error={!!errors.postal_code}
-              className="h-9"
-              disabled={isPending}
-            />
-          </FormField>
-          <FormField label={__( 'Country', 'codeclove-school-management' )} error={errors.country?.message}>
-            <Input {...register('country')} placeholder="e.g. United States" disabled={isPending} className="h-9" />
-          </FormField>
-        </div>
+        {/* Residential Address */}
+        <AddressFields
+          register={register}
+          errors={errors}
+          disabled={isPending}
+          streetLabel={__( 'Residential Street Address', 'codeclove-school-management' )}
+        />
 
         {/* Emergency Contact Sub-section */}
-        <div className="border-t border-border/40 pt-3 space-y-3">
+        <div className="border-t border-border pt-3 space-y-3">
           <div className="flex items-center gap-1.5 text-xs font-bold text-text">
             <PhoneCall className="w-3.5 h-3.5 text-brand" />
             <span>{__( 'Emergency Contact (Duty of Care)', 'codeclove-school-management' )}</span>
@@ -585,8 +497,8 @@ export default function StaffForm({
       </Card>
 
       {/* ─── CARD 3: Institutional Placement & Qualifications ─────────────── */}
-      <Card className="overflow-hidden border border-border/60 bg-bg-surface shadow-xs rounded-xl p-5 space-y-4">
-        <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/60">
+      <Card className="overflow-hidden border border-border bg-bg-elevated shadow-xs rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2.5 pb-2.5 border-b border-border">
           <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
           <h3 className="text-sm font-bold text-text tracking-tight uppercase">{__( 'Institutional Placement & Qualifications', 'codeclove-school-management' )}</h3>
         </div>
@@ -648,7 +560,7 @@ export default function StaffForm({
         </div>
 
         {/* Educational Credentials */}
-        <div className="border-t border-border/40 pt-3 space-y-3">
+        <div className="border-t border-border pt-3 space-y-3">
           <div className="flex items-center gap-1.5 text-xs font-bold text-text">
             <GraduationCap className="w-3.5 h-3.5 text-brand" />
             <span>{__( 'Academic Qualifications', 'codeclove-school-management' )}</span>
@@ -675,8 +587,8 @@ export default function StaffForm({
       </Card>
 
       {/* ─── CARD 4: Regional Compliance & Presets ─────────────────────────── */}
-      <Card className="overflow-hidden border border-border/60 bg-bg-surface shadow-xs rounded-xl p-5 space-y-4">
-        <div className="flex items-center justify-between pb-2.5 border-b border-border/60">
+      <Card className="overflow-hidden border border-border bg-bg-elevated shadow-xs rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between pb-2.5 border-b border-border">
           <div className="flex items-center gap-2.5">
             <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0">4</span>
             <h3 className="text-sm font-bold text-text tracking-tight uppercase">{__( 'Statutory & Regional Information', 'codeclove-school-management' )}</h3>
@@ -723,7 +635,7 @@ export default function StaffForm({
                       {...register(`metadata.${f.name}`)}
                       placeholder={f.placeholder}
                       maxLength={f.maxLength}
-                      className="h-9 font-mono text-xs"
+                      className="h-9 font-mono text-sm"
                       disabled={isPending}
                     />
                   )}
@@ -732,15 +644,15 @@ export default function StaffForm({
             </div>
           </div>
         ) : (
-          <div className="p-3 bg-bg-light/30 rounded-lg text-xs text-text-muted">
+          <div className="p-3 bg-bg-surface border border-border rounded-lg text-xs text-text-muted">
             {__( 'Standard international compliance active. No country-specific statutory preset overrides configured.', 'codeclove-school-management' )}
           </div>
         )}
       </Card>
 
       {/* ─── CARD 5: Account Access & Security ────────────────────────────── */}
-      <Card className="overflow-hidden border border-border/60 bg-bg-surface shadow-xs rounded-xl p-5 space-y-4">
-        <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/60">
+      <Card className="overflow-hidden border border-border bg-bg-elevated shadow-xs rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2.5 pb-2.5 border-b border-border">
           <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0">5</span>
           <h3 className="text-sm font-bold text-text tracking-tight uppercase">{__( 'Account Access & Security', 'codeclove-school-management' )}</h3>
         </div>
@@ -786,7 +698,7 @@ export default function StaffForm({
         </div>
 
         {/* WordPress User Account Credentials */}
-        <div className="border-t border-border/40 pt-3 space-y-3">
+        <div className="border-t border-border pt-3 space-y-3">
           <h4 className="text-xs font-bold text-text">{__( 'WordPress User Account', 'codeclove-school-management' )}</h4>
 
           {initialData?.user_id ? (
@@ -794,7 +706,7 @@ export default function StaffForm({
               <FormField label={__( 'Username', 'codeclove-school-management' )}>
                 <Input
                   {...register('username')}
-                  className="h-9 bg-bg-surface-hover"
+                  className="h-9 bg-bg-surface opacity-75 cursor-not-allowed"
                   disabled
                   placeholder="e.g. alicesmith"
                 />
@@ -815,12 +727,12 @@ export default function StaffForm({
             </div>
           ) : (
             <>
-              <div className="p-2.5 rounded-lg border border-border bg-bg-light/20 flex items-center gap-2 select-none cursor-pointer">
+              <div className="p-2.5 rounded-lg border border-border bg-bg-surface hover:bg-hover-bg flex items-center gap-2 select-none cursor-pointer">
                 <input
                   type="checkbox"
                   id="create_user_checkbox"
                   {...register('create_user')}
-                  className="rounded border-border text-brand focus:ring-brand w-3.5 h-3.5"
+                  className="rounded border-border text-brand focus:ring-brand w-4 h-4"
                   disabled={isPending}
                 />
                 <label htmlFor="create_user_checkbox" className="flex flex-col cursor-pointer flex-1">
@@ -862,14 +774,14 @@ export default function StaffForm({
       </Card>
 
       {/* ─── CARD 6: Documents & Certifications ────────────────────────────── */}
-      <Card className="overflow-hidden border border-border/60 bg-bg-surface shadow-xs rounded-xl p-5 space-y-4">
-        <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/60">
+      <Card className="overflow-hidden border border-border bg-bg-elevated shadow-xs rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2.5 pb-2.5 border-b border-border">
           <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0">6</span>
           <h3 className="text-sm font-bold text-text tracking-tight uppercase">{__( 'Documents & Verification', 'codeclove-school-management' )}</h3>
         </div>
 
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3 items-end bg-bg-light/20 border border-border/40 p-3 rounded-lg">
+          <div className="flex flex-col sm:flex-row gap-3 items-end bg-bg-surface border border-border p-3 rounded-lg">
             <FormField label={__( 'Document Name', 'codeclove-school-management' )} className="flex-1 w-full">
               <Input
                 placeholder="e.g. Academic Resume, Certifications, Contract"
@@ -913,9 +825,9 @@ export default function StaffForm({
           </div>
 
           {documents.length > 0 ? (
-            <div className="divide-y divide-border border border-border/60 rounded-lg overflow-hidden">
+            <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
               {documents.map((doc, idx) => (
-                <div key={idx} className="flex items-center justify-between px-3 py-2.5 text-xs bg-bg-surface hover:bg-bg-light/30 transition-colors">
+                <div key={idx} className="flex items-center justify-between px-3 py-2.5 text-xs bg-bg-surface hover:bg-hover-bg transition-colors">
                   <div className="flex items-center gap-2.5 truncate pr-2">
                     <FileText className="w-4 h-4 text-brand shrink-0" />
                     <span className="font-medium text-text truncate">{doc.label}</span>
@@ -945,7 +857,7 @@ export default function StaffForm({
               ))}
             </div>
           ) : (
-            <div className="text-center py-6 border border-dashed border-border/80 rounded-lg">
+            <div className="text-center py-6 border border-dashed border-border rounded-lg bg-bg-surface">
               <FileText className="w-8 h-8 text-text-subtle/50 mx-auto mb-1.5" />
               <p className="text-xs text-text-muted">{__( 'No documents uploaded yet.', 'codeclove-school-management' )}</p>
             </div>

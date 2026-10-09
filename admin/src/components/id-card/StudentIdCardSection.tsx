@@ -64,13 +64,13 @@ export function StudentIdCardSection({
 
         <div className="flex items-center gap-2">
           {/* Single Side / Dual Side Toggle */}
-          <div className="flex items-center bg-bg-base/60 p-0.5 rounded-lg border border-border text-xs">
+          <div className="flex items-center bg-bg-surface p-0.5 rounded-lg border border-border text-xs">
             <button
               type="button"
               onClick={() => setBadgeDual(false)}
               className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                 !badgeDual
-                  ? 'bg-bg-surface text-text font-semibold shadow-xs'
+                  ? 'bg-bg-elevated text-text font-semibold shadow-xs border border-border/50'
                   : 'text-text-muted hover:text-text'
               }`}
             >
@@ -81,7 +81,7 @@ export function StudentIdCardSection({
               onClick={() => setBadgeDual(true)}
               className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                 badgeDual
-                  ? 'bg-bg-surface text-text font-semibold shadow-xs'
+                  ? 'bg-bg-elevated text-text font-semibold shadow-xs border border-border/50'
                   : 'text-text-muted hover:text-text'
               }`}
             >
@@ -98,7 +98,7 @@ export function StudentIdCardSection({
       </div>
 
       {/* Card Preview Container */}
-      <div className="bg-slate-50/80 border border-border rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center overflow-x-auto">
+      <div className="bg-bg-surface border border-border rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center overflow-x-auto">
         <div ref={printRef} className="bg-white text-black font-sans">
           <StudentIdCard
             student={student}

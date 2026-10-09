@@ -3,8 +3,7 @@
 import { Settings as SettingsIcon, Mail } from 'lucide-react'
 import type { UseFormRegister, Control, UseFormSetValue } from 'react-hook-form'
 import type { CodeCloveSettings } from '@/api/settings'
-import { FormGroup, FormInput, FormMediaUpload } from '../components/SettingsFormPrimitives'
-import { Textarea } from '@/components/ui'
+import { FormGroup, FormInput, FormMediaUpload, FormTextarea } from '../components/SettingsFormPrimitives'
 import { __ } from '@/lib/i18n'
 
 type Register = UseFormRegister<CodeCloveSettings>
@@ -77,12 +76,12 @@ export function GeneralTab({ register, control, setValue }: GeneralTabProps) {
           register={register}
           type="url"
         />
-        <div className="col-span-full space-y-1">
-          <label htmlFor="settings-input-school.address" className="text-xs font-semibold text-text-muted">
-            {__( 'Postal Address', 'codeclove-school-management' )}
-          </label>
-          <Textarea id="settings-input-school.address" {...register('school.address')} rows={3} />
-        </div>
+        <FormTextarea
+          label={__( 'Postal Address', 'codeclove-school-management' )}
+          name="school.address"
+          register={register}
+          rows={3}
+        />
       </FormGroup>
     </div>
   )

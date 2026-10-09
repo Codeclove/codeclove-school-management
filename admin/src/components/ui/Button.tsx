@@ -6,19 +6,19 @@ const buttonVariants = cva(
   // Base styles
   [
     'inline-flex items-center justify-center gap-1.5 font-medium',
-    'rounded transition-colors duration-100 focus-visible:ring-2',
+    'rounded transition-all duration-100 focus-visible:ring-2',
     'focus-visible:ring-brand-ring focus-visible:ring-offset-1',
     'focus-visible:ring-offset-bg-base disabled:opacity-50',
-    'disabled:pointer-events-none select-none',
+    'disabled:pointer-events-none select-none active:scale-[0.98]',
   ],
   {
     variants: {
       variant: {
-        default:   'bg-brand text-text-inverted hover:bg-brand-strong',
-        secondary: 'bg-bg-elevated text-text hover:bg-bg-overlay border border-border',
-        ghost:     'text-text-muted hover:text-text hover:bg-white/[0.05]',
-        danger:    'bg-danger text-text-inverted hover:opacity-95 border border-transparent shadow-sm',
-        link:      'text-brand hover:text-brand-strong underline-offset-4 hover:underline p-0 h-auto',
+        default:   'bg-brand text-text-inverted hover:bg-brand-strong shadow-sm',
+        secondary: 'bg-bg-elevated text-text hover:bg-hover-bg border border-border shadow-sm',
+        ghost:     'text-text-muted hover:text-text hover:bg-hover-bg',
+        danger:    'bg-danger text-text-inverted hover:opacity-90 border border-transparent shadow-sm',
+        link:      'text-brand hover:text-brand-strong underline-offset-4 hover:underline p-0 h-auto active:scale-100',
       },
       size: {
         sm:      'h-7 px-2.5 text-xs',

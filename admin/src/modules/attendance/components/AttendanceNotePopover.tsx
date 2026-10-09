@@ -57,7 +57,7 @@ export function AttendanceNotePopover({
           <button
             type="button"
             disabled={disabled}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-2xs font-medium text-text-muted hover:text-text bg-bg-surface hover:bg-bg-subtle rounded-md border border-dashed border-border/80 hover:border-border transition-all shrink-0 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-2xs font-medium text-text-muted hover:text-text bg-bg-surface hover:bg-hover-bg rounded-md border border-dashed border-border/80 hover:border-border transition-all shrink-0 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             title={__('Add Note', 'codeclove-school-management')}
             aria-label={studentName ? `${__('Add note for', 'codeclove-school-management')} ${studentName}` : __('Add note', 'codeclove-school-management')}
           >
@@ -71,7 +71,7 @@ export function AttendanceNotePopover({
         <PopoverPrimitive.Content
           align="end"
           sideOffset={8}
-          className="z-50 w-72 p-3.5 bg-bg-overlay border border-border/80 rounded-2xl shadow-2xl space-y-3 animate-slide-down outline-none"
+          className="z-[100050] w-72 p-3.5 bg-bg-overlay border border-border/80 rounded-2xl shadow-2xl space-y-3 animate-slide-down outline-none"
         >
           <div className="flex items-center justify-between border-b border-border/40 pb-2">
             <span className="text-xs font-bold text-text flex items-center gap-1.5">
@@ -81,7 +81,7 @@ export function AttendanceNotePopover({
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="text-text-subtle hover:text-text p-1 rounded-md hover:bg-bg-surface transition-colors"
+              className="text-text-muted hover:text-text hover:bg-hover-bg p-1 rounded-md transition-colors"
               aria-label={__('Close note popover', 'codeclove-school-management')}
             >
               <X size={14} />
@@ -93,7 +93,7 @@ export function AttendanceNotePopover({
             onChange={(e) => setTempNote(e.target.value)}
             placeholder={__('Type reason or observation...', 'codeclove-school-management')}
             rows={3}
-            className="w-full p-2.5 text-xs bg-bg-surface border border-border/60 rounded-xl text-text placeholder:text-text-subtle/60 focus:outline-none focus:ring-1 focus:ring-brand/40 resize-none"
+            className="w-full p-2.5 text-xs bg-bg-surface border border-border/60 rounded-xl text-text placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-brand/40 resize-none"
             autoFocus
           />
 
@@ -112,14 +112,14 @@ export function AttendanceNotePopover({
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="px-2.5 py-1 text-2xs font-medium text-text-muted hover:text-text bg-bg-surface rounded-lg border border-border/60 transition-colors"
+                className="px-2.5 py-1 text-2xs font-medium text-text-muted hover:text-text bg-bg-surface hover:bg-hover-bg rounded-lg border border-border transition-colors"
               >
                 {__('Cancel', 'codeclove-school-management')}
               </button>
               <button
                 type="button"
                 onClick={handleSave}
-                className="inline-flex items-center gap-1 px-3 py-1 text-2xs font-bold text-white bg-brand hover:bg-brand-strong rounded-lg shadow-sm transition-colors"
+                className="inline-flex items-center gap-1 px-3 py-1 text-2xs font-bold text-text-inverted bg-brand hover:bg-brand-strong rounded-lg shadow-sm transition-colors"
               >
                 <Check size={12} />
                 {__('Save', 'codeclove-school-management')}

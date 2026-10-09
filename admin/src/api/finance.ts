@@ -474,13 +474,14 @@ export interface DefaulterFilters {
 }
 
 /** Hook to retrieve fee defaulters report. */
-export function useDefaultersReport(filters?: DefaulterFilters) {
+export function useDefaultersReport(filters?: DefaulterFilters, options?: { enabled?: boolean }) {
   return useQuery<{ data: DefaulterRow[]; total: number }>({
     queryKey: queryKeys.finance.defaulters(filters),
     queryFn: async () => {
       const response = await api.get<{ data: DefaulterRow[]; total: number }>(`finance/reports/defaulters${toQueryString(filters)}`)
       return response.data
     },
+    ...options,
   })
 }
 

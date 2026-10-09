@@ -23,6 +23,7 @@ import { formatCurrency, formatDate } from '../../lib/formatter'
 import { InvoiceStatementView } from './InvoiceStatementView'
 import { ReceiptSlipView } from './ReceiptSlipView'
 import type { Invoice, InvoicePayment } from '../../types'
+import { SegmentedTabs, type SegmentedTab } from '../../components/SegmentedTabs'
 import {
   Badge,
   Button,
@@ -167,6 +168,24 @@ export const FinancePage: React.FC = () => {
     )
   }, [invoices])
 
+  const tabs = useMemo<Array<SegmentedTab<'invoices' | 'receipts'>>>(
+    () => [
+      {
+        id: 'invoices',
+        label: __( 'Invoices', 'codeclove-school-management' ),
+        icon: FileText,
+        count: invoices.length,
+      },
+      {
+        id: 'receipts',
+        label: __( 'Payment Receipts', 'codeclove-school-management' ),
+        icon: Receipt,
+        count: allPayments.length,
+      },
+    ],
+    [invoices.length, allPayments.length]
+  )
+
   // Dedicated In-Page View 1: Receipt Slip View
   if (selectedPayment) {
     return (
@@ -212,26 +231,25 @@ export const FinancePage: React.FC = () => {
       {returnBanner && (
         <div
           className={cn(
-            'rounded-xl border p-4 flex items-start justify-between gap-3 transition-all',
-            returnBanner.type === 'success' && 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200',
-            returnBanner.type === 'info' && 'bg-blue-500/10 border-blue-500/30 text-blue-900 dark:text-blue-200',
-            returnBanner.type === 'error' && 'bg-destructive/10 border-destructive/30 text-destructive dark:text-red-200'
+            returnBanner.type === 'success' && 'bg-success-dim border border-success text-success',
+            returnBanner.type === 'info' && 'bg-info-dim border border-info text-info',
+            returnBanner.type === 'error' && 'bg-danger-dim border border-danger text-danger'
           )}
         >
           <div className="flex items-start gap-2.5">
             {returnBanner.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
             ) : returnBanner.type === 'error' ? (
-              <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
             ) : (
-              <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-info shrink-0 mt-0.5" />
             )}
             <p className="text-sm font-medium leading-relaxed">{returnBanner.message}</p>
           </div>
           <button
             type="button"
             onClick={() => setReturnBanner(null)}
-            className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+            className="p-1 rounded-md hover:bg-hover-bg transition-colors"
             aria-label={__( 'Dismiss', 'codeclove-school-management' )}
           >
             <X className="w-4 h-4" />
@@ -247,7 +265,7 @@ export const FinancePage: React.FC = () => {
 
       {isLoading ? (
         <div className="space-y-6 animate-pulse">
-          <div className="rounded-xl border border-border/80 bg-bg-surface p-6 shadow-card">
+          <Card className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="space-y-3">
@@ -260,21 +278,21 @@ export const FinancePage: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-bg-surface shadow-card p-6 space-y-4">
+          </Card>
+          <Card className="p-6 space-y-4">
             <div className="h-4 w-32 rounded bg-bg-base" />
             <div className="space-y-3 pt-2">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="h-10 rounded-lg bg-bg-base/70" />
               ))}
             </div>
-          </div>
+          </Card>
         </div>
       ) : (
         <>
           {/* Executive Fee Overview Cards (Divided Grid Pattern) */}
-          <Card className="rounded-xl border border-border/80 overflow-hidden shadow-card bg-bg-surface">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border/60">
+          <Card className="rounded-xl border border-border overflow-hidden shadow-card">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border">
               {/* Total Invoiced */}
               <div className="p-5 flex flex-col justify-between space-y-3">
                 <div className="flex items-center justify-between">
@@ -363,55 +381,12 @@ export const FinancePage: React.FC = () => {
 
           {/* Sub-Navigation Tabs Bar (Segmented Capsule Track) */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div
-              role="tablist"
-              aria-label={__( 'Finance records views', 'codeclove-school-management' )}
-              className="inline-flex items-center bg-bg-base/80 border border-border/80 rounded-xl p-1 gap-1 max-w-full overflow-x-auto shadow-2xs w-fit"
-            >
-              {[
-                { id: 'invoices', label: __( 'Invoices', 'codeclove-school-management' ), icon: FileText, count: invoices.length },
-                { id: 'receipts', label: __( 'Payment Receipts', 'codeclove-school-management' ), icon: Receipt, count: allPayments.length },
-              ].map((tab) => {
-                const isActive = activeTab === tab.id
-                const Icon = tab.icon
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    id={`tab-${tab.id}`}
-                    aria-selected={isActive}
-                    aria-controls={`panel-${tab.id}`}
-                    onClick={() => setActiveTab(tab.id as 'invoices' | 'receipts')}
-                    className={cn(
-                      'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none outline-none whitespace-nowrap',
-                      isActive
-                        ? 'bg-bg-surface text-brand font-bold shadow-xs'
-                        : 'text-text-muted hover:text-text hover:bg-bg-surface/50'
-                    )}
-                  >
-                    <Icon
-                      className={cn(
-                        'w-4 h-4 transition-colors',
-                        isActive ? 'text-brand' : 'text-text-subtle'
-                      )}
-                    />
-                    <span>{tab.label}</span>
-                    <span
-                      className={cn(
-                        'inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-3xs font-bold rounded-full transition-colors font-mono tabular-nums',
-                        isActive
-                          ? 'bg-brand-dim text-brand'
-                          : 'bg-border/60 text-text-subtle'
-                      )}
-                    >
-                      {tab.count}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
+            <SegmentedTabs<'invoices' | 'receipts'>
+              tabs={tabs}
+              activeTab={activeTab}
+              onChange={setActiveTab}
+              ariaLabel={__( 'Finance records views', 'codeclove-school-management' )}
+            />
             <div className="hidden sm:flex items-center gap-2 text-xs text-text-subtle font-medium">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand/50" />
               <span>
@@ -422,8 +397,12 @@ export const FinancePage: React.FC = () => {
             </div>
           </div>
           {/* Invoices & Receipts Ledger Card */}
-          <Card className="rounded-xl border border-border/70 overflow-hidden shadow-card bg-bg-surface">
-            {/* Tab 1: Invoices */}
+          <Card
+            id={`panel-${activeTab}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${activeTab}`}
+            className="rounded-xl border border-border overflow-hidden shadow-card"
+          >
             {activeTab === 'invoices' && (
               invoices.length === 0 ? (
                 <EmptyState
@@ -434,8 +413,8 @@ export const FinancePage: React.FC = () => {
                 />
               ) : (
                 <TableRoot responsiveMode="scroll" className="w-full">
-                  <Thead className="border-b border-border/60 bg-bg-base/50">
-                    <Tr className="border-b border-border/60">
+                  <Thead className="border-b border-border bg-bg-surface">
+                    <Tr className="border-b border-border">
                       <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted">{__( 'Invoice #', 'codeclove-school-management' )}</Th>
                       <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted">{__( 'Issued Date', 'codeclove-school-management' )}</Th>
                       <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted">{__( 'Due Date', 'codeclove-school-management' )}</Th>
@@ -446,11 +425,11 @@ export const FinancePage: React.FC = () => {
                       <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted text-right">{__( 'Actions', 'codeclove-school-management' )}</Th>
                     </Tr>
                   </Thead>
-                  <Tbody className="divide-y divide-border/60">
+                  <Tbody className="divide-y divide-border">
                     {invoices.map((inv) => (
                       <Tr
                         key={inv.id}
-                        className="cursor-pointer hover:bg-bg-base/50 border-b border-border/60 last:border-b-0 transition-colors"
+                        className="cursor-pointer hover:bg-hover-bg border-b border-border last:border-b-0 transition-colors"
                         onClick={() => setSelectedInvoice(inv)}
                       >
                         <Td className="font-semibold text-text whitespace-nowrap">
@@ -484,7 +463,7 @@ export const FinancePage: React.FC = () => {
                               e.stopPropagation()
                               setSelectedInvoice(inv)
                             }}
-                            className="h-7 px-2.5 text-xs font-semibold rounded-lg border border-border/60 hover:border-border/90"
+                            className="h-7 px-2.5 text-xs font-semibold rounded-lg border border-border hover:border-border-strong hover:bg-hover-bg"
                           >
                             <Eye className="w-3.5 h-3.5 mr-1 text-text-subtle" />
                             {__( 'View', 'codeclove-school-management' )}
@@ -508,8 +487,8 @@ export const FinancePage: React.FC = () => {
                 />
               ) : (
                 <TableRoot responsiveMode="scroll" className="w-full">
-                  <Thead className="border-b border-border/60 bg-bg-base/50">
-                    <Tr className="border-b border-border/60">
+                  <Thead className="border-b border-border bg-bg-surface">
+                    <Tr className="border-b border-border">
                       <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted">{__( 'Receipt #', 'codeclove-school-management' )}</Th>
                       <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted">{__( 'Date Paid', 'codeclove-school-management' )}</Th>
                       <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted">{__( 'For Invoice', 'codeclove-school-management' )}</Th>
@@ -519,7 +498,7 @@ export const FinancePage: React.FC = () => {
                       <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted text-right">{__( 'Action', 'codeclove-school-management' )}</Th>
                     </Tr>
                   </Thead>
-                  <Tbody className="divide-y divide-border/60">
+                  <Tbody className="divide-y divide-border">
                     {allPayments.map((pmt, idx) => {
                       const receiptNum = pmt.payment_number
                       const paidDate = pmt.paid_on
@@ -527,7 +506,7 @@ export const FinancePage: React.FC = () => {
                       return (
                         <Tr
                           key={pmt.id ?? idx}
-                          className="cursor-pointer hover:bg-bg-base/50 border-b border-border/60 last:border-b-0 transition-colors"
+                          className="cursor-pointer hover:bg-hover-bg border-b border-border last:border-b-0 transition-colors"
                           onClick={() => setSelectedPayment(pmt)}
                         >
                           <Td className="font-mono text-xs font-semibold text-text whitespace-nowrap">
@@ -558,7 +537,7 @@ export const FinancePage: React.FC = () => {
                                 e.stopPropagation()
                                 setSelectedPayment(pmt)
                               }}
-                              className="h-7 px-2.5 text-xs font-semibold rounded-lg border border-border/60 hover:border-border/90"
+                              className="h-7 px-2.5 text-xs font-semibold rounded-lg border border-border hover:border-border-strong hover:bg-hover-bg"
                             >
                               <Receipt className="w-3.5 h-3.5 mr-1 text-text-subtle" />
                               {__( 'View', 'codeclove-school-management' )}

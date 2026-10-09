@@ -24,6 +24,7 @@ import {
   Spinner,
 } from '@/components/ui'
 import { WeeklyScheduleMatrix } from './components/WeeklyScheduleMatrix'
+import { SegmentedTabs } from '../../components/SegmentedTabs'
 import { __, sprintf } from '@/lib/i18n'
 
 interface DayTab {
@@ -100,40 +101,16 @@ export const TimetablePage: React.FC = () => {
         actions={
           <div className="flex flex-wrap items-center gap-2.5">
             {/* View mode segmented switcher (Segmented Capsule Track) */}
-            <div
-              role="tablist"
-              aria-label={__( 'Timetable view mode', 'codeclove-school-management' )}
-              className="inline-flex items-center gap-1 p-1 rounded-xl bg-bg-base/80 border border-border/80 shadow-2xs"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={viewMode === 'day'}
-                onClick={() => setViewMode('day')}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer select-none outline-none ${
-                  viewMode === 'day'
-                    ? 'bg-bg-surface text-brand font-bold shadow-xs'
-                    : 'text-text-muted hover:text-text hover:bg-bg-surface/50'
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>{__( 'Day View', 'codeclove-school-management' )}</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={viewMode === 'week'}
-                onClick={() => setViewMode('week')}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer select-none outline-none ${
-                  viewMode === 'week'
-                    ? 'bg-bg-surface text-brand font-bold shadow-xs'
-                    : 'text-text-muted hover:text-text hover:bg-bg-surface/50'
-                }`}
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>{__( 'Week View', 'codeclove-school-management' )}</span>
-              </button>
-            </div>
+            <SegmentedTabs<'day' | 'week'>
+              size="sm"
+              ariaLabel={__( 'Timetable view mode', 'codeclove-school-management' )}
+              activeTab={viewMode}
+              onChange={setViewMode}
+              tabs={[
+                { id: 'day', label: __( 'Day View', 'codeclove-school-management' ), icon: Clock },
+                { id: 'week', label: __( 'Week View', 'codeclove-school-management' ), icon: Calendar },
+              ]}
+            />
 
           </div>
         }
@@ -141,40 +118,24 @@ export const TimetablePage: React.FC = () => {
 
       {/* Day selector tabs (visible in Day View — Segmented Capsule Track) */}
       {viewMode === 'day' && (
-        <div
-          role="tablist"
-          aria-label={__( 'Day selection', 'codeclove-school-management' )}
-          className="inline-flex items-center gap-1 overflow-x-auto rounded-xl bg-bg-base/80 p-1 border border-border/80 shadow-2xs w-fit max-w-full"
-        >
-          {daysList.map((day) => {
-            const isToday = day.id === todayDayOfWeek
-            const isSelected = day.id === selectedDay
-            return (
-              <button
-                key={day.id}
-                type="button"
-                role="tab"
-                aria-selected={isSelected}
-                onClick={() => setSelectedDay(day.id)}
-                className={`relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer shrink-0 select-none outline-none ${
-                  isSelected
-                    ? 'bg-bg-surface text-brand font-bold shadow-xs'
-                    : 'text-text-muted hover:text-text hover:bg-bg-surface/50'
+        <SegmentedTabs<number>
+          size="sm"
+          ariaLabel={__( 'Day selection', 'codeclove-school-management' )}
+          activeTab={selectedDay}
+          onChange={setSelectedDay}
+          tabs={daysList.map((day) => ({
+            id: day.id,
+            label: day.shortLabel,
+            badge: day.id === todayDayOfWeek ? (
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  day.id === selectedDay ? 'bg-brand' : 'bg-border-strong'
                 }`}
-              >
-                <span>{day.shortLabel}</span>
-                {isToday && (
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      isSelected ? 'bg-brand' : 'bg-border-strong'
-                    }`}
-                    title={__( 'Today', 'codeclove-school-management' )}
-                  />
-                )}
-              </button>
-            )
-          })}
-        </div>
+                title={__( 'Today', 'codeclove-school-management' )}
+              />
+            ) : undefined,
+          }))}
+        />
       )}
 
       {isLoading ? (
@@ -182,7 +143,7 @@ export const TimetablePage: React.FC = () => {
           <Spinner size="lg" />
         </div>
       ) : isError ? (
-        <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface overflow-hidden p-8 text-center">
+        <Card className="rounded-xl p-8 text-center">
           <EmptyState
             icon={Clock}
             title={__( 'Unable to load timetable', 'codeclove-school-management' )}
@@ -197,8 +158,8 @@ export const TimetablePage: React.FC = () => {
       ) : viewMode === 'week' ? (
         <WeeklyScheduleMatrix timetable={timetableData} />
       ) : (
-        <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface overflow-hidden">
-          <CardHeader className="flex items-center justify-between border-b border-border/60 pb-3">
+        <Card className="rounded-xl">
+          <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-brand" />
               <h3 className="text-sm font-bold text-text">
@@ -226,7 +187,7 @@ export const TimetablePage: React.FC = () => {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-bg-base/50 border-b border-border/60 text-xs font-semibold text-text-subtle uppercase tracking-wider">
+                  <thead className="bg-bg-surface border-b border-border text-xs font-semibold text-text-subtle uppercase tracking-wider">
                     <tr>
                       <th scope="col" className="py-3 px-4 w-24">{__( 'Period', 'codeclove-school-management' )}</th>
                       <th scope="col" className="py-3 px-4 w-44">{__( 'Time', 'codeclove-school-management' )}</th>
@@ -236,7 +197,7 @@ export const TimetablePage: React.FC = () => {
                       <th scope="col" className="py-3 px-4 text-right">{__( 'Status', 'codeclove-school-management' )}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/60">
+                  <tbody className="divide-y divide-border">
                     {currentSlots.map((slot, idx) => {
                       const isToday = selectedDay === todayDayOfWeek
                       const slotStatus = isToday ? getSlotStatus(slot.start_time, slot.end_time) : null
@@ -254,8 +215,8 @@ export const TimetablePage: React.FC = () => {
                               activeNow
                                 ? 'bg-brand-dim/40 font-medium'
                                 : isPast
-                                ? 'opacity-70 bg-bg-base/20 hover:bg-bg-base/40'
-                                : 'hover:bg-bg-base/40'
+                                ? 'opacity-70 hover:bg-hover-bg'
+                                : 'hover:bg-hover-bg'
                             }`}
                           >
                             <td className="py-3.5 px-4 font-bold text-text-subtle">
@@ -304,7 +265,7 @@ export const TimetablePage: React.FC = () => {
                           </tr>
 
                           {gap && (
-                            <tr key={`break-${idx}`} className="bg-bg-base/40 border-y border-dashed border-border/70 text-text-muted">
+                            <tr key={`break-${idx}`} className="bg-bg-surface border-y border-dashed border-border text-text-muted">
                               <td className="py-2.5 px-4 text-center">
                                 <Coffee className="w-3.5 h-3.5 text-brand inline" />
                               </td>

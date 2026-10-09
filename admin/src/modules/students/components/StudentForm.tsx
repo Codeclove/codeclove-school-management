@@ -1,32 +1,33 @@
 import { useState, useEffect } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { studentSchema, type StudentFormValues } from '@/schemas/students'
-import { User, X } from 'lucide-react'
-import { api } from '@/lib/api-client'
-import { useToast } from '@/lib/toast'
 import {
   useGroupEnrollmentCounts,
   useGuardians,
+  type FullStudent,
 } from '@/api/students'
 import {
   useUnits,
   useGroups,
   useUnitSubjects,
 } from '@/api/academics'
-import { useSettings } from '@/api/settings'
+import { useSettings, type IdentifierFormat } from '@/api/settings'
 import { useSession } from '@/lib/session-context'
 import { useLabels } from '@/lib/labels'
 import { GENDER_OPTIONS } from '@/lib/constants'
 import { __, sprintf } from '@/lib/i18n'
 import {
-  Button, Card, FormField, Input, Select, Spinner, DatePicker, Alert
+  Button, Card, Spinner, Alert
 } from '@/components/ui'
+import {
+  Form, FormInput, FormSelect, FormDatePicker, AvatarUpload, AddressFields
+} from '@/components/ui/form'
 
 
 interface StudentFormProps {
   mode: 'admit' | 'edit'
-  initialData?: any
+  initialData?: FullStudent | null
   onSubmit: (data: StudentFormValues) => void
   onCancel: () => void
   isPending?: boolean
@@ -41,7 +42,6 @@ export default function StudentForm({
   onCancel,
   isPending = false,
 }: StudentFormProps) {
-  const toast = useToast()
   const { session } = useSession()
   const { data: settings } = useSettings()
   const { data: mockCounts } = useGroupEnrollmentCounts()
@@ -55,17 +55,8 @@ export default function StudentForm({
   const guardianLabelSingular = getLabel('guardian', false, 'Guardian')
 
   const [photoUrl, setPhotoUrl] = useState<string>('')
-  const [isUploading, setIsUploading] = useState<boolean>(false)
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    reset,
-    control,
-    formState: { errors },
-  } = useForm<StudentFormValues>({
+  const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentSchema),
     defaultValues: {
       academic_session_id: session ? String(session.id) : '1',
@@ -102,12 +93,20 @@ export default function StudentForm({
     },
   })
 
+  const {
+    setValue,
+    watch,
+    reset,
+    formState: { errors },
+  } = form
+
   // Watch fields — guaranteed string values for Radix UI select options matching
   const selectedSubjectIds = watch('subject_ids') || []
   const linkExisting = watch('link_existing_guardian')
   const autoGenerateAdm = watch('auto_generate_admission')
   const activeUnit = watch('academic_unit_id') ? String(watch('academic_unit_id')) : ''
   const activeGroup = watch('academic_group_id') ? String(watch('academic_group_id')) : ''
+  const currentGender = watch('gender')
 
   // Query academic units & groups cleanly without pagination truncations
   const { data: unitData } = useUnits({ per_page: 200 })
@@ -174,35 +173,6 @@ export default function StudentForm({
     }
   }, [initialData, reset, setValue, session, units.length, groups.length])
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setIsUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const res = await api.post<{ id: number; url: string }>('media/upload', formData)
-      if (res.success) {
-        setValue('photo_id', res.data.id, { shouldDirty: true })
-        setPhotoUrl(res.data.url)
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to upload image')
-    } finally {
-      setIsUploading(false)
-    }
-  }
-
-  const handleSelectPhoto = () => {
-    document.getElementById('student-photo-input')?.click()
-  }
-
-  const handleRemovePhoto = () => {
-    setValue('photo_id', null, { shouldDirty: true })
-    setPhotoUrl('')
-  }
 
   const handleSubjectToggle = (id: number) => {
     if (selectedSubjectIds.includes(id)) {
@@ -238,7 +208,7 @@ export default function StudentForm({
   const nextStudentNum = settings?.identifiers?.student_number?.next_number ?? 1
   const nextAdmissionNum = settings?.identifiers?.admission_number?.next_number ?? 1
 
-  const formatIdPreview = (format: any, num: number) => {
+  const formatIdPreview = (format: IdentifierFormat | undefined, num: number) => {
     if (!format) return '—'
     const prefix = format.prefix ?? ''
     const padding = format.sequence_padding ?? 4
@@ -265,96 +235,40 @@ export default function StudentForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
+    <Form form={form} onSubmit={handleFormSubmit} className="space-y-5">
       
       {/* CATEGORIZED CARD 1: Student & Academic Details */}
-      <Card className="overflow-hidden border border-border/60 bg-bg-surface shadow-xs rounded-xl p-5 space-y-4">
+      <Card className="p-5 space-y-4">
         <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/60">
           <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
           <h3 className="text-sm font-bold text-text tracking-tight uppercase">{__( 'Student & Academic Details', 'codeclove-school-management' )}</h3>
         </div>
 
         {/* Photo + Status Header Row */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-bg-light/30 rounded-lg p-3 border border-border/40">
-          <div className="flex items-center gap-3">
-            <input
-              type="file"
-              accept="image/*"
-              id="student-photo-input"
-              className="hidden"
-              onChange={handleFileChange}
-              disabled={isUploading || isPending}
-            />
-            {isUploading ? (
-              <div className="w-11 h-11 rounded-full border border-border bg-bg-surface flex items-center justify-center flex-shrink-0">
-                <Spinner size="sm" />
-              </div>
-            ) : photoUrl ? (
-              <div className="relative group w-11 h-11 rounded-full border border-border overflow-hidden flex items-center justify-center bg-bg-surface flex-shrink-0">
-                <img src={photoUrl} alt={sprintf( __( '%s Photo', 'codeclove-school-management' ), studentLabelSingular )} className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={handleRemovePhoto}
-                  className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white rounded-full"
-                  disabled={isPending}
-                  title={__( 'Remove Photo', 'codeclove-school-management' )}
-                  aria-label={__( 'Remove Photo', 'codeclove-school-management' )}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <div className="w-11 h-11 rounded-full border border-dashed border-border bg-bg-surface flex items-center justify-center text-text-subtle flex-shrink-0">
-                <User size={16} />
-              </div>
-            )}
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-text">{sprintf( __( '%s Photo', 'codeclove-school-management' ), studentLabelSingular )}</p>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  onClick={handleSelectPhoto}
-                  size="sm"
-                  variant="secondary"
-                  disabled={isUploading || isPending}
-                  className="h-6 text-2xs px-2"
-                >
-                  {photoUrl ? __( 'Change Photo', 'codeclove-school-management' ) : __( 'Upload Photo', 'codeclove-school-management' )}
-                </Button>
-                {photoUrl && !isUploading && (
-                  <button
-                    type="button"
-                    onClick={handleRemovePhoto}
-                    className="text-text-muted hover:text-danger text-2xs"
-                    disabled={isPending}
-                  >
-                    {__( 'Remove Photo', 'codeclove-school-management' )}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-bg-surface rounded-lg p-3 border border-border">
+          <AvatarUpload
+            photoUrl={photoUrl}
+            onPhotoChange={(id, url) => {
+              setValue('photo_id', id, { shouldDirty: true })
+              setPhotoUrl(url)
+            }}
+            disabled={isPending}
+            label={sprintf( __( '%s Photo', 'codeclove-school-management' ), studentLabelSingular )}
+          />
 
           {mode === 'edit' && (
             <div className="flex items-center gap-2 ms-auto">
               <span className="text-xs font-semibold text-text">{__( 'Status:', 'codeclove-school-management' )}</span>
               <div className="w-32">
-                <Controller
+                <FormSelect
                   name="status"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value ? String(field.value) : 'active'}
-                      onValueChange={field.onChange}
-                      disabled={isPending}
-                      options={[
-                        { value: 'active', label: __( 'Active', 'codeclove-school-management' ) },
-                        { value: 'inactive', label: __( 'Inactive', 'codeclove-school-management' ) },
-                        { value: 'graduated', label: __( 'Graduated', 'codeclove-school-management' ) },
-                        { value: 'withdrawn', label: __( 'Withdrawn', 'codeclove-school-management' ) },
-                      ]}
-                    />
-                  )}
+                  disabled={isPending}
+                  options={[
+                    { value: 'active', label: __( 'Active', 'codeclove-school-management' ) },
+                    { value: 'inactive', label: __( 'Inactive', 'codeclove-school-management' ) },
+                    { value: 'graduated', label: __( 'Graduated', 'codeclove-school-management' ) },
+                    { value: 'withdrawn', label: __( 'Withdrawn', 'codeclove-school-management' ) },
+                  ]}
                 />
               </div>
             </div>
@@ -363,98 +277,78 @@ export default function StudentForm({
 
         {/* Row 1: Student Full Name */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <FormField label={__( 'First Name', 'codeclove-school-management' )} error={errors.first_name?.message} required>
-            <Input {...register('first_name')} placeholder={__( 'e.g. Alice', 'codeclove-school-management' )} error={!!errors.first_name} className="h-9" disabled={isPending} />
-          </FormField>
-          <FormField label={__( 'Middle Name', 'codeclove-school-management' )} error={errors.middle_name?.message}>
-            <Input {...register('middle_name')} placeholder={__( 'e.g. Marie', 'codeclove-school-management' )} className="h-9" disabled={isPending} />
-          </FormField>
-          <FormField label={__( 'Last Name', 'codeclove-school-management' )} error={errors.last_name?.message} required>
-            <Input {...register('last_name')} placeholder={__( 'e.g. Smith', 'codeclove-school-management' )} error={!!errors.last_name} className="h-9" disabled={isPending} />
-          </FormField>
+          <FormInput
+            name="first_name"
+            label={__( 'First Name', 'codeclove-school-management' )}
+            placeholder={__( 'e.g. Alice', 'codeclove-school-management' )}
+            required
+            disabled={isPending}
+            inputClassName="h-9"
+          />
+          <FormInput
+            name="middle_name"
+            label={__( 'Middle Name', 'codeclove-school-management' )}
+            placeholder={__( 'e.g. Marie', 'codeclove-school-management' )}
+            disabled={isPending}
+            inputClassName="h-9"
+          />
+          <FormInput
+            name="last_name"
+            label={__( 'Last Name', 'codeclove-school-management' )}
+            placeholder={__( 'e.g. Smith', 'codeclove-school-management' )}
+            required
+            disabled={isPending}
+            inputClassName="h-9"
+          />
         </div>
 
         {/* Row 2: Demographics & Admission Date */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-          <FormField label={__( 'Date of Birth', 'codeclove-school-management' )} error={errors.date_of_birth?.message} required>
-            <Controller
-              name="date_of_birth"
-              control={control}
-              render={({ field }) => (
-                <DatePicker
-                  value={field.value || ''}
-                  onChange={field.onChange}
-                  disabled={isPending}
-                />
-              )}
-            />
-          </FormField>
-          <FormField label={__( 'Gender', 'codeclove-school-management' )} error={errors.gender?.message} required>
-            <Controller
-              name="gender"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  value={field.value || 'male'}
-                  onValueChange={field.onChange}
-                  disabled={isPending}
-                  options={[
-                    ...GENDER_OPTIONS.map((opt) => ({ value: opt.value, label: __( opt.label, 'codeclove-school-management' ) })),
-                    ...(field.value === 'other' ? [{ value: 'other', label: __( 'Other (Legacy)', 'codeclove-school-management' ) }] : []),
-                  ]}
-                />
-              )}
-            />
-          </FormField>
-          <FormField label={__( 'Admission Date', 'codeclove-school-management' )} error={errors.admission_date?.message} required>
-            <Controller
-              name="admission_date"
-              control={control}
-              render={({ field }) => (
-                <DatePicker
-                  value={field.value || ''}
-                  onChange={field.onChange}
-                  disabled={isPending}
-                />
-              )}
-            />
-          </FormField>
+          <FormDatePicker
+            name="date_of_birth"
+            label={__( 'Date of Birth', 'codeclove-school-management' )}
+            required
+            disabled={isPending}
+          />
+          <FormSelect
+            name="gender"
+            label={__( 'Gender', 'codeclove-school-management' )}
+            required
+            disabled={isPending}
+            options={[
+              ...GENDER_OPTIONS.map((opt) => ({ value: opt.value, label: __( opt.label, 'codeclove-school-management' ) })),
+              ...(currentGender === 'other' ? [{ value: 'other', label: __( 'Other (Legacy)', 'codeclove-school-management' ) }] : []),
+            ]}
+          />
+          <FormDatePicker
+            name="admission_date"
+            label={__( 'Admission Date', 'codeclove-school-management' )}
+            required
+            disabled={isPending}
+          />
         </div>
 
         {/* Row 3: Class & Placement Credentials */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-          <FormField label={unitLabelSingular} error={errors.academic_unit_id?.message} required>
-            <Controller
-              name="academic_unit_id"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  value={field.value ? String(field.value) : undefined}
-                  onValueChange={(val) => {
-                    field.onChange(val)
-                    setValue('academic_group_id', '', { shouldDirty: true })
-                  }}
-                  disabled={isPending}
-                  placeholder={sprintf( __( 'Select %s...', 'codeclove-school-management' ), unitLabelSingular.toLowerCase() )}
-                  options={units.map((u) => ({ value: String(u.id), label: u.name }))}
-                />
-              )}
-            />
-          </FormField>
+          <FormSelect
+            name="academic_unit_id"
+            label={unitLabelSingular}
+            required
+            disabled={isPending}
+            placeholder={sprintf( __( 'Select %s...', 'codeclove-school-management' ), unitLabelSingular.toLowerCase() )}
+            options={units.map((u) => ({ value: String(u.id), label: u.name }))}
+            onValueChange={() => {
+              setValue('academic_group_id', '', { shouldDirty: true })
+            }}
+          />
 
-          <FormField label={groupLabelSingular}>
-            <Controller
+          <div>
+            <FormSelect
               name="academic_group_id"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  value={field.value ? String(field.value) : undefined}
-                  onValueChange={field.onChange}
-                  disabled={!activeUnit || isPending}
-                  placeholder={sprintf( __( 'Assign %s...', 'codeclove-school-management' ), groupLabelSingular.toLowerCase() )}
-                  options={sectionOptions}
-                />
-              )}
+              label={groupLabelSingular}
+              disabled={!activeUnit || isPending}
+              placeholder={sprintf( __( 'Assign %s...', 'codeclove-school-management' ), groupLabelSingular.toLowerCase() )}
+              options={sectionOptions}
             />
             {isOverCapacity && (
               <Alert variant="warning" title={__( 'Capacity Alert', 'codeclove-school-management' )} className="mt-1.5 py-1 px-2 text-2xs">
@@ -466,18 +360,23 @@ export default function StudentForm({
                 )}
               </Alert>
             )}
-          </FormField>
+          </div>
 
-          <FormField label={__( 'Graduation Year', 'codeclove-school-management' )} error={errors.graduation_year?.message}>
-            <Input type="number" placeholder={__( 'e.g. 2030', 'codeclove-school-management' )} {...register('graduation_year')} error={!!errors.graduation_year} className="h-9" disabled={isPending} />
-          </FormField>
+          <FormInput
+            name="graduation_year"
+            type="number"
+            label={__( 'Graduation Year', 'codeclove-school-management' )}
+            placeholder={__( 'e.g. 2030', 'codeclove-school-management' )}
+            disabled={isPending}
+            inputClassName="h-9"
+          />
         </div>
 
         {/* Row 4: Admission Identifier Settings & Preview */}
         <div className="pt-2">
           {mode === 'admit' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-3 rounded-lg border border-border bg-bg-light/20 space-y-2">
+              <div className="p-3 rounded-lg border border-border bg-bg-surface space-y-2">
                 <label className="flex items-start gap-2 select-none cursor-pointer">
                   <input
                     type="checkbox"
@@ -499,29 +398,28 @@ export default function StudentForm({
 
                 {!autoGenerateAdm && (
                   <div className="pt-1">
-                    <FormField label={__( 'Manual Admission ID', 'codeclove-school-management' )} error={errors.admission_number?.message} required>
-                      <Input
-                        {...register('admission_number')}
-                        error={!!errors.admission_number}
-                        placeholder={__( 'e.g. ADM-2026-0099', 'codeclove-school-management' )}
-                        className="h-8 font-mono text-xs"
-                        disabled={isPending}
-                      />
-                    </FormField>
+                    <FormInput
+                      name="admission_number"
+                      label={__( 'Manual Admission ID', 'codeclove-school-management' )}
+                      required
+                      placeholder={__( 'e.g. ADM-2026-0099', 'codeclove-school-management' )}
+                      inputClassName="h-8 font-mono text-xs"
+                      disabled={isPending}
+                    />
                   </div>
                 )}
               </div>
 
-              <div className="p-3 rounded-lg border border-border/60 bg-bg-light/20 space-y-2">
+              <div className="p-3 rounded-lg border border-border bg-bg-surface space-y-2">
                 <p className="text-2xs font-bold text-text-muted uppercase tracking-wider">{__( 'Identifiers Preview', 'codeclove-school-management' )}</p>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 rounded bg-bg-surface border border-border/50">
+                  <div className="p-2 rounded bg-bg-elevated border border-border">
                     <p className="text-text-subtle font-medium text-2xs">{sprintf( __( 'Auto %s #', 'codeclove-school-management' ), studentLabelSingular )}</p>
                     <p className="font-mono text-text font-bold text-xs truncate mt-0.5">
                       {formatIdPreview(settings?.identifiers?.student_number, nextStudentNum)}
                     </p>
                   </div>
-                  <div className="p-2 rounded bg-bg-surface border border-border/50">
+                  <div className="p-2 rounded bg-bg-elevated border border-border">
                     <p className="text-text-subtle font-medium text-2xs">{__( 'Admission ID', 'codeclove-school-management' )}</p>
                     <p className="font-mono text-text font-bold text-xs truncate mt-0.5">
                       {autoGenerateAdm
@@ -533,56 +431,35 @@ export default function StudentForm({
               </div>
             </div>
           ) : (
-            <FormField label={__( 'Admission ID', 'codeclove-school-management' )} error={errors.admission_number?.message} required className="max-w-md">
-              <Input
-                {...register('admission_number')}
-                error={!!errors.admission_number}
-                placeholder={__( 'e.g. ADM-2026-0099', 'codeclove-school-management' )}
-                className="h-9 font-mono tracking-wide"
-                disabled={isPending}
-              />
-            </FormField>
+            <FormInput
+              name="admission_number"
+              label={__( 'Admission ID', 'codeclove-school-management' )}
+              required
+              placeholder={__( 'e.g. ADM-2026-0099', 'codeclove-school-management' )}
+              inputClassName="h-9 font-mono tracking-wide"
+              className="max-w-md"
+              disabled={isPending}
+            />
           )}
         </div>
       </Card>
 
       {/* CATEGORIZED CARD 2: Contact & Address Details */}
-      <Card className="overflow-hidden border border-border/60 bg-bg-surface shadow-xs rounded-xl p-5 space-y-4">
+      <Card className="p-5 space-y-4">
         <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/60">
           <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
           <h3 className="text-sm font-bold text-text tracking-tight uppercase">{__( 'Address Details', 'codeclove-school-management' )}</h3>
         </div>
 
-        {/* Street Address */}
-        <FormField label={__( 'Street Address', 'codeclove-school-management' )} error={errors.address?.message}>
-          <Input {...register('address')} placeholder={__( 'e.g. 123 Main St, Apt 4B', 'codeclove-school-management' )} error={!!errors.address} className="h-9" disabled={isPending} />
-        </FormField>
-
-        {/* City, State, Postal/ZIP, Country */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <FormField label={__( 'City', 'codeclove-school-management' )} error={errors.city?.message}>
-            <Input {...register('city')} placeholder={__( 'e.g. Springfield', 'codeclove-school-management' )} error={!!errors.city} className="h-9" disabled={isPending} />
-          </FormField>
-          <FormField label={__( 'State / Province', 'codeclove-school-management' )} error={errors.state?.message}>
-            <Input {...register('state')} placeholder={__( 'e.g. Illinois', 'codeclove-school-management' )} error={!!errors.state} className="h-9" disabled={isPending} />
-          </FormField>
-          <FormField label={__( 'ZIP / Postal Code', 'codeclove-school-management' )} error={errors.postal_code?.message}>
-            <Input
-              {...register('postal_code')}
-              placeholder={__( 'e.g. 62701', 'codeclove-school-management' )}
-              error={!!errors.postal_code}
-              className="h-9"
-              disabled={isPending}
-            />
-          </FormField>
-          <FormField label={__( 'Country', 'codeclove-school-management' )} error={errors.country?.message}>
-            <Input {...register('country')} placeholder={__( 'e.g. United States', 'codeclove-school-management' )} error={!!errors.country} className="h-9" disabled={isPending} />
-          </FormField>
-        </div>
+        <AddressFields
+          register={form.register}
+          errors={form.formState.errors}
+          disabled={isPending}
+        />
       </Card>
 
       {/* CATEGORIZED CARD 3: Course Electives & Subjects */}
-      <Card className="overflow-hidden border border-border/60 bg-bg-surface shadow-xs rounded-xl p-5 space-y-4">
+      <Card className="p-5 space-y-4">
         <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/60">
           <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
           <h3 className="text-sm font-bold text-text tracking-tight uppercase">{__( 'Course Electives & Subjects', 'codeclove-school-management' )}</h3>
@@ -601,8 +478,8 @@ export default function StudentForm({
                   key={sub.subject_id}
                   className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer select-none transition-all ${
                     isChecked
-                      ? 'border-brand bg-brand/10 text-brand'
-                      : 'border-border bg-bg-light/10 text-text hover:border-border-hover'
+                      ? 'border-brand bg-brand-dim text-brand'
+                      : 'border-border bg-bg-surface text-text hover:border-brand-ring hover:bg-hover-bg'
                   } ${isPending ? 'pointer-events-none opacity-60' : ''}`}
                 >
                   <input
@@ -624,7 +501,7 @@ export default function StudentForm({
       </Card>
 
       {/* CATEGORIZED CARD 4: Parents & Guardian Contacts */}
-      <Card className="overflow-hidden border border-border/60 bg-bg-surface shadow-xs rounded-xl p-5 space-y-4">
+      <Card className="p-5 space-y-4">
         <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/60">
           <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0">4</span>
           <h3 className="text-sm font-bold text-text tracking-tight uppercase">{__( 'Family & Guardians', 'codeclove-school-management' )}</h3>
@@ -635,21 +512,44 @@ export default function StudentForm({
           <div className="space-y-2.5">
             <h4 className="text-sm font-semibold text-text">{__( "Father's Details (Optional)", 'codeclove-school-management' )}</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FormField label={__( 'First Name', 'codeclove-school-management' )} error={errors.father_first_name?.message}>
-                <Input {...register('father_first_name')} placeholder={__( 'e.g. John', 'codeclove-school-management' )} error={!!errors.father_first_name} className="h-8 text-xs" disabled={isPending} />
-              </FormField>
-              <FormField label={__( 'Last Name', 'codeclove-school-management' )} error={errors.father_last_name?.message} required={!!watch('father_first_name')}>
-                <Input {...register('father_last_name')} placeholder={__( 'e.g. Smith', 'codeclove-school-management' )} error={!!errors.father_last_name} className="h-8 text-xs" disabled={isPending} />
-              </FormField>
-              <FormField label={__( 'Phone Number', 'codeclove-school-management' )} error={errors.father_phone?.message}>
-                <Input {...register('father_phone')} placeholder={__( 'e.g. +1 (555) 019-8765', 'codeclove-school-management' )} error={!!errors.father_phone} className="h-8 text-xs" disabled={isPending} />
-              </FormField>
-              <FormField label={__( 'Email Address', 'codeclove-school-management' )} error={errors.father_email?.message}>
-                <Input type="email" {...register('father_email')} placeholder={__( 'e.g. john.smith@gmail.com', 'codeclove-school-management' )} error={!!errors.father_email} className="h-8 text-xs" disabled={isPending} />
-              </FormField>
-              <FormField label={__( 'Occupation', 'codeclove-school-management' )} error={errors.father_occupation?.message} className="sm:col-span-2">
-                <Input {...register('father_occupation')} placeholder={__( 'e.g. Software Engineer', 'codeclove-school-management' )} error={!!errors.father_occupation} className="h-8 text-xs" disabled={isPending} />
-              </FormField>
+              <FormInput
+                name="father_first_name"
+                label={__( 'First Name', 'codeclove-school-management' )}
+                placeholder={__( 'e.g. John', 'codeclove-school-management' )}
+                inputClassName="h-8 text-xs"
+                disabled={isPending}
+              />
+              <FormInput
+                name="father_last_name"
+                label={__( 'Last Name', 'codeclove-school-management' )}
+                placeholder={__( 'e.g. Smith', 'codeclove-school-management' )}
+                required={!!watch('father_first_name')}
+                inputClassName="h-8 text-xs"
+                disabled={isPending}
+              />
+              <FormInput
+                name="father_phone"
+                label={__( 'Phone Number', 'codeclove-school-management' )}
+                placeholder={__( 'e.g. +1 (555) 019-8765', 'codeclove-school-management' )}
+                inputClassName="h-8 text-xs"
+                disabled={isPending}
+              />
+              <FormInput
+                name="father_email"
+                type="email"
+                label={__( 'Email Address', 'codeclove-school-management' )}
+                placeholder={__( 'e.g. john.smith@gmail.com', 'codeclove-school-management' )}
+                inputClassName="h-8 text-xs"
+                disabled={isPending}
+              />
+              <FormInput
+                name="father_occupation"
+                label={__( 'Occupation', 'codeclove-school-management' )}
+                placeholder={__( 'e.g. Software Engineer', 'codeclove-school-management' )}
+                className="sm:col-span-2"
+                inputClassName="h-8 text-xs"
+                disabled={isPending}
+              />
             </div>
           </div>
 
@@ -657,21 +557,44 @@ export default function StudentForm({
           <div className="space-y-2.5 pt-2 border-t border-border/40">
             <h4 className="text-sm font-semibold text-text">{__( "Mother's Details (Optional)", 'codeclove-school-management' )}</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FormField label={__( 'First Name', 'codeclove-school-management' )} error={errors.mother_first_name?.message}>
-                <Input {...register('mother_first_name')} placeholder={__( 'e.g. Jane', 'codeclove-school-management' )} error={!!errors.mother_first_name} className="h-8 text-xs" disabled={isPending} />
-              </FormField>
-              <FormField label={__( 'Last Name', 'codeclove-school-management' )} error={errors.mother_last_name?.message} required={!!watch('mother_first_name')}>
-                <Input {...register('mother_last_name')} placeholder={__( 'e.g. Smith', 'codeclove-school-management' )} error={!!errors.mother_last_name} className="h-8 text-xs" disabled={isPending} />
-              </FormField>
-              <FormField label={__( 'Phone Number', 'codeclove-school-management' )} error={errors.mother_phone?.message}>
-                <Input {...register('mother_phone')} placeholder={__( 'e.g. +1 (555) 019-8766', 'codeclove-school-management' )} error={!!errors.mother_phone} className="h-8 text-xs" disabled={isPending} />
-              </FormField>
-              <FormField label={__( 'Email Address', 'codeclove-school-management' )} error={errors.mother_email?.message}>
-                <Input type="email" {...register('mother_email')} placeholder={__( 'e.g. jane.smith@gmail.com', 'codeclove-school-management' )} error={!!errors.mother_email} className="h-8 text-xs" disabled={isPending} />
-              </FormField>
-              <FormField label={__( 'Occupation', 'codeclove-school-management' )} error={errors.mother_occupation?.message} className="sm:col-span-2">
-                <Input {...register('mother_occupation')} placeholder={__( 'e.g. Pediatrist', 'codeclove-school-management' )} error={!!errors.mother_occupation} className="h-8 text-xs" disabled={isPending} />
-              </FormField>
+              <FormInput
+                name="mother_first_name"
+                label={__( 'First Name', 'codeclove-school-management' )}
+                placeholder={__( 'e.g. Jane', 'codeclove-school-management' )}
+                inputClassName="h-8 text-xs"
+                disabled={isPending}
+              />
+              <FormInput
+                name="mother_last_name"
+                label={__( 'Last Name', 'codeclove-school-management' )}
+                placeholder={__( 'e.g. Smith', 'codeclove-school-management' )}
+                required={!!watch('mother_first_name')}
+                inputClassName="h-8 text-xs"
+                disabled={isPending}
+              />
+              <FormInput
+                name="mother_phone"
+                label={__( 'Phone Number', 'codeclove-school-management' )}
+                placeholder={__( 'e.g. +1 (555) 019-8766', 'codeclove-school-management' )}
+                inputClassName="h-8 text-xs"
+                disabled={isPending}
+              />
+              <FormInput
+                name="mother_email"
+                type="email"
+                label={__( 'Email Address', 'codeclove-school-management' )}
+                placeholder={__( 'e.g. jane.smith@gmail.com', 'codeclove-school-management' )}
+                inputClassName="h-8 text-xs"
+                disabled={isPending}
+              />
+              <FormInput
+                name="mother_occupation"
+                label={__( 'Occupation', 'codeclove-school-management' )}
+                placeholder={__( 'e.g. Pediatrist', 'codeclove-school-management' )}
+                className="sm:col-span-2"
+                inputClassName="h-8 text-xs"
+                disabled={isPending}
+              />
             </div>
           </div>
 
@@ -679,7 +602,7 @@ export default function StudentForm({
           <div className="space-y-2.5 pt-2 border-t border-border/40">
             <h4 className="text-sm font-semibold text-text">{sprintf( __( 'Legal %s / Secondary Contact', 'codeclove-school-management' ), guardianLabelSingular )}</h4>
             
-            <div className="p-2 rounded-lg border border-border bg-bg-light/20 flex items-center gap-2 select-none cursor-pointer">
+            <div className="p-2.5 rounded-lg border border-border bg-bg-surface flex items-center gap-2 select-none cursor-pointer">
               <input
                 type="checkbox"
                 id="link_existing_guardian_admit"
@@ -698,61 +621,67 @@ export default function StudentForm({
 
             {linkExisting && (
               <div className="animate-fadeIn">
-                <FormField label={sprintf( __( 'Select %s', 'codeclove-school-management' ), guardianLabelSingular )} error={errors.guardian_id?.message} required>
-                  <Controller
-                    name="guardian_id"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        value={field.value ? String(field.value) : undefined}
-                        onValueChange={handleGuardianChange}
-                        disabled={isPending}
-                        placeholder={sprintf( __( 'Search/Select %s...', 'codeclove-school-management' ), guardianLabelSingular )}
-                        options={guardians?.map((g) => ({
-                          value: String(g.id),
-                          label: `${g.first_name} ${g.last_name} (${g.email || __( 'No Email', 'codeclove-school-management' )})`,
-                        })) ?? []}
-                      />
-                    )}
-                  />
-                </FormField>
+                <FormSelect
+                  name="guardian_id"
+                  label={sprintf( __( 'Select %s', 'codeclove-school-management' ), guardianLabelSingular )}
+                  required
+                  disabled={isPending}
+                  placeholder={sprintf( __( 'Search/Select %s...', 'codeclove-school-management' ), guardianLabelSingular )}
+                  options={guardians?.map((g) => ({
+                    value: String(g.id),
+                    label: `${g.first_name} ${g.last_name} (${g.email || __( 'No Email', 'codeclove-school-management' )})`,
+                  })) ?? []}
+                  onValueChange={handleGuardianChange}
+                />
               </div>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FormField label={sprintf( __( '%s First Name', 'codeclove-school-management' ), guardianLabelSingular )} error={errors.guardian_first_name?.message} required={!linkExisting && !!watch('guardian_last_name')}>
-                <Input {...register('guardian_first_name')} placeholder={__( 'e.g. Robert', 'codeclove-school-management' )} disabled={linkExisting || isPending} error={!!errors.guardian_first_name} className="h-8 text-xs" />
-              </FormField>
-              <FormField label={sprintf( __( '%s Last Name', 'codeclove-school-management' ), guardianLabelSingular )} error={errors.guardian_last_name?.message} required={!linkExisting && !!watch('guardian_first_name')}>
-                <Input {...register('guardian_last_name')} placeholder={__( 'e.g. Miller', 'codeclove-school-management' )} disabled={linkExisting || isPending} error={!!errors.guardian_last_name} className="h-8 text-xs" />
-              </FormField>
-              <FormField label={sprintf( __( '%s Phone', 'codeclove-school-management' ), guardianLabelSingular )} error={errors.guardian_phone?.message}>
-                <Input {...register('guardian_phone')} placeholder={__( 'e.g. +1 (555) 012-3456', 'codeclove-school-management' )} disabled={linkExisting || isPending} error={!!errors.guardian_phone} className="h-8 text-xs" />
-              </FormField>
-              <FormField label={sprintf( __( '%s Email', 'codeclove-school-management' ), guardianLabelSingular )} error={errors.guardian_email?.message}>
-                <Input type="email" {...register('guardian_email')} placeholder={__( 'e.g. robert.miller@gmail.com', 'codeclove-school-management' )} disabled={linkExisting || isPending} error={!!errors.guardian_email} className="h-8 text-xs" />
-              </FormField>
-              <FormField label={sprintf( __( 'Relationship to %s', 'codeclove-school-management' ), studentLabelSingular )} error={errors.relationship?.message} className="sm:col-span-2">
-                <Controller
-                  name="relationship"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value ? String(field.value) : 'guardian'}
-                      onValueChange={field.onChange}
-                      disabled={isPending}
-                      options={[
-                        { value: 'guardian', label: sprintf( __( 'Legal %s', 'codeclove-school-management' ), guardianLabelSingular ) },
-                        { value: 'grandparent', label: __( 'Grandparent', 'codeclove-school-management' ) },
-                        { value: 'uncle_aunt', label: __( 'Uncle / Aunt', 'codeclove-school-management' ) },
-                        { value: 'foster_parent', label: __( 'Foster Parent', 'codeclove-school-management' ) },
-                        { value: 'sibling', label: __( 'Sibling', 'codeclove-school-management' ) },
-                        { value: 'other', label: __( 'Other Relative', 'codeclove-school-management' ) },
-                      ]}
-                    />
-                  )}
-                />
-              </FormField>
+              <FormInput
+                name="guardian_first_name"
+                label={sprintf( __( '%s First Name', 'codeclove-school-management' ), guardianLabelSingular )}
+                placeholder={__( 'e.g. Robert', 'codeclove-school-management' )}
+                disabled={linkExisting || isPending}
+                required={!linkExisting && !!watch('guardian_last_name')}
+                inputClassName="h-8 text-xs"
+              />
+              <FormInput
+                name="guardian_last_name"
+                label={sprintf( __( '%s Last Name', 'codeclove-school-management' ), guardianLabelSingular )}
+                placeholder={__( 'e.g. Miller', 'codeclove-school-management' )}
+                disabled={linkExisting || isPending}
+                required={!linkExisting && !!watch('guardian_first_name')}
+                inputClassName="h-8 text-xs"
+              />
+              <FormInput
+                name="guardian_phone"
+                label={sprintf( __( '%s Phone', 'codeclove-school-management' ), guardianLabelSingular )}
+                placeholder={__( 'e.g. +1 (555) 012-3456', 'codeclove-school-management' )}
+                disabled={linkExisting || isPending}
+                inputClassName="h-8 text-xs"
+              />
+              <FormInput
+                name="guardian_email"
+                type="email"
+                label={sprintf( __( '%s Email', 'codeclove-school-management' ), guardianLabelSingular )}
+                placeholder={__( 'e.g. robert.miller@gmail.com', 'codeclove-school-management' )}
+                disabled={linkExisting || isPending}
+                inputClassName="h-8 text-xs"
+              />
+              <FormSelect
+                name="relationship"
+                label={sprintf( __( 'Relationship to %s', 'codeclove-school-management' ), studentLabelSingular )}
+                disabled={isPending}
+                className="sm:col-span-2"
+                options={[
+                  { value: 'guardian', label: sprintf( __( 'Legal %s', 'codeclove-school-management' ), guardianLabelSingular ) },
+                  { value: 'grandparent', label: __( 'Grandparent', 'codeclove-school-management' ) },
+                  { value: 'uncle_aunt', label: __( 'Uncle / Aunt', 'codeclove-school-management' ) },
+                  { value: 'foster_parent', label: __( 'Foster Parent', 'codeclove-school-management' ) },
+                  { value: 'sibling', label: __( 'Sibling', 'codeclove-school-management' ) },
+                  { value: 'other', label: __( 'Other Relative', 'codeclove-school-management' ) },
+                ]}
+              />
             </div>
           </div>
 
@@ -786,6 +715,6 @@ export default function StudentForm({
           )}
         </Button>
       </div>
-    </form>
+    </Form>
   )
 }

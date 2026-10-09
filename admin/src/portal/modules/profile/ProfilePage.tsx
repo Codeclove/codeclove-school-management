@@ -33,7 +33,7 @@ import {
   Spinner,
 } from '@/components/ui'
 import { StudentIdCardSection } from '@/components/print'
-import { cn } from '@/lib/utils'
+import { SegmentedTabs } from '../../components/SegmentedTabs'
 import { __, _n, sprintf } from '@/lib/i18n'
 
 interface ContactFormData {
@@ -193,8 +193,8 @@ export const ProfilePage: React.FC = () => {
         <div
           className={`flex items-center justify-between p-3.5 rounded-lg border text-xs transition-all ${
             feedback.type === 'success'
-              ? 'bg-success/5 border-success/30 text-success'
-              : 'bg-danger/5 border-danger/30 text-danger'
+              ? 'bg-success-dim border border-success text-success'
+              : 'bg-danger-dim border border-danger text-danger'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -259,19 +259,19 @@ export const ProfilePage: React.FC = () => {
               {/* Identifier Pills */}
               <div className="flex items-center gap-2 pt-1 flex-wrap text-xs">
                 {student?.admission_number && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-bg-base px-2.5 py-1 font-mono font-semibold text-text border border-border text-2xs">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-bg-surface px-2.5 py-1 font-mono font-semibold text-text border border-border text-2xs">
                     <span className="text-text-subtle font-sans text-3xs uppercase tracking-wider">{__( 'Adm', 'codeclove-school-management' )}</span>
                     <span>{student.admission_number}</span>
                   </span>
                 )}
                 {student?.student_number && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-bg-base px-2.5 py-1 font-mono font-semibold text-text border border-border text-2xs">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-bg-surface px-2.5 py-1 font-mono font-semibold text-text border border-border text-2xs">
                     <span className="text-text-subtle font-sans text-3xs uppercase tracking-wider">{__( 'ID', 'codeclove-school-management' )}</span>
                     <span>{student.student_number}</span>
                   </span>
                 )}
                 {student?.admission_date && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-bg-base px-2.5 py-1 text-text-muted border border-border text-2xs">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-bg-surface px-2.5 py-1 text-text-muted border border-border text-2xs">
                     <span className="text-text-subtle text-3xs uppercase tracking-wider">{__( 'Enrolled', 'codeclove-school-management' )}</span>
                     <span>{formatDate(student.admission_date)}</span>
                   </span>
@@ -284,44 +284,15 @@ export const ProfilePage: React.FC = () => {
 
       {/* Profile Subtabs (Details vs Identity Card) — Segmented Capsule Track */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div
-          role="tablist"
-          aria-label={__( 'Profile views', 'codeclove-school-management' )}
-          className="inline-flex items-center bg-bg-base/80 border border-border/80 rounded-xl p-1 gap-1 max-w-full overflow-x-auto shadow-2xs w-fit"
-        >
-          {[
+        <SegmentedTabs<'profile' | 'idcard'>
+          ariaLabel={__( 'Profile views', 'codeclove-school-management' )}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          tabs={[
             { id: 'profile', label: __( 'Profile Details', 'codeclove-school-management' ), icon: User },
             { id: 'idcard', label: __( 'Identity Card', 'codeclove-school-management' ), icon: IdCard },
-          ].map((tab) => {
-            const isActive = activeTab === tab.id
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                id={`tab-${tab.id}`}
-                aria-selected={isActive}
-                aria-controls={`panel-${tab.id}`}
-                onClick={() => setActiveTab(tab.id as 'profile' | 'idcard')}
-                className={cn(
-                  'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none outline-none whitespace-nowrap',
-                  isActive
-                    ? 'bg-bg-surface text-brand font-bold shadow-xs'
-                    : 'text-text-muted hover:text-text hover:bg-bg-surface/50'
-                )}
-              >
-                <Icon
-                  className={cn(
-                    'w-4 h-4 transition-colors',
-                    isActive ? 'text-brand' : 'text-text-subtle'
-                  )}
-                />
-                <span>{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
+          ]}
+        />
 
         <div className="hidden sm:flex items-center gap-2 text-xs text-text-subtle font-medium">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand/50" />
@@ -377,7 +348,7 @@ export const ProfilePage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4 text-xs">
-                  <div className="border-b border-border/60 pb-3 sm:border-b-0 sm:pb-0">
+                  <div className="border-b border-border pb-3 sm:border-b-0 sm:pb-0">
                     <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
                       {__( 'Date of Birth', 'codeclove-school-management' )}
                     </span>
@@ -386,7 +357,7 @@ export const ProfilePage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="border-b border-border/60 pb-3 sm:border-b-0 sm:pb-0">
+                  <div className="border-b border-border pb-3 sm:border-b-0 sm:pb-0">
                     <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
                       {__( 'Gender', 'codeclove-school-management' )}
                     </span>
@@ -567,7 +538,7 @@ export const ProfilePage: React.FC = () => {
                 </div>
 
                 {guardians.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border bg-bg-base/50 p-6 text-center space-y-1">
+                  <div className="rounded-lg border border-dashed border-border bg-bg-surface p-6 text-center space-y-1">
                     <User className="mx-auto h-6 w-6 text-text-subtle" />
                     <p className="text-xs font-semibold text-text">{__( 'No guardian records linked', 'codeclove-school-management' )}</p>
                     <p className="text-3xs text-text-subtle max-w-xs mx-auto">
@@ -585,11 +556,11 @@ export const ProfilePage: React.FC = () => {
                       return (
                         <div
                           key={guardian.id}
-                          className="rounded-lg border border-border bg-bg-base/40 p-4 space-y-3 hover:bg-bg-surface hover:border-border-strong hover:shadow-card transition-all"
+                          className="rounded-lg border border-border bg-bg-surface p-4 space-y-3 hover:border-border-strong hover:shadow-card transition-all"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bg-surface text-text text-xs font-bold border border-border">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bg-elevated text-text text-xs font-bold border border-border">
                                 {getInitials(gFullName)}
                               </div>
                               <div className="min-w-0">
@@ -618,7 +589,7 @@ export const ProfilePage: React.FC = () => {
 
                           {/* Direct action buttons */}
                           {(guardian.phone || guardian.email) && (
-                            <div className="space-y-1.5 pt-2 border-t border-border/60 text-xs">
+                            <div className="space-y-1.5 pt-2 border-t border-border text-xs">
                               {guardian.phone && (
                                 <a
                                   href={`tel:${guardian.phone}`}

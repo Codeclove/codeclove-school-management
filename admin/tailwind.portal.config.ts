@@ -15,7 +15,6 @@ const config: Config = {
   content: [
     './src/portal/**/*.{ts,tsx}',
     './src/components/**/*.{ts,tsx}',
-    './src/modules/**/*.{ts,tsx}',
   ],
 
   corePlugins: {
@@ -32,7 +31,9 @@ const config: Config = {
           surface:  'var(--bg-surface)',
           elevated: 'var(--bg-elevated)',
           overlay:  'var(--bg-overlay)',
+          subtle:   'var(--bg-subtle)',
         },
+        'hover-bg': 'var(--hover-bg)',
         border: {
           DEFAULT: 'var(--border)',
           subtle:  'var(--border-subtle)',
@@ -140,6 +141,19 @@ const config: Config = {
         'scale-in':   'scale-in 150ms ease-out',
         shimmer:      'shimmer 1.5s infinite linear',
         'slide-left': 'slide-left 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+      },
+
+      // ── Z-Index Token Hierarchy (WordPress Chrome & Overlay Aware) ─────────
+      zIndex: {
+        sticky:           '20',
+        banner:           '40',
+        drawer:           '100000',
+        'modal-backdrop': '100010',
+        modal:            '100020',
+        popover:          '100050',
+        dropdown:         '100050',
+        tooltip:          '100060',
+        toast:            '100070',
       },
     },
   },

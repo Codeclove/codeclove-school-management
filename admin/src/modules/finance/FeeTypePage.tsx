@@ -12,16 +12,19 @@ import {
   useClassRates,
   useUpsertClassRate,
   useDeleteClassRate,
+  type ClassRate,
 } from '@/api/finance'
 import { useUnits } from '@/api/academics'
 import { useSettings } from '@/api/settings'
 import { useToast } from '@/lib/toast'
 import { useLabels } from '@/lib/labels'
+import { onFormError } from '@/lib/form-errors'
 import {
   Button,
   PageHeader,
   Card,
   CardContent,
+  ConfirmDialog,
   FormField,
   Input,
   Select,
@@ -111,7 +114,21 @@ export default function FeeTypePage() {
   const allUnits = unitsData?.data || []
   const [newRateUnit, setNewRateUnit] = useState('')
   const [newRateAmount, setNewRateAmount] = useState('')
+  const [rateToDelete, setRateToDelete] = useState<ClassRate | null>(null)
 
+  const handleConfirmDeleteRate = () => {
+    if (!rateToDelete) return
+    deleteRateMutation.mutate(rateToDelete.academic_unit_id, {
+      onSuccess: () => {
+        toast.success(sprintf(__('Class rate override for %s deleted.', 'codeclove-school-management'), rateToDelete.unit_name))
+        setRateToDelete(null)
+      },
+      onError: (err: unknown) => {
+        const message = err instanceof Error ? err.message : ''
+        toast.error(message || __('Failed to delete class rate override.', 'codeclove-school-management'))
+      },
+    })
+  }
   const handleAddRate = () => {
     const unitId = Number(newRateUnit)
     const amount = parseFloat(newRateAmount || '0')
@@ -222,14 +239,14 @@ export default function FeeTypePage() {
             >
               {__('Cancel', 'codeclove-school-management')}
             </Button>
-            <Button size="sm" onClick={handleSubmit(onSubmit)} disabled={isPending}>
+            <Button size="sm" onClick={handleSubmit(onSubmit, onFormError)} disabled={isPending}>
               {isPending ? __('Saving…', 'codeclove-school-management') : isEdit ? __('Save Changes', 'codeclove-school-management') : sprintf(__('Create %s', 'codeclove-school-management'), feeTypeLabel)}
             </Button>
           </div>
         }
       />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <form onSubmit={handleSubmit(onSubmit, onFormError)} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Main Column ─────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-6">
 
@@ -267,6 +284,7 @@ export default function FeeTypePage() {
                       min="0"
                       placeholder="0.00"
                       {...register('default_amount')}
+                      className="font-mono text-sm"
                     />
                   </FormField>
                 </div>
@@ -337,13 +355,13 @@ export default function FeeTypePage() {
                     {classRates.map(r => (
                       <div key={r.academic_unit_id} className="flex items-center justify-between gap-2 text-xs py-1 border-b border-border/30 last:border-0">
                         <Badge variant="default" className="truncate max-w-[140px]">{r.unit_name}</Badge>
-                        <span className="font-semibold text-text flex-1 text-right mr-2">
+                        <span className="font-semibold text-text flex-1 text-right mr-2 tabular-nums">
                           {baseCurrency} {(r.amount_minor / 100).toFixed(2)}
                         </span>
                         <Button
                           type="button"
                           variant="danger" size="icon"
-                          onClick={() => deleteRateMutation.mutate(r.academic_unit_id)}
+                          onClick={() => setRateToDelete(r)}
                           disabled={deleteRateMutation.isPending}
                         >
                           <Trash2 className="h-3 w-3" />
@@ -374,6 +392,7 @@ export default function FeeTypePage() {
                         placeholder={sprintf(__('Amount (%s)', 'codeclove-school-management'), baseCurrency)}
                         value={newRateAmount}
                         onChange={e => setNewRateAmount(e.target.value)}
+                        className="font-mono text-sm"
                       />
                     </div>
                     <Button
@@ -432,7 +451,7 @@ export default function FeeTypePage() {
                 </div>
                 <div className="flex justify-between">
                   <span>{__('Default Amount', 'codeclove-school-management')}</span>
-                  <span className="font-semibold text-text">
+                  <span className="font-semibold text-text tabular-nums">
                     {baseCurrency} {(existing.default_amount_minor / 100).toFixed(2)}
                   </span>
                 </div>
@@ -445,6 +464,25 @@ export default function FeeTypePage() {
           )}
         </div>
       </form>
+      <ConfirmDialog
+        open={Boolean(rateToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setRateToDelete(null)
+        }}
+        onConfirm={handleConfirmDeleteRate}
+        title={__('Delete Class Rate Override', 'codeclove-school-management')}
+        description={
+          rateToDelete
+            ? sprintf(
+                __('Are you sure you want to remove the class fee rate override for %s? Students in this class will use the default rate instead.', 'codeclove-school-management'),
+                rateToDelete.unit_name
+              )
+            : undefined
+        }
+        variant="danger"
+        confirmText={__('Delete Override', 'codeclove-school-management')}
+        isLoading={deleteRateMutation.isPending}
+      />
     </div>
   )
 }

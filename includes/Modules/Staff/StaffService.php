@@ -712,7 +712,8 @@ final class StaffService {
 		$item['specialization']        = $qual['specialization'] ?? '';
 		unset( $item['qualifications_json'] );
 
-		$item['metadata'] = ! empty( $item['metadata_json'] ) ? ( json_decode( $item['metadata_json'], true ) ?: [] ) : [];
+		$decoded_meta = ! empty( $item['metadata_json'] ) ? json_decode( $item['metadata_json'], true ) : null;
+		$item['metadata'] = ( is_array( $decoded_meta ) && ! empty( $decoded_meta ) ) ? $decoded_meta : (object) [];
 		unset( $item['metadata_json'] );
 
 		$address = [

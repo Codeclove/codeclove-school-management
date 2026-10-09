@@ -1,64 +1,82 @@
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
-const badgeVariants = cva(
-  'inline-flex items-center rounded-xl font-medium leading-none border border-transparent capitalize whitespace-nowrap shrink-0',
+const badgeVariantStyles = {
+  default:              'bg-bg-surface text-text-muted border-border',
+  secondary:            'bg-hover-bg text-text-muted border-border',
+  brand:                'bg-brand-dim text-brand border-brand-border',
+  success:              'bg-success-dim text-success border-success-border',
+  warning:              'bg-warning-dim text-warning border-warning-border',
+  danger:               'bg-danger-dim text-danger border-danger-border',
+  info:                 'bg-info-dim text-info border-info-border',
+
+  // Workflow & System status variants
+  inquiry:              'bg-bg-surface text-text-muted border-border',
+  submitted:            'bg-info-dim text-info border-info-border',
+  under_review:         'bg-brand-dim text-brand border-brand-border',
+  more_info_needed:     'bg-warning-dim text-warning border-warning-border',
+  interview_scheduled:  'bg-brand-dim text-brand border-brand-border',
+  accepted:             'bg-success-dim text-success border-success-border',
+  waitlisted:           'bg-warning-dim text-warning border-warning-border',
+  rejected:             'bg-danger-dim text-danger border-danger-border',
+  admitted:             'bg-success-dim text-success border-success-border',
+  withdrawn:            'bg-bg-surface text-text-subtle border-border',
+  hired:                'bg-success-dim text-success border-success-border',
+  offer_sent:           'bg-brand-dim text-brand border-brand-border',
+  active:               'bg-success-dim text-success border-success-border',
+  inactive:             'bg-bg-surface text-text-muted border-border',
+  archived:             'bg-bg-surface text-text-muted border-border',
+  draft:                'bg-bg-surface text-text-muted border-border',
+  current:              'bg-success-dim text-success border-success-border',
+  future:               'bg-info-dim text-info border-info-border',
+
+  // Core system status variants
+  suspended:            'bg-danger-dim text-danger border-danger-border',
+  graduated:            'bg-brand-dim text-brand border-brand-border',
+  upcoming:             'bg-info-dim text-info border-info-border',
+  completed:            'bg-success-dim text-success border-success-border',
+  issued:               'bg-brand-dim text-brand border-brand-border',
+  void:                 'bg-bg-surface text-text-muted border-border',
+  cancelled:            'bg-bg-surface text-text-muted border-border',
+  paid:                 'bg-success-dim text-success border-success-border',
+  partially_paid:       'bg-warning-dim text-warning border-warning-border',
+  partial:              'bg-warning-dim text-warning border-warning-border',
+  overdue:              'bg-danger-dim text-danger border-danger-border',
+
+  // Attendance status variants
+  present:              'bg-success-dim text-success border-success-border',
+  absent:               'bg-danger-dim text-danger border-danger-border',
+  late:                 'bg-warning-dim text-warning border-warning-border',
+  half_day:             'bg-warning-dim text-warning border-warning-border',
+  on_leave:             'bg-warning-dim text-warning border-warning-border',
+  excused:              'bg-info-dim text-info border-info-border',
+  holiday:              'bg-bg-surface text-text-muted border-border',
+
+  // Payment status variants
+  pending:              'bg-warning-dim text-warning border-warning-border',
+  failed:               'bg-danger-dim text-danger border-danger-border',
+  refunded:             'bg-info-dim text-info border-info-border',
+} as const
+
+export const VARIANT_ALIASES: Record<string, keyof typeof badgeVariantStyles> = {
+  partial: 'partially_paid',
+}
+
+export type BadgeVariantKey = keyof typeof badgeVariantStyles
+export type BadgeVariant = BadgeVariantKey | (string & {})
+
+export function resolveBadgeVariant(variant?: string | null): BadgeVariantKey {
+  if (!variant) return 'default'
+  const normalized = variant.toLowerCase().trim()
+  const aliased = VARIANT_ALIASES[normalized] || normalized
+  return (aliased in badgeVariantStyles ? (aliased as BadgeVariantKey) : 'default')
+}
+
+export const badgeVariants = cva(
+  'inline-flex items-center rounded-xl font-semibold leading-none border border-transparent capitalize whitespace-nowrap shrink-0',
   {
     variants: {
-      variant: {
-        default:  'bg-text-muted/5 text-text-muted border-text-muted/20',
-        brand:    'bg-brand-dim text-brand border-brand/20',
-        success:  'bg-success/5 text-success border-success/30',
-        warning:  'bg-warning/5 text-warning border-warning/20',
-        danger:   'bg-danger/5 text-danger border-danger/20',
-        info:     'bg-info/5 text-info border-info/20',
-
-        // Workflow & System status variants
-        inquiry:              'bg-text-muted/5 text-text-muted border-text-muted/20',
-        submitted:            'bg-info/5 text-info border-info/20',
-        under_review:         'bg-brand-dim text-brand border-brand/20',
-        more_info_needed:     'bg-warning/5 text-warning border-warning/20',
-        interview_scheduled:  'bg-status-interview_scheduled/10 text-status-interview_scheduled border-status-interview_scheduled/20',
-        accepted:             'bg-success/5 text-success border-success/30',
-        waitlisted:           'bg-status-waitlisted/10 text-status-waitlisted border-status-waitlisted/20',
-        rejected:             'bg-danger/5 text-danger border-danger/20',
-        admitted:             'bg-success/5 text-success border-success/30',
-        withdrawn:            'bg-text-muted/5 text-text-subtle border-text-muted/20',
-        hired:                'bg-success/5 text-success border-success/30',
-        offer_sent:           'bg-status-offer_sent/10 text-status-offer_sent border-status-offer_sent/20',
-        active:               'bg-success/5 text-success border-success/30',
-        inactive:             'bg-text-muted/5 text-text-muted border-text-muted/20',
-        archived:             'bg-text-muted/5 text-text-subtle border-text-muted/20',
-        draft:                'bg-text-muted/5 text-text-muted border-text-muted/20',
-        current:              'bg-success/5 text-success border-success/30',
-        future:               'bg-info/5 text-info border-info/20',
-
-        // Core system status variants
-        suspended:            'bg-danger/5 text-danger border-danger/20',
-        graduated:            'bg-brand-dim text-brand border-brand/20',
-        upcoming:             'bg-info/5 text-info border-info/20',
-        completed:            'bg-success/5 text-success border-success/30',
-        issued:               'bg-brand-dim text-brand border-brand/20',
-        void:                 'bg-text-muted/5 text-text-muted border-text-muted/20',
-        cancelled:            'bg-text-muted/5 text-text-muted border-text-muted/20',
-        paid:                 'bg-success/5 text-success border-success/30',
-        partially_paid:       'bg-warning/5 text-warning border-warning/20',
-        overdue:              'bg-danger/5 text-danger border-danger/20',
-
-        // Attendance status variants
-        present:              'bg-success/5 text-success border-success/30',
-        absent:               'bg-danger/5 text-danger border-danger/20',
-        late:                 'bg-warning/5 text-warning border-warning/20',
-        half_day:             'bg-warning/5 text-warning border-warning/20',
-        on_leave:             'bg-warning/5 text-warning border-warning/20',
-        excused:              'bg-info/5 text-info border-info/20',
-        holiday:              'bg-text-muted/5 text-text-muted border-text-muted/20',
-
-        // Payment status variants
-        pending:              'bg-warning/5 text-warning border-warning/20',
-        failed:               'bg-danger/5 text-danger border-danger/20',
-        refunded:             'bg-info/5 text-info border-info/20',
-      },
+      variant: badgeVariantStyles,
       size: {
         sm:      'text-xs px-2 py-0.5 gap-1',
         default: 'text-xs px-2.5 py-0.5 gap-1.5',
@@ -74,7 +92,8 @@ const badgeVariants = cva(
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof badgeVariants> {
+    Omit<VariantProps<typeof badgeVariants>, 'variant'> {
+  variant?: BadgeVariant | null
   dot?: boolean
 }
 
@@ -89,8 +108,9 @@ const formatChildren = (node: React.ReactNode): React.ReactNode => {
 }
 
 export function Badge({ className, variant, size, dot = false, children, ...props }: BadgeProps) {
+  const resolvedVariant = variant ? resolveBadgeVariant(variant) : 'default'
   return (
-    <span className={cn(badgeVariants({ variant, size }), className)} {...props}>
+    <span className={cn(badgeVariants({ variant: resolvedVariant, size }), className)} {...props}>
       {dot && (
         <span
           className="w-1.5 h-1.5 rounded-full bg-current opacity-80 flex-shrink-0"

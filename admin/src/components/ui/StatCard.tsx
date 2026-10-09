@@ -15,10 +15,10 @@ import { Skeleton } from './Skeleton'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface StatCardProps {
+export interface StatCardProps {
   label: string
-  value: string | number
-  icon: LucideIcon
+  value: ReactNode
+  icon?: LucideIcon
   iconColor?: string
   iconBg?: string
   /** Percentage or absolute delta value (e.g. "+12%" or "3") */
@@ -37,7 +37,12 @@ interface StatCardProps {
   clickable?: boolean
   onClick?: () => void
   className?: string
+  valueClassName?: string
   compact?: boolean
+  /** Optional custom content rendered below value/label (e.g. progress bar) */
+  children?: ReactNode
+  /** Optional footer content pinned to the bottom of the card */
+  footer?: ReactNode
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -58,6 +63,9 @@ export function StatCard({
   compact = false,
   subtext,
   badge,
+  valueClassName,
+  children,
+  footer,
 }: StatCardProps) {
   if (loading) {
     if (compact) {
@@ -108,19 +116,27 @@ export function StatCard({
           className
         )}
       >
-        <div
-          className={cn(
-            'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-            iconBg
-          )}
-        >
-          <Icon size={16} className={iconColor} />
-        </div>
+        {Icon && (
+          <div
+            className={cn(
+              'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+              iconBg
+            )}
+          >
+            <Icon size={16} className={iconColor} />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
-          <p className="text-xl font-bold text-text tabular-nums leading-none">
+          <p
+            className={cn(
+              'text-xl font-bold text-text tabular-nums leading-none',
+              valueClassName
+            )}
+          >
             {value}
           </p>
           <p className="text-xs text-text-muted mt-1 leading-none">{label}</p>
+          {children}
         </div>
       </div>
     )
@@ -130,7 +146,7 @@ export function StatCard({
     <div
       onClick={onClick}
       className={cn(
-        'rounded-2xl bg-bg-elevated border border-border p-5',
+        'rounded-2xl bg-bg-elevated border border-border p-5 flex flex-col',
         'transition-all duration-150',
         clickable
           ? 'cursor-pointer hover:border-border-strong hover:-translate-y-[1px] hover:shadow-card'
@@ -139,35 +155,52 @@ export function StatCard({
       )}
     >
       {/* ── Top row: icon + delta ────────────────────────────────── */}
-      <div className="flex items-start justify-between mb-4">
-        <div
-          className={cn(
-            'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
-            iconBg
+      {(Icon || badge || delta !== undefined) && (
+        <div className="flex items-start justify-between mb-4">
+          {Icon ? (
+            <div
+              className={cn(
+                'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
+                iconBg
+              )}
+            >
+              <Icon size={17} className={iconColor} />
+            </div>
+          ) : (
+            <div />
           )}
-        >
-          <Icon size={17} className={iconColor} />
-        </div>
 
-        {badge ? (
-          badge
-        ) : delta !== undefined ? (
-          <DeltaBadge delta={delta} positive={deltaPositive} />
-        ) : null}
-      </div>
+          {badge ? (
+            badge
+          ) : delta !== undefined ? (
+            <DeltaBadge delta={delta} positive={deltaPositive} />
+          ) : null}
+        </div>
+      )}
+
       {/* ── Value ────────────────────────────────────────────────── */}
-      <p className="text-3xl font-bold text-text tabular-nums tracking-tight leading-none">
+      <p
+        className={cn(
+          'text-3xl font-bold text-text tabular-nums tracking-tight leading-none',
+          valueClassName
+        )}
+      >
         {value}
       </p>
 
       {/* ── Label ────────────────────────────────────────────────── */}
       <p className="text-sm font-medium text-text-muted mt-2">{label}</p>
 
+      {/* ── Optional children content (e.g. progress bar) ────────── */}
+      {children && <div className="mt-3">{children}</div>}
+
       {/* ── Delta context label or subtext ────────────────────────── */}
       {(subtext || deltaLabel) && (
-        <p className="text-xs text-text-subtle mt-1">{subtext || deltaLabel}</p>
+        <p className="text-xs text-text-subtle mt-1.5">{subtext || deltaLabel}</p>
       )}
 
+      {/* ── Optional footer content (e.g. actions/drilldown) ─────── */}
+      {footer && <div className="mt-auto pt-3">{footer}</div>}
     </div>
   )
 }
@@ -190,10 +223,10 @@ function DeltaBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded',
-        isPositive && 'text-success bg-success/10',
-        isNegative && 'text-danger bg-danger/10',
-        isNeutral  && 'text-text-muted bg-bg-overlay'
+        'inline-flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded border',
+        isPositive && 'text-success bg-success-dim border-success-border',
+        isNegative && 'text-danger bg-danger-dim border-danger-border',
+        isNeutral  && 'text-text-muted bg-bg-surface border-border'
       )}
     >
       {TrendIcon && <TrendIcon size={11} />}

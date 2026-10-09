@@ -102,7 +102,7 @@ export function EducationTab({
         cols={1}
       >
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 bg-bg-subtle/40 p-3.5 rounded-xl border border-border/60">
+          <div className="flex items-center justify-between gap-3 bg-bg-surface p-3.5 rounded-xl border border-border">
             <div className="flex items-center gap-2.5">
               <Sparkles size={16} className="text-brand" />
               <div>
@@ -151,18 +151,18 @@ export function EducationTab({
                       ? 'border-brand bg-brand-dim/15 shadow-md shadow-brand/10'
                       : isActive
                       ? 'border-emerald-500/50 bg-emerald-500/5'
-                      : 'border-border/60 bg-bg-surface hover:border-border-strong hover:bg-bg-subtle/30'
+                      : 'border-border bg-bg-surface hover:border-border-strong hover:bg-hover-bg'
                   }`}
                 >
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-2xl leading-none">{meta.flag}</span>
                       {isActive ? (
-                        <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                           {__( 'Active', 'codeclove-school-management' )}
                         </span>
                       ) : isSelected ? (
-                        <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-brand text-white shadow-xs">
+                        <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-brand text-white dark:text-text-inverted shadow-xs">
                           {__( 'Selected', 'codeclove-school-management' )}
                         </span>
                       ) : null}
@@ -173,7 +173,7 @@ export function EducationTab({
                     </div>
                   </div>
 
-                  <div className="pt-3 mt-3 border-t border-border/40 flex items-center justify-between text-3xs text-text-muted">
+                  <div className="pt-3 mt-3 border-t border-border-subtle flex items-center justify-between text-3xs text-text-muted">
                     <span className="font-mono">{meta.features}</span>
                   </div>
                 </div>
@@ -183,7 +183,7 @@ export function EducationTab({
 
           {/* Action Footer */}
           {selectedPreset && (
-            <div className="flex items-center justify-between gap-3 p-3.5 bg-brand-dim/20 rounded-xl border border-brand/30 animate-slide-down">
+            <div className="flex items-center justify-between gap-3 p-3.5 bg-brand-dim rounded-xl border border-brand/20 animate-slide-down">
               <div className="flex items-center gap-2">
                 <Check size={16} className="text-brand" />
                 <span className="text-xs font-semibold text-brand">
@@ -277,7 +277,7 @@ export function EducationTab({
           {termKeys.map(({ key, label }) => (
             <div
               key={key}
-              className="border border-border rounded-xl p-3.5 space-y-2 bg-bg-surface/50 shadow-xs hover:border-border-strong transition-colors"
+              className="border border-border rounded-xl p-3.5 space-y-2 bg-bg-surface shadow-xs hover:border-border-strong transition-colors"
             >
               <p className="text-xs font-semibold text-text-muted uppercase tracking-wide">
                 {label}

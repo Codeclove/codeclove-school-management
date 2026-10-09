@@ -20,6 +20,7 @@ import {
   BookOpen,
   BookMarked,
   Layers,
+  Clock,
   Users,
   ClipboardList,
   CalendarCheck,
@@ -53,7 +54,7 @@ import { IS_MAC } from './Header'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface NavItem  { label: string; to: string; icon: LucideIcon; permission?: PermissionKey; end?: boolean; pro?: boolean }
+interface NavItem  { label: string; to: string; icon: LucideIcon; permission?: PermissionKey; end?: boolean; pro?: boolean; proBadge?: boolean }
 interface NavGroup { id: string; label: string; icon: LucideIcon; items: NavItem[] }
 
 import { useFeedbackModal } from '@/lib/feedback-context'
@@ -131,6 +132,13 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
         { label: getLabel('academic_unit',  true, __( 'Classes', 'codeclove-school-management' )),                to: ROUTES.UNITS,     icon: BookOpen,     permission: PERMISSIONS.UNITS_VIEW },
         { label: getLabel('academic_group', true, __( 'Sections', 'codeclove-school-management' )),               to: ROUTES.GROUPS,    icon: Layers,        permission: PERMISSIONS.GROUPS_VIEW },
         { label: getLabel('subject',        true, __( 'Subjects', 'codeclove-school-management' )),               to: ROUTES.SUBJECTS,  icon: BookMarked,    permission: PERMISSIONS.SUBJECTS_VIEW },
+        {
+          label: __( 'Timetable', 'codeclove-school-management' ),
+          to: isPro ? ROUTES.TIMETABLE : '/pro-upgrade?feature=timetable',
+          icon: Clock,
+          permission: isPro ? PERMISSIONS.TIMETABLE_VIEW : undefined,
+          proBadge: !isPro,
+        },
       ],
     },
     {
@@ -157,7 +165,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
         { label: getLabel('fee_type', true, __( 'Fee Types', 'codeclove-school-management' )),         to: ROUTES.FEE_TYPES,         icon: BadgeDollarSign, permission: PERMISSIONS.FEE_TYPES_VIEW },
         { label: getLabel('invoice',  true, __( 'Invoices', 'codeclove-school-management' )),          to: ROUTES.INVOICES,          icon: FileText,        permission: PERMISSIONS.INVOICES_VIEW },
         { label: getLabel('payment',  true, __( 'Payments', 'codeclove-school-management' )),          to: ROUTES.PAYMENTS,          icon: CreditCard,      permission: PERMISSIONS.PAYMENTS_VIEW },
-        { label: __( 'Defaulters Report', 'codeclove-school-management' ),                             to: ROUTES.DEFAULTERS_REPORT, icon: AlertTriangle,   permission: PERMISSIONS.FINANCE_VIEW, pro: true },
+        { label: __( 'Defaulters', 'codeclove-school-management' ),                                    to: ROUTES.DEFAULTERS_REPORT, icon: AlertTriangle,   permission: PERMISSIONS.FINANCE_VIEW, proBadge: !isPro },
       ],
     },
   ]
@@ -539,6 +547,7 @@ interface SidebarLinkProps {
   isChild?: boolean
   end?: boolean
   sidebarCollapsed?: boolean
+  proBadge?: boolean
 }
 
 function SidebarLink({
@@ -548,6 +557,7 @@ function SidebarLink({
   isChild = false,
   end,
   sidebarCollapsed = false,
+  proBadge = false,
 }: SidebarLinkProps) {
   const link = (
     <NavLink
@@ -572,8 +582,13 @@ function SidebarLink({
             className={cn('flex-shrink-0 transition-colors', isActive ? 'text-brand' : 'text-text-subtle')}
           />
           {!sidebarCollapsed && (
-            <span className="text-sm leading-snug sidebar-link-text truncate min-w-0">
+            <span className="text-sm leading-snug sidebar-link-text truncate min-w-0" title={label}>
               {label}
+            </span>
+          )}
+          {!sidebarCollapsed && proBadge && (
+            <span className="ms-auto flex-shrink-0 px-1.5 py-0.5 rounded text-[9.5px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/25">
+              PRO
             </span>
           )}
         </>
@@ -583,7 +598,7 @@ function SidebarLink({
 
   if (sidebarCollapsed) {
     return (
-      <Tooltip content={label} side={isRtl() ? 'left' : 'right'}>
+      <Tooltip content={proBadge ? `${label} (PRO)` : label} side={isRtl() ? 'left' : 'right'}>
         <div className="w-full flex justify-center py-0.5">
           {link}
         </div>

@@ -53,6 +53,41 @@ export interface CodeCloveConfigType {
   i18nUrl: string | null
   /** Currently authenticated WordPress user */
   currentUser: CodeCloveCurrentUser
+  /** Milestone review prompt status */
+  reviewPrompt?: {
+    shouldShow?: boolean
+    should_show?: boolean
+    triggerReason?: string
+    trigger_reason?: string
+    studentsCount?: number
+    students_count?: number
+    daysPassed?: number
+    days_passed?: number
+    reviewUrl?: string
+    review_url?: string
+    supportUrl?: string
+    support_url?: string
+  }
+  /** Demo data status */
+  demoData?: {
+    imported?: boolean
+    prompt_dismissed?: boolean
+    student_count?: number
+    session_count?: number
+    should_show_prompt?: boolean
+    has_demo_data?: boolean
+  }
+  /** WordPress core environment settings */
+  wpSettings?: {
+    timezone: string
+    currentTime?: string
+    locale: string
+    localeName?: string
+    startOfWeek: number
+    dateFormat: string
+    timeFormat: string
+    generalSettingsUrl: string
+  }
 }
 
 export interface CodeClovePortalConfigType {

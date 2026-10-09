@@ -130,7 +130,7 @@ export function ShortcodesTab(_: { settings: CodeCloveSettings }) {
               icon={Icon}
             />
 
-            <div className="divide-y divide-border/70 pt-1">
+            <div className="divide-y divide-border pt-1">
               {section.items.map((item) => {
                 const isCopied = copiedCode === item.code
                 return (
@@ -150,7 +150,7 @@ export function ShortcodesTab(_: { settings: CodeCloveSettings }) {
                     {/* Compound Code Pill + Copy Button */}
                     <div className="flex items-center shrink-0 self-start md:self-auto">
                       <div className="flex items-center rounded border border-border bg-bg-surface overflow-hidden shadow-2xs hover:border-border-strong transition-colors focus-within:ring-1 focus-within:ring-brand-ring focus-within:border-brand">
-                        <code className="px-3 py-1 font-mono text-xs font-semibold text-text bg-bg-base/60 select-all border-r border-border">
+                        <code className="px-3 py-1 font-mono text-xs font-semibold text-text bg-bg-surface select-all border-r border-border">
                           {item.code}
                         </code>
 

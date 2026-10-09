@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use CodeClove\Api\RestApi;
 use CodeClove\Database\Migrations;
 use CodeClove\Database\Seeders\RolesSeeder;
-
+use CodeClove\Modules\Settings\ReviewPromptService;
 /**
  * Class Plugin
  */
@@ -87,6 +87,7 @@ final class Plugin {
 		if ( ! wp_next_scheduled( 'codeclove_update_overdue_invoices' ) ) {
 			wp_schedule_event( time(), 'daily', 'codeclove_update_overdue_invoices' );
 		}
+		ReviewPromptService::ensure_installed_at();
 
 		do_action( 'codeclove_activate' );
 
@@ -111,6 +112,7 @@ final class Plugin {
 		add_action( 'init', [ $this, 'init' ] );
 		add_action( 'admin_menu', [ $this, 'register_admin_menu' ] );
 		add_action( 'admin_notices', static fn() => do_action( 'codeclove_admin_notices' ) );
+		add_action( 'admin_notices', [ $this, 'maybe_render_review_notice' ] );
 
 		// Register the REST API namespace and all routes.
 		add_action( 'rest_api_init', [ $rest, 'register_routes' ] );
@@ -142,6 +144,17 @@ final class Plugin {
 
 		// Restrict student and guardian portal accounts from accessing wp-admin.
 		add_action( 'admin_init', [ $this, 'restrict_admin_access_for_portal_users' ] );
+
+		// Add Settings and Upgrade / License links on plugins.php.
+		$basename = defined( 'CODECLOVE_BASENAME' ) ? CODECLOVE_BASENAME : plugin_basename( defined( 'CODECLOVE_FILE' ) ? CODECLOVE_FILE : __DIR__ . '/../../codeclove-school-management.php' );
+		add_filter( 'plugin_action_links_' . $basename, [ $this, 'add_plugin_action_links' ] );
+		add_filter( 'network_admin_plugin_action_links_' . $basename, [ $this, 'add_plugin_action_links' ] );
+
+		// Voluntary deactivation feedback survey on plugins.php (Free edition only).
+		$is_pro = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
+		if ( ! $is_pro ) {
+			\CodeClove\Modules\Settings\DeactivationFeedback::init();
+		}
 	}
 
 	// ─── Admin Menu ──────────────────────────────────────────────────────────
@@ -188,6 +201,35 @@ final class Plugin {
 	}
 
 	/**
+	 * Adds Settings and Upgrade / License links to the plugin action links on plugins.php.
+	 *
+	 * @param array<string, string> $actions Array of plugin action links.
+	 * @return array<string, string> Modified plugin action links.
+	 */
+	public function add_plugin_action_links( array $actions ): array {
+		$is_pro = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
+
+		$custom_actions = [
+			'settings' => sprintf(
+				'<a href="%s">%s</a>',
+				esc_url( admin_url( 'admin.php?page=codeclove-school-management#/settings' ) ),
+				esc_html__( 'Settings', 'codeclove-school-management' )
+			),
+		];
+
+		if ( ! $is_pro ) {
+			$custom_actions['upgrade'] = sprintf(
+				'<a href="%s" style="color:#d97706;font-weight:600;">%s</a>',
+				esc_url( admin_url( 'admin.php?page=codeclove-school-management#/pro-upgrade' ) ),
+				esc_html__( 'Upgrade to Pro ↗', 'codeclove-school-management' )
+			);
+		}
+
+		$merged = array_merge( $custom_actions, $actions );
+
+		return (array) apply_filters( 'codeclove_plugin_action_links', $merged, $is_pro );
+	}
+	/**
 	 * Initializes plugin components and textdomain.
 	 */
 	public function init(): void {
@@ -219,6 +261,119 @@ final class Plugin {
 	 */
 	public function maybe_show_license_notice(): void {
 		do_action( 'codeclove_license_notice' );
+	}
+
+	/**
+	 * Renders the milestone review prompt notice in WordPress admin.
+	 */
+	public function maybe_render_review_notice(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		// WordPress.org compliance: Only render on CodeClove screen, never on unrelated core WP screens (e.g. edit.php, plugins.php).
+		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+		if ( 'codeclove-school-management' !== $page ) {
+			return;
+		}
+		$status = ReviewPromptService::get_status();
+		if ( empty( $status['should_show'] ) ) {
+			return;
+		}
+
+		$review_url     = esc_url( $status['review_url'] ?? ReviewPromptService::REVIEW_URL );
+		$support_url    = esc_url( $status['support_url'] ?? ReviewPromptService::SUPPORT_URL );
+		$rest_url       = esc_url( rest_url( 'codeclove/v1/review-prompt/dismiss' ) );
+		$nonce          = esc_attr( wp_create_nonce( 'wp_rest' ) );
+		$students_count = (int) ( $status['students_count'] ?? 0 );
+		$days_passed    = (int) ( $status['days_passed'] ?? 0 );
+		$reason         = (string) ( $status['trigger_reason'] ?? '' );
+
+		if ( 'students_count' === $reason ) {
+			$message = sprintf(
+				/* translators: %d: number of students */
+				__( 'Congratulations on enrolling %d students! We hope CodeClove is making your school administration easier. Could you take 30 seconds to rate us on WordPress.org?', 'codeclove-school-management' ),
+				$students_count
+			);
+		} else {
+			$message = sprintf(
+				/* translators: %d: number of days */
+				__( "You've been using CodeClove for %d days! If you find it helpful, would you consider leaving us a quick 5-star review?", 'codeclove-school-management' ),
+				$days_passed
+			);
+		}
+		?>
+		<div id="codeclove-review-admin-notice" class="notice notice-info is-dismissible" style="padding: 12px 16px; border-left-color: #f59e0b; position: relative;">
+			<div style="display: flex; align-items: flex-start; gap: 12px;">
+				<div style="font-size: 20px; line-height: 1; margin-top: 2px;">⭐</div>
+				<div style="flex: 1;">
+					<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+						<strong style="font-size: 14px; color: #1e293b;"><?php esc_html_e( 'Loving CodeClove?', 'codeclove-school-management' ); ?></strong>
+						<span style="color: #f59e0b; font-size: 14px; letter-spacing: 1px;">★★★★★</span>
+					</div>
+					<p style="margin: 0 0 10px 0; color: #475569; font-size: 13px; line-height: 1.5;">
+						<?php echo esc_html( $message ); ?>
+					</p>
+					<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+						<a href="<?php echo $review_url; ?>" target="_blank" rel="noopener noreferrer" class="button button-primary codeclove-review-btn" data-action="reviewed" style="background: #2563eb; border-color: #2563eb;">
+							★ <?php esc_html_e( 'Leave a 5-Star Review', 'codeclove-school-management' ); ?>
+						</a>
+						<button type="button" class="button button-secondary codeclove-review-btn" data-action="maybe_later">
+							<?php esc_html_e( 'Remind Me Later (14 Days)', 'codeclove-school-management' ); ?>
+						</button>
+						<a href="<?php echo $support_url; ?>" target="_blank" rel="noopener noreferrer" class="button button-secondary">
+							<?php esc_html_e( 'Support Forum', 'codeclove-school-management' ); ?>
+						</a>
+						<button type="button" class="button button-link codeclove-review-btn" data-action="never" style="color: #64748b; text-decoration: none;">
+							<?php esc_html_e( 'Never Ask Again', 'codeclove-school-management' ); ?>
+						</button>
+						<button type="button" class="button button-link codeclove-review-btn" data-action="reviewed" style="color: #64748b; text-decoration: none;">
+							<?php esc_html_e( 'Already Reviewed', 'codeclove-school-management' ); ?>
+						</button>
+				</div>
+			</div>
+			<script>
+			(function() {
+				var notice = document.getElementById('codeclove-review-admin-notice');
+				if (!notice) return;
+
+				function dismiss(action) {
+					fetch('<?php echo $rest_url; ?>', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-WP-Nonce': '<?php echo $nonce; ?>'
+						},
+						body: JSON.stringify({ action: action })
+					}).catch(function(err) {
+						console.error('CodeClove review dismiss error:', err);
+					});
+				}
+
+				var buttons = notice.querySelectorAll('.codeclove-review-btn');
+				buttons.forEach(function(btn) {
+					btn.addEventListener('click', function() {
+						var action = btn.getAttribute('data-action');
+						if (action) {
+							dismiss(action);
+						}
+						if (btn.tagName.toLowerCase() !== 'a') {
+							notice.remove();
+						} else {
+							setTimeout(function() { notice.remove(); }, 500);
+						}
+					});
+				});
+
+				notice.addEventListener('click', function(e) {
+					if (e.target.classList.contains('notice-dismiss')) {
+						dismiss('maybe_later');
+					}
+				});
+			})();
+			</script>
+		</div>
+		<?php
 	}
 
 	// ─── Migrations ──────────────────────────────────────────────────────────
@@ -277,10 +432,10 @@ final class Plugin {
 				'academic_year_end_month'   => 12,
 				'date_format'               => 'd/m/Y',
 				'time_format'               => 'H:i',
-				'timezone'                  => 'UTC',
+				'timezone'                  => function_exists( 'wp_timezone_string' ) ? wp_timezone_string() : 'UTC',
 				'currency'                  => 'USD',
-				'language'                  => 'en',
-				'rtl'                       => false,
+				'language'                  => 'site_default',
+				'rtl'                       => is_rtl(),
 			];
 			$settings['labels']           = [
 				'academic_session' => [ 'singular' => 'Academic Session', 'plural' => 'Academic Sessions' ],

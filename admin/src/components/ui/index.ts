@@ -7,7 +7,16 @@
 
 // ── Atoms ─────────────────────────────────────────────────────────────────────
 export { Button, type ButtonProps }     from './Button'
-export { Badge, type BadgeProps }       from './Badge'
+export { Badge, type BadgeProps, type BadgeVariant, resolveBadgeVariant } from './Badge'
+export {
+  Avatar,
+  type AvatarProps,
+  type AvatarSize,
+  type AvatarShape,
+  getAvatarInitials,
+  getAvatarColor,
+  AVATAR_COLORS,
+} from './Avatar'
 export { Input, type InputProps }       from './Input'
 export { Textarea, type TextareaProps } from './Textarea'
 export { Skeleton }                     from './Skeleton'
@@ -16,9 +25,10 @@ export { Spinner }                      from './Spinner'
 // ── Layout ────────────────────────────────────────────────────────────────────
 export { Card, CardHeader, CardContent, CardFooter } from './Card'
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './Accordion'
-export { StatCard }                     from './StatCard'
+export { StatCard, type StatCardProps } from './StatCard'
 export { PageHeader }                   from './PageHeader'
 export { EmptyState }                   from './EmptyState'
+export { FilterBar, type FilterBarProps } from './FilterBar'
 
 // ── Forms ─────────────────────────────────────────────────────────────────────
 export { Select, type SelectOption, type SelectGroup } from './Select'
@@ -32,6 +42,16 @@ export {
 
 // ── Overlays ──────────────────────────────────────────────────────────────────
 export { Modal, ModalFooter }           from './Modal'
+export { ConfirmDialog, type ConfirmDialogProps, type ConfirmDialogVariant } from './ConfirmDialog'
+export {
+  Sheet,
+  SheetHeader,
+  SheetBody,
+  SheetFooter,
+  type SheetProps,
+  type SheetSize,
+  type SheetSide,
+}                                       from './Sheet'
 export {
   Dropdown,
   DropdownItem,
@@ -52,6 +72,15 @@ export { Alert, type AlertProps }       from './Alert'
 // ── Data ──────────────────────────────────────────────────────────────────────
 export { PersonAvatar, type PersonAvatarProps } from './PersonAvatar'
 export {
+  DataTable,
+  type DataTableProps,
+  type DataTableColumn,
+} from './DataTable'
+export {
+  TablePagination,
+  type TablePaginationProps,
+} from './TablePagination'
+export {
   TableRoot,
   Thead,
   Tbody,
@@ -60,7 +89,7 @@ export {
   Td,
   TableEmpty,
   TableSkeleton,
-}                                       from './Table'
+} from './Table'
 
 // ── Print ─────────────────────────────────────────────────────────────────────
 export {
@@ -73,4 +102,3 @@ export {
   Barcode,
   type BarcodeProps,
 } from './Barcode'
-

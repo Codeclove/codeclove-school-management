@@ -21,6 +21,7 @@ import { usePortal } from '../../lib/portal-context'
 import { useAttendance } from '../../api/portal'
 import { formatDate, getCleanLocale } from '../../lib/formatter'
 import type { AttendanceRecord, AttendanceStatus } from '../../types'
+import { SegmentedTabs, type SegmentedTab } from '../../components/SegmentedTabs'
 import {
   Badge,
   Button,
@@ -142,13 +143,15 @@ export const AttendancePage: React.FC = () => {
   const absentDays = summary?.absent_days ?? summary?.absent ?? 0
   const lateDays = summary?.late_days ?? summary?.late ?? 0
 
-  const filterOptions: Array<{ id: 'all' | AttendanceStatus; label: string }> = [
-    { id: 'all', label: __( 'All', 'codeclove-school-management' ) },
-    { id: 'present', label: __( 'Present', 'codeclove-school-management' ) },
-    { id: 'absent', label: __( 'Absent', 'codeclove-school-management' ) },
-    { id: 'late', label: __( 'Late', 'codeclove-school-management' ) },
-  ]
-
+  const filterOptions: Array<SegmentedTab<'all' | AttendanceStatus>> = useMemo(
+    () => [
+      { id: 'all', label: __( 'All', 'codeclove-school-management' ) },
+      { id: 'present', label: __( 'Present', 'codeclove-school-management' ) },
+      { id: 'absent', label: __( 'Absent', 'codeclove-school-management' ) },
+      { id: 'late', label: __( 'Late', 'codeclove-school-management' ) },
+    ],
+    []
+  )
   const weekHeaders = weekStartDay === 0
     ? [
         __( 'Sun', 'codeclove-school-management' ),
@@ -176,12 +179,12 @@ export const AttendancePage: React.FC = () => {
         title={__( 'Attendance Records', 'codeclove-school-management' )}
         description={__( 'Monthly attendance calendar and daily records', 'codeclove-school-management' )}
         actions={
-          <div className="flex items-center gap-1 rounded-xl border border-border/80 bg-bg-surface p-1.5 shadow-card">
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-bg-surface p-1.5 shadow-card">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleMonthChange(-1)}
-              className="h-7 w-7 p-0 rounded-lg hover:bg-bg-base"
+              className="h-7 w-7 p-0 rounded-lg hover:bg-hover-bg"
               aria-label={__( 'Previous month', 'codeclove-school-management' )}
             >
               <ChevronLeft className="w-4 h-4" />
@@ -193,7 +196,7 @@ export const AttendancePage: React.FC = () => {
               variant="ghost"
               size="sm"
               onClick={() => handleMonthChange(1)}
-              className="h-7 w-7 p-0 rounded-lg hover:bg-bg-base"
+              className="h-7 w-7 p-0 rounded-lg hover:bg-hover-bg"
               aria-label={__( 'Next month', 'codeclove-school-management' )}
             >
               <ChevronRight className="w-4 h-4" />
@@ -211,7 +214,7 @@ export const AttendancePage: React.FC = () => {
           {/* Summary Stat Cards (Clean 4-Card Responsive Grid) */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
             <StatCard
-              className="rounded-xl border-border/80 bg-bg-surface shadow-card"
+              className="rounded-xl border-border bg-bg-elevated shadow-card"
               label={__( 'Attendance Rate', 'codeclove-school-management' )}
               value={`${percentage.toFixed(1)}%`}
               icon={CalendarCheck}
@@ -220,7 +223,7 @@ export const AttendancePage: React.FC = () => {
               subtext={sprintf( __( '%1$d of %2$d school days', 'codeclove-school-management' ), presentDays, totalDays )}
             />
             <StatCard
-              className="rounded-xl border-border/80 bg-bg-surface shadow-card"
+              className="rounded-xl border-border bg-bg-elevated shadow-card"
               label={__( 'Present Days', 'codeclove-school-management' )}
               value={presentDays}
               icon={CheckCircle2}
@@ -229,7 +232,7 @@ export const AttendancePage: React.FC = () => {
               subtext={__( 'Attended sessions', 'codeclove-school-management' )}
             />
             <StatCard
-              className="rounded-xl border-border/80 bg-bg-surface shadow-card"
+              className="rounded-xl border-border bg-bg-elevated shadow-card"
               label={__( 'Absent Days', 'codeclove-school-management' )}
               value={absentDays}
               icon={XCircle}
@@ -238,7 +241,7 @@ export const AttendancePage: React.FC = () => {
               subtext={__( 'Recorded absences', 'codeclove-school-management' )}
             />
             <StatCard
-              className="rounded-xl border-border/80 bg-bg-surface shadow-card"
+              className="rounded-xl border-border bg-bg-elevated shadow-card"
               label={__( 'Late Arrivals', 'codeclove-school-management' )}
               value={lateDays}
               icon={AlertTriangle}
@@ -249,17 +252,17 @@ export const AttendancePage: React.FC = () => {
           </div>
 
           {/* Monthly Calendar View */}
-          <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface overflow-hidden">
-            <CardHeader className="flex items-center gap-2 border-b border-border/60 pb-3">
+          <Card className="rounded-xl">
+            <CardHeader className="flex items-center gap-2 pb-3">
               <CalendarIcon className="w-4 h-4 text-brand" />
               <h3 className="text-sm font-bold text-text">{__( 'Calendar Overview', 'codeclove-school-management' )}</h3>
             </CardHeader>
 
             <CardContent className="p-4 sm:p-5">
               {/* Calendar grid container with clean borders */}
-              <div className="rounded-xl border border-border/70 overflow-hidden bg-bg-surface shadow-2xs">
+              <div className="rounded-xl border border-border overflow-hidden bg-bg-surface shadow-2xs">
                 {/* Day header */}
-                <div className="grid grid-cols-7 text-center text-2xs font-bold text-text-muted uppercase tracking-wider py-2.5 bg-bg-base/60 border-b border-border/70">
+                <div className="grid grid-cols-7 text-center text-2xs font-bold text-text-muted uppercase tracking-wider py-2.5 bg-bg-surface border-b border-border">
                   {weekHeaders.map((d) => (
                     <span key={d}>{d}</span>
                   ))}
@@ -272,33 +275,33 @@ export const AttendancePage: React.FC = () => {
                       return (
                         <div
                           key={`empty-${idx}`}
-                          className="min-h-[56px] sm:min-h-[64px] bg-bg-base/20 border-b border-r border-border/50"
+                          className="min-h-[56px] sm:min-h-[64px] bg-bg-surface border-b border-r border-border"
                         />
                       )
                     }
 
                     const status = item.record?.status
-                    let statusBg = 'bg-bg-surface hover:bg-bg-base/50'
+                    let statusBg = 'bg-bg-surface hover:bg-hover-bg'
                     let indicatorBg = 'bg-border-strong'
 
                     if (status === 'present') {
-                      statusBg = 'bg-success/5 hover:bg-success/10'
+                      statusBg = 'bg-success-dim hover:opacity-90'
                       indicatorBg = 'bg-success'
                     } else if (status === 'absent') {
-                      statusBg = 'bg-danger/5 hover:bg-danger/10'
+                      statusBg = 'bg-danger-dim hover:opacity-90'
                       indicatorBg = 'bg-danger'
                     } else if (status === 'late') {
-                       statusBg = 'bg-warning/5 hover:bg-warning/10'
+                       statusBg = 'bg-warning-dim hover:opacity-90'
                       indicatorBg = 'bg-warning'
                     } else if (status === 'half_day') {
-                      statusBg = 'bg-info/5 hover:bg-info/10'
+                      statusBg = 'bg-info-dim hover:opacity-90'
                       indicatorBg = 'bg-info'
                     }
 
                     return (
                       <div
                         key={item.dateStr}
-                        className={`min-h-[56px] sm:min-h-[64px] border-b border-r border-border/50 p-2 flex flex-col justify-between transition-colors ${statusBg}`}
+                        className={`min-h-[56px] sm:min-h-[64px] border-b border-r border-border p-2 flex flex-col justify-between transition-colors ${statusBg}`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold text-text">
@@ -328,36 +331,21 @@ export const AttendancePage: React.FC = () => {
           </Card>
 
           {/* Daily Attendance Log List */}
-          <Card className="rounded-xl border border-border/70 overflow-hidden shadow-card bg-bg-surface">
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/70 pb-3.5">
+          <Card className="rounded-xl">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5">
               <div className="flex items-center gap-2">
                 <ClipboardList className="w-4 h-4 text-brand" />
                 <h3 className="text-sm font-bold text-text">{__( 'Daily Attendance Log', 'codeclove-school-management' )}</h3>
               </div>
 
               {/* Status Filter Tabs (Segmented Capsule Track) */}
-              <div
-                role="tablist"
-                aria-label={__( 'Attendance status filters', 'codeclove-school-management' )}
-                className="inline-flex items-center bg-bg-base/80 border border-border/80 rounded-xl p-1 gap-1 shadow-2xs"
-              >
-                {filterOptions.map((filter) => (
-                  <button
-                    key={filter.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={statusFilter === filter.id}
-                    onClick={() => setStatusFilter(filter.id)}
-                    className={`rounded-lg px-3 py-1.5 capitalize text-xs font-semibold transition-all cursor-pointer select-none outline-none ${
-                      statusFilter === filter.id
-                        ? 'bg-bg-surface text-brand font-bold shadow-xs'
-                        : 'text-text-muted hover:text-text hover:bg-bg-surface/50'
-                    }`}
-                  >
-                    {filter.label}
-                  </button>
-                ))}
-              </div>
+              <SegmentedTabs<'all' | AttendanceStatus>
+                tabs={filterOptions}
+                activeTab={statusFilter}
+                onChange={setStatusFilter}
+                ariaLabel={__( 'Attendance status filters', 'codeclove-school-management' )}
+                size="sm"
+              />
             </CardHeader>
 
             {filteredRecords.length === 0 ? (
@@ -369,16 +357,16 @@ export const AttendancePage: React.FC = () => {
               />
             ) : (
               <TableRoot responsiveMode="scroll">
-                <Thead className="border-b border-border/70 bg-bg-base/50">
-                  <Tr className="border-b border-border/70">
-                    <Th className="w-[180px] bg-bg-base/50 text-2xs uppercase tracking-wider font-semibold text-text-muted">{__( 'Date', 'codeclove-school-management' )}</Th>
-                    <Th className="w-[140px] bg-bg-base/50 text-2xs uppercase tracking-wider font-semibold text-text-muted text-center">{__( 'Status', 'codeclove-school-management' )}</Th>
-                    <Th className="bg-bg-base/50 text-2xs uppercase tracking-wider font-semibold text-text-muted">{__( 'Teacher / Class Note', 'codeclove-school-management' )}</Th>
+                <Thead className="border-b border-border bg-bg-surface">
+                  <Tr className="border-b border-border">
+                    <Th className="w-[180px] bg-bg-surface text-2xs uppercase tracking-wider font-semibold text-text-muted">{__( 'Date', 'codeclove-school-management' )}</Th>
+                    <Th className="w-[140px] bg-bg-surface text-2xs uppercase tracking-wider font-semibold text-text-muted text-center">{__( 'Status', 'codeclove-school-management' )}</Th>
+                    <Th className="bg-bg-surface text-2xs uppercase tracking-wider font-semibold text-text-muted">{__( 'Teacher / Class Note', 'codeclove-school-management' )}</Th>
                   </Tr>
                 </Thead>
-                <Tbody className="divide-y divide-border/60">
+                <Tbody className="divide-y divide-border">
                   {filteredRecords.map((record, index) => (
-                    <Tr key={`${record.attendance_date}-${index}`} className="hover:bg-bg-base/50 border-b border-border/60 last:border-b-0 transition-colors">
+                    <Tr key={`${record.attendance_date}-${index}`} className="hover:bg-hover-bg border-b border-border last:border-b-0 transition-colors">
                       <Td className="font-medium text-text py-3">
                         {formatDate(record.attendance_date)}
                       </Td>
@@ -388,7 +376,7 @@ export const AttendancePage: React.FC = () => {
                         </Badge>
                       </Td>
                       <Td className="text-text-muted py-3">
-                        {record.note ? record.note : <span className="text-text-subtle/50">—</span>}
+                        {record.note ? record.note : <span className="text-text-subtle">—</span>}
                       </Td>
                     </Tr>
                   ))}

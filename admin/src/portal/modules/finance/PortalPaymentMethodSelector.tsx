@@ -362,7 +362,7 @@ export function PortalPaymentMethodSelector({
   if (sessionResult) {
     const gatewayMeta = getGatewayMeta(sessionResult.gateway)
     return (
-      <Card className={cn('overflow-hidden border-border/80 shadow-sm transition-all', className)}>
+      <Card className={cn('overflow-hidden border-border shadow-sm transition-all', className)}>
         <CardContent className="p-6 sm:p-8 space-y-6">
           <div className="flex flex-col items-center text-center space-y-3">
             <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
@@ -370,14 +370,14 @@ export function PortalPaymentMethodSelector({
             </div>
 
             <div className="space-y-1 max-w-md">
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="text-lg font-semibold text-text">
                 {sprintf(
                   /* translators: %s: Gateway Name */
                   __('%s Checkout Session Ready', 'codeclove-school-management'),
                   gatewayMeta.title
                 )}
               </h3>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              <p className="text-xs sm:text-sm text-text-muted leading-relaxed">
                 {sessionResult.gateway === 'paypal'
                   ? __(
                       'A secure PayPal window was launched. Log in to your PayPal account or pay with credit/debit card to complete payment.',
@@ -390,9 +390,9 @@ export function PortalPaymentMethodSelector({
               </p>
             </div>
 
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/60 border text-xs font-medium text-foreground">
-              <span className="text-muted-foreground">{__('Amount Due:', 'codeclove-school-management')}</span>
-              <span className="font-bold text-foreground font-mono">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-surface border border-border text-xs font-medium text-text">
+              <span className="text-text-muted">{__('Amount Due:', 'codeclove-school-management')}</span>
+              <span className="font-bold text-text font-mono">
                 {formatCurrency(sessionResult.amount_minor ? sessionResult.amount_minor / 100 : effectiveAmountMajor, currency)}
               </span>
             </div>
@@ -431,7 +431,7 @@ export function PortalPaymentMethodSelector({
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4 text-muted-foreground" />
+                  <Copy className="w-4 h-4 text-text-muted" />
                   <span>{__('Copy Direct Payment Link', 'codeclove-school-management')}</span>
                 </>
               )}
@@ -478,7 +478,7 @@ export function PortalPaymentMethodSelector({
                   setSessionResult(null)
                   setCheckoutError(null)
                 }}
-                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors underline-offset-4 hover:underline py-1"
+                className="text-text-muted hover:text-text inline-flex items-center gap-1 transition-colors underline-offset-4 hover:underline py-1"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 {__('Change Gateway or Amount', 'codeclove-school-management')}
@@ -488,7 +488,7 @@ export function PortalPaymentMethodSelector({
                 <button
                   type="button"
                   onClick={onCancel}
-                  className="text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline py-1"
+                  className="text-text-muted hover:text-text transition-colors underline-offset-4 hover:underline py-1"
                 >
                   {__('Return to Invoice', 'codeclove-school-management')}
                 </button>
@@ -496,9 +496,9 @@ export function PortalPaymentMethodSelector({
             </div>
           </div>
 
-          <div className="pt-2 text-center border-t border-border/60">
-            <p className="text-[11px] text-muted-foreground inline-flex items-center gap-1.5">
-              <Lock className="w-3 h-3 text-muted-foreground" />
+          <div className="pt-2 text-center border-t border-border">
+            <p className="text-[11px] text-text-muted inline-flex items-center gap-1.5">
+              <Lock className="w-3 h-3 text-text-muted" />
               {__(
                 'Your payment is encrypted and verified securely. Once settled, your receipt will be available immediately.',
                 'codeclove-school-management'
@@ -514,19 +514,19 @@ export function PortalPaymentMethodSelector({
     <div className={cn('space-y-6', className)}>
       {/* Optional In-Page Invoice Summary Header */}
       {showInvoiceSummary && (
-        <Card className="border-border/80 bg-muted/20">
+        <Card className="border-border">
           <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">
+                <span className="text-xs font-medium text-text-muted">
                   {__('Invoice', 'codeclove-school-management')}
                 </span>
-                <span className="text-xs font-mono font-bold text-foreground">
+                <span className="text-xs font-mono font-bold text-text">
                   #{invoice.invoice_number}
                 </span>
               </div>
               {invoice.student_name && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-text-muted">
                   {sprintf(
                     /* translators: %s: student name */
                     __('Student: %s', 'codeclove-school-management'),
@@ -537,10 +537,10 @@ export function PortalPaymentMethodSelector({
             </div>
 
             <div className="text-left sm:text-right">
-              <p className="text-xs text-muted-foreground font-medium">
+              <p className="text-xs text-text-muted font-medium">
                 {__('Total Outstanding Balance', 'codeclove-school-management')}
               </p>
-              <p className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono">
+              <p className="text-xl sm:text-2xl font-bold tracking-tight text-text font-mono">
                 {formatCurrency(balanceMajor, currency)}
               </p>
             </div>
@@ -598,10 +598,10 @@ export function PortalPaymentMethodSelector({
           /* Empty State: No Gateways Configured */
           <div className="p-5 rounded-xl border border-warning/30 bg-warning/5 space-y-2 text-center">
             <AlertCircle className="w-6 h-6 text-warning mx-auto" />
-            <p className="text-xs font-semibold text-foreground">
+            <p className="text-xs font-semibold text-text">
               {__('Online Payments Not Available', 'codeclove-school-management')}
             </p>
-            <p className="text-[11px] text-muted-foreground max-w-sm mx-auto leading-relaxed">
+            <p className="text-[11px] text-text-muted max-w-sm mx-auto leading-relaxed">
               {isPro
                 ? __(
                     'Online tuition payment gateways are currently disabled. Please contact the school finance administration to settle your dues.',
@@ -642,7 +642,7 @@ export function PortalPaymentMethodSelector({
                     'relative group flex items-start sm:items-center justify-between p-3.5 sm:p-4 rounded-xl border cursor-pointer transition-all duration-150 select-none outline-none focus-visible:ring-2 focus-visible:ring-brand',
                     isSelected
                       ? 'border-brand ring-1 ring-brand/20 bg-brand-dim/40 shadow-2xs'
-                      : 'border-border/80 hover:border-border hover:bg-bg-base/40'
+                      : 'border-border hover:border-border-strong hover:bg-hover-bg'
                   )}
                 >
                   <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
@@ -674,7 +674,7 @@ export function PortalPaymentMethodSelector({
                       className={cn(
                         'w-5 h-5 rounded-full border flex items-center justify-center transition-colors duration-150',
                         isSelected
-                          ? 'border-brand bg-brand text-white shadow-2xs'
+                          ? 'border-brand bg-brand text-text-inverted shadow-2xs'
                           : 'border-border-strong group-hover:border-text-subtle'
                       )}
                     >
@@ -707,7 +707,7 @@ export function PortalPaymentMethodSelector({
                 'flex flex-col p-3.5 rounded-xl border text-left transition-all duration-150 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand',
                 amountMode === 'full'
                   ? 'border-brand bg-brand-dim/30 ring-1 ring-brand/20 shadow-2xs'
-                  : 'border-border/80 hover:border-border hover:bg-bg-base/40'
+                  : 'border-border hover:border-border-strong hover:bg-hover-bg'
               )}
             >
               <div className="flex items-center justify-between">
@@ -718,7 +718,7 @@ export function PortalPaymentMethodSelector({
                   className={cn(
                     'w-4 h-4 rounded-full border flex items-center justify-center',
                     amountMode === 'full'
-                      ? 'border-brand bg-brand text-white'
+                      ? 'border-brand bg-brand text-text-inverted'
                       : 'border-border-strong'
                   )}
                 >
@@ -743,7 +743,7 @@ export function PortalPaymentMethodSelector({
                 'flex flex-col p-3.5 rounded-xl border text-left transition-all duration-150 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand',
                 amountMode === 'custom'
                   ? 'border-brand bg-brand-dim/30 ring-1 ring-brand/20 shadow-2xs'
-                  : 'border-border/80 hover:border-border hover:bg-bg-base/40'
+                  : 'border-border hover:border-border-strong hover:bg-hover-bg'
               )}
             >
               <div className="flex items-center justify-between">
@@ -754,7 +754,7 @@ export function PortalPaymentMethodSelector({
                   className={cn(
                     'w-4 h-4 rounded-full border flex items-center justify-center',
                     amountMode === 'custom'
-                      ? 'border-brand bg-brand text-white'
+                      ? 'border-brand bg-brand text-text-inverted'
                       : 'border-border-strong'
                   )}
                 >
@@ -772,7 +772,7 @@ export function PortalPaymentMethodSelector({
             </button>
           </div>
         ) : (
-          <div className="p-3.5 rounded-xl border border-border/80 bg-bg-base/30 flex items-center justify-between">
+          <div className="p-3.5 rounded-xl border border-border bg-bg-surface flex items-center justify-between">
             <div>
               <span className="text-2xs font-semibold uppercase tracking-wider text-text-muted block">
                 {__('Full Balance Outstanding', 'codeclove-school-management')}
@@ -788,7 +788,7 @@ export function PortalPaymentMethodSelector({
         )}
         {/* Custom Amount Input & Quick Percentages */}
         {allowPartialPayments && amountMode === 'custom' && (
-          <div className="p-4 rounded-xl border border-border/80 bg-bg-base/40 space-y-3.5 animate-in fade-in-50 duration-150">
+          <div className="p-4 rounded-xl border border-border bg-bg-surface space-y-3.5 animate-in fade-in-50 duration-150">
             <div>
               <label htmlFor={customInputId} className="text-xs font-semibold text-text block mb-1.5">
                 {sprintf(
@@ -835,7 +835,7 @@ export function PortalPaymentMethodSelector({
                       key={pct}
                       type="button"
                       onClick={() => setPercentageAmount(pct)}
-                      className="px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-bg-surface border border-border/80 text-text hover:bg-bg-base/70 hover:border-border transition-colors shadow-2xs"
+                      className="px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-bg-surface border border-border text-text hover:bg-hover-bg hover:border-border-strong transition-colors shadow-2xs"
                     >
                       {pct}% ({formatCurrency(balanceMajor * (pct / 100), currency)})
                     </button>
@@ -846,7 +846,7 @@ export function PortalPaymentMethodSelector({
                       setCustomAmountStr(balanceMajor.toFixed(2))
                       setAmountMode('full')
                     }}
-                    className="px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-bg-surface border border-border/80 text-text hover:bg-bg-base/70 hover:border-border transition-colors shadow-2xs"
+                    className="px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-bg-surface border border-border text-text hover:bg-hover-bg hover:border-border-strong transition-colors shadow-2xs"
                   >
                     100% ({__('Full', 'codeclove-school-management')})
                   </button>
@@ -913,7 +913,7 @@ export function PortalPaymentMethodSelector({
             >
               {isSubmitting ? (
                 <>
-                  <Spinner className="w-4 h-4 text-primary-foreground" />
+                  <Spinner className="w-4 h-4 text-brand" />
                   <span>{__('Connecting to payment gateway...', 'codeclove-school-management')}</span>
                 </>
               ) : (
@@ -934,7 +934,7 @@ export function PortalPaymentMethodSelector({
         })()}
 
         {/* Security Reassurance Footnote */}
-        <div className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
+        <div className="flex items-center justify-center gap-1.5 text-center text-[11px] text-text-muted">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>
             {__(

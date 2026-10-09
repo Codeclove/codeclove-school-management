@@ -85,6 +85,12 @@ final class RestApi {
 
 			// Student & Guardian Portal Module
 			'\CodeClove\Modules\Portal\PortalController',
+
+			// Demo Data Management
+			'\CodeClove\Api\DemoDataController',
+
+			// Milestone Review Prompt
+			'\CodeClove\Api\ReviewPromptController',
 		];
 		$controllers = [];
 

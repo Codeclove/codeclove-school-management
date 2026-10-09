@@ -25,11 +25,11 @@ const monthsList = Array.from({ length: 12 }, (_, i) => ({
 const STATUS_BADGE_CONFIG: Record<string, { label: string; className: string }> = {
   present: { label: 'P', className: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' },
   absent: { label: 'A', className: 'bg-rose-600 text-white shadow-xs' },
-  late: { label: 'L', className: 'bg-amber-500 text-white shadow-xs' },
-  half_day: { label: 'H', className: 'bg-orange-500 text-white shadow-xs' },
+  late: { label: 'L', className: 'bg-amber-400 text-amber-950 font-bold shadow-xs' },
+  half_day: { label: 'H', className: 'bg-orange-400 text-orange-950 font-bold shadow-xs' },
   on_leave: { label: 'O', className: 'bg-purple-600 text-white shadow-xs' },
-  excused: { label: 'E', className: 'bg-sky-500 text-white shadow-xs' },
-  holiday: { label: 'Hl', className: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' },
+  excused: { label: 'E', className: 'bg-sky-600 text-white shadow-xs' },
+  holiday: { label: 'Hl', className: 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold' },
 }
 
 export default function StaffMonthlyAttendance() {
@@ -205,7 +205,7 @@ export default function StaffMonthlyAttendance() {
   return (
     <div className="space-y-3">
       {/* ── Tier 1: Toolbar ── */}
-      <div className="p-3 bg-bg-surface border border-border rounded-xl shadow-xs">
+      <div className="p-3 bg-bg-elevated border border-border rounded-xl shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
           {/* Controls: Department, Role, Month Navigation */}
           <div className="flex flex-wrap items-center gap-2 flex-1">
@@ -244,7 +244,7 @@ export default function StaffMonthlyAttendance() {
               <button
                 type="button"
                 onClick={() => shiftMonth(-1)}
-                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-bg-subtle text-text-subtle hover:text-text transition-colors shrink-0"
+                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-hover-bg text-text-subtle hover:text-text transition-colors shrink-0"
                 title={__('Previous Month', 'codeclove-school-management')}
                 aria-label={__('Previous Month', 'codeclove-school-management')}
               >
@@ -272,7 +272,7 @@ export default function StaffMonthlyAttendance() {
               <button
                 type="button"
                 onClick={() => shiftMonth(1)}
-                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-bg-subtle text-text-subtle hover:text-text transition-colors shrink-0"
+                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-hover-bg text-text-subtle hover:text-text transition-colors shrink-0"
                 title={__('Next Month', 'codeclove-school-management')}
                 aria-label={__('Next Month', 'codeclove-school-management')}
               >
@@ -282,7 +282,7 @@ export default function StaffMonthlyAttendance() {
               <button
                 type="button"
                 onClick={setCurrentMonth}
-                className="h-9 px-2.5 text-2xs font-semibold rounded-lg border border-border bg-bg-surface hover:bg-bg-subtle text-text-subtle hover:text-text transition-colors shrink-0"
+                className="h-9 px-2.5 text-2xs font-semibold rounded-lg border border-border bg-bg-surface hover:bg-hover-bg text-text-subtle hover:text-text transition-colors shrink-0"
                 title={__('Jump to Current Month', 'codeclove-school-management')}
               >
                 {__('Current', 'codeclove-school-management')}
@@ -334,7 +334,7 @@ export default function StaffMonthlyAttendance() {
               {/* ── Integrated Sleek KPI & Action Bar ── */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-5 py-2.5 bg-bg-surface border-b border-border gap-2.5">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-bg-subtle text-text font-semibold text-2xs">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-bg-surface border border-border text-text font-semibold text-2xs">
                     <Users size={12} className="text-text-subtle" />
                     {searchQuery || departmentFilter || designationFilter
                       ? sprintf(__('%1$d of %2$d Staff', 'codeclove-school-management'), filteredStaffList.length, monthlyStaffList.length)
@@ -391,7 +391,7 @@ export default function StaffMonthlyAttendance() {
               </div>
 
               {/* Mobile scroll hint */}
-              <div className="flex sm:hidden items-center justify-between px-3 py-1.5 bg-bg-subtle/50 border-b border-border text-3xs text-text-subtle font-medium">
+              <div className="flex sm:hidden items-center justify-between px-3 py-1.5 bg-bg-surface border-b border-border text-3xs text-text-subtle font-medium">
                 <span>← {__('Swipe to view all dates', 'codeclove-school-management')} →</span>
                 <span className="text-text-muted">{sprintf(__('%d days', 'codeclove-school-management'), monthlyDaysCount)}</span>
               </div>
@@ -401,7 +401,7 @@ export default function StaffMonthlyAttendance() {
                 <div className="overflow-x-auto w-full touch-pan-x overscroll-x-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                   <table className="w-full text-left border-collapse min-w-[780px] sm:min-w-[860px]">
                     <thead>
-                      <tr className="bg-bg-subtle/50 border-b border-border text-2xs font-semibold text-text-muted">
+                      <tr className="bg-bg-surface border-b border-border text-2xs font-semibold text-text-muted">
                         {/* Staff Member column */}
                         <th className="py-2.5 px-3 sm:px-4 sm:sticky sm:left-0 z-10 sm:z-30 bg-bg-surface border-r border-border min-w-[140px] sm:min-w-[220px] sm:shadow-[3px_0_6px_-2px_rgba(0,0,0,0.08)] uppercase tracking-wider text-left">
                           <span className="text-2xs font-semibold text-text-muted">{__('Staff Member', 'codeclove-school-management')}</span>
@@ -413,7 +413,7 @@ export default function StaffMonthlyAttendance() {
                             key={info.day}
                             className={`p-0.5 sm:p-1 text-center text-2xs font-mono w-[28px] sm:w-[32px] min-w-[28px] sm:min-w-[32px] max-w-[28px] sm:max-w-[32px] ${
                               info.isMonday ? 'border-l border-border/80' : ''
-                            } ${info.isWeekend ? 'bg-bg-subtle/40 text-text-subtle/60' : 'text-text'}`}
+                            } ${info.isWeekend ? 'bg-black/[0.03] dark:bg-white/[0.04] text-text-subtle/60' : 'text-text'}`}
                           >
                             <div className="flex flex-col items-center">
                               <span className="font-bold leading-none">{info.day}</span>
@@ -456,7 +456,7 @@ export default function StaffMonthlyAttendance() {
                           let totalLogged = 0
 
                           return (
-                            <tr key={s.staff_member_id} className="hover:bg-bg-overlay/5 transition-colors">
+                            <tr key={s.staff_member_id} className="hover:bg-hover-bg transition-colors">
                               {/* Sticky Staff Info */}
                               <td className="py-2 px-3 sm:px-4 sm:sticky sm:left-0 z-10 sm:z-20 bg-bg-surface border-r border-border min-w-[140px] sm:min-w-[220px] sm:shadow-[3px_0_6px_-2px_rgba(0,0,0,0.08)]">
                                 <PersonAvatar
@@ -500,7 +500,7 @@ export default function StaffMonthlyAttendance() {
                                     key={info.day}
                                     className={`p-0.5 sm:p-1 text-center w-[28px] sm:w-[32px] min-w-[28px] sm:min-w-[32px] max-w-[28px] sm:max-w-[32px] ${
                                       info.isMonday ? 'border-l border-border/80' : ''
-                                    } ${info.isWeekend ? 'bg-bg-subtle/30' : ''}`}
+                                    } ${info.isWeekend ? 'bg-black/[0.03] dark:bg-white/[0.04]' : ''}`}
                                   >
                                     <Tooltip content={tooltipContent} delay={100}>
                                       <div className="flex items-center justify-center h-7 sm:h-8">
@@ -565,7 +565,7 @@ export default function StaffMonthlyAttendance() {
                     {__('Present', 'codeclove-school-management')}
                   </span>
                   <span className="flex items-center gap-1.5 font-medium">
-                    <span className="w-5 h-5 flex items-center justify-center rounded-md bg-amber-500 text-white font-bold text-2xs font-mono shadow-xs">
+                    <span className="w-5 h-5 flex items-center justify-center rounded-md bg-amber-400 text-amber-950 font-bold text-2xs font-mono shadow-xs">
                       L
                     </span>
                     {__('Late', 'codeclove-school-management')}
@@ -577,7 +577,7 @@ export default function StaffMonthlyAttendance() {
                     {__('Absent', 'codeclove-school-management')}
                   </span>
                   <span className="flex items-center gap-1.5 font-medium">
-                    <span className="w-5 h-5 flex items-center justify-center rounded-md bg-orange-500 text-white font-bold text-2xs font-mono shadow-xs">
+                    <span className="w-5 h-5 flex items-center justify-center rounded-md bg-orange-400 text-orange-950 font-bold text-2xs font-mono shadow-xs">
                       H
                     </span>
                     {__('Half Day', 'codeclove-school-management')}
@@ -589,19 +589,19 @@ export default function StaffMonthlyAttendance() {
                     {__('On Leave', 'codeclove-school-management')}
                   </span>
                   <span className="flex items-center gap-1.5 font-medium">
-                    <span className="w-5 h-5 flex items-center justify-center rounded-md bg-sky-500 text-white font-bold text-2xs font-mono shadow-xs">
+                    <span className="w-5 h-5 flex items-center justify-center rounded-md bg-sky-600 text-white font-bold text-2xs font-mono shadow-xs">
                       E
                     </span>
                     {__('Excused', 'codeclove-school-management')}
                   </span>
                   <span className="flex items-center gap-1.5 font-medium">
-                    <span className="w-5 h-5 flex items-center justify-center rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-2xs font-mono">
+                    <span className="w-5 h-5 flex items-center justify-center rounded-md bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-2xs font-mono">
                       Hl
                     </span>
                     {__('Holiday', 'codeclove-school-management')}
                   </span>
                   <span className="flex items-center gap-1.5 font-medium text-text-subtle">
-                    <span className="w-5 h-5 rounded-md bg-bg-subtle/50 border border-border/40 inline-block" />
+                    <span className="w-5 h-5 rounded-md bg-black/[0.03] dark:bg-white/[0.04] border border-border/40 inline-block" />
                     {__('Weekend', 'codeclove-school-management')}
                   </span>
                 </div>

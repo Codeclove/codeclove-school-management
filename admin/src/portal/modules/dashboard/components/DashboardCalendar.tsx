@@ -138,8 +138,8 @@ export const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ events = [
   }, [events, selectedDate, viewYearMonth])
 
   return (
-    <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface">
-      <CardHeader className="flex items-center justify-between border-b border-border/60 pb-3">
+    <Card className="rounded-xl">
+      <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-dim text-brand">
             <CalendarIcon className="w-4 h-4" />
@@ -152,7 +152,7 @@ export const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ events = [
           <Button
             variant="ghost"
             size="icon-sm"
-            className="h-7 w-7 rounded-lg text-text-muted hover:text-text hover:bg-bg-base/70"
+            className="h-7 w-7 rounded-lg text-text-muted hover:text-text hover:bg-hover-bg"
             onClick={() => setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
             aria-label={__( 'Previous month', 'codeclove-school-management' )}
           >
@@ -166,7 +166,7 @@ export const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ events = [
           <Button
             variant="ghost"
             size="icon-sm"
-            className="h-7 w-7 rounded-lg text-text-muted hover:text-text hover:bg-bg-base/70"
+            className="h-7 w-7 rounded-lg text-text-muted hover:text-text hover:bg-hover-bg"
             onClick={() => setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
             aria-label={__( 'Next month', 'codeclove-school-management' )}
           >
@@ -177,7 +177,7 @@ export const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ events = [
 
       <CardContent className="space-y-4 p-4 sm:p-5">
         {/* Mini Calendar Grid */}
-        <div className="rounded-xl border border-border/60 p-2.5 bg-bg-base/20">
+        <div className="rounded-xl border border-border p-2.5 bg-bg-surface">
           {/* Weekday Header */}
           <div className="grid grid-cols-7 text-center mb-1.5">
             {weekHeaders.map((day) => (
@@ -211,12 +211,12 @@ export const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ events = [
                   onClick={() => setSelectedDate((prev) => (prev === dateStr ? null : dateStr))}
                   className={`group relative h-8 w-8 mx-auto flex flex-col items-center justify-center rounded-lg text-xs transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-brand text-white font-bold shadow-xs'
+                      ? 'bg-brand text-text-inverted font-bold shadow-xs'
                       : isToday
                       ? 'bg-brand-dim text-brand font-bold ring-1 ring-brand/40 hover:bg-brand-dim/80'
                       : hasEvents
-                      ? 'text-text font-bold hover:bg-bg-base'
-                      : 'text-text-muted hover:text-text hover:bg-bg-base/60 font-medium'
+                      ? 'text-text font-bold hover:bg-hover-bg'
+                      : 'text-text-muted hover:text-text hover:bg-hover-bg font-medium'
                   }`}
                   title={
                     hasEvents
@@ -234,7 +234,7 @@ export const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ events = [
                         <span
                           key={e.id ?? idx}
                           className={`h-1 w-1 rounded-full shrink-0 ${
-                            isSelected ? 'bg-white' : getEventStyle(e).dot
+                            isSelected ? 'bg-text-inverted' : getEventStyle(e).dot
                           }`}
                         />
                       ))}
@@ -247,7 +247,7 @@ export const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ events = [
         </div>
 
         {/* ─── Agenda List Section ────────────────────────────────────────── */}
-        <div className="pt-3 border-t border-border/60 space-y-3">
+        <div className="pt-3 border-t border-border space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-text-muted">
@@ -274,7 +274,7 @@ export const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ events = [
           </div>
 
           {agendaEvents.length === 0 ? (
-            <div className="py-6 text-center text-xs text-text-muted flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border/80 p-4">
+            <div className="py-6 text-center text-xs text-text-muted flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-bg-surface p-4">
               <CalendarIcon className="w-5 h-5 text-text-subtle" />
               <span className="font-semibold text-text">
                 {selectedDate ? __( 'No events on this date', 'codeclove-school-management' ) : __( 'No upcoming events this month', 'codeclove-school-management' )}
@@ -304,11 +304,11 @@ export const DashboardCalendar: React.FC<DashboardCalendarProps> = ({ events = [
                 return (
                   <div
                     key={evt.id}
-                    className="group flex items-start justify-between gap-3 p-2.5 rounded-lg border border-border/60 bg-bg-surface hover:border-border/90 hover:bg-bg-base/40 transition-all"
+                    className="group flex items-start justify-between gap-3 p-2.5 rounded-lg border border-border bg-bg-surface hover:border-border-strong hover:bg-hover-bg transition-all"
                   >
                     <div className="flex items-start gap-2.5 min-w-0">
                       {/* Date Pill */}
-                      <div className="flex flex-col items-center justify-center rounded-lg bg-bg-base border border-border/70 px-2 py-1 min-w-[42px] shrink-0 text-center">
+                      <div className="flex flex-col items-center justify-center rounded-lg bg-bg-elevated border border-border px-2 py-1 min-w-[42px] shrink-0 text-center">
                         <span className="text-3xs font-bold text-text-muted uppercase tracking-wider leading-none">
                           {monthShort}
                         </span>

@@ -19,7 +19,7 @@ export function AcademicsNav() {
   ]
 
   return (
-    <div className="flex items-center gap-1.5 p-1 rounded-xl bg-bg-surface border border-border/70 shadow-2xs w-fit max-w-full overflow-x-auto scrollbar-none">
+    <div className="flex items-center gap-1.5 p-1 rounded-xl bg-bg-elevated border border-border shadow-2xs w-fit max-w-full overflow-x-auto scrollbar-none">
       {NAV_ITEMS.map((item) => {
         const Icon = item.icon
         return (
@@ -30,7 +30,7 @@ export function AcademicsNav() {
               `flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all duration-150 select-none whitespace-nowrap flex-shrink-0 ${
                 isActive
                   ? 'bg-brand-dim text-brand border border-brand/30 font-bold shadow-2xs'
-                  : 'text-text hover:text-brand hover:bg-bg-subtle/50 border border-transparent'
+                  : 'text-text-muted hover:text-brand hover:bg-hover-bg border border-transparent'
               }`
             }
           >

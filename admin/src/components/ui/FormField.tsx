@@ -40,7 +40,7 @@ export function FormField({
   inputId: propInputId,
 }: FormFieldProps) {
   const generatedId = useId()
-  const isElement = React.isValidElement<{ id?: string; name?: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean }>(children)
+  const isElement = React.isValidElement<{ id?: string; name?: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean; error?: boolean }>(children)
   const childId = isElement ? children.props.id || children.props.name : undefined
   const inputId = propInputId || childId || generatedId
   const errorId = error ? `${inputId}-error` : undefined
@@ -53,7 +53,8 @@ export function FormField({
 
     modifiedChildren = React.cloneElement(children, {
       id: inputId,
-      'aria-invalid': !!error,
+      error: Boolean(error || children.props.error),
+      'aria-invalid': Boolean(error || children.props['aria-invalid']),
       'aria-describedby': combinedDescribedBy,
     })
   }

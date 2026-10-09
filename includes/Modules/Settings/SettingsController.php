@@ -568,10 +568,18 @@ final class SettingsController extends BaseController {
 					'User-Agent'   => 'CodeClove/' . ( defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0' ),
 				],
 				'body'      => wp_json_encode( [
-					'title'         => $remote_title,
-					'description'   => $description,
-					'full_markdown' => $full_markdown,
-					'labels'        => array_values( array_unique( $labels ) ),
+					'title'          => $remote_title,
+					'description'    => $description,
+					'type'           => $type,
+					'priority'       => $priority,
+					'area'           => $area,
+					'edition'        => $edition,
+					'site_url'       => get_site_url(),
+					'plugin_version' => defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0',
+					'wp_version'     => get_bloginfo( 'version' ),
+					'php_version'    => PHP_VERSION,
+					'full_markdown'  => $full_markdown,
+					'labels'         => array_values( array_unique( $labels ) ),
 				] ),
 				'timeout'   => 15,
 				'sslverify' => $this->should_verify_ssl( $receiver_url ),
@@ -655,8 +663,7 @@ final class SettingsController extends BaseController {
 			return $this->success( [ 'tickets' => [] ] );
 		}
 
-		$status_endpoint = str_replace( '/feedback', '/feedback/status', $this->get_feedback_receiver_url() );
-		$updated_any     = false;
+		$status_endpoint = (string) preg_replace( '#/feedback/?$#', '/feedback/status', $this->get_feedback_receiver_url() );
 
 		foreach ( $history as &$item ) {
 			$ticket_id = (int) ( $item['ticket_id'] ?? 0 );
@@ -699,7 +706,6 @@ final class SettingsController extends BaseController {
 		$default = ( defined( 'CODECLOVE_FEEDBACK_API_URL' ) && CODECLOVE_FEEDBACK_API_URL )
 			? CODECLOVE_FEEDBACK_API_URL
 			: 'https://codeclove.com/wp-json/nexora/v1/feedback';
-
 		return (string) apply_filters( 'codeclove_feedback_api_url', $default );
 	}
 	/**

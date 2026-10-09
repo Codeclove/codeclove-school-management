@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   User, RefreshCw, Coins, BookOpen, Pencil, AlertTriangle, MapPin, Users,
   Eye, Printer, ArrowLeftRight, IdCard, KeyRound, UserX, CheckCircle2,
-  UserPlus, Copy, History, Receipt, Plus
+  UserPlus, Copy, History, Receipt, Plus, Filter
 } from 'lucide-react'
 import {
   useStudentDetails,
@@ -21,8 +21,8 @@ import {
 import { useStudentAttendanceHistory } from '@/api/attendance'
 import {
   Button, Badge, Card, PageHeader, Spinner, EmptyState, FormGroupHeader,
-  Modal, ModalFooter, FormField, Input, Select, Skeleton,
-  TableRoot, Thead, Tbody, Tr, Th, Td, TableEmpty
+  Modal, ModalFooter, ConfirmDialog, FormField, Input, Select, Skeleton,
+  TableRoot, Thead, Tbody, Tr, Th, Td, TableEmpty, Avatar
 } from '@/components/ui'
 import { TablePagination } from '@/components/ui/TablePagination'
 import { cn } from '@/lib/utils'
@@ -57,6 +57,15 @@ const ENROLLMENT_STATUS_VARIANTS: Record<string, 'success' | 'brand' | 'default'
   retained: 'warning',
   withdrawn: 'danger',
   transferred: 'danger',
+}
+
+const ATTENDANCE_BADGE_VARIANTS: Record<string, 'success' | 'danger' | 'warning' | 'info' | 'default'> = {
+  present: 'success',
+  absent: 'danger',
+  late: 'warning',
+  half_day: 'warning',
+  excused: 'info',
+  holiday: 'default',
 }
 
 export default function StudentProfilePage() {
@@ -285,6 +294,26 @@ export default function StudentProfilePage() {
     return filteredLogs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
   }, [filteredLogs, currentPage])
 
+  // ponytail: single-pass tally across attendance records
+  const attendanceStats = useMemo(() => {
+    const counts = { total: 0, present: 0, absent: 0, late: 0, half_day: 0, excused: 0, rate: 0 }
+    if (!attendanceHistory?.length) return counts
+    counts.total = attendanceHistory.length
+    for (const h of attendanceHistory) {
+      if (h.status in counts) counts[h.status as keyof typeof counts]++
+    }
+    const effective = counts.present + counts.late + (counts.half_day * 0.5)
+    counts.rate = Math.round((effective / counts.total) * 100)
+    return counts
+  }, [attendanceHistory])
+
+  const formatAttendanceDate = (dateStr: string) => {
+    if (!dateStr) return '—'
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr
+    const weekday = d.toLocaleDateString(undefined, { weekday: 'short' })
+    return `${weekday}, ${formatDate(dateStr)}`
+  }
   // Query units & groups based on student's enrollment
   const sessionId = student?.enrollment?.academic_session_id ?? 1
   const { data: termsData } = useTerms(Number(sessionId))
@@ -558,7 +587,7 @@ export default function StudentProfilePage() {
           return (
             <div
               key={member.id}
-              className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-bg-base/30 transition-colors"
+              className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-hover-bg transition-colors"
             >
               {/* Left: Avatar + Identity */}
               <div className="flex items-center gap-3.5 min-w-0">
@@ -572,7 +601,7 @@ export default function StudentProfilePage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-text text-sm truncate">{member.name}</span>
-                    <span className="text-3xs font-medium px-2 py-0.5 rounded-md bg-bg-base border border-border text-text-muted">
+                    <span className="text-3xs font-medium px-2 py-0.5 rounded-md bg-bg-surface border border-border text-text-muted">
                       {member.role}
                     </span>
                   </div>
@@ -663,7 +692,7 @@ export default function StudentProfilePage() {
         })}
 
         {linkedGuardiansList.length === 0 && (
-          <div className="p-4 text-center text-xs text-text-muted bg-bg-base/20">
+          <div className="p-4 text-center text-xs text-text-muted bg-bg-surface">
             {__( 'No legal guardians registered for this student.', 'codeclove-school-management' )}
           </div>
         )}
@@ -699,15 +728,12 @@ export default function StudentProfilePage() {
         {/* Left Column - Profile Sidebar Card */}
         <div className="lg:col-span-1">
           <Card className="p-6 flex flex-col items-center text-center space-y-4">
-            {student.photo_url ? (
-              <div className="w-20 h-20 rounded-full border-4 border-brand/10 shadow-sm overflow-hidden flex-shrink-0 select-none relative">
-                <img src={student.photo_url} alt={`${student.first_name} ${student.last_name}`} className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-brand-dim border-4 border-brand/10 shadow-sm flex items-center justify-center text-brand font-bold text-2xl flex-shrink-0 select-none">
-                {student.first_name[0] ?? ''}{student.last_name[0] ?? ''}
-              </div>
-            )}
+            <Avatar
+              name={`${student.first_name} ${student.last_name}`}
+              photoUrl={student.photo_url}
+              size="2xl"
+              shape="circle"
+            />
             <div className="space-y-1">
               <h2 className="text-base font-bold text-text">
                 {student.first_name} {student.last_name}
@@ -1196,47 +1222,33 @@ export default function StudentProfilePage() {
 
                     {/* Finance Sub-tabs & Filter bar */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-                      <div className="p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 inline-flex items-center gap-1 self-start text-xs font-medium">
-                        <button
-                          type="button"
-                          onClick={() => setFinanceTab('ledger')}
-                          className={cn(
-                            'inline-flex items-center justify-center gap-2 font-medium text-xs rounded-lg transition-all h-8 px-3.5 select-none cursor-pointer',
-                            financeTab === 'ledger'
-                              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold shadow-xs border border-slate-200/80 dark:border-slate-700'
-                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/40 dark:hover:bg-slate-800/60'
-                          )}
-                        >
-                          <span>{__( 'Invoice Ledger', 'codeclove-school-management' )}</span>
-                          <span className={cn(
-                            'px-1.5 py-0.2 rounded-full text-[10px] font-bold font-mono',
-                            financeTab === 'ledger'
-                              ? 'bg-primary/10 text-primary'
-                              : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                          )}>
-                            {filteredInvoices.length}
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setFinanceTab('history')}
-                          className={cn(
-                            'inline-flex items-center justify-center gap-2 font-medium text-xs rounded-lg transition-all h-8 px-3.5 select-none cursor-pointer',
-                            financeTab === 'history'
-                              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold shadow-xs border border-slate-200/80 dark:border-slate-700'
-                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/40 dark:hover:bg-slate-800/60'
-                          )}
-                        >
-                          <span>{__( 'Payment History', 'codeclove-school-management' )}</span>
-                          <span className={cn(
-                            'px-1.5 py-0.2 rounded-full text-[10px] font-bold font-mono',
-                            financeTab === 'history'
-                              ? 'bg-primary/10 text-primary'
-                              : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                          )}>
-                            {payments.length}
-                          </span>
-                        </button>
+                      <div className="p-1 rounded-xl bg-bg-surface border border-border inline-flex items-center gap-1 self-start text-xs font-medium">
+                        {([
+                          { id: 'ledger', label: __( 'Invoice Ledger', 'codeclove-school-management' ), count: filteredInvoices.length },
+                          { id: 'history', label: __( 'Payment History', 'codeclove-school-management' ), count: payments.length },
+                        ] as const).map((tab) => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setFinanceTab(tab.id)}
+                            className={cn(
+                              'inline-flex items-center justify-center gap-2 font-medium text-xs rounded-lg transition-all h-8 px-3.5 select-none cursor-pointer',
+                              financeTab === tab.id
+                                ? 'bg-bg-elevated text-text font-semibold shadow-xs border border-border'
+                                : 'text-text-muted hover:text-text hover:bg-hover-bg'
+                            )}
+                          >
+                            <span>{tab.label}</span>
+                            <span className={cn(
+                              'px-1.5 py-0.5 rounded-full text-[10px] font-bold font-mono',
+                              financeTab === tab.id
+                                ? 'bg-brand-dim text-brand'
+                                : 'bg-hover-bg text-text-subtle'
+                            )}>
+                              {tab.count}
+                            </span>
+                          </button>
+                        ))}
                       </div>
 
                       {/* Term filter select */}
@@ -1393,7 +1405,7 @@ export default function StudentProfilePage() {
                               paginatedPayments.map((p) => {
                                 const isReversed = p.status === 'cancelled' || p.status === 'refunded'
                                 return (
-                                  <Tr key={p.id} className="hover:bg-bg-base/20 transition-colors">
+                                  <Tr key={p.id} className="hover:bg-hover-bg transition-colors">
                                     <Td type="code">
                                       <span className="font-mono font-semibold text-text">{p.payment_number}</span>
                                     </Td>
@@ -1472,26 +1484,36 @@ export default function StudentProfilePage() {
             )}
 
             {activeSubTab === 'academics' && (
-              <div className="space-y-4">
-                <FormGroupHeader title={__( 'Academics & Subject selection', 'codeclove-school-management' )} icon={BookOpen} />
-                <div className="space-y-3 pb-3">
-                  <p className="text-2xs font-bold text-text-muted uppercase tracking-wider mb-1">{__( 'Enrolled Subjects', 'codeclove-school-management' )}</p>
+              <div className="space-y-5">
+                <FormGroupHeader title={__( 'Academic Enrollment & Attendance', 'codeclove-school-management' )} icon={BookOpen} />
+                
+                {/* Enrolled Subjects */}
+                <div className="space-y-2.5 pb-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xs font-bold text-text-muted uppercase tracking-wider">{__( 'Enrolled Subjects', 'codeclove-school-management' )}</span>
+                    {studentSubjects.length > 0 && (
+                      <span className="text-2xs text-text-muted">{sprintf( __( '%d Subjects', 'codeclove-school-management' ), studentSubjects.length )}</span>
+                    )}
+                  </div>
                   {studentSubjects.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-center text-xs text-text-muted">
+                    <div className="flex flex-col items-center justify-center py-6 text-center text-xs text-text-muted bg-bg-surface rounded-lg border border-border/50">
                       <BookOpen size={20} className="text-text-subtle mb-1" />
                       {sprintf( __( 'No academic %s enrolled yet.', 'codeclove-school-management' ), subjectLabelPlural.toLowerCase() )}
                     </div>
                   ) : (
-                    <div className="flex flex-wrap gap-2 pt-1">
+                    <div className="flex flex-wrap gap-2 pt-0.5">
                       {studentSubjects.map((sub) => (
-                        <Badge key={sub.id} variant={sub.type === 'core' ? 'brand' : 'default'} size="sm" className="capitalize">
-                          {sub.name} ({sub.type})
+                        <Badge key={sub.id} variant={sub.type === 'core' ? 'brand' : 'default'} size="sm" className="gap-1.5 px-2.5 py-1 text-xs capitalize">
+                          <BookOpen size={11} className="opacity-70" />
+                          {sub.name}
+                          <span className="text-[10px] opacity-75 font-normal">({sub.type})</span>
                         </Badge>
                       ))}
                     </div>
                   )}
                 </div>
 
+                {/* Attendance Section */}
                 <div className="border-t border-border/40 pt-4 space-y-4">
                   <h3 className="text-xs font-bold text-text uppercase tracking-wider">{__( 'Attendance Logs', 'codeclove-school-management' )}</h3>
                   {isAttendanceLoading ? (
@@ -1501,42 +1523,26 @@ export default function StudentProfilePage() {
                   ) : (
                     <div className="space-y-4">
                       {/* Summary stats */}
-                      <div className="flex flex-wrap gap-3">
-                        {student.enrollment?.roll_number && (
-                          <div className="px-3 py-1.5 bg-bg-surface border border-border/40 rounded flex items-center gap-2">
-                            <span className="text-2xs text-text-muted">{__( 'Roll No', 'codeclove-school-management' )}</span>
-                            <span className="text-xs font-bold text-text">
-                              {student.enrollment.roll_number}
-                            </span>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                        {[
+                          { label: __( 'Attendance Rate', 'codeclove-school-management' ), value: `${attendanceStats.rate}%`, color: attendanceStats.rate >= 75 ? 'text-success' : 'text-danger' },
+                          { label: __( 'Present', 'codeclove-school-management' ), value: sprintf( __( '%d days', 'codeclove-school-management' ), attendanceStats.present ), color: 'text-success' },
+                          { label: __( 'Late', 'codeclove-school-management' ), value: sprintf( __( '%d days', 'codeclove-school-management' ), attendanceStats.late ), color: 'text-warning' },
+                          { label: __( 'Half Day', 'codeclove-school-management' ), value: sprintf( __( '%d days', 'codeclove-school-management' ), attendanceStats.half_day ), color: 'text-warning' },
+                          { label: __( 'Absent', 'codeclove-school-management' ), value: sprintf( __( '%d days', 'codeclove-school-management' ), attendanceStats.absent ), color: 'text-danger' },
+                        ].map((stat) => (
+                          <div key={stat.label} className="p-3 bg-bg-surface border border-border/60 rounded-lg space-y-1">
+                            <span className="text-2xs text-text-muted uppercase tracking-wider font-semibold block">{stat.label}</span>
+                            <span className={cn('text-lg font-bold block', stat.color)}>{stat.value}</span>
                           </div>
-                        )}
-                        <div className="px-3 py-1.5 bg-bg-surface border border-border/40 rounded flex items-center gap-2">
-                          <span className="text-2xs text-text-muted">{__( 'Rate', 'codeclove-school-management' )}</span>
-                          <span className="text-xs font-bold text-text">
-                            {(() => {
-                              const total = attendanceHistory.length;
-                              const present = attendanceHistory.filter(h => h.status === 'present').length;
-                              return total > 0 ? `${Math.round((present / total) * 100)}%` : '0%';
-                            })()}
-                          </span>
-                        </div>
-                        <div className="px-3 py-1.5 bg-bg-surface border border-border/40 rounded flex items-center gap-2">
-                          <span className="text-2xs text-text-muted">{__( 'Present', 'codeclove-school-management' )}</span>
-                          <span className="text-xs font-bold text-success">
-                            {sprintf( __( '%d days', 'codeclove-school-management' ), attendanceHistory.filter(h => h.status === 'present').length )}
-                          </span>
-                        </div>
-                        <div className="px-3 py-1.5 bg-bg-surface border border-border/40 rounded flex items-center gap-2">
-                          <span className="text-2xs text-text-muted">{__( 'Absent', 'codeclove-school-management' )}</span>
-                          <span className="text-xs font-bold text-danger">
-                            {sprintf( __( '%d days', 'codeclove-school-management' ), attendanceHistory.filter(h => h.status === 'absent').length )}
-                          </span>
-                        </div>
+                        ))}
                       </div>
-
                       {/* Filters */}
-                      <div className="flex flex-wrap gap-4 items-center py-2 px-4 bg-bg-overlay/5 border border-border/40 rounded text-xs">
-                        <span className="font-semibold text-text-muted">{__( 'Filters:', 'codeclove-school-management' )}</span>
+                      <div className="flex flex-wrap items-center gap-3 p-3 bg-bg-surface border border-border/70 rounded-lg text-xs">
+                        <div className="flex items-center gap-1.5 text-text-muted font-semibold pe-1">
+                          <Filter size={13} className="text-text-subtle" />
+                          <span>{__( 'Filter Logs:', 'codeclove-school-management' )}</span>
+                        </div>
                         
                         <div className="flex items-center gap-1.5">
                           <span className="text-text-subtle font-medium">{__( 'Year:', 'codeclove-school-management' )}</span>
@@ -1546,7 +1552,7 @@ export default function StudentProfilePage() {
                               setYearFilter(e.target.value)
                               setCurrentPage(1)
                             }}
-                            className="bg-bg-surface border border-border rounded px-2 py-1 text-text outline-none focus:border-brand/60"
+                            className="bg-bg-base border border-border rounded px-2.5 py-1 text-xs text-text outline-none focus:ring-1 focus:ring-brand-ring"
                           >
                             <option value="">{__( 'All Years', 'codeclove-school-management' )}</option>
                             {uniqueYears.map(y => (
@@ -1563,7 +1569,7 @@ export default function StudentProfilePage() {
                               setMonthFilter(e.target.value)
                               setCurrentPage(1)
                             }}
-                            className="bg-bg-surface border border-border rounded px-2 py-1 text-text outline-none focus:border-brand/60"
+                            className="bg-bg-base border border-border rounded px-2.5 py-1 text-xs text-text outline-none focus:ring-1 focus:ring-brand-ring"
                           >
                             <option value="">{__( 'All Months', 'codeclove-school-management' )}</option>
                             {[
@@ -1593,7 +1599,7 @@ export default function StudentProfilePage() {
                               setStatusFilter(e.target.value)
                               setCurrentPage(1)
                             }}
-                            className="bg-bg-surface border border-border rounded px-2 py-1 text-text outline-none focus:border-brand/60 capitalize"
+                            className="bg-bg-base border border-border rounded px-2.5 py-1 text-xs text-text outline-none focus:ring-1 focus:ring-brand-ring capitalize"
                           >
                             <option value="">{__( 'All Statuses', 'codeclove-school-management' )}</option>
                             {['present', 'absent', 'late', 'half_day', 'excused', 'holiday'].map(st => (
@@ -1608,29 +1614,29 @@ export default function StudentProfilePage() {
                         <p className="text-xs text-text-muted italic py-4 text-center">{__( 'No attendance records match your active filters.', 'codeclove-school-management' )}</p>
                       ) : (
                         <>
-                          <div className="border border-border/40 rounded overflow-hidden">
+                          <div className="border border-border/40 rounded-lg overflow-hidden">
                             <TableRoot>
                               <Thead>
                                 <Tr>
-                                  <Th className="p-3">{__( 'Date', 'codeclove-school-management' )}</Th>
-                                  <Th type="badge" className="p-3">{__( 'Status', 'codeclove-school-management' )}</Th>
-                                  <Th className="p-3">{__( 'Session & Class', 'codeclove-school-management' )}</Th>
-                                  <Th className="p-3">{__( 'Note', 'codeclove-school-management' )}</Th>
+                                  <Th className="p-3 w-48">{__( 'Date', 'codeclove-school-management' )}</Th>
+                                  <Th type="badge" className="p-3 w-32">{__( 'Status', 'codeclove-school-management' )}</Th>
+                                  <Th className="p-3">{__( 'Note / Remarks', 'codeclove-school-management' )}</Th>
                                 </Tr>
                               </Thead>
                               <Tbody className="divide-y divide-border/20 text-xs">
                                 {paginatedLogs.map((h) => (
                                   <Tr key={h.id} className="hover:bg-bg-overlay/10">
-                                    <Td className="p-3 font-mono font-medium">{h.attendance_date}</Td>
+                                    <Td className="p-3 font-medium text-text">
+                                      {formatAttendanceDate(h.attendance_date)}
+                                    </Td>
                                     <Td type="badge" className="p-3">
-                                      <Badge size="sm" variant={(h.status || 'default') as any} className="capitalize">
+                                      <Badge size="sm" variant={ATTENDANCE_BADGE_VARIANTS[h.status] || 'default'} className="capitalize">
                                         {h.status.replace('_', ' ')}
                                       </Badge>
                                     </Td>
-                                    <Td className="p-3 text-text-muted">
-                                      {h.session_name || '—'} • {h.unit_name || '—'}{h.group_name ? ` (${h.group_name})` : ''}
+                                    <Td className="p-3 text-text-muted italic">
+                                      {h.note || '—'}
                                     </Td>
-                                    <Td className="p-3 text-text-muted italic">{h.note || '—'}</Td>
                                   </Tr>
                                 ))}
                               </Tbody>
@@ -1696,7 +1702,7 @@ export default function StudentProfilePage() {
             description={sprintf( __( 'Move %1$s %2$s to a different %3$s or %4$s within the current academic session.', 'codeclove-school-management' ), student.first_name, student.last_name, unitLabelSingular, groupLabelSingular )}
           >
             <div className="space-y-4 p-1">
-              <div className="p-3 rounded-lg bg-bg-base border border-border text-xs text-text-muted">
+              <div className="p-3 rounded-lg bg-bg-surface border border-border text-xs text-text-muted">
                 {__( 'Currently enrolled in', 'codeclove-school-management' )}{' '}
                 <span className="font-semibold text-text">{matchedUnit?.name || '—'}</span>
                 {matchedGroup && (
@@ -1786,7 +1792,7 @@ export default function StudentProfilePage() {
               />
             </FormField>
 
-            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-bg-base border border-border cursor-pointer text-xs">
+            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-bg-surface border border-border cursor-pointer text-xs">
               <input
                 type="checkbox"
                 checked={formSendEmail}
@@ -1827,7 +1833,7 @@ export default function StudentProfilePage() {
           description={sprintf( __( 'Portal access enabled for %s. Share these credentials so they can sign in.', 'codeclove-school-management' ), createdCreds.name )}
         >
           <div className="space-y-3 p-1">
-            <div className="bg-bg-base rounded-xl border border-border p-4 space-y-2.5 text-xs font-mono">
+            <div className="bg-bg-surface rounded-xl border border-border p-4 space-y-2.5 text-xs font-mono">
               <div className="flex items-center justify-between">
                 <span className="text-text-muted font-sans font-medium">{__( 'Username:', 'codeclove-school-management' )}</span>
                 <span className="font-semibold text-text">@{createdCreds.username}</span>
@@ -1866,11 +1872,15 @@ export default function StudentProfilePage() {
 
       {/* Revoke Portal Access Modal */}
       {revokeModalOpen && revokeTarget && (
-        <Modal
+        <ConfirmDialog
           open={revokeModalOpen}
           onOpenChange={setRevokeModalOpen}
+          onConfirm={handleConfirmRevokePortal}
           title={__( 'Revoke Portal Access', 'codeclove-school-management' )}
           description={sprintf( __( 'Are you sure you want to revoke portal access for %1$s (@%2$s)?', 'codeclove-school-management' ), revokeTarget.name, revokeTarget.username )}
+          variant="danger"
+          confirmText={__( 'Confirm Revoke Access', 'codeclove-school-management' )}
+          isLoading={unlinkPortalAccountMutation.isPending}
         >
           <div className="p-3 rounded-lg bg-danger/5 border border-danger/20 text-xs text-text space-y-2">
             <p className="font-semibold text-danger flex items-center gap-1.5">
@@ -1884,20 +1894,7 @@ export default function StudentProfilePage() {
               )}
             </p>
           </div>
-
-          <ModalFooter>
-            <Button variant="secondary" onClick={() => setRevokeModalOpen(false)}>
-              {__( 'Cancel', 'codeclove-school-management' )}
-            </Button>
-            <Button
-              variant="danger"
-              onClick={handleConfirmRevokePortal}
-              disabled={unlinkPortalAccountMutation.isPending}
-            >
-              {unlinkPortalAccountMutation.isPending ? __( 'Revoking…', 'codeclove-school-management' ) : __( 'Confirm Revoke Access', 'codeclove-school-management' )}
-            </Button>
-          </ModalFooter>
-        </Modal>
+        </ConfirmDialog>
       )}
       {/* Hidden printable elements container */}
       <div className="hidden">

@@ -30,7 +30,7 @@
   font-family: 'Inter', system-ui, sans-serif;
   font-size: calc(0.875rem * var(--codeclove-view-scale, 1));
   line-height: calc(1.375rem * var(--codeclove-view-scale, 1));
-  color: #0f172a;
+  color: var(--text, #0f172a);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
@@ -39,6 +39,8 @@
   font-variation-settings: normal;
   width: 100%;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
 
 /* Box-model & Border reset scoped to portal — establishes Tailwind preflight baseline */
@@ -49,7 +51,7 @@
   box-sizing: border-box;
   border-width: 0;
   border-style: solid;
-  border-color: var(--border, #e2e8f0);
+  border-color: var(--border, #cbd5e1);
 }
 #codeclove-portal-root {
   /* Tailwind core variable defaults (required when preflight is disabled) */
@@ -77,7 +79,7 @@
   --tw-ring-inset: ;
   --tw-ring-offset-width: 0px;
   --tw-ring-offset-color: #fff;
-  --tw-ring-color: rgb(79 70 229 / 0.5);
+  --tw-ring-color: var(--brand-ring);
   --tw-ring-offset-shadow: 0 0 #0000;
   --tw-ring-shadow: 0 0 #0000;
   --tw-shadow: 0 0 #0000;
@@ -200,7 +202,7 @@
 #codeclove-portal-root td {
   border-style: solid;
   border-width: 0;
-  border-color: var(--border, #e2e8f0);
+  border-color: var(--border, #cbd5e1);
   padding: 0;
   display: table-cell !important;
 }
@@ -233,7 +235,7 @@
 }
 
 #codeclove-portal-root :focus-visible {
-  outline: 2px solid var(--brand, #5e5bf2);
+  outline: 2px solid var(--brand-ring, var(--brand, #5e5bf2));
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -251,110 +253,259 @@
 
 #codeclove-portal-root {
   /* Backgrounds */
-  --bg-base:     #f4f6f9;
-  --bg-surface:  #ffffff;
-  --bg-elevated: #ffffff;
-  --bg-overlay:  #f8fafc;
+  --bg-base:     #f4f6f9;   /* page canvas    */
+  --bg-surface:  #ffffff;   /* sidebar, panels*/
+  --bg-elevated: #ffffff;   /* cards          */
+  --bg-overlay:  #f8fafc;   /* menus, popovers*/
+  --bg-subtle:   #f1f5f9;
 
   /* Borders */
-  --border:        #e2e8f0;
-  --border-subtle: #f1f5f9;
-  --border-strong: #cbd5e1;
-
-  /* Text */
+  --border:        #cbd5e1;
+  --border-subtle: rgba(0, 0, 0, 0.04);
+  --border-strong: #7c8ba1;
+  /* Text — WCAG AA/AAA compliant (>= 4.5:1 on light surfaces) */
   --text:          #0f172a;
-  --text-muted:    #334155;
-  --text-subtle:   #64748b;
+  --text-muted:    #475569;
+  --text-subtle:   #5b6b82;
   --text-inverted: #ffffff;
 
-  /* Brand — Premium Deep Indigo */
-  --brand:         #4f46e5;
-  --brand-strong:  #4338ca;
-  --brand-dim:     rgba(79, 70, 229, 0.08);
-  --brand-ring:    #4f46e5;
+  /* Brand — indigo-violet */
+  --brand:         #5e5bf2;
+  --brand-strong:  #4845d2;
+  --brand-dim:     rgba(94, 91, 242, 0.08);
+  --brand-ring:    #4845d2;
+
+  /* Semantic — WCAG AA compliant on white */
+  --success:     #15803d;
+  --success-dim: rgba(21, 128, 61, 0.08);
+  --warning:     #b45309;
+  --warning-dim: rgba(180, 83, 9, 0.08);
+  --danger:      #b91c1c;
+  --danger-dim:  rgba(185, 28, 28, 0.08);
+  --info:        #0369a1;
+  --info-dim:    rgba(3, 105, 161, 0.08);
+
+  /* Status badge foreground — WCAG AA compliant on light */
+  --status-inquiry:       #475569;
+  --status-submitted:     #0369a1;
+  --status-under-review:  #4f46e5;
+  --status-more-info:     #b45309;
+  --status-interview:     #6d28d9;
+  --status-accepted:      #15803d;
+  --status-waitlisted:    #c2410c;
+  --status-rejected:      #b91c1c;
+  --status-admitted:      #047857;
+  --status-withdrawn:     #5b6b82;
+  --status-hired:         #047857;
+  --status-offer-sent:    #6d28d9;
+  --status-active:        #15803d;
+  --status-inactive:      #5b6b82;
+  --status-archived:      #475569;
+  --status-draft:         #5b6b82;
+  --status-paid:          #15803d;
+  --status-partially_paid:#b45309;
+  --status-overdue:       #b91c1c;
+  --status-present:       #15803d;
+  --status-absent:        #b91c1c;
+  --status-late:          #b45309;
+
+  /* Interactive hover */
+  --hover-bg:  rgba(0, 0, 0, 0.04);
+  --active-bg: rgba(0, 0, 0, 0.06);
+
+  /* Shadows */
+  --shadow-card:    0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card-md: 0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-modal:   0 20px 60px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06);
+  --shadow-ring:    0 0 0 3px rgba(99,102,241,0.28);
+  --shadow-glow:    0 0 24px rgba(99,102,241,0.16);
+  --shadow-sidebar: 1px 0 0 rgba(0,0,0,0.06);
+  --shadow-header:  0 1px 0 rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+
+  /* Shimmer gradient */
+  --shimmer-from: #f1f5f9;
+  --shimmer-mid:  #e2e8f0;
 }
 
-/* Theme Color Presets mapped from Settings */
+/* Theme Color Presets mapped from Settings — WCAG AA compliant */
 #codeclove-portal-root[data-theme-color="classic_indigo"] {
   --brand:         #5e5bf2;
   --brand-strong:  #4845d2;
   --brand-dim:     rgba(94, 91, 242, 0.08);
-  --brand-ring:    #5e5bf2;
+  --brand-ring:    #4845d2;
 }
 
 #codeclove-portal-root[data-theme-color="sky_blue"] {
   --brand:         #2269e3;
   --brand-strong:  #1d5ecb;
   --brand-dim:     rgba(34, 105, 227, 0.08);
-  --brand-ring:    #2269e3;
+  --brand-ring:    #1d5ecb;
 }
 
 #codeclove-portal-root[data-theme-color="sunset_orange"] {
-  --brand:         #d64f1a;
-  --brand-strong:  #c04212;
-  --brand-dim:     rgba(214, 79, 26, 0.08);
-  --brand-ring:    #d64f1a;
+  --brand:         #cf4a17;
+  --brand-strong:  #b93e11;
+  --brand-dim:     rgba(207, 74, 23, 0.08);
+  --brand-ring:    #b93e11;
 }
 
 #codeclove-portal-root[data-theme-color="sunny_gold"] {
-  --brand:         #d98a00;
-  --brand-strong:  #c27a00;
-  --brand-dim:     rgba(217, 138, 0, 0.08);
-  --brand-ring:    #d98a00;
+  --brand:         #a85c00;
+  --brand-strong:  #8f4c00;
+  --brand-dim:     rgba(168, 92, 0, 0.08);
+  --brand-ring:    #8f4c00;
 }
 
 #codeclove-portal-root[data-theme-color="fresh_mint"] {
-  --brand:         #158f49;
+  --brand:         #148543;
   --brand-strong:  #10783c;
-  --brand-dim:     rgba(21, 143, 73, 0.08);
-  --brand-ring:    #158f49;
+  --brand-dim:     rgba(20, 133, 67, 0.08);
+  --brand-ring:    #10783c;
 }
 
 #codeclove-portal-root[data-theme-color="playful_violet"] {
   --brand:         #8a3ffc;
   --brand-strong:  #7532df;
   --brand-dim:     rgba(138, 63, 252, 0.08);
-  --brand-ring:    #8a3ffc;
+  --brand-ring:    #7532df;
 }
 
 #codeclove-portal-root[data-theme-color="fun_pink"] {
   --brand:         #d12377;
   --brand-strong:  #b61b65;
   --brand-dim:     rgba(209, 35, 119, 0.08);
-  --brand-ring:    #d12377;
+  --brand-ring:    #b61b65;
+}
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Portal Dark Mode Tokens                                                    */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+#codeclove-portal-root.dark,
+.dark #codeclove-portal-root {
+  /* Backgrounds */
+  --bg-base:     #09090b;   /* page canvas    */
+  --bg-surface:  #111115;   /* sidebar, panels*/
+  --bg-elevated: #1c1c26;   /* cards          */
+  --bg-overlay:  #242432;   /* menus, popovers*/
+  --bg-subtle:   #16161e;   /* secondary tags */
+
+  /* Borders — WCAG 2.2 AA compliant (>= 3:1 contrast against dark surfaces) */
+  --border:        rgba(255, 255, 255, 0.16);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.32);
+
+  /* Text — WCAG AA compliant */
+  --text:          #f8fafc;
+  --text-muted:    #cbd5e1;
+  --text-subtle:   #94a3b8;
+  --text-inverted: #0f172a;
+
+  /* Brand — slightly lighter for dark bg legibility */
+  --brand:         #807eff;
+  --brand-strong:  #9e9dff;
+  --brand-dim:     rgba(128, 126, 255, 0.14);
+  --brand-ring:    #807eff;
+
+  /* Semantic — brighter for dark bg visibility */
+  --success:     #22c55e;
+  --success-dim: rgba(34, 197, 94, 0.12);
+  --warning:     #f59e0b;
+  --warning-dim: rgba(245, 158, 11, 0.12);
+  --danger:      #f87171;
+  --danger-dim:  rgba(248, 113, 113, 0.12);
+  --info:        #38bdf8;
+  --info-dim:    rgba(56, 189, 248, 0.12);
+
+  /* Status badge foreground tokens — WCAG AA compliant on dark */
+  --status-inquiry:        #94a3b8;
+  --status-submitted:      #38bdf8;
+  --status-under-review:   #818cf8;
+  --status-more-info:      #f59e0b;
+  --status-interview:      #a78bfa;
+  --status-accepted:       #22c55e;
+  --status-waitlisted:     #fb923c;
+  --status-rejected:       #f87171;
+  --status-admitted:       #34d399;
+  --status-withdrawn:      #94a3b8;
+  --status-hired:          #34d399;
+  --status-offer-sent:     #a78bfa;
+  --status-active:         #22c55e;
+  --status-inactive:       #94a3b8;
+  --status-archived:       #94a3b8;
+  --status-draft:          #94a3b8;
+  --status-paid:           #22c55e;
+  --status-partially_paid: #f59e0b;
+  --status-overdue:        #f87171;
+  --status-present:        #22c55e;
+  --status-absent:         #f87171;
+  --status-late:           #f59e0b;
+
+  /* Interactive hover */
+  --hover-bg:  rgba(255, 255, 255, 0.08);
+  --active-bg: rgba(255, 255, 255, 0.12);
+
+  /* Shadows — deeper on dark */
+  --shadow-card:    0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.24);
+  --shadow-card-md: 0 4px 20px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-modal:   0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-ring:    0 0 0 3px rgba(99,102,241,0.38);
+  --shadow-glow:    0 0 28px rgba(99,102,241,0.24);
+  --shadow-sidebar: 1px 0 0 rgba(255,255,255,0.04);
+  --shadow-header:  0 1px 0 rgba(255,255,255,0.04);
+
+  /* Shimmer gradient */
+  --shimmer-from: #242432;
+  --shimmer-mid:  #2e2e40;
 }
 
-#codeclove-portal-root {
-  /* Semantic */
-  --success:     #16a34a;
-  --success-dim: rgba(22, 163, 74, 0.08);
-  --warning:     #d97706;
-  --warning-dim: rgba(217, 119, 6, 0.08);
-  --danger:      #dc2626;
-  --danger-dim:  rgba(220, 38, 38, 0.08);
-  --info:        #0284c7;
-  --info-dim:    rgba(2, 132, 199, 0.08);
-
-  /* Status badge foreground tokens — WCAG AA compliant */
-  --status-active:         #15803d;
-  --status-paid:           #15803d;
-  --status-partially_paid: #b45309;
-  --status-overdue:        #b91c1c;
-  --status-present:        #15803d;
-  --status-absent:         #b91c1c;
-  --status-late:           #b45309;
-  --hover-bg:              rgba(0, 0, 0, 0.04);
-  --active-bg:             rgba(0, 0, 0, 0.06);
-  /* Shadows — Soft Layered Modern Depth */
-  --shadow-card:    0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
-  --shadow-card-md: 0 4px 12px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
-  --shadow-modal:   0 20px 60px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  --shadow-ring:    0 0 0 3px rgba(79, 70, 229, 0.25);
-  --shadow-glow:    0 0 24px rgba(79, 70, 229, 0.14);
-  --shadow-sidebar: 1px 0 0 rgba(0, 0, 0, 0.05);
-  --shadow-header:  0 1px 0 rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.02);
+:is(#codeclove-portal-root.dark, .dark #codeclove-portal-root)[data-theme-color="classic_indigo"] {
+  --brand:         #807eff;
+  --brand-strong:  #9e9dff;
+  --brand-dim:     rgba(128, 126, 255, 0.14);
+  --brand-ring:    #807eff;
 }
 
+:is(#codeclove-portal-root.dark, .dark #codeclove-portal-root)[data-theme-color="sky_blue"] {
+  --brand:         #6bafff;
+  --brand-strong:  #93c5fd;
+  --brand-dim:     rgba(107, 175, 255, 0.14);
+  --brand-ring:    #6bafff;
+}
+
+:is(#codeclove-portal-root.dark, .dark #codeclove-portal-root)[data-theme-color="sunset_orange"] {
+  --brand:         #ff8a50;
+  --brand-strong:  #fdba74;
+  --brand-dim:     rgba(255, 138, 80, 0.14);
+  --brand-ring:    #ff8a50;
+}
+
+:is(#codeclove-portal-root.dark, .dark #codeclove-portal-root)[data-theme-color="sunny_gold"] {
+  --brand:         #ffb74d;
+  --brand-strong:  #fcd34d;
+  --brand-dim:     rgba(255, 183, 77, 0.14);
+  --brand-ring:    #ffb74d;
+}
+
+:is(#codeclove-portal-root.dark, .dark #codeclove-portal-root)[data-theme-color="fresh_mint"] {
+  --brand:         #56d087;
+  --brand-strong:  #6ee7b7;
+  --brand-dim:     rgba(86, 208, 135, 0.14);
+  --brand-ring:    #56d087;
+}
+
+:is(#codeclove-portal-root.dark, .dark #codeclove-portal-root)[data-theme-color="playful_violet"] {
+  --brand:         #a78bfa;
+  --brand-strong:  #c4b5fd;
+  --brand-dim:     rgba(167, 139, 250, 0.14);
+  --brand-ring:    #a78bfa;
+}
+
+:is(#codeclove-portal-root.dark, .dark #codeclove-portal-root)[data-theme-color="fun_pink"] {
+  --brand:         #f472b6;
+  --brand-strong:  #f9a8d4;
+  --brand-dim:     rgba(244, 114, 182, 0.14);
+  --brand-ring:    #f472b6;
+}
 /* ─────────────────────────────────────────────────────────────────────────── */
 /* Maximize Mode                                                              */
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -431,14 +582,32 @@ body.admin-bar #codeclove-portal-root .codeclove-portal-backdrop {
 
 
 /* ─────────────────────────────────────────────────────────────────────────── */
-/* Custom Scrollbar                                                           */
+/* Custom Scrollbar, Selection & Directionality                               */
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 #codeclove-portal-root ::-webkit-scrollbar { width: 6px; height: 6px; }
 #codeclove-portal-root ::-webkit-scrollbar-track { background: transparent; }
-#codeclove-portal-root ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 9999px; }
-#codeclove-portal-root ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.22); }
+#codeclove-portal-root ::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 9999px;
+}
+#codeclove-portal-root ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-subtle);
+}
 
+#codeclove-portal-root ::selection {
+  background-color: var(--brand);
+  color: var(--text-inverted);
+}
+
+[dir="rtl"] #codeclove-portal-root,
+#codeclove-portal-root[dir="rtl"] {
+  --shadow-sidebar: -1px 0 0 rgba(0, 0, 0, 0.06);
+}
+.dark #codeclove-portal-root[dir="rtl"],
+#codeclove-portal-root.dark[dir="rtl"] {
+  --shadow-sidebar: -1px 0 0 rgba(255, 255, 255, 0.04);
+}
 /* ─────────────────────────────────────────────────────────────────────────── */
 /* Print                                                                       */
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -471,4 +640,9 @@ body.admin-bar #codeclove-portal-root .codeclove-portal-backdrop {
 /* Ensure clean edge-to-edge container without unwanted theme inner margin */
 :is(body, .page, .post, article):has(#codeclove-portal-root) .entry-content {
   margin: 0 !important;
+}
+
+/* Ensure Sonner toast notifications float above all modal backdrops & dialogs */
+[data-sonner-toaster] {
+  z-index: 100050 !important;
 }

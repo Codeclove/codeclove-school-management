@@ -12,6 +12,7 @@ import {
   Trash2,
   FileText,
   Check,
+  Lock,
 } from 'lucide-react'
 import { __, sprintf } from '@/lib/i18n'
 import { getStatusVariant } from './finance-utils'
@@ -32,12 +33,14 @@ import { useFormatter } from '@/lib/formatter'
 import { printElement } from '@/lib/print'
 import PrintInvoiceSheet from './PrintInvoiceSheet'
 import { UnifiedCheckoutModal } from './components/UnifiedCheckoutModal'
+import { ProGatewayLockModal } from './components/ProGatewayLockModal'
 import { useGatewaysConfig } from '@/api/gateways'
 import {
   Button,
   PageHeader,
   Skeleton,
   EmptyState,
+  ConfirmDialog,
   TableRoot,
   Thead,
   Tbody,
@@ -66,6 +69,8 @@ export default function InvoiceDetailPage() {
   // Modals state
   const [isEditing, setIsEditing] = useState(false)
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false)
+  const [showVoidModal, setShowVoidModal] = useState(false)
+  const [isProGatewayModalOpen, setIsProGatewayModalOpen] = useState(false)
   const handleOpenPayment = () => navigate(`/finance/invoices/${invoiceId}/record-payment`)
 
   // Edit Form State
@@ -82,7 +87,7 @@ export default function InvoiceDetailPage() {
   const { data: settingsData } = useSettings()
   const school = settingsData?.school
   const printRef = useRef<HTMLDivElement>(null)
-  const isPro = typeof window === 'undefined' || window.CodeCloveConfig?.isPro !== false
+  const isPro = window.CodeCloveConfig?.isPro ?? false
   const { data: gatewaysConfig } = useGatewaysConfig({ enabled: isPro })
   const hasActiveGateways = Boolean(
     isPro &&
@@ -145,17 +150,10 @@ export default function InvoiceDetailPage() {
   }
 
   const handleVoidInvoice = () => {
-    const reason = window.prompt(
-      sprintf(__('Enter a reason for voiding this %s (required):', 'codeclove-school-management'), invoiceLabel.toLowerCase())
-    )
-    if (reason === null) return // user cancelled
-    if (!reason.trim()) {
-      toast.error(__('A reason is required to void an invoice.', 'codeclove-school-management'))
-      return
-    }
     voidInvoiceMutation.mutate(invoiceId, {
       onSuccess: () => {
-        toast.success(sprintf(__('%1$s voided. Reason: %2$s', 'codeclove-school-management'), invoiceLabel, reason))
+        toast.success(sprintf(__('%s voided successfully.', 'codeclove-school-management'), invoiceLabel))
+        setShowVoidModal(false)
       },
       onError: (err: unknown) => {
         const message = err instanceof Error ? err.message : ''
@@ -271,10 +269,24 @@ export default function InvoiceDetailPage() {
                 </Button>
                 {!isClosed && !isPaid && (
                   <>
-                    {hasActiveGateways && (
+                    {isPro && hasActiveGateways && (
                       <Button size="sm" variant="secondary" onClick={() => setIsCheckoutModalOpen(true)} className="flex items-center gap-1.5">
                         <CreditCard className="h-4 w-4 text-primary" />
                         {__('Pay Online', 'codeclove-school-management')}
+                      </Button>
+                    )}
+                    {!isPro && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setIsProGatewayModalOpen(true)}
+                        className="flex items-center gap-1.5"
+                      >
+                        <Lock className="h-3.5 w-3.5 text-amber-500" />
+                        <span>{__('Pay Online (Razorpay / Stripe)', 'codeclove-school-management')}</span>
+                        <span className="ms-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/25">
+                          PRO
+                        </span>
                       </Button>
                     )}
                     <Button size="sm" onClick={handleOpenPayment} className="flex items-center gap-1.5">
@@ -284,7 +296,7 @@ export default function InvoiceDetailPage() {
                   </>
                 )}
                 {!isClosed && (
-                  <Button size="sm" variant="danger" onClick={handleVoidInvoice}>
+                  <Button size="sm" variant="danger" onClick={() => setShowVoidModal(true)}>
                     {__('Void Invoice', 'codeclove-school-management')}
                   </Button>
                 )}
@@ -295,7 +307,7 @@ export default function InvoiceDetailPage() {
       />
 
       {/* Invoice Lifecycle Stepper */}
-      <Card className="p-5 border-border/70 shadow-2xs">
+      <Card className="p-5 shadow-2xs">
         <div className="flex items-center justify-between gap-2 overflow-x-auto py-1.5">
           {[
             { id: 'draft', label: __('Draft Created', 'codeclove-school-management') },
@@ -322,10 +334,10 @@ export default function InvoiceDetailPage() {
                       isClosed
                         ? 'bg-bg-subtle text-text-subtle border border-border'
                         : isCompleted
-                        ? 'bg-emerald-500/15 text-emerald-600 border border-emerald-500/30'
+                        ? 'bg-success-dim text-success border border-success/30'
                         : isCurrent
                         ? 'bg-brand-dim text-brand border border-brand/40 ring-4 ring-brand/10 font-bold'
-                        : 'bg-bg-subtle text-text-subtle border border-border/60'
+                        : 'bg-bg-subtle text-text-subtle border border-border'
                     }`}
                   >
                     {isCompleted ? <Check size={14} /> : idx + 1}
@@ -335,12 +347,12 @@ export default function InvoiceDetailPage() {
                       {step.label}
                     </span>
                     {isCurrent && invoice.status === 'overdue' && (
-                      <span className="text-3xs text-amber-600 font-bold block mt-0.5">{__('Payment Overdue', 'codeclove-school-management')}</span>
+                      <span className="text-3xs text-warning font-bold block mt-0.5">{__('Payment Overdue', 'codeclove-school-management')}</span>
                     )}
                   </div>
                 </div>
                 {idx < 3 && (
-                  <div className={`flex-1 h-0.5 rounded-full ${isCompleted ? 'bg-emerald-500/40' : 'bg-border/60'}`} />
+                  <div className={`flex-1 h-0.5 rounded-full ${isCompleted ? 'bg-success' : 'bg-border'}`} />
                 )}
               </div>
             )
@@ -425,7 +437,7 @@ export default function InvoiceDetailPage() {
               </TableRoot>
 
               {/* Totals Summary */}
-              <div className="flex justify-end p-6 bg-bg-base/10 border-t border-border">
+              <div className="flex justify-end p-6 bg-bg-surface border-t border-border">
                 <div className="w-72 space-y-2.5 text-right text-xs">
                   <div className="flex justify-between">
                     <span className="text-text-muted">{__('Total Fees:', 'codeclove-school-management')}</span>
@@ -451,7 +463,7 @@ export default function InvoiceDetailPage() {
                       <span className="font-semibold tabular-nums">-{formatCurrency(invoice.discount_minor)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm font-bold border-t border-border/80 pt-2 text-text">
+                  <div className="flex justify-between text-sm font-bold border-t border-border pt-2 text-text">
                     <span>{__('Net Payable:', 'codeclove-school-management')}</span>
                     <span className="tabular-nums">{formatCurrency(invoice.total_minor)}</span>
                   </div>
@@ -459,7 +471,7 @@ export default function InvoiceDetailPage() {
                     <span>{__('Amount Received:', 'codeclove-school-management')}</span>
                     <span className="tabular-nums">{formatCurrency(invoice.paid_minor)}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-bold border-t border-border/80 pt-2 text-danger">
+                  <div className="flex justify-between text-sm font-bold border-t border-border pt-2 text-danger">
                     <span>{__('Balance Outstanding:', 'codeclove-school-management')}</span>
                     <span className="tabular-nums">{formatCurrency(invoice.balance_minor)}</span>
                   </div>
@@ -595,11 +607,11 @@ export default function InvoiceDetailPage() {
               ) : (
                 <div className="space-y-4 max-h-80 overflow-y-auto pr-1">
                   {invoice.payments.map((p: Payment) => (
-                    <div key={p.id} className="border border-border/50 p-3 rounded-lg bg-bg-surface flex justify-between items-start gap-2">
+                    <div key={p.id} className="border border-border p-3 rounded-lg bg-bg-surface flex justify-between items-start gap-2">
                       <div className="space-y-1">
                         <div className="flex items-center gap-1.5">
                           <span className="font-semibold text-text text-xs">{p.payment_number}</span>
-                          <Badge variant={p.status}>
+                          <Badge variant={getStatusVariant(p.status)}>
                             {p.status}
                           </Badge>
                         </div>
@@ -664,6 +676,23 @@ export default function InvoiceDetailPage() {
           }}
         />
       )}
+      <ProGatewayLockModal
+        isOpen={isProGatewayModalOpen}
+        onClose={() => setIsProGatewayModalOpen(false)}
+      />
+      <ConfirmDialog
+        open={showVoidModal}
+        onOpenChange={setShowVoidModal}
+        onConfirm={handleVoidInvoice}
+        title={sprintf(__('Void %s', 'codeclove-school-management'), invoiceLabel)}
+        description={sprintf(
+          __('Are you sure you want to void this %s? This action cannot be undone.', 'codeclove-school-management'),
+          invoiceLabel.toLowerCase()
+        )}
+        variant="danger"
+        confirmText={__('Void Invoice', 'codeclove-school-management')}
+        isLoading={voidInvoiceMutation.isPending}
+      />
 
     </div>
   )

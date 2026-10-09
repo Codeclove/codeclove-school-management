@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, RotateCcw, AlertTriangle, Printer, X, SlidersHorizontal } from 'lucide-react'
+import { Search, RotateCcw, Printer, X, SlidersHorizontal, QrCode, Sparkles } from 'lucide-react'
 import { __, sprintf } from '@/lib/i18n'
 import { getMethodLabel } from './finance-utils'
 import {
@@ -19,23 +19,15 @@ import { useLabels } from '@/lib/labels'
 import { useFormatter } from '@/lib/formatter'
 import { useSession } from '@/lib/session-context'
 import { useEntity } from '@/lib/useEntity'
-import { TablePagination } from '@/components/ui/TablePagination'
 import { useTableState } from '@/lib/useTableState'
 import { useDebounce } from '@/lib/useDebounce'
 import {
   Button,
   PageHeader,
   Spinner,
-  TableRoot,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  TableSkeleton,
-  TableEmpty,
+  DataTable,
+  type DataTableColumn,
   Card,
-  CardContent,
   Badge,
   FormField,
   Input,
@@ -44,6 +36,7 @@ import {
 } from '@/components/ui'
 
 export default function PaymentsPage() {
+  const isPro = window.CodeCloveConfig?.isPro ?? false
   const navigate = useNavigate()
   const toast = useToast()
   const confirm = useConfirm()
@@ -147,6 +140,110 @@ export default function PaymentsPage() {
     )
   }
 
+  const columns: DataTableColumn<Payment>[] = useMemo(
+    () => [
+      {
+        key: 'payment_number',
+        header: __('Receipt #', 'codeclove-school-management'),
+        type: 'code',
+        render: (row) => row.payment_number,
+      },
+      {
+        key: 'student',
+        header: studentLabel,
+        type: 'primary',
+        render: (row) => (
+          <div>
+            <div>
+              {row.student_first_name} {row.student_last_name}
+            </div>
+            <div className="text-2xs text-text-muted font-mono">{row.student_number}</div>
+          </div>
+        ),
+      },
+      {
+        key: 'invoice_number',
+        header: __('Invoice #', 'codeclove-school-management'),
+        type: 'code',
+        render: (row) => row.invoice_number || '—',
+      },
+      {
+        key: 'paid_on',
+        header: __('Payment Date', 'codeclove-school-management'),
+        type: 'date',
+        render: (row) => formatDate(row.paid_on),
+      },
+      {
+        key: 'method',
+        header: __('Method', 'codeclove-school-management'),
+        type: 'badge',
+        render: (row) => (
+          <span className="text-xs text-text-muted font-medium bg-bg-surface border border-border px-2 py-1 rounded inline-block">
+            {getMethodLabel(row.method)}
+          </span>
+        ),
+      },
+      {
+        key: 'amount',
+        header: __('Amount', 'codeclove-school-management'),
+        type: 'number',
+        render: (row) => (
+          <div className={`tabular-nums font-semibold ${row.status === 'completed' ? 'text-success' : 'text-danger line-through'}`}>
+            {formatCurrency(row.amount_minor)}
+            {row.status !== 'completed' && (
+              <Badge
+                variant={
+                  row.status === 'refunded' || row.status === 'failed' || row.status === 'cancelled'
+                    ? 'danger'
+                    : 'warning'
+                }
+                size="sm"
+                className="ml-1.5 align-middle"
+              >
+                {row.status}
+              </Badge>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: 'actions',
+        header: __('Actions', 'codeclove-school-management'),
+        type: 'actions',
+        render: (row) => (
+          <div className="flex items-center justify-end gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handlePrintReceipt(row)}
+              disabled={isPrintLoading === row.id}
+              className="h-8 w-8 text-text-subtle hover:text-brand"
+              title={__('Print Receipt', 'codeclove-school-management')}
+            >
+              {isPrintLoading === row.id ? (
+                <Spinner size="xs" />
+              ) : (
+                <Printer size={14} />
+              )}
+            </Button>
+            {row.status === 'completed' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleReversePayment(row.id, row.invoice_id)}
+                className="h-8 w-8 text-text-subtle hover:text-danger"
+                title={__('Reverse Payment', 'codeclove-school-management')}
+              >
+                <RotateCcw size={14} />
+              </Button>
+            )}
+          </div>
+        ),
+      },
+    ],
+    [studentLabel, formatDate, formatCurrency, isPrintLoading]
+  )
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -215,22 +312,39 @@ export default function PaymentsPage() {
                 />
               </FormField>
             </div>
-            <div className="flex items-end h-9">
+            <div className="flex items-center gap-2 flex-shrink-0 h-9">
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className={`text-xs gap-1.5 h-9 ${showAdvanced ? 'bg-bg-base text-brand border-brand/30' : 'text-text-muted hover:text-text'}`}
+                className={`text-xs gap-1.5 h-9 ${showAdvanced ? 'bg-bg-surface text-brand border border-border' : 'text-text-muted hover:text-text'}`}
               >
                 <SlidersHorizontal size={12} />
                 {showAdvanced ? __('Hide Dates', 'codeclove-school-management') : __('Date Range', 'codeclove-school-management')}
               </Button>
+              {(search || method || status || startDate || endDate) && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setSearch('')
+                    setMethod('')
+                    setStatus('')
+                    setStartDate('')
+                    setEndDate('')
+                    table.resetPage()
+                  }}
+                  className="text-xs text-text-muted hover:text-text gap-1"
+                >
+                  <X size={12} />
+                  {__('Clear Filters', 'codeclove-school-management')}
+                </Button>
+              )}
             </div>
           </div>
 
           {/* Date Range Filters */}
           {showAdvanced && (
-            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3 border-t border-border/40 pt-3 animate-in fade-in duration-200">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3 border-t border-border pt-3 animate-in fade-in duration-200">
               <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
                 <FormField label={__('Start Date', 'codeclove-school-management')}>
                   <DatePicker
@@ -254,133 +368,67 @@ export default function PaymentsPage() {
                 </FormField>
               </div>
 
-              <div className="flex items-center gap-2 ml-auto h-9">
-                {(search || method || status || startDate || endDate) && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setSearch('')
-                      setMethod('')
-                      setStatus('')
-                      setStartDate('')
-                      setEndDate('')
-                      table.resetPage()
-                    }}
-                    className="text-xs text-text-muted hover:text-text gap-1"
-                  >
-                    <X size={12} />
-                    {__('Clear Filters', 'codeclove-school-management')}
-                  </Button>
-                )}
-              </div>
             </div>
           )}
         </div>
       </Card>
 
-      {/* Main List */}
-      <Card>
-        <CardContent className="p-0">
-          <TableRoot>
-            <Thead>
-              <Tr>
-                <Th type="code">{__('Receipt #', 'codeclove-school-management')}</Th>
-                <Th type="primary">{studentLabel}</Th>
-                <Th type="code">{__('Invoice #', 'codeclove-school-management')}</Th>
-                <Th type="date">{__('Payment Date', 'codeclove-school-management')}</Th>
-                <Th type="badge">{__('Method', 'codeclove-school-management')}</Th>
-                <Th type="number">{__('Amount', 'codeclove-school-management')}</Th>
-                <Th type="actions">{__('Actions', 'codeclove-school-management')}</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {isLoading ? (
-                <TableSkeleton columns={7} rows={5} />
-              ) : isError ? (
-                <TableEmpty
-                  colSpan={7}
-                  message={__('Error Loading Payments', 'codeclove-school-management')}
-                  description={__("We couldn't retrieve the payments log. Please check your network or try again.", 'codeclove-school-management')}
-                  icon={AlertTriangle}
-                  action={<Button size="sm" onClick={() => refetch()}>{__('Retry', 'codeclove-school-management')}</Button>}
-                />
-              ) : list.length === 0 ? (
-                <TableEmpty
-                  colSpan={7}
-                  message={sprintf(__('No %s found', 'codeclove-school-management'), paymentLabelPlural)}
-                  description={__('Payments will appear here once recorded against outstanding student invoices.', 'codeclove-school-management')}
-                  icon={entity.icon}
-                  action={<Button size="sm" onClick={() => navigate('/finance/payments/record')}>{__('Record Payment', 'codeclove-school-management')}</Button>}
-                />
-              ) : (
-                list.map((row) => (
-                  <Tr key={row.id} className="hover:bg-bg-base/20 transition-colors">
-                    <Td type="code">{row.payment_number}</Td>
-                    <Td type="primary">
-                      <div>
-                        {row.student_first_name} {row.student_last_name}
-                      </div>
-                      <div className="text-2xs text-text-muted font-mono">{row.student_number}</div>
-                    </Td>
-                    <Td type="code">{row.invoice_number || '—'}</Td>
-                    <Td type="date">{formatDate(row.paid_on)}</Td>
-                    <Td type="badge">
-                      <span className="text-xs text-text-muted font-medium bg-bg-base px-2 py-1 rounded inline-block">
-                        {getMethodLabel(row.method)}
-                      </span>
-                    </Td>
-                    <Td type="number" className={row.status === 'completed' ? 'text-success' : 'text-danger line-through'}>
-                      {formatCurrency(row.amount_minor)}
-                      {row.status !== 'completed' && (
-                        <Badge variant={row.status === 'refunded' || row.status === 'failed' || row.status === 'cancelled' ? 'danger' : 'warning'} size="sm" className="ml-1.5 align-middle">
-                          {row.status}
-                        </Badge>
-                      )}
-                    </Td>
-                    <Td type="actions">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handlePrintReceipt(row)}
-                          disabled={isPrintLoading === row.id}
-                          className="h-8 w-8 text-text-subtle hover:text-brand"
-                          title={__('Print Receipt', 'codeclove-school-management')}
-                        >
-                          {isPrintLoading === row.id ? (
-                            <Spinner size="xs" />
-                          ) : (
-                            <Printer size={14} />
-                          )}
-                        </Button>
-                        {row.status === 'completed' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleReversePayment(row.id, row.invoice_id)}
-                            className="h-8 w-8 text-text-subtle hover:text-danger"
-                            title={__('Reverse Payment', 'codeclove-school-management')}
-                          >
-                            <RotateCcw size={14} />
-                          </Button>
-                        )}
-                      </div>
-                    </Td>
-                  </Tr>
-                ))
-              )}
-            </Tbody>
-          </TableRoot>
-        </CardContent>
+      {/* Contextual Pro Gateway Callout for Free Users */}
+      {!isPro && (
+        <div className="rounded-xl border border-brand/20 bg-gradient-to-r from-brand-dim/50 via-bg-elevated to-brand-dim/20 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-brand/10 border border-brand/20 text-brand shrink-0">
+              <QrCode className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-text flex items-center gap-2">
+                <span>{__('Automate UPI & Card Collections', 'codeclove-school-management')}</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/25">
+                  PRO
+                </span>
+              </h3>
+              <p className="text-xs text-text-muted leading-relaxed max-w-2xl">
+                {__(
+                  'Connect Razorpay for instant UPI, QR Code, and NetBanking payments, or Stripe for cards and digital wallets. Payments settle directly into your account and balance invoices automatically.',
+                  'codeclove-school-management'
+                )}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => navigate('/pro-upgrade?feature=payment_gateways')}
+            className="shrink-0 gap-1.5 whitespace-nowrap"
+          >
+            <Sparkles size={13} />
+            <span>{__('Unlock Online Payments (Pro)', 'codeclove-school-management')}</span>
+          </Button>
+        </div>
+      )}
 
-        {/* Pagination */}
-        {!isLoading && !isError && (
-          <TablePagination
-            {...table.paginationProps}
-            total={total}
-          />
-        )}
-      </Card>
+      {/* Main List */}
+      <DataTable<Payment>
+        data={list}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        errorMessage={__('Error Loading Payments', 'codeclove-school-management')}
+        onRetry={() => refetch()}
+        keyExtractor={(row) => row.id}
+        emptyState={{
+          message: sprintf(__('No %s found', 'codeclove-school-management'), paymentLabelPlural),
+          description: __('Payments will appear here once recorded against outstanding student invoices.', 'codeclove-school-management'),
+          icon: entity.icon,
+          action: (
+            <Button size="sm" onClick={() => navigate('/finance/payments/record')}>
+              {__('Record Payment', 'codeclove-school-management')}
+            </Button>
+          ),
+        }}
+      />
 
       {/* Hidden print container */}
       {printingPayment && printingInvoice && (

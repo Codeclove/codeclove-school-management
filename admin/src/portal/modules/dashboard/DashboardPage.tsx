@@ -90,7 +90,7 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* ─── 1. Welcome & Status Banner ────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-border/80 bg-bg-surface p-6 shadow-card">
+      <div className="rounded-2xl border border-border bg-bg-elevated p-6 shadow-card">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5 max-w-xl">
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand">
@@ -125,7 +125,7 @@ export const DashboardPage: React.FC = () => {
         {/* Attendance Rate */}
         <Link
           to="/attendance"
-          className="group rounded-xl border border-border/80 bg-bg-surface p-4 sm:p-5 shadow-card hover:border-brand/30 hover:shadow-card-md transition-all flex flex-col justify-between"
+          className="group rounded-xl border border-border bg-bg-elevated p-4 sm:p-5 shadow-card hover:border-brand/40 hover:shadow-card-md transition-all flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-text-muted group-hover:text-brand transition-colors">
@@ -171,7 +171,7 @@ export const DashboardPage: React.FC = () => {
         {/* Academic Subjects */}
         <Link
           to="/academics"
-          className="group rounded-xl border border-border/80 bg-bg-surface p-4 sm:p-5 shadow-card hover:border-brand/30 hover:shadow-card-md transition-all flex flex-col justify-between"
+          className="group rounded-xl border border-border bg-bg-elevated p-4 sm:p-5 shadow-card hover:border-brand/40 hover:shadow-card-md transition-all flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-text-muted group-hover:text-brand transition-colors">
@@ -204,7 +204,7 @@ export const DashboardPage: React.FC = () => {
         {/* Fee Standing */}
         <Link
           to="/finance"
-          className="group rounded-xl border border-border/80 bg-bg-surface p-4 sm:p-5 shadow-card hover:border-brand/30 hover:shadow-card-md transition-all flex flex-col justify-between"
+          className="group rounded-xl border border-border bg-bg-elevated p-4 sm:p-5 shadow-card hover:border-brand/40 hover:shadow-card-md transition-all flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-2xs font-bold uppercase tracking-wider text-text-muted group-hover:text-brand transition-colors">
@@ -259,8 +259,8 @@ export const DashboardPage: React.FC = () => {
         {/* Left / Primary Column (7 cols): Today's Schedule */}
         <div className="lg:col-span-7 space-y-6">
           {/* Section: Today's Schedule */}
-          <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface overflow-hidden">
-            <CardHeader className="flex items-center justify-between border-b border-border/60 pb-3">
+          <Card className="rounded-xl overflow-hidden">
+            <CardHeader className="flex items-center justify-between pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-info-dim text-info">
                   <Clock className="w-4 h-4" />
@@ -297,7 +297,7 @@ export const DashboardPage: React.FC = () => {
                   <span className="text-3xs text-text-subtle">{__( 'Enjoy your day or catch up on coursework!', 'codeclove-school-management' )}</span>
                 </div>
               ) : (
-                <div className="divide-y divide-border/60">
+                <div className="divide-y divide-border">
                   {todayClasses.map((slot, index) => {
                     const roomClean = formatRoomName(slot.room)
                     const teacher = slot.teacher_name || slot.staff_name
@@ -313,13 +313,13 @@ export const DashboardPage: React.FC = () => {
                             status === 'current'
                               ? 'bg-brand-dim/35 font-medium'
                               : status === 'past'
-                              ? 'opacity-65 bg-bg-base/20 hover:bg-bg-base/40'
-                              : 'hover:bg-bg-base/40'
+                              ? 'opacity-65 hover:bg-hover-bg'
+                              : 'hover:bg-hover-bg'
                           }`}
                         >
                           <div className="flex items-center gap-3.5 min-w-0">
                             {/* Time Interval Badge */}
-                            <div className="flex flex-col items-center justify-center rounded-lg bg-bg-base/80 border border-border/60 px-2.5 py-1 text-center min-w-[76px] shrink-0">
+                            <div className="flex flex-col items-center justify-center rounded-lg bg-bg-surface border border-border px-2.5 py-1 text-center min-w-[76px] shrink-0">
                               <span className="text-xs font-bold text-text tabular-nums leading-tight">
                                 {formatTime(slot.start_time)}
                               </span>
@@ -356,7 +356,7 @@ export const DashboardPage: React.FC = () => {
 
                         {/* Break / Recess Strip */}
                         {gap && (
-                          <div className="flex items-center justify-between px-4 py-2 bg-bg-base/40 border-y border-dashed border-border/70 text-text-muted text-xs">
+                          <div className="flex items-center justify-between px-4 py-2 bg-bg-surface border-y border-dashed border-border text-text-muted text-xs">
                             <div className="flex items-center gap-2 font-medium">
                               <Coffee className="w-3.5 h-3.5 text-brand shrink-0" />
                               <span className="font-bold text-text">{__( gap.label, 'codeclove-school-management' )}</span>
@@ -365,7 +365,7 @@ export const DashboardPage: React.FC = () => {
                                 {formatTime(gap.startTime)} – {formatTime(gap.endTime)}
                               </span>
                             </div>
-                            <span className="text-3xs font-semibold text-text-muted bg-bg-surface border border-border/60 px-2 py-0.5 rounded-full">
+                            <span className="text-3xs font-semibold text-text-muted bg-bg-elevated border border-border px-2 py-0.5 rounded-full">
                               {gap.durationMinutes}m
                             </span>
                           </div>
@@ -386,8 +386,8 @@ export const DashboardPage: React.FC = () => {
 
           {/* Section: Recent Notifications (Pro only) */}
           {isPro && (
-            <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface">
-            <CardHeader className="flex items-center justify-between border-b border-border/60 pb-3">
+            <Card className="rounded-xl">
+            <CardHeader className="flex items-center justify-between pb-3">
               <div className="flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning-dim text-warning">
                   <Bell className="w-4 h-4" />
@@ -420,7 +420,7 @@ export const DashboardPage: React.FC = () => {
                   <Link
                     key={notice.id}
                     to={notice.url || '/notifications'}
-                    className="group block p-3 rounded-lg border border-border/60 bg-bg-surface hover:border-border/90 hover:bg-bg-base/50 transition-all cursor-pointer"
+                    className="group block p-3 rounded-lg border border-border bg-bg-surface hover:border-border-strong hover:bg-hover-bg transition-all cursor-pointer"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <h4 className="text-xs font-bold text-text group-hover:text-brand transition-colors leading-snug line-clamp-1">

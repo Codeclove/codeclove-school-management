@@ -59,7 +59,7 @@ export const AcademicsPage: React.FC = () => {
       ) : (
         <>
           {/* Academic Enrollment Summary Strip */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-border/80 bg-bg-surface shadow-card">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-bg-elevated shadow-card">
             <div className="flex items-center gap-3.5">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-dim text-brand shrink-0">
                 <GraduationCap className="w-5 h-5" />
@@ -92,8 +92,8 @@ export const AcademicsPage: React.FC = () => {
           </div>
 
           {/* Assigned Subjects Card */}
-          <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface">
-            <CardHeader className="flex items-center justify-between border-b border-border/60 pb-3">
+          <Card className="rounded-xl">
+            <CardHeader className="flex items-center justify-between pb-3">
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-brand" />
                 <h3 className="text-sm font-bold text-text">
@@ -124,11 +124,11 @@ export const AcademicsPage: React.FC = () => {
                     return (
                       <div
                         key={`${sub.name}-${idx}`}
-                        className="flex items-center justify-between rounded-xl border border-border/60 bg-bg-surface p-3.5 hover:border-border/90 hover:bg-bg-base/40 hover:shadow-card transition-all"
+                        className="flex items-center justify-between rounded-xl border border-border bg-bg-surface p-3.5 hover:border-border-strong hover:bg-hover-bg hover:shadow-card transition-all"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div
-                            className={`flex h-9 w-9 items-center justify-center rounded-lg border border-border/40 flex-shrink-0 ${
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg border border-border flex-shrink-0 ${
                               isCore ? 'bg-brand-dim text-brand' : 'bg-warning-dim text-warning'
                             }`}
                           >

@@ -302,9 +302,9 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
       </div>
 
       {/* ─── 2. OFFICIAL STATEMENT LETTERHEAD CARD ─────────────────────────────── */}
-      <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface overflow-hidden">
+      <Card className="rounded-xl">
         {/* Institutional Letterhead Top Banner */}
-        <div className="p-6 border-b border-border/70 bg-gradient-to-b from-bg-base/30 to-transparent">
+        <div className="p-6 border-b border-border bg-gradient-to-b from-bg-surface to-transparent">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5">
             {/* School Identity (Left) */}
             <div className="flex items-start gap-4 min-w-0">
@@ -312,7 +312,7 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
                 <img
                   src={logoUrl}
                   alt={school?.name || siteName}
-                  className="w-14 h-14 rounded-lg object-contain bg-white dark:bg-bg-elevated p-1 border border-border/60 shadow-2xs shrink-0"
+                  className="w-14 h-14 rounded-lg object-contain bg-white dark:bg-bg-elevated p-1 border border-border shadow-2xs shrink-0"
                 />
               ) : (
                 <div className="w-14 h-14 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand shrink-0">
@@ -372,7 +372,7 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
           </div>
 
           {/* Compact Student, Payer & Billing Status Bar */}
-          <div className="mt-5 pt-4 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="mt-5 pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 flex-wrap text-text-muted">
               <span>{__( 'Student:', 'codeclove-school-management' )}</span>
               <span className="font-semibold text-text">{studentName}</span>
@@ -408,7 +408,7 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
         </div>
 
         {/* ─── 3. FINANCIAL SUMMARY 3-GRID (Clean, non-redundant) ─────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border/60 bg-bg-surface">
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border bg-bg-surface">
           {/* Total Billed */}
           <div className="p-4 sm:p-5 space-y-0.5">
             <span className="text-2xs font-semibold uppercase tracking-wider text-text-muted">
@@ -447,8 +447,8 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
       </Card>
 
       {/* ─── 4. ITEMIZED FEE BREAKDOWN TABLE ─────────────────────────────────── */}
-      <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface overflow-hidden">
-        <div className="p-5 border-b border-border/70 flex items-center justify-between">
+      <Card className="rounded-xl">
+        <div className="p-5 border-b border-border flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-text tracking-tight">
               {__( 'Itemized Fee Breakdown', 'codeclove-school-management' )}
@@ -466,7 +466,7 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
         <div className="overflow-x-auto">
           <TableRoot responsiveMode="scroll" className="w-full">
             <Thead>
-              <Tr className="border-b border-border/70 bg-bg-base/40 text-left">
+              <Tr className="border-b border-border bg-bg-surface text-left">
                 <Th className="w-12 text-center text-2xs uppercase tracking-wider font-semibold text-text-muted py-3">
                   #
                 </Th>
@@ -484,7 +484,7 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
                 </Th>
               </Tr>
             </Thead>
-            <Tbody className="divide-y divide-border/60 text-xs">
+            <Tbody className="divide-y divide-border text-xs">
               {lineItems.map((item, idx) => {
                 const qty = item.quantity ?? 1
                 const unitRate = item.unit_amount_minor
@@ -494,7 +494,7 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
                   : item.amount
 
                 return (
-                  <Tr key={item.id ?? idx} className="hover:bg-bg-base/30 transition-colors">
+                  <Tr key={item.id ?? idx} className="hover:bg-hover-bg transition-colors">
                     <Td className="text-center font-mono text-2xs text-text-subtle py-3.5">
                       {idx + 1}
                     </Td>
@@ -518,7 +518,7 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
         </div>
 
         {/* Table Summary Footer */}
-        <div className="p-6 bg-bg-base/40 border-t border-border/70 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="p-6 bg-bg-surface border-t border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="text-xs text-text-subtle">
             <p>{__( 'All fees are billed in accordance with the official school fee policy.', 'codeclove-school-management' )}</p>
           </div>
@@ -536,7 +536,7 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
                 -{formatCurrency(invoice.paid, currency)}
               </span>
             </div>
-            <div className="border-t border-border/80 pt-2 flex justify-between items-baseline">
+            <div className="border-t border-border pt-2 flex justify-between items-baseline">
               <span className="font-bold text-text text-sm">{__( 'Balance Outstanding', 'codeclove-school-management' )}</span>
               <span
                 className={cn(
@@ -553,8 +553,8 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
 
       {/* ─── 5. PAYMENT RECEIPTS & AUDIT HISTORY (Only shown if receipts exist) ─── */}
       {payments.length > 0 && (
-        <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface overflow-hidden">
-          <div className="p-5 border-b border-border/70 flex items-center justify-between">
+        <Card className="rounded-xl">
+          <div className="p-5 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <span className="p-2 rounded-lg bg-brand-dim text-brand">
                 <Receipt className="w-4 h-4" />
@@ -578,7 +578,7 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
           <div className="overflow-x-auto">
             <TableRoot responsiveMode="scroll" className="w-full">
               <Thead>
-                <Tr className="border-b border-border/70 bg-bg-base/40 text-left">
+                <Tr className="border-b border-border bg-bg-surface text-left">
                   <Th className="text-2xs uppercase tracking-wider font-semibold text-text-muted py-3 whitespace-nowrap">
                     {__( 'Receipt #', 'codeclove-school-management' )}
                   </Th>
@@ -658,7 +658,7 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
       {/* ─── 6. INTERACTIVE PAYMENT DOCK ─────────────────────────────────────── */}
       {isOnlinePaymentAvailable && isPayable && (
         <div id="payment-dock" ref={paymentDockRef} tabIndex={-1} className="outline-hidden scroll-mt-6">
-          <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface overflow-hidden">
+          <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface">
             <div className="p-5 border-b border-border/70 bg-gradient-to-r from-brand/5 via-transparent to-transparent">
               <div className="flex items-center gap-3">
                 <span className="p-2 rounded-lg bg-brand text-white shadow-xs">

@@ -13,7 +13,7 @@
  */
 import { useState, useMemo, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   School,
   Globe,
@@ -40,6 +40,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button, Card, PageHeader, Spinner, Modal, ModalFooter, Skeleton } from '@/components/ui'
 import { __ } from '@/lib/i18n'
+import { onFormError } from '@/lib/form-errors'
 import {
   useSettings,
   useUpdateSettings,
@@ -93,6 +94,14 @@ const TABS: TabDefinition[] = [
 
 type TabId = (typeof TABS)[number]['id']
 
+export const PRO_TAB_UPGRADE_MAP: Record<string, string> = {
+  gateways: 'payment_gateways',
+  sms_notifications: 'sms',
+  whatsapp_notifications: 'sms',
+  in_app_notifications: 'sms',
+  activity_log: 'audit_log',
+}
+
 // ─── Diff Types ───────────────────────────────────────────────────────────────
 
 interface DiffItem {
@@ -105,7 +114,8 @@ interface DiffItem {
 
 export default function SettingsPage() {
   const isPro = window.CodeCloveConfig?.isPro ?? false
-  const visibleTabs = TABS.filter((t) => !t.pro || isPro)
+  const visibleTabs = TABS
+  const navigate = useNavigate()
   const toast = useToast()
   const { data: settings, isLoading, isError } = useSettings()
   const updateSettingsMutation = useUpdateSettings()
@@ -117,13 +127,9 @@ export default function SettingsPage() {
   const tabFromUrl = searchParams.get('tab') as TabId | null
 
   const [activeTab, setActiveTab] = useState<TabId>(() => {
-    if ((tabFromUrl as string) === 'notifications') {
-      return 'email_notifications'
-    }
-    if (tabFromUrl && visibleTabs.some((t) => t.id === tabFromUrl)) {
-      return tabFromUrl
-    }
-    return 'general'
+    if ((tabFromUrl as string) === 'notifications') return 'email_notifications'
+    const target = tabFromUrl ? TABS.find((t) => t.id === tabFromUrl) : null
+    return target && (isPro || !target.pro) ? target.id : 'general'
   })
 
   useEffect(() => {
@@ -131,14 +137,28 @@ export default function SettingsPage() {
       setActiveTab('email_notifications')
       return
     }
-    if (tabFromUrl && visibleTabs.some((t) => t.id === tabFromUrl) && tabFromUrl !== activeTab) {
-      setActiveTab(tabFromUrl)
+    if (tabFromUrl && visibleTabs.some((t) => t.id === tabFromUrl)) {
+      const targetTab = TABS.find((t) => t.id === tabFromUrl)
+      if (!isPro && targetTab?.pro) {
+        const featureParam = PRO_TAB_UPGRADE_MAP[tabFromUrl]
+        navigate(featureParam ? `/pro-upgrade?feature=${featureParam}` : '/pro-upgrade', { replace: true })
+        return
+      }
+      if (tabFromUrl !== activeTab) {
+        setActiveTab(tabFromUrl)
+      }
     }
-  }, [tabFromUrl, activeTab, isPro])
+  }, [tabFromUrl, activeTab, isPro, navigate])
 
   const currentTab = visibleTabs.find((t) => t.id === activeTab) ?? visibleTabs[0]
 
   const handleTabChange = (tabId: TabId) => {
+    const targetTab = TABS.find((t) => t.id === tabId)
+    if (!isPro && targetTab?.pro) {
+      const featureParam = PRO_TAB_UPGRADE_MAP[tabId]
+      navigate(featureParam ? `/pro-upgrade?feature=${featureParam}` : '/pro-upgrade')
+      return
+    }
     setActiveTab(tabId)
     setSearchParams({ tab: tabId })
   }
@@ -286,7 +306,7 @@ export default function SettingsPage() {
           activeTab !== 'activity_log' ? (
             <Button
               type="button"
-              onClick={handleSubmit(onSubmit)}
+              onClick={handleSubmit(onSubmit, onFormError)}
               disabled={saveStatus === 'saving'}
               className="gap-2 shadow-md font-semibold text-xs animate-glow"
             >
@@ -297,30 +317,43 @@ export default function SettingsPage() {
         }
       />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col md:flex-row gap-6 items-start">
+      <form onSubmit={handleSubmit(onSubmit, onFormError)} className="flex flex-col md:flex-row gap-6 items-start">
         {/* ── Sidebar nav ────────────────────────────────────────────── */}
         <div className="w-full md:w-56 flex-shrink-0">
-          <Card className="p-2 md:sticky md:top-6 border-border/60 shadow-sm">
+          <Card className="p-2 md:sticky md:top-6 border-border shadow-sm">
             <nav className="space-y-0.5">
-              {visibleTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => handleTabChange(tab.id)}
-                  className={cn(
-                    'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs transition-all duration-150 text-start font-medium select-none',
-                    activeTab === tab.id
-                      ? 'bg-brand-dim text-brand font-semibold shadow-2xs'
-                      : 'text-text-muted hover:text-text hover:bg-bg-subtle/50'
-                  )}
-                >
-                  <tab.icon
-                    size={15}
-                    className={activeTab === tab.id ? 'text-brand' : 'text-text-subtle'}
-                  />
-                  <span className="flex-1 truncate">{tab.label}</span>
-                </button>
-              ))}
+              {visibleTabs.map((tab) => {
+                const isProLocked = !isPro && tab.pro
+                const upgradeHref = isProLocked
+                  ? `/pro-upgrade?feature=${PRO_TAB_UPGRADE_MAP[tab.id] || ''}`
+                  : undefined
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => handleTabChange(tab.id)}
+                    data-pro-upgrade={upgradeHref}
+                    className={cn(
+                      'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs transition-all duration-150 text-start font-medium select-none',
+                      activeTab === tab.id
+                        ? 'bg-brand-dim text-brand font-semibold shadow-2xs'
+                        : 'text-text-muted hover:text-text hover:bg-bg-subtle/50'
+                    )}
+                  >
+                    <tab.icon
+                      size={15}
+                      className={activeTab === tab.id ? 'text-brand' : 'text-text-subtle'}
+                    />
+                    <span className="flex-1 truncate">{tab.label}</span>
+                    {isProLocked && (
+                      <span className="ms-auto flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/25">
+                        PRO
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
             </nav>
           </Card>
         </div>
@@ -379,14 +412,14 @@ export default function SettingsPage() {
 
       {/* ── Sticky Floating Save Bar ───────────────────────────────── */}
       {(isDirty || saveStatus === 'saving') && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 md:right-10 z-[120] flex items-center justify-between gap-4 p-2.5 px-4 sm:px-5 w-auto max-w-[calc(100vw-2rem)] sm:max-w-none bg-bg-overlay/95 backdrop-blur-md border border-border/80 rounded-2xl shadow-modal animate-slide-up">
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 md:right-10 z-[120] flex items-center justify-between gap-4 p-2.5 px-4 sm:px-5 w-auto max-w-[calc(100vw-2rem)] sm:max-w-none bg-bg-overlay/95 backdrop-blur-md border border-border rounded-2xl shadow-modal animate-slide-up">
           <div className="flex items-center gap-2.5 shrink-0">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
             <span className="text-xs font-semibold text-text whitespace-nowrap">
               {__( 'Unsaved settings changes', 'codeclove-school-management' )}
             </span>
           </div>
-          <div className="flex items-center gap-2 pl-3 border-l border-border/60 shrink-0">
+          <div className="flex items-center gap-2 pl-3 border-l border-border shrink-0">
             {isDirty && saveStatus !== 'saving' && (
               <Button
                 type="button"
@@ -400,7 +433,7 @@ export default function SettingsPage() {
             )}
             <Button
               type="button"
-              onClick={handleSubmit(onSubmit)}
+              onClick={handleSubmit(onSubmit, onFormError)}
               disabled={saveStatus === 'saving'}
               size="sm"
               className="h-8 text-xs font-semibold gap-1.5 shadow-md animate-glow whitespace-nowrap"
@@ -449,29 +482,28 @@ function PresetModal({
       title={
         <span className="flex items-center gap-2">
           <Globe size={16} className="text-brand" />
-          Apply Preset
+          {__( 'Apply Preset', 'codeclove-school-management' )}
         </span>
       }
-      description="Compare and review the differences before switching default cycles and terminologies."
-      size="lg"
+      description={__( 'Compare and review the differences before switching default cycles and terminologies.', 'codeclove-school-management' )}
     >
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12 gap-2.5">
           <Spinner size="md" />
-          <p className="text-xs text-text-muted">Fetching preset comparison differences…</p>
+          <p className="text-xs text-text-muted">{__( 'Fetching preset comparison differences…', 'codeclove-school-management' )}</p>
         </div>
       ) : (
         <div className="space-y-4">
           {/* Diff table */}
-          <div className="border border-border rounded-xl divide-y divide-border bg-bg-base/20 max-h-[35vh] overflow-y-auto">
+          <div className="border border-border rounded-xl divide-y divide-border bg-bg-surface max-h-[35vh] overflow-y-auto">
             {diffItems.length > 0 ? (
               diffItems.map((item, idx) => (
                 <div key={idx} className="grid grid-cols-3 gap-4 p-3 text-xs items-center">
                   <span className="font-semibold text-text-muted">{item.label}</span>
-                  <span className="text-danger bg-danger/5 px-2 py-1 rounded truncate line-through" title={item.current}>
+                  <span className="text-danger bg-danger-dim px-2 py-1 rounded truncate line-through" title={item.current}>
                     {item.current}
                   </span>
-                  <span className="text-success bg-success/5 px-2 py-1 rounded truncate font-medium" title={item.preset}>
+                  <span className="text-success bg-success-dim px-2 py-1 rounded truncate font-medium" title={item.preset}>
                     {item.preset}
                   </span>
                 </div>
@@ -479,26 +511,26 @@ function PresetModal({
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center px-4">
                 <Check size={20} className="text-success mb-1.5" />
-                <p className="text-xs font-semibold text-text">No Configuration Differences</p>
+                <p className="text-xs font-semibold text-text">{__( 'No Configuration Differences', 'codeclove-school-management' )}</p>
                 <p className="text-2xs text-text-muted mt-0.5">
-                  The selected preset matches your current settings terminology exactly.
+                  {__( 'The selected preset matches your current settings terminology exactly.', 'codeclove-school-management' )}
                 </p>
               </div>
             )}
           </div>
 
           {/* Mode Explanation & Info banner */}
-          <div className="bg-bg-elevated border border-border rounded-lg p-3.5 space-y-2 text-xs">
+          <div className="bg-bg-surface border border-border rounded-lg p-3.5 space-y-2 text-xs">
             <div className="flex gap-2 text-text font-semibold">
               <Info size={14} className="text-brand flex-shrink-0 mt-0.5" />
-              <span>Choosing an Apply Mode:</span>
+              <span>{__( 'Choosing an Apply Mode:', 'codeclove-school-management' )}</span>
             </div>
             <ul className="list-disc list-inside pl-1 space-y-1 text-text-muted leading-relaxed text-xs">
               <li>
-                <strong className="text-text font-medium">Merge Missing Only</strong>: Fills in new or unset terminology labels while preserving any manual overrides you have already saved.
+                <strong className="text-text font-medium">{__( 'Merge Missing Only', 'codeclove-school-management' )}</strong>: {__( 'Fills in new or unset terminology labels while preserving any manual overrides you have already saved.', 'codeclove-school-management' )}
               </li>
               <li>
-                <strong className="text-text font-medium">Overwrite All Defaults</strong>: Resets all terminology singular and plural values back to the regional defaults.
+                <strong className="text-text font-medium">{__( 'Overwrite All Defaults', 'codeclove-school-management' )}</strong>: {__( 'Resets all terminology singular and plural values back to the regional defaults.', 'codeclove-school-management' )}
               </li>
             </ul>
           </div>
@@ -510,7 +542,7 @@ function PresetModal({
               disabled={isPending}
               className="w-full sm:w-auto order-last sm:order-first"
             >
-              Cancel
+              {__( 'Cancel', 'codeclove-school-management' )}
             </Button>
             <Button
               variant="secondary"
@@ -518,7 +550,7 @@ function PresetModal({
               disabled={isPending}
               className="w-full sm:w-auto"
             >
-              Merge Missing Only
+              {__( 'Merge Missing Only', 'codeclove-school-management' )}
             </Button>
             <Button
               onClick={() => onApply('replace_defaults')}
@@ -526,7 +558,7 @@ function PresetModal({
               className="w-full sm:w-auto"
             >
               {isPending && <Spinner size="xs" />}
-              Overwrite All Defaults
+              {__( 'Overwrite All Defaults', 'codeclove-school-management' )}
             </Button>
           </ModalFooter>
         </div>

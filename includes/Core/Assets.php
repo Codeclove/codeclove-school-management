@@ -246,6 +246,17 @@ final class Assets {
 				'avatar'   => get_avatar_url( $user_id, [ 'size' => 64 ] ),
 				'isAdmin'  => $is_admin,
 			],
+			'reviewPrompt' => \CodeClove\Modules\Settings\ReviewPromptService::get_status(),
+			'wpSettings'  => [
+				'timezone'           => function_exists( 'wp_timezone_string' ) ? wp_timezone_string() : 'UTC',
+				'currentTime'        => function_exists( 'wp_date' ) ? wp_date( 'h:i A (T)' ) : gmdate( 'h:i A (T)' ),
+				'locale'             => get_locale(),
+				'localeName'         => 'en_US' === get_locale() ? 'English (United States)' : get_locale(),
+				'startOfWeek'        => (int) get_option( 'start_of_week', 1 ),
+				'dateFormat'         => (string) get_option( 'date_format', 'd/m/Y' ),
+				'timeFormat'         => (string) get_option( 'time_format', 'H:i' ),
+				'generalSettingsUrl' => admin_url( 'options-general.php' ),
+			],
 		];
 	}
 

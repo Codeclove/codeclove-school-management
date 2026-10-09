@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Pencil, Trash2, AlertTriangle, Coins } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Coins } from 'lucide-react'
 import { __, _n, sprintf } from '@/lib/i18n'
 import {
   useFeeTypes,
@@ -11,23 +11,18 @@ import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
 import { useLabels } from '@/lib/labels'
 import { useFormatter } from '@/lib/formatter'
-import { TablePagination } from '@/components/ui/TablePagination'
+import { useDebounce } from '@/lib/useDebounce'
+import { useTableState } from '@/lib/useTableState'
 import {
   Button,
   PageHeader,
-  TableRoot,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  TableSkeleton,
-  TableEmpty,
   Card,
   CardContent,
   Badge,
   Input,
   Select,
+  DataTable,
+  type DataTableColumn,
 } from '@/components/ui'
 
 export default function FeeTypesPage() {
@@ -42,30 +37,31 @@ export default function FeeTypesPage() {
 
   // State
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 350)
   const [status, setStatus] = useState('all')
   const [frequency, setFrequency] = useState('all')
   const [scope, setScope] = useState('all')
   const [hasOverrides, setHasOverrides] = useState<'all' | 'yes' | 'no'>('all')
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState<number | 'all'>(25)
+  const table = useTableState({ defaultPerPage: 25 })
+
+  // Reset page when debounced search changes
+  useEffect(() => {
+    table.resetPage()
+  }, [debouncedSearch])
 
   // Queries / Mutations
   const { data, isLoading, isError, refetch } = useFeeTypes({
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     frequency: frequency && frequency !== 'all' ? frequency : undefined,
     scope: scope && scope !== 'all' ? scope : undefined,
     status: status && status !== 'all' ? status : undefined,
     has_overrides: hasOverrides && hasOverrides !== 'all' ? hasOverrides : undefined,
-    page,
-    per_page: perPage === 'all' ? -1 : perPage,
+    page: table.page,
+    per_page: table.perPage === 'all' ? -1 : table.perPage,
   })
-
   const deleteMutation = useDeleteFeeType()
-  const list = data?.data || []
+  const feeTypes = data?.data || []
   const total = data?.pagination?.total || 0
-
-  const handleOpenAdd = () => navigate('/finance/fee-types/new')
-  const handleOpenEdit = (feeType: FeeType) => navigate(`/finance/fee-types/${feeType.id}/edit`)
 
   const handleDelete = async (id: number) => {
     const isConfirmed = await confirm({
@@ -99,6 +95,91 @@ export default function FeeTypesPage() {
     return labels[freq] || freq
   }
 
+  const columns = useMemo<DataTableColumn<FeeType>[]>(
+    () => [
+      {
+        key: 'name',
+        header: __('Name', 'codeclove-school-management'),
+        type: 'primary',
+      },
+      {
+        key: 'code',
+        header: __('Code', 'codeclove-school-management'),
+        type: 'code',
+        render: (row) => row.code || '—',
+      },
+      {
+        key: 'description',
+        header: __('Description', 'codeclove-school-management'),
+        className: 'max-w-xs truncate',
+        render: (row) => row.description || '—',
+      },
+      {
+        key: 'default_amount_minor',
+        header: __('Default Amount', 'codeclove-school-management'),
+        type: 'number',
+        render: (row) => (
+          <div>
+            <div className="tabular-nums font-semibold">{formatCurrency(row.default_amount_minor)}</div>
+            {row.overrides_count && row.overrides_count > 0 ? (
+              <span className="text-2xs text-text-muted font-normal block mt-0.5">
+                {sprintf(_n('%d override', '%d overrides', row.overrides_count, 'codeclove-school-management'), row.overrides_count)}
+              </span>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        key: 'frequency',
+        header: __('Frequency', 'codeclove-school-management'),
+        type: 'badge',
+        render: (row) => (
+          <span className="text-xs text-text-muted font-medium bg-bg-surface border border-border px-2 py-1 rounded inline-block">
+            {getFrequencyBadge(row.frequency)}
+          </span>
+        ),
+      },
+      {
+        key: 'status',
+        header: __('Status', 'codeclove-school-management'),
+        type: 'badge',
+        render: (row) => (
+          <Badge variant={row.status}>
+            {row.status}
+          </Badge>
+        ),
+      },
+      {
+        key: 'actions',
+        header: __('Actions', 'codeclove-school-management'),
+        type: 'actions',
+        render: (row) => (
+          <div className="flex items-center justify-end gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/finance/fee-types/${row.id}/edit`)}
+              className="h-8 w-8 text-text-subtle hover:text-brand"
+              title={__('Edit Template', 'codeclove-school-management')}
+            >
+              <Pencil size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDelete(row.id)}
+              className="h-8 w-8 text-text-subtle hover:text-danger"
+              title={__('Delete Template', 'codeclove-school-management')}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [formatCurrency, navigate]
+  )
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -106,7 +187,7 @@ export default function FeeTypesPage() {
         description={sprintf(__('Manage fee templates, pricing defaults, and payment schedules for %s.', 'codeclove-school-management'), feeTypeLabelPlural.toLowerCase())}
         breadcrumbs={[{ label: __('Finance', 'codeclove-school-management') }, { label: feeTypeLabelPlural }]}
         actions={
-          <Button size="sm" onClick={handleOpenAdd} className="flex items-center gap-1.5">
+          <Button size="sm" onClick={() => navigate('/finance/fee-types/new')} className="flex items-center gap-1.5">
             <Plus className="h-4 w-4" />
             {sprintf(__('Add %s', 'codeclove-school-management'), feeTypeLabel)}
           </Button>
@@ -125,7 +206,7 @@ export default function FeeTypesPage() {
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value)
-                  setPage(1)
+                  table.resetPage()
                 }}
                 className="pl-9 w-full"
               />
@@ -135,7 +216,7 @@ export default function FeeTypesPage() {
                 value={frequency}
                 onValueChange={(val) => {
                   setFrequency(val)
-                  setPage(1)
+                  table.resetPage()
                 }}
                 placeholder={__('All Frequencies', 'codeclove-school-management')}
                 options={[
@@ -154,7 +235,7 @@ export default function FeeTypesPage() {
                 value={scope}
                 onValueChange={(val) => {
                   setScope(val)
-                  setPage(1)
+                  table.resetPage()
                 }}
                 placeholder={__('All Scopes', 'codeclove-school-management')}
                 options={[
@@ -169,7 +250,7 @@ export default function FeeTypesPage() {
                 value={hasOverrides}
                 onValueChange={(val) => {
                   setHasOverrides(val as 'all' | 'yes' | 'no')
-                  setPage(1)
+                  table.resetPage()
                 }}
                 placeholder={__('All Customizations', 'codeclove-school-management')}
                 options={[
@@ -184,7 +265,7 @@ export default function FeeTypesPage() {
                 value={status}
                 onValueChange={(val) => {
                   setStatus(val)
-                  setPage(1)
+                  table.resetPage()
                 }}
                 placeholder={__('All Statuses', 'codeclove-school-management')}
                 options={[
@@ -199,107 +280,30 @@ export default function FeeTypesPage() {
       </Card>
 
       {/* Main List */}
-      <Card>
-        <CardContent className="p-0">
-          <TableRoot>
-            <Thead>
-              <Tr>
-                <Th type="primary">{__('Name', 'codeclove-school-management')}</Th>
-                <Th type="code">{__('Code', 'codeclove-school-management')}</Th>
-                <Th>{__('Description', 'codeclove-school-management')}</Th>
-                <Th type="number">{__('Default Amount', 'codeclove-school-management')}</Th>
-                <Th type="badge">{__('Frequency', 'codeclove-school-management')}</Th>
-                <Th type="badge">{__('Status', 'codeclove-school-management')}</Th>
-                <Th type="actions">{__('Actions', 'codeclove-school-management')}</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {isLoading ? (
-                <TableSkeleton columns={7} rows={5} />
-              ) : isError ? (
-                <TableEmpty
-                  colSpan={7}
-                  message={__('Error Loading Data', 'codeclove-school-management')}
-                  description={sprintf(__("We couldn't retrieve the list of %s. Please try again.", 'codeclove-school-management'), feeTypeLabelPlural.toLowerCase())}
-                  icon={AlertTriangle}
-                  action={<Button size="sm" onClick={() => refetch()}>{__('Retry', 'codeclove-school-management')}</Button>}
-                />
-              ) : list.length === 0 ? (
-                <TableEmpty
-                  colSpan={7}
-                  message={sprintf(__('No %s found', 'codeclove-school-management'), feeTypeLabelPlural)}
-                  description={__('Get started by creating your first reusable school fee template.', 'codeclove-school-management')}
-                  icon={Coins}
-                  action={
-                    <Button size="sm" onClick={handleOpenAdd}>
-                      {sprintf(__('Add %s', 'codeclove-school-management'), feeTypeLabel)}
-                    </Button>
-                  }
-                />
-              ) : (
-                list.map((row) => (
-                  <Tr key={row.id} className="hover:bg-bg-base/20 transition-colors">
-                    <Td type="primary">{row.name}</Td>
-                    <Td type="code">{row.code || '—'}</Td>
-                    <Td className="max-w-xs truncate">{row.description || '—'}</Td>
-                    <Td type="number">
-                      <div>{formatCurrency(row.default_amount_minor)}</div>
-                      {row.overrides_count && row.overrides_count > 0 ? (
-                        <span className="text-2xs text-text-muted font-normal block mt-0.5">
-                          {sprintf(_n('%d override', '%d overrides', row.overrides_count, 'codeclove-school-management'), row.overrides_count)}
-                        </span>
-                      ) : null}
-                    </Td>
-                    <Td type="badge">
-                      <span className="text-xs text-text-muted font-medium bg-bg-base px-2 py-1 rounded inline-block">
-                        {getFrequencyBadge(row.frequency)}
-                      </span>
-                    </Td>
-                    <Td type="badge">
-                      <Badge variant={row.status}>
-                        {row.status}
-                      </Badge>
-                    </Td>
-                    <Td type="actions">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenEdit(row)}
-                          className="h-8 w-8 text-text-subtle hover:text-brand"
-                          title={__('Edit Template', 'codeclove-school-management')}
-                        >
-                          <Pencil size={14} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(row.id)}
-                          className="h-8 w-8 text-text-subtle hover:text-danger"
-                          title={__('Delete Template', 'codeclove-school-management')}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    </Td>
-                  </Tr>
-                ))
-              )}
-            </Tbody>
-          </TableRoot>
-        </CardContent>
-
-        {/* Pagination */}
-        {!isLoading && !isError && (
-          <TablePagination
-            page={page}
-            perPage={perPage}
-            total={total}
-            onPageChange={setPage}
-            onPerPageChange={setPerPage}
-          />
-        )}
-      </Card>
+      <DataTable<FeeType>
+        columns={columns}
+        data={feeTypes}
+        table={table}
+        total={total}
+        loading={isLoading}
+        isLoading={isLoading}
+        error={isError}
+        isError={isError}
+        errorMessage={sprintf(__("We couldn't retrieve the list of %s. Please try again.", 'codeclove-school-management'), feeTypeLabelPlural.toLowerCase())}
+        onRetry={() => refetch()}
+        keyExtractor={(row) => row.id}
+        emptyMessage={sprintf(__('No %s found', 'codeclove-school-management'), feeTypeLabelPlural)}
+        emptyState={{
+          message: sprintf(__('No %s found', 'codeclove-school-management'), feeTypeLabelPlural),
+          description: __('Get started by creating your first reusable school fee template.', 'codeclove-school-management'),
+          icon: Coins,
+          action: (
+            <Button size="sm" onClick={() => navigate('/finance/fee-types/new')}>
+              {sprintf(__('Add %s', 'codeclove-school-management'), feeTypeLabel)}
+            </Button>
+          ),
+        }}
+      />
     </div>
   )
 }

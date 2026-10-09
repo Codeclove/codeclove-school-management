@@ -220,7 +220,7 @@ export default function StudentDailyAttendance() {
   return (
     <div className={`space-y-3 ${isDirty ? 'pb-20 sm:pb-0' : ''}`}>
       {/* ── Tier 1: Filters Toolbar ── */}
-      <div className="p-3 bg-bg-surface border border-border rounded-xl shadow-xs">
+      <div className="p-3 bg-bg-elevated border border-border rounded-xl shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
           {/* Controls: Class, Section, Date Stepper */}
           <div className="flex flex-wrap items-center gap-2 flex-1">
@@ -263,7 +263,7 @@ export default function StudentDailyAttendance() {
               <button
                 type="button"
                 onClick={() => shiftDate(-1)}
-                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-bg-subtle text-text-subtle hover:text-text transition-colors shrink-0"
+                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-hover-bg text-text-subtle hover:text-text transition-colors shrink-0"
                 title={__('Previous Day', 'codeclove-school-management')}
                 aria-label={__('Previous Day', 'codeclove-school-management')}
               >
@@ -284,7 +284,7 @@ export default function StudentDailyAttendance() {
               <button
                 type="button"
                 onClick={() => shiftDate(1)}
-                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-bg-subtle text-text-subtle hover:text-text transition-colors shrink-0"
+                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-hover-bg text-text-subtle hover:text-text transition-colors shrink-0"
                 title={__('Next Day', 'codeclove-school-management')}
                 aria-label={__('Next Day', 'codeclove-school-management')}
               >
@@ -294,7 +294,7 @@ export default function StudentDailyAttendance() {
               <button
                 type="button"
                 onClick={setTodayDate}
-                className="h-9 px-2.5 text-2xs font-semibold rounded-lg border border-border bg-bg-surface hover:bg-bg-subtle text-text-subtle hover:text-text transition-colors shrink-0"
+                className="h-9 px-2.5 text-2xs font-semibold rounded-lg border border-border bg-bg-surface hover:bg-hover-bg text-text-subtle hover:text-text transition-colors shrink-0"
                 title={__('Jump to Today', 'codeclove-school-management')}
               >
                 {__('Today', 'codeclove-school-management')}
@@ -364,7 +364,7 @@ export default function StudentDailyAttendance() {
                       </span>
                     )}
 
-                    <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md bg-bg-subtle text-text font-semibold text-3xs sm:text-2xs">
+                    <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md bg-bg-surface border border-border text-text font-semibold text-3xs sm:text-2xs">
                       <Users size={11} className="text-text-subtle" />
                       {searchQuery
                         ? sprintf(__('%1$d of %2$d', 'codeclove-school-management'), filteredRecordsList.length, totalCount)
@@ -446,7 +446,7 @@ export default function StudentDailyAttendance() {
                 {/* ── Desktop View: Attendance Roster Table (md and up) ── */}
                 <div className="hidden md:block overflow-x-auto">
                   <TableRoot className="min-w-[700px]">
-                    <Thead className="bg-bg-subtle/40">
+                    <Thead className="bg-bg-surface border-b border-border">
                       <Tr>
                         <Th className="py-2.5 px-4 sm:px-5 text-left text-2xs uppercase tracking-wider text-text-muted font-semibold min-w-[240px] sm:min-w-[280px]">
                           {__('Student', 'codeclove-school-management')}
@@ -470,7 +470,7 @@ export default function StudentDailyAttendance() {
                             : rollText
 
                         return (
-                          <Tr key={r.student_id} className="hover:bg-bg-overlay/5 transition-colors">
+                          <Tr key={r.student_id} className="hover:bg-hover-bg transition-colors">
                             {/* Column 1: Student Profile (Name, ID, Section, Roll) */}
                             <Td className="py-2.5 px-4 sm:px-5 min-w-[240px] sm:min-w-[280px]">
                               <PersonAvatar
@@ -516,7 +516,7 @@ export default function StudentDailyAttendance() {
                         : rollText
 
                     return (
-                      <div key={r.student_id} className="p-3 space-y-2 hover:bg-bg-overlay/5 transition-colors">
+                      <div key={r.student_id} className="p-3 space-y-2 hover:bg-hover-bg transition-colors">
                         <div className="flex items-center justify-between gap-2 min-w-0">
                           <div className="min-w-0 flex-1">
                             <PersonAvatar

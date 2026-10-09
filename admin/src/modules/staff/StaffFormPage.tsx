@@ -39,7 +39,7 @@ export default function StaffFormPage() {
       designation: values.designation || null,
       joined_on: values.joined_on || null,
       photo_id: values.photo_id || null,
-      role_id: values.role_id ? Number(values.role_id) : null,
+      role_id: values.role_id ? Number(values.role_id) : (isEditMode && staff?.role_id ? staff.role_id : null),
       documents: values.documents,
     }
 

@@ -39,7 +39,7 @@ export const StudentSwitcher: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center gap-2 sm:gap-2.5 pl-2 pr-2.5 h-10 rounded-xl border border-border/70 hover:border-border text-left transition-all bg-bg-surface hover:bg-bg-base shadow-2xs cursor-pointer"
+        className="flex items-center gap-2 sm:gap-2.5 pl-2 pr-2.5 h-10 rounded-xl border border-border hover:border-border-strong text-left transition-all bg-bg-surface hover:bg-hover-bg shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
@@ -49,7 +49,7 @@ export const StudentSwitcher: React.FC = () => {
             <img
               src={currentStudent.photo_url}
               alt={currentStudent.full_name}
-              className="w-7 h-7 rounded-full object-cover border border-border/70"
+              className="w-7 h-7 rounded-full object-cover border border-border"
             />
           ) : (
             <div className="w-7 h-7 rounded-full bg-brand-dim text-brand flex items-center justify-center font-semibold text-2xs border border-brand/20">
@@ -69,7 +69,7 @@ export const StudentSwitcher: React.FC = () => {
             <span className="truncate max-w-24">{currentStudent?.unit_name || __( 'Student', 'codeclove-school-management' )}</span>
             {currentStudent?.group_name && (
               <>
-                <span className="text-text-subtle/40">·</span>
+                <span className="opacity-50">·</span>
                 <span className="truncate max-w-20">{currentStudent.group_name}</span>
               </>
             )}
@@ -85,8 +85,8 @@ export const StudentSwitcher: React.FC = () => {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 sm:left-0 mt-1.5 w-72 rounded-xl bg-bg-elevated shadow-modal border border-border/80 py-1 z-50 animate-in fade-in-50 slide-in-from-top-1 duration-150">
-          <div className="px-3 py-2 flex items-center justify-between text-3xs font-semibold uppercase tracking-wider text-text-subtle border-b border-border/60">
+        <div className="absolute right-0 sm:left-0 mt-1.5 w-72 rounded-xl bg-bg-overlay shadow-modal border border-border py-1 z-50 animate-in fade-in-50 slide-in-from-top-1 duration-150">
+          <div className="px-3 py-2 flex items-center justify-between text-3xs font-semibold uppercase tracking-wider text-text-subtle border-b border-border">
             <span>{__( 'Active Student', 'codeclove-school-management' )}</span>
             <span className="text-brand font-medium">({students.length})</span>
           </div>
@@ -103,7 +103,7 @@ export const StudentSwitcher: React.FC = () => {
                     setIsOpen(false)
                   }}
                   className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left text-sm transition-colors ${
-                    isSelected ? 'bg-brand-dim text-text font-medium border border-brand/20' : 'hover:bg-bg-base text-text-muted hover:text-text border border-transparent'
+                    isSelected ? 'bg-brand-dim text-text font-medium border border-brand/20' : 'hover:bg-hover-bg text-text-muted hover:text-text border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -111,10 +111,10 @@ export const StudentSwitcher: React.FC = () => {
                       <img
                         src={student.photo_url}
                         alt={student.full_name}
-                        className="w-7 h-7 rounded-full object-cover border border-border/60 flex-shrink-0"
+                        className="w-7 h-7 rounded-full object-cover border border-border flex-shrink-0"
                       />
                     ) : (
-                      <div className="w-7 h-7 rounded-full bg-bg-base text-text-muted flex items-center justify-center font-medium text-3xs border border-border/60 flex-shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-bg-surface text-text-muted flex items-center justify-center font-medium text-3xs border border-border flex-shrink-0">
                         {getInitials(student.full_name)}
                       </div>
                     )}

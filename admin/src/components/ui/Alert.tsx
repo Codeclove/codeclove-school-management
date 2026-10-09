@@ -27,11 +27,11 @@ export function Alert({
   const ActiveIcon = Icon || DefaultIcon
 
   const variantStyles = {
-    default: 'bg-bg-elevated border-border text-text',
-    danger: 'bg-danger-dim border border-danger/20 text-danger',
-    warning: 'bg-warning-dim border border-warning/20 text-warning',
-    success: 'bg-success-dim border border-success/20 text-success',
-    info: 'bg-info-dim border border-info/20 text-info',
+    default: 'bg-bg-elevated border border-border text-text',
+    danger:  'bg-danger-dim border border-danger-border text-danger',
+    warning: 'bg-warning-dim border border-warning-border text-warning',
+    success: 'bg-success-dim border border-success-border text-success',
+    info:    'bg-info-dim border border-info-border text-info',
   }[variant]
 
   return (
@@ -46,8 +46,12 @@ export function Alert({
     >
       <ActiveIcon size={16} className="flex-shrink-0 mt-0.5" />
       <div className="flex-1 space-y-1">
-        {title && <p className="font-semibold text-text">{title}</p>}
-        {children && <div className={cn('text-xs opacity-90', !title && 'text-sm text-text')}>{children}</div>}
+        {title && <p className="font-semibold text-text leading-tight">{title}</p>}
+        {children && (
+          <div className={cn('text-xs leading-relaxed', title ? 'text-text-muted mt-0.5' : 'text-sm text-text')}>
+            {children}
+          </div>
+        )}
       </div>
     </div>
   )

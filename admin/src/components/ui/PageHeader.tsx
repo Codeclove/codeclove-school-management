@@ -27,7 +27,7 @@ export function PageHeader({ title, description, icon: Icon, actions, className,
             const isLast = idx === breadcrumbs.length - 1
             return (
               <div key={idx} className="flex items-center gap-1.5">
-                {idx > 0 && <span className="text-text-muted/40 font-normal">/</span>}
+                {idx > 0 && <span className="text-text-subtle font-normal">/</span>}
                 {item.href && !isLast ? (
                   <Link to={item.href} className="hover:text-brand transition-colors font-medium">
                     {item.label}
@@ -50,7 +50,7 @@ export function PageHeader({ title, description, icon: Icon, actions, className,
                 variant="ghost"
                 onClick={onBack}
                 size="sm"
-                className="h-9 w-9 p-0 flex-shrink-0 hover:bg-border/30 rounded-lg text-text-muted hover:text-text transition-colors"
+                className="h-9 w-9 p-0 flex-shrink-0 hover:bg-hover-bg rounded-lg text-text-muted hover:text-text transition-colors"
               >
                 <ArrowLeft size={16} className="rtl:rotate-180" />
               </Button>

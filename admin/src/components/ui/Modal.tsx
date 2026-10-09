@@ -58,7 +58,7 @@ export function Modal({
         {/* Backdrop */}
         <DialogPrimitive.Overlay
           className={cn(
-            'fixed inset-0 z-[9990] bg-black/50 backdrop-blur-[2px]',
+            'fixed inset-0 z-[100000] bg-black/60 dark:bg-black/75 backdrop-blur-sm',
             'data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out'
           )}
         />
@@ -78,10 +78,10 @@ export function Modal({
             }
           }}
           className={cn(
-            'fixed z-[9995] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
+            'fixed z-[100001] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
             'w-[calc(100vw-2rem)] flex flex-col',
             'max-h-[min(90vh,720px)]',
-            'bg-bg-surface border border-border rounded-xl shadow-modal outline-none focus-visible:ring-0 focus-visible:ring-offset-0 overflow-hidden',
+            'bg-bg-overlay border border-border rounded-xl shadow-modal outline-none focus-visible:ring-0 focus-visible:ring-offset-0 overflow-hidden',
             'data-[state=open]:animate-scale-in',
             SIZE_CLASSES[size],
             className
@@ -113,8 +113,7 @@ export function Modal({
               <DialogPrimitive.Close
                 aria-label={__( 'Close', 'codeclove-school-management' )}
                 className={cn(
-                  'flex-shrink-0 w-7 h-7 flex items-center justify-center rounded',
-                  'text-text-subtle hover-bg transition-colors duration-100',
+                  'flex-shrink-0 flex items-center justify-center text-text-muted hover:text-text hover:bg-hover-bg rounded-lg p-1.5 transition-colors',
                   'focus-visible:ring-2 focus-visible:ring-brand-ring'
                 )}
               >

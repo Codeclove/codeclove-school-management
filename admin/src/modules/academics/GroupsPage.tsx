@@ -3,12 +3,12 @@
  *
  * Displays a list of academic groups (e.g. Section A, Section B) scoped to the active session/unit.
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { groupSchema, type GroupFormValues } from '@/schemas/academics'
 import {
-  Plus, Trash2, RefreshCw, GraduationCap, AlertTriangle, Pencil, Search, X
+  Plus, Trash2, RefreshCw, AlertTriangle, Pencil, Search, X
 } from 'lucide-react'
 import {
   useGroups,
@@ -22,17 +22,18 @@ import {
 import { useSession } from '@/lib/session-context'
 import { useLabels } from '@/lib/labels'
 import { useToast } from '@/lib/toast'
+import { onFormError } from '@/lib/form-errors'
 import { useConfirm } from '@/lib/confirm'
 import { useEntity } from '@/lib/useEntity'
 import { AcademicsNav } from './components/AcademicsNav'
-import { TablePagination } from '@/components/ui/TablePagination'
 import { useTableState } from '@/lib/useTableState'
 import { useDebounce } from '@/lib/useDebounce'
 import {
-  Button, Badge, Card, CardContent,
+  DataTable,
+  type DataTableColumn,
+  Button, Badge, Card,
   Modal, ModalFooter, FormField, Input, Select,
-  TableRoot, Thead, Tbody, Tr, Th, Td, TableEmpty, TableSkeleton,
-  PageHeader, Spinner, EmptyState, FormGroupHeader,
+  PageHeader, Spinner,
 } from '@/components/ui'
 import { __, sprintf } from '@/lib/i18n'
 
@@ -95,18 +96,107 @@ export default function GroupsPage() {
   const groups = data?.data ?? []
   const total  = data?.total ?? 0
 
+  const columns = useMemo<DataTableColumn<AcademicGroup>[]>(
+    () => [
+      {
+        key: 'name',
+        header: sprintf( __( '%s Name', 'codeclove-school-management' ), groupLabelSingular ),
+        type: 'primary',
+        sortable: true,
+        render: (group) => <span className="font-semibold text-text">{group.name}</span>,
+      },
+      {
+        key: 'code',
+        header: __( 'Code', 'codeclove-school-management' ),
+        type: 'code',
+        sortable: true,
+        render: (group) =>
+          group.code ? (
+            <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text-muted">
+              {group.code}
+            </span>
+          ) : (
+            <span className="text-text-subtle">—</span>
+          ),
+      },
+      {
+        key: 'unit_id',
+        header: unitLabelSingular,
+        render: (group) => {
+          const parentUnit = units.find((u) => u.id === group.unit_id)
+          return parentUnit?.name ?? __( 'Unknown Class', 'codeclove-school-management' )
+        },
+      },
+      {
+        key: 'capacity',
+        header: __( 'Capacity', 'codeclove-school-management' ),
+        type: 'number',
+        render: (group) => <span className="text-text-muted">{group.capacity ?? '—'}</span>,
+      },
+      {
+        key: 'students_count',
+        header: __( 'Active Students', 'codeclove-school-management' ),
+        type: 'number',
+        sortable: true,
+        render: (group) => group.students_count,
+      },
+      {
+        key: 'status',
+        header: __( 'Status', 'codeclove-school-management' ),
+        type: 'badge',
+        sortable: true,
+        render: (group) => (
+          <Badge variant={group.status}>{group.status}</Badge>
+        ),
+      },
+      {
+        key: 'actions',
+        header: __( 'Actions', 'codeclove-school-management' ),
+        type: 'actions',
+        render: (group) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setEditTarget(group)
+                setShowModal(true)
+              }}
+              className="h-8 w-8 text-text-muted hover:text-brand hover:bg-brand-dim/50"
+              title={sprintf( __( 'Edit %s', 'codeclove-school-management' ), groupLabelSingular )}
+            >
+              <Pencil size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDelete(group)}
+              className="h-8 w-8 text-text-muted hover:text-danger hover:bg-danger-dim/50"
+              title={sprintf( __( 'Delete %s', 'codeclove-school-management' ), groupLabelSingular )}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [groupLabelSingular, unitLabelSingular, units]
+  )
+
   // Reset page & filters when session changes
   useEffect(() => {
     table.resetPage()
+    table.clearSelection()
     setSelectedUnitFilter(0)
     setStatus('')
     setSearch('')
-  }, [session_id, table.resetPage])
+  }, [session_id, table.resetPage, table.clearSelection])
 
   // Reset to page 1 when filters change
   useEffect(() => {
     table.resetPage()
-  }, [selectedUnitFilter, status, debouncedSearch, table.resetPage])
+    table.clearSelection()
+  }, [selectedUnitFilter, status, debouncedSearch, table.resetPage, table.clearSelection])
 
   return (
     <div className="space-y-5 w-full">
@@ -187,6 +277,7 @@ export default function GroupsPage() {
                   setSelectedUnitFilter(0)
                   setStatus('')
                   table.resetPage()
+                  table.clearSelection()
                 }}
               >
                 <X size={12} />
@@ -197,107 +288,55 @@ export default function GroupsPage() {
         </div>
       </Card>
 
-      {/* Table Card */}
-      <Card className="shadow-sm">
-        <CardContent className="p-0 overflow-hidden">
-          {isError ? (
-            <div className="p-6">
-              <EmptyState
-                title={sprintf( __( 'Could not load %s', 'codeclove-school-management' ), groupLabelPlural.toLowerCase() )}
-                description={sprintf( __( 'An error occurred while fetching %s from the backend REST API.', 'codeclove-school-management' ), groupLabelPlural.toLowerCase() )}
-                icon={AlertTriangle}
-                action={
+      <DataTable<AcademicGroup>
+        data={groups}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        emptyState={
+          isError
+            ? {
+                icon: AlertTriangle,
+                message: sprintf( __( 'Could not load %s', 'codeclove-school-management' ), groupLabelPlural.toLowerCase() ),
+                description: sprintf( __( 'An error occurred while fetching %s from the backend REST API.', 'codeclove-school-management' ), groupLabelPlural.toLowerCase() ),
+                action: (
                   <Button variant="secondary" size="sm" onClick={() => refetch()} className="gap-1.5">
                     <RefreshCw size={13} />
                     {__( 'Try again', 'codeclove-school-management' )}
                   </Button>
-                }
-              />
-            </div>
-          ) : (
-            <TableRoot>
-              <Thead>
-                <Tr>
-                  <Th type="primary" {...table.getSortProps('name')}>
-                    {sprintf( __( '%s Name', 'codeclove-school-management' ), groupLabelSingular )}
-                  </Th>
-                  <Th type="code" {...table.getSortProps('code')}>
-                    {__( 'Code', 'codeclove-school-management' )}
-                  </Th>
-                  <Th>{unitLabelSingular}</Th>
-                  <Th type="number">{__( 'Capacity', 'codeclove-school-management' )}</Th>
-                  <Th type="number" {...table.getSortProps('students_count')}>
-                    {__( 'Active Students', 'codeclove-school-management' )}
-                  </Th>
-                  <Th type="badge" {...table.getSortProps('status')}>
-                    {__( 'Status', 'codeclove-school-management' )}
-                  </Th>
-                  <Th type="actions">{__( 'Actions', 'codeclove-school-management' )}</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {isLoading ? (
-                  <TableSkeleton columns={7} rows={5} />
-                ) : groups.length === 0 ? (
-                  <TableEmpty
-                    colSpan={7}
-                    icon={entity.icon}
-                    message={
-                      search || selectedUnitFilter !== 0 || status
-                        ? __( 'No Classes Match Filters', 'codeclove-school-management' )
-                        : !session_id
-                        ? __( 'Session Not Selected', 'codeclove-school-management' )
-                        : units.length === 0
-                        ? sprintf( __( 'No %s Found', 'codeclove-school-management' ), unitLabelPlural )
-                        : sprintf( __( 'No %s Found', 'codeclove-school-management' ), groupLabelPlural )
-                    }
-                    description={
-                      search || selectedUnitFilter !== 0 || status
-                        ? __( 'Try adjusting your search query or status filter.', 'codeclove-school-management' )
-                        : !session_id
-                        ? sprintf( __( 'Select an active %1$s in the header to view %2$s.', 'codeclove-school-management' ), sessionLabelSingular.toLowerCase(), groupLabelPlural.toLowerCase() )
-                        : units.length === 0
-                        ? sprintf( __( 'You must create a %1$s first before you can map any %2$s (sections/streams).', 'codeclove-school-management' ), unitLabelSingular.toLowerCase(), groupLabelPlural.toLowerCase() )
-                        : __( 'Get started by grouping students into classes and sections/streams.', 'codeclove-school-management' )
-                    }
-                    action={
-                      !search && !selectedUnitFilter && !status && session_id && units.length > 0 && (
-                        <Button size="sm" onClick={() => { setEditTarget(null); setShowModal(true); }}>
-                          {sprintf( __( 'New %s', 'codeclove-school-management' ), groupLabelSingular )}
-                        </Button>
-                      )
-                    }
-                  />
-                ) : (
-                  groups.map((group) => {
-                    const parentUnit = units.find((u) => u.id === group.unit_id)
-                    return (
-                      <GroupRow
-                        key={group.id}
-                        group={group}
-                        unitName={parentUnit?.name ?? __( 'Unknown Class', 'codeclove-school-management' )}
-                        onEdit={() => {
-                          setEditTarget(group)
-                          setShowModal(true)
-                        }}
-                        onDelete={() => handleDelete(group)}
-                      />
-                    )
-                  })
-                )}
-              </Tbody>
-            </TableRoot>
-          )}
-
-          {/* Pagination */}
-          {!isLoading && !isError && (
-            <TablePagination
-              {...table.paginationProps}
-              total={total}
-            />
-          )}
-        </CardContent>
-      </Card>
+                ),
+              }
+            : {
+                icon: entity.icon,
+                message:
+                  search || selectedUnitFilter !== 0 || status
+                    ? __( 'No Classes Match Filters', 'codeclove-school-management' )
+                    : !session_id
+                    ? __( 'Session Not Selected', 'codeclove-school-management' )
+                    : units.length === 0
+                    ? sprintf( __( 'No %s Found', 'codeclove-school-management' ), unitLabelPlural )
+                    : sprintf( __( 'No %s Found', 'codeclove-school-management' ), groupLabelPlural ),
+                description:
+                  search || selectedUnitFilter !== 0 || status
+                    ? __( 'Try adjusting your search query or status filter.', 'codeclove-school-management' )
+                    : !session_id
+                    ? sprintf( __( 'Select an active %1$s in the header to view %2$s.', 'codeclove-school-management' ), sessionLabelSingular.toLowerCase(), groupLabelPlural.toLowerCase() )
+                    : units.length === 0
+                    ? sprintf( __( 'You must create a %1$s first before you can map any %2$s (sections/streams).', 'codeclove-school-management' ), unitLabelSingular.toLowerCase(), groupLabelPlural.toLowerCase() )
+                    : __( 'Get started by grouping students into classes and sections/streams.', 'codeclove-school-management' ),
+                action:
+                  !search && !selectedUnitFilter && !status && session_id && units.length > 0 ? (
+                    <Button size="sm" onClick={() => { setEditTarget(null); setShowModal(true); }}>
+                      {sprintf( __( 'New %s', 'codeclove-school-management' ), groupLabelSingular )}
+                    </Button>
+                  ) : undefined,
+              }
+        }
+        keyExtractor={(group) => group.id}
+      />
 
       {/* Group Modal */}
       <GroupModal
@@ -315,88 +354,6 @@ export default function GroupsPage() {
         }}
       />
     </div>
-  )
-}
-
-// ─── Table Row ────────────────────────────────────────────────────────────────
-
-function GroupRow({
-  group,
-  unitName,
-  onEdit,
-  onDelete,
-}: {
-  group: AcademicGroup
-  unitName: string
-  onEdit: () => void
-  onDelete: () => void
-}) {
-  const { getLabel } = useLabels()
-  const groupLabelSingular = getLabel('academic_group', false, __( 'Academic Group', 'codeclove-school-management' ))
-
-  const statusLabel = group.status === 'active'
-    ? __( 'Active', 'codeclove-school-management' )
-    : group.status === 'inactive'
-    ? __( 'Inactive', 'codeclove-school-management' )
-    : __( 'Archived', 'codeclove-school-management' )
-
-  return (
-    <Tr className="table-row-hover">
-      <Td type="primary">
-        <span className="font-semibold text-text">{group.name}</span>
-      </Td>
-      <Td type="code">
-        {group.code ? (
-          <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-bg-base border border-border text-text-muted">
-            {group.code}
-          </span>
-        ) : (
-          <span className="text-text-subtle">—</span>
-        )}
-      </Td>
-      <Td>{unitName}</Td>
-      <Td type="number" className="text-text-muted">{group.capacity ?? '—'}</Td>
-      <Td type="number">
-        {group.students_count}
-      </Td>
-      <Td type="badge">
-        <Badge
-          variant={
-            group.status === 'active'
-              ? 'success'
-              : group.status === 'inactive'
-              ? 'default'
-              : 'brand'
-          }
-          size="sm"
-          dot
-        >
-          {statusLabel}
-        </Badge>
-      </Td>
-      <Td type="actions">
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onEdit}
-            className="h-8 w-8 text-text-muted hover:text-brand hover:bg-brand-dim/50"
-            title={sprintf( __( 'Edit %s', 'codeclove-school-management' ), groupLabelSingular )}
-          >
-            <Pencil size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onDelete}
-            className="h-8 w-8 text-text-muted hover:text-danger hover:bg-danger-dim/50"
-            title={sprintf( __( 'Delete %s', 'codeclove-school-management' ), groupLabelSingular )}
-          >
-            <Trash2 size={14} />
-          </Button>
-        </div>
-      </Td>
-    </Tr>
   )
 }
 
@@ -528,12 +485,7 @@ function GroupModal({
       }
       size="md"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <FormGroupHeader
-          title={sprintf( __( '%s Details', 'codeclove-school-management' ), groupLabelSingular )}
-          description={sprintf( __( 'Configure the %1$s name, code, capacity, and parent %2$s.', 'codeclove-school-management' ), groupLabelSingular.toLowerCase(), unitLabelSingular.toLowerCase() )}
-          icon={GraduationCap}
-        />
+      <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-4">
         <FormField label={sprintf( __( 'Parent %s', 'codeclove-school-management' ), unitLabelSingular )} error={errors.unit_id?.message} required>
           <Select
             value={unitIdValue ? unitIdValue.toString() : ''}

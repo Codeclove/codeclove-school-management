@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  User, Pencil, Trash2, Mail, Briefcase, AlertTriangle, Plus, FileText, Clock, MapPin, IdCard, Printer, CalendarCheck,
+  User, Pencil, Trash2, Mail, Briefcase, AlertTriangle, FileText, Clock, MapPin, IdCard, Printer, CalendarCheck,
   PhoneCall, ShieldCheck
 } from 'lucide-react'
 import {
@@ -9,8 +9,8 @@ import {
   useDeleteStaff,
 } from '@/api/staff'
 import {
-  Button, Badge, Card, PageHeader, Spinner, EmptyState, Modal, ModalFooter,
-  TableRoot, Thead, Tbody, Tr, Th, Td
+  Button, Badge, Card, PageHeader, Spinner, EmptyState, ConfirmDialog,
+  TableRoot, Thead, Tbody, Tr, Th, Td, Avatar
 } from '@/components/ui'
 import { useToast } from '@/lib/toast'
 import { useLabels } from '@/lib/labels'
@@ -76,7 +76,7 @@ export default function StaffProfilePage() {
     return filteredLogs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
   }, [filteredLogs, currentPage])
 
-  const handleDeleteConfirm = () => {
+  const handleDelete = () => {
     if (!staff) return
     deleteMutation.mutate(staff.id, {
       onSuccess: () => {
@@ -126,15 +126,12 @@ export default function StaffProfilePage() {
         {/* Left Column - Profile Sidebar Card */}
         <div className="lg:col-span-1">
           <Card className="p-6 flex flex-col items-center text-center space-y-4">
-            {staff.photo_url && !staff.photo_url.endsWith('avatar.svg') ? (
-              <div className="w-20 h-20 rounded-full border-4 border-brand/10 shadow-sm overflow-hidden flex-shrink-0 select-none relative">
-                <img src={staff.photo_url} alt={`${staff.first_name} ${staff.last_name}`} className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-brand-dim border-4 border-brand/10 shadow-sm flex items-center justify-center text-brand font-bold text-2xl flex-shrink-0 select-none">
-                {staff.first_name[0] ?? ''}{staff.last_name[0] ?? ''}
-              </div>
-            )}
+            <Avatar
+              name={`${staff.first_name} ${staff.last_name}`}
+              photoUrl={staff.photo_url}
+              size="2xl"
+              shape="circle"
+            />
             
             <div className="space-y-1">
               <h2 className="text-base font-bold text-text">
@@ -142,29 +139,18 @@ export default function StaffProfilePage() {
               </h2>
               <p className="text-xs text-text-muted">{staff.designation || staffLabelSingular}</p>
               <div className="flex justify-center pt-1">
-                <Badge
-                  variant={
-                    staff.status === 'active'
-                      ? 'success'
-                      : staff.status === 'inactive'
-                      ? 'inactive'
-                      : 'suspended'
-                  }
-                  size="sm"
-                >
-                  {staff.status.toUpperCase()}
-                </Badge>
+                <Badge variant={staff.status}>{staff.status}</Badge>
               </div>
             </div>
 
-            <div className="w-full border-t border-border/60 my-2"></div>
+            <div className="w-full border-t border-border my-2"></div>
 
             <div className="w-full space-y-2 text-xs">
-              <div className="flex justify-between py-1.5 border-b border-border/30 items-center">
+              <div className="flex justify-between py-1.5 border-b border-border items-center">
                 <span className="text-text-muted">{sprintf( __( '%s Code', 'codeclove-school-management' ), staffLabelSingular )}</span>
                 <span className="font-mono font-medium text-text">{staff.staff_number}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-border/30 items-center">
+              <div className="flex justify-between py-1.5 border-b border-border items-center">
                 <span className="text-text-muted">{__( 'Department', 'codeclove-school-management' )}</span>
                 <span className="font-medium text-text">{staff.department || '—'}</span>
               </div>
@@ -192,9 +178,9 @@ export default function StaffProfilePage() {
                 {__( 'Identity Card', 'codeclove-school-management' )}
               </Button>
               <Button
-                variant="danger"
+                variant="secondary"
                 onClick={() => setShowDeleteModal(true)}
-                className="w-full gap-1.5 text-xs py-2 bg-danger/5 hover:bg-danger/10 border-danger/10 hover:border-danger/20 text-danger"
+                className="w-full gap-1.5 text-xs py-2 text-danger hover:bg-danger-dim border-border hover:border-danger transition-colors"
               >
                 <Trash2 size={12} />
                 {__( 'Delete Profile', 'codeclove-school-management' )}
@@ -255,35 +241,35 @@ export default function StaffProfilePage() {
                     {__( 'Personal Information', 'codeclove-school-management' )}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs">
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Title', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.title || '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Staff ID / Code', 'codeclove-school-management' )}</span>
                       <span className="font-mono font-medium text-text">{staff.staff_number || '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'First Name', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.first_name}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Last Name', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.last_name}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Middle Name', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.middle_name || '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Preferred Name', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.preferred_name || '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Date of Birth', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.date_of_birth ? formatDate(staff.date_of_birth) : '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Gender', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{formatGender(staff.gender)}</span>
                     </div>
@@ -296,11 +282,11 @@ export default function StaffProfilePage() {
                     {__( 'Contact Details', 'codeclove-school-management' )}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs">
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Email Address', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.email}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Phone Number', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.phone || '—'}</span>
                     </div>
@@ -313,23 +299,23 @@ export default function StaffProfilePage() {
                     {__( 'Physical Address', 'codeclove-school-management' )}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs">
-                    <div className="flex justify-between py-2 border-b border-border/30 col-span-full">
+                    <div className="flex justify-between py-2 border-b border-border col-span-full">
                       <span className="text-text-muted font-medium">{__( 'Street Address', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.address || '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'City', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.city || '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'State / Province', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.state || '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'ZIP / Postal Code', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.postal_code || '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Country', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.country || '—'}</span>
                     </div>
@@ -342,45 +328,45 @@ export default function StaffProfilePage() {
                     {__( 'Employment Information', 'codeclove-school-management' )}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs">
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Designation', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.designation || '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Department', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.department || '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Staff Category', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text capitalize">{staff.staff_category ? staff.staff_category.replace(/_/g, ' ') : '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Employment Model', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text capitalize">{staff.employment_type ? staff.employment_type.replace(/_/g, ' ') : '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Highest Qualification', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.highest_qualification || '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Subject / Specialization', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.specialization || '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Joined Date', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.joined_on ? formatDate(staff.joined_on) : '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Associated User ID', 'codeclove-school-management' )}</span>
                       <span className="font-mono font-medium text-text">{staff.user_id || '—'}</span>
                     </div>
                     {staff.user_id && (
-                      <div className="flex justify-between py-2 border-b border-border/30">
+                      <div className="flex justify-between py-2 border-b border-border">
                         <span className="text-text-muted font-medium">{__( 'WordPress Username', 'codeclove-school-management' )}</span>
                         <span className="font-medium text-text">{staff.username || '—'}</span>
                       </div>
                     )}
-                    <div className="flex justify-between py-2 border-b border-border/30">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Assigned System Role', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.role_name || '—'}</span>
                     </div>
@@ -394,15 +380,15 @@ export default function StaffProfilePage() {
                       {__( 'Emergency Contact', 'codeclove-school-management' )}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 text-xs">
-                      <div className="flex justify-between py-2 border-b border-border/30">
+                      <div className="flex justify-between py-2 border-b border-border">
                         <span className="text-text-muted font-medium">{__( 'Contact Person', 'codeclove-school-management' )}</span>
                         <span className="font-medium text-text">{staff.emergency_contact_name || '—'}</span>
                       </div>
-                      <div className="flex justify-between py-2 border-b border-border/30">
+                      <div className="flex justify-between py-2 border-b border-border">
                         <span className="text-text-muted font-medium">{__( 'Relationship', 'codeclove-school-management' )}</span>
                         <span className="font-medium text-text">{staff.emergency_contact_relationship || '—'}</span>
                       </div>
-                      <div className="flex justify-between py-2 border-b border-border/30">
+                      <div className="flex justify-between py-2 border-b border-border">
                         <span className="text-text-muted font-medium">{__( 'Emergency Phone', 'codeclove-school-management' )}</span>
                         <span className="font-medium text-text">{staff.emergency_contact_phone || '—'}</span>
                       </div>
@@ -421,7 +407,7 @@ export default function StaffProfilePage() {
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs">
                         {metaEntries.map(([key, val]) => (
-                          <div key={key} className="flex justify-between py-2 border-b border-border/30">
+                          <div key={key} className="flex justify-between py-2 border-b border-border">
                             <span className="text-text-muted font-medium capitalize">
                               {key.replace(/_/g, ' ')}
                             </span>
@@ -435,7 +421,7 @@ export default function StaffProfilePage() {
                   )
                 })()}
 
-                <div className="border-t border-border/60 pt-6">
+                <div className="border-t border-border pt-6">
                   <h3 className="text-sm font-semibold text-text flex items-center gap-2 mb-4">
                     <FileText size={16} className="text-brand" />
                     {__( 'Uploaded Documents', 'codeclove-school-management' )}
@@ -443,7 +429,7 @@ export default function StaffProfilePage() {
                   {staff.documents && staff.documents.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {staff.documents.map((doc, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-bg-base/30 hover:bg-bg-elevated border border-border/40 rounded-lg transition-colors">
+                        <div key={idx} className="flex items-center justify-between p-3 bg-bg-surface hover:bg-hover-bg border border-border rounded-lg transition-colors">
                           <div className="space-y-0.5">
                             <p className="text-xs font-semibold text-text">{doc.label}</p>
                             <p className="text-2xs text-text-muted font-mono">{sprintf( __( 'ID: %s', 'codeclove-school-management' ), doc.attachment_id )}</p>
@@ -478,7 +464,7 @@ export default function StaffProfilePage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-bg-base/60 p-0.5 rounded-lg border border-border text-xs">
+                    <div className="flex items-center bg-bg-surface p-0.5 rounded-lg border border-border text-xs">
                       <button
                         type="button"
                         onClick={() => setBadgeDual(false)}
@@ -501,7 +487,7 @@ export default function StaffProfilePage() {
                   </div>
                 </div>
 
-                <div className="bg-slate-50/80 border border-border rounded-2xl p-8 flex flex-col items-center justify-center overflow-x-auto">
+                <div className="bg-bg-surface border border-border rounded-2xl p-8 flex flex-col items-center justify-center overflow-x-auto shadow-inner">
                   <StaffIdCard
                     staff={staff}
                     school={settingsData?.school}
@@ -535,14 +521,14 @@ export default function StaffProfilePage() {
                     {/* Summary stats */}
                     <div className="flex flex-wrap gap-3">
                       {staff.staff_number && (
-                        <div className="px-3 py-1.5 bg-bg-surface border border-border/40 rounded flex items-center gap-2">
+                        <div className="px-3 py-1.5 bg-bg-surface border border-border rounded flex items-center gap-2">
                           <span className="text-2xs text-text-muted">{__( 'Staff Code', 'codeclove-school-management' )}</span>
                           <span className="text-xs font-bold text-text">
                             {staff.staff_number}
                           </span>
                         </div>
                       )}
-                      <div className="px-3 py-1.5 bg-bg-surface border border-border/40 rounded flex items-center gap-2">
+                      <div className="px-3 py-1.5 bg-bg-surface border border-border rounded flex items-center gap-2">
                         <span className="text-2xs text-text-muted">{__( 'Rate', 'codeclove-school-management' )}</span>
                         <span className="text-xs font-bold text-text">
                           {(() => {
@@ -552,19 +538,19 @@ export default function StaffProfilePage() {
                           })()}
                         </span>
                       </div>
-                      <div className="px-3 py-1.5 bg-bg-surface border border-border/40 rounded flex items-center gap-2">
+                      <div className="px-3 py-1.5 bg-bg-surface border border-border rounded flex items-center gap-2">
                         <span className="text-2xs text-text-muted">{__( 'Present', 'codeclove-school-management' )}</span>
                         <span className="text-xs font-bold text-success">
                           {sprintf( __( '%d days', 'codeclove-school-management' ), attendanceHistory.filter(h => h.status === 'present').length )}
                         </span>
                       </div>
-                      <div className="px-3 py-1.5 bg-bg-surface border border-border/40 rounded flex items-center gap-2">
+                      <div className="px-3 py-1.5 bg-bg-surface border border-border rounded flex items-center gap-2">
                         <span className="text-2xs text-text-muted">{__( 'Absent', 'codeclove-school-management' )}</span>
                         <span className="text-xs font-bold text-danger">
                           {sprintf( __( '%d days', 'codeclove-school-management' ), attendanceHistory.filter(h => h.status === 'absent').length )}
                         </span>
                       </div>
-                      <div className="px-3 py-1.5 bg-bg-surface border border-border/40 rounded flex items-center gap-2">
+                      <div className="px-3 py-1.5 bg-bg-surface border border-border rounded flex items-center gap-2">
                         <span className="text-2xs text-text-muted">{__( 'On Leave', 'codeclove-school-management' )}</span>
                         <span className="text-xs font-bold text-warning">
                           {sprintf( __( '%d days', 'codeclove-school-management' ), attendanceHistory.filter(h => h.status === 'on_leave').length )}
@@ -573,7 +559,7 @@ export default function StaffProfilePage() {
                     </div>
 
                     {/* Filters */}
-                    <div className="flex flex-wrap gap-4 items-center py-2 px-4 bg-bg-overlay/5 border border-border/40 rounded text-xs">
+                    <div className="flex flex-wrap gap-4 items-center py-2 px-3 bg-bg-surface border border-border rounded-lg text-xs">
                       <span className="font-semibold text-text-muted">{__( 'Filters:', 'codeclove-school-management' )}</span>
                       
                       <div className="flex items-center gap-1.5">
@@ -584,7 +570,7 @@ export default function StaffProfilePage() {
                             setYearFilter(e.target.value)
                             setCurrentPage(1)
                           }}
-                          className="bg-bg-surface border border-border rounded px-2 py-1 text-text outline-none focus:border-brand/60"
+                          className="bg-bg-surface border border-border rounded-md px-2.5 py-1 text-xs text-text outline-none focus:border-brand focus:ring-1 focus:ring-brand-ring"
                         >
                           <option value="">{__( 'All Years', 'codeclove-school-management' )}</option>
                           {uniqueYears.map(y => (
@@ -601,7 +587,7 @@ export default function StaffProfilePage() {
                             setMonthFilter(e.target.value)
                             setCurrentPage(1)
                           }}
-                          className="bg-bg-surface border border-border rounded px-2 py-1 text-text outline-none focus:border-brand/60"
+                          className="bg-bg-surface border border-border rounded-md px-2.5 py-1 text-xs text-text outline-none focus:border-brand focus:ring-1 focus:ring-brand-ring"
                         >
                           <option value="">{__( 'All Months', 'codeclove-school-management' )}</option>
                           {[
@@ -631,7 +617,7 @@ export default function StaffProfilePage() {
                             setStatusFilter(e.target.value)
                             setCurrentPage(1)
                           }}
-                          className="bg-bg-surface border border-border rounded px-2 py-1 text-text outline-none focus:border-brand/60 capitalize"
+                          className="bg-bg-surface border border-border rounded-md px-2.5 py-1 text-xs text-text outline-none focus:border-brand focus:ring-1 focus:ring-brand-ring capitalize"
                         >
                           <option value="">{__( 'All Statuses', 'codeclove-school-management' )}</option>
                           {['present', 'absent', 'late', 'half_day', 'on_leave', 'excused', 'holiday'].map(st => (
@@ -711,48 +697,25 @@ export default function StaffProfilePage() {
       </div>
 
       {/* ── Delete Confirmation Dialog ─────────────────────────────────────────── */}
-      <Modal
+      <ConfirmDialog
         open={showDeleteModal}
         onOpenChange={setShowDeleteModal}
+        onConfirm={handleDelete}
         title={sprintf( __( 'Delete %s Record', 'codeclove-school-management' ), staffLabelSingular )}
         description={sprintf( __( 'Are you absolutely sure you want to remove this %s? This will soft-delete the record from active directories, preserving historical database records.', 'codeclove-school-management' ), staffLabelSingular.toLowerCase() )}
+        variant="danger"
+        confirmText={__( 'Delete Staff Member', 'codeclove-school-management' )}
+        isLoading={deleteMutation.isPending}
       >
-        <div className="space-y-4 pt-2">
-          <div className="bg-danger/10 border border-danger/20 rounded-lg p-4 flex gap-3 text-sm text-text">
-            <Plus size={16} className="text-danger flex-shrink-0 mt-0.5 rotate-45" />
-            <div className="space-y-1">
-              <p className="font-semibold text-danger">{__( 'Warning: Deletion is permanent for active views', 'codeclove-school-management' )}</p>
-              <p className="text-xs text-text-subtle leading-relaxed">
-                {sprintf( __( 'Removing %1$s %2$s (%3$s) will hide them from the directory, timetables, and list views.', 'codeclove-school-management' ), staff.first_name, staff.last_name, staff.staff_number )}
-              </p>
-            </div>
+        {staff && (
+          <div className="bg-danger/10 border border-danger/20 rounded-lg p-3 text-xs text-text space-y-1">
+            <p className="font-semibold text-danger">{__( 'Warning: Deletion is permanent for active views', 'codeclove-school-management' )}</p>
+            <p className="text-text-muted leading-relaxed">
+              {sprintf( __( 'Removing %1$s %2$s (%3$s) will hide them from the directory, timetables, and list views.', 'codeclove-school-management' ), staff.first_name, staff.last_name, staff.staff_number )}
+            </p>
           </div>
-
-          <ModalFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setShowDeleteModal(false)}
-              disabled={deleteMutation.isPending}
-            >
-              {__( 'Cancel', 'codeclove-school-management' )}
-            </Button>
-            <Button
-              variant="danger"
-              onClick={handleDeleteConfirm}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? (
-                <>
-                  <Spinner size="sm" className="text-current mr-1.5" />
-                  {__( 'Deleting...', 'codeclove-school-management' )}
-                </>
-              ) : (
-                __( 'Yes, Delete Record', 'codeclove-school-management' )
-              )}
-            </Button>
-          </ModalFooter>
-        </div>
-      </Modal>
+        )}
+      </ConfirmDialog>
       {/* Hidden printable elements container */}
       {isPrintingBadge && (
         <div className="hidden">

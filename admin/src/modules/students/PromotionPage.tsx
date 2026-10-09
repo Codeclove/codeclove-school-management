@@ -13,7 +13,6 @@ import {
   Sparkles,
   ArrowRight,
   CheckCircle2,
-  Check,
   Users
 } from 'lucide-react'
 import {
@@ -37,8 +36,7 @@ import {
   Badge,
   Card,
   CardContent,
-  Modal,
-  ModalFooter,
+  ConfirmDialog,
   FormField,
   Input,
   Select,
@@ -386,7 +384,7 @@ export default function PromotionPage() {
       <Card>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-6 h-6 rounded-full bg-bg-base border border-border flex items-center justify-center text-xs font-semibold text-text-muted">
+            <div className="w-6 h-6 rounded-full bg-bg-surface border border-border flex items-center justify-center text-xs font-semibold text-text-muted">
               01
             </div>
             <div>
@@ -415,7 +413,7 @@ export default function PromotionPage() {
           </div>
 
           {sourceSessionId && targetSessionId && (
-            <div className="mt-4 p-4 rounded-xl border border-dashed border-border bg-bg-base/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="mt-4 p-4 rounded-xl border border-dashed border-border bg-bg-surface flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="space-y-1">
                 <span className="inline-flex items-center gap-1.5 text-xs text-brand font-medium bg-brand-dim px-2.5 py-1 rounded-full">
                   <Sparkles size={12} />
@@ -463,7 +461,7 @@ export default function PromotionPage() {
         <Card>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-6 h-6 rounded-full bg-bg-base border border-border flex items-center justify-center text-xs font-semibold text-text-muted">
+              <div className="w-6 h-6 rounded-full bg-bg-surface border border-border flex items-center justify-center text-xs font-semibold text-text-muted">
                 02
               </div>
               <div>
@@ -618,7 +616,7 @@ export default function PromotionPage() {
         <Card>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-6 h-6 rounded-full bg-bg-base border border-border flex items-center justify-center text-xs font-semibold text-text-muted">
+              <div className="w-6 h-6 rounded-full bg-bg-surface border border-border flex items-center justify-center text-xs font-semibold text-text-muted">
                 03
               </div>
               <div>
@@ -682,7 +680,7 @@ export default function PromotionPage() {
       {sourceSessionId && targetSessionId && !isStructureEmpty && isSelectionComplete && (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-6 h-6 rounded-full bg-bg-base border border-border flex items-center justify-center text-xs font-semibold text-text-muted flex-shrink-0">
+            <div className="w-6 h-6 rounded-full bg-bg-surface border border-border flex items-center justify-center text-xs font-semibold text-text-muted flex-shrink-0">
               {promotionScope === 'student' ? '03' : '04'}
             </div>
             <div className="flex-1">
@@ -805,7 +803,7 @@ export default function PromotionPage() {
                         </div>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="p-4 bg-bg-base/30 space-y-4">
+                    <AccordionContent className="p-4 bg-bg-surface/50 space-y-4">
                       {/* Bulk actions inside panel */}
                       <div className="p-3 rounded-xl border border-border bg-bg-surface flex flex-col md:flex-row items-start md:items-center gap-3">
                         <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
@@ -815,7 +813,7 @@ export default function PromotionPage() {
                           <Button
                             variant="secondary"
                             size="sm"
-                            className="text-xs font-medium text-text bg-bg-base hover:bg-hover-bg border border-border"
+                            className="bg-bg-surface"
                             onClick={() => {
                               const targetUnit = classMappings[group.unitId]
                               if (!targetUnit || targetUnit === 'graduate' || targetUnit === 'withdraw') {
@@ -834,7 +832,7 @@ export default function PromotionPage() {
                           <Button
                             variant="secondary"
                             size="sm"
-                            className="text-xs font-medium text-text bg-bg-base hover:bg-hover-bg border border-border"
+                            className="bg-bg-surface"
                             onClick={() => {
                               handleBulkSetGroupAction(groupKey, 'detain', group.unitId.toString(), group.groupId?.toString() ?? '')
                             }}
@@ -844,7 +842,7 @@ export default function PromotionPage() {
                           <Button
                             variant="secondary"
                             size="sm"
-                            className="text-xs font-medium text-text bg-bg-base hover:bg-hover-bg border border-border animate-fade-in"
+                            className="bg-bg-surface"
                             onClick={() => {
                               handleBulkSetGroupAction(groupKey, 'graduate')
                             }}
@@ -1045,10 +1043,20 @@ export default function PromotionPage() {
       )}
 
       {/* ─── PREVIEW MODAL ────────────────────────────────────────────────────────── */}
-      <Modal
+      <ConfirmDialog
         open={previewModalOpen}
         onOpenChange={setPreviewModalOpen}
+        onConfirm={handleExecuteRollover}
         title={__( 'Confirm Academic Rollover', 'codeclove-school-management' )}
+        variant="danger"
+        confirmText={
+          promotionScope === 'all'
+            ? __( 'Confirm & Execute Rollover', 'codeclove-school-management' )
+            : promotionScope === 'class'
+            ? __( 'Confirm & Execute Class Rollover', 'codeclove-school-management' )
+            : __( 'Confirm & Execute Student Rollover', 'codeclove-school-management' )
+        }
+        isLoading={executeMutation.isPending}
       >
         <div className="space-y-4">
           <Alert variant="danger" title={__( 'Critical Operational Action', 'codeclove-school-management' )}>
@@ -1056,19 +1064,19 @@ export default function PromotionPage() {
           </Alert>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 bg-bg-base rounded-xl text-center space-y-1">
+            <div className="p-3 bg-bg-surface border border-border rounded-xl text-center space-y-1">
               <span className="text-2xl font-bold text-success">{stats.promote}</span>
               <p className="text-xs font-medium text-text-muted">{__( 'Students Promoted', 'codeclove-school-management' )}</p>
             </div>
-            <div className="p-3 bg-bg-base rounded-xl text-center space-y-1">
+            <div className="p-3 bg-bg-surface border border-border rounded-xl text-center space-y-1">
               <span className="text-2xl font-bold text-warning">{stats.detain}</span>
               <p className="text-xs font-medium text-text-muted">{__( 'Students Detained', 'codeclove-school-management' )}</p>
             </div>
-            <div className="p-3 bg-bg-base rounded-xl text-center space-y-1">
+            <div className="p-3 bg-bg-surface border border-border rounded-xl text-center space-y-1">
               <span className="text-2xl font-bold text-info">{stats.graduate}</span>
               <p className="text-xs font-medium text-text-muted">{__( 'Students Graduated', 'codeclove-school-management' )}</p>
             </div>
-            <div className="p-3 bg-bg-base rounded-xl text-center space-y-1">
+            <div className="p-3 bg-bg-surface border border-border rounded-xl text-center space-y-1">
               <span className="text-2xl font-bold text-text-muted">{stats.withdraw}</span>
               <p className="text-xs font-medium text-text-muted">{__( 'Students Withdrawn', 'codeclove-school-management' )}</p>
             </div>
@@ -1093,25 +1101,7 @@ export default function PromotionPage() {
             </div>
           </div>
         </div>
-
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setPreviewModalOpen(false)}>
-            {__( 'Cancel', 'codeclove-school-management' )}
-          </Button>
-          <Button
-            onClick={handleExecuteRollover}
-            disabled={executeMutation.isPending}
-            className="bg-brand hover:bg-brand-strong gap-1.5"
-          >
-            {executeMutation.isPending ? (
-              <Spinner size="sm" />
-            ) : (
-              <Check size={14} />
-            )}
-            {promotionScope === 'all' ? __( 'Confirm & Execute Rollover', 'codeclove-school-management' ) : promotionScope === 'class' ? __( 'Confirm & Execute Class Rollover', 'codeclove-school-management' ) : __( 'Confirm & Execute Student Rollover', 'codeclove-school-management' )}
-          </Button>
-        </ModalFooter>
-      </Modal>
+      </ConfirmDialog>
     </div>
   )
 }

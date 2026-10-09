@@ -235,4 +235,10 @@ export const queryKeys = {
     all: ['codeclove', 'promotion'] as const,
     eligible: (filters?: unknown) => [...queryKeys.promotion.all, 'eligible', filters] as const,
   },
+
+  // ─── Demo Data ─────────────────────────────────────────────────────────────
+  demoData: {
+    all: ['codeclove', 'demo-data'] as const,
+    status: () => [...queryKeys.demoData.all, 'status'] as const,
+  },
 } as const

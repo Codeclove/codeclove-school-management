@@ -131,7 +131,7 @@ export function IdentifiersTab({ register, control }: IdentifiersTabProps) {
               </div>
 
               {/* Reactive Live Preview Badge */}
-              <div className="mt-3 flex items-center justify-between bg-bg-surface border border-border/60 rounded px-3 py-1.5 text-xs text-text-muted">
+              <div className="mt-3 flex items-center justify-between bg-bg-surface border border-border rounded px-3 py-1.5 text-xs text-text-muted">
                 <span className="font-medium text-text-subtle">{__( 'Generated ID Preview:', 'codeclove-school-management' )}</span>
                 <span className="font-mono font-bold text-brand bg-brand-dim/30 px-2.5 py-0.5 rounded border border-brand/10 tracking-wider">
                   {getPreview(key)}

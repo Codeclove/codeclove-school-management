@@ -20,6 +20,7 @@ import {
   Button, FormField, Input, Select, PageHeader, Spinner, EmptyState, FormGroup, DatePicker, Skeleton
 } from '@/components/ui'
 import { __, sprintf } from '@/lib/i18n'
+import { onFormError } from '@/lib/form-errors'
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -316,7 +317,7 @@ export default function AdmissionEditPage() {
         ]}
       />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-6">
         {/* Card 1: Student Details */}
         <FormGroup
           title={__( '1. Student Details', 'codeclove-school-management' )}

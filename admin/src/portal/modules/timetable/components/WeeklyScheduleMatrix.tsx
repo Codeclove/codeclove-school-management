@@ -115,7 +115,7 @@ export const WeeklyScheduleMatrix: React.FC<WeeklyScheduleMatrixProps> = ({
 
   if (periodRows.length === 0) {
     return (
-      <Card className="rounded-xl border border-border/80 shadow-card bg-bg-surface">
+      <Card className="rounded-xl">
         <EmptyState
           icon={Clock}
           title={__( 'No weekly schedule available', 'codeclove-school-management' )}
@@ -129,15 +129,15 @@ export const WeeklyScheduleMatrix: React.FC<WeeklyScheduleMatrixProps> = ({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Horizontally scrollable matrix container */}
-      <div className="w-full overflow-x-auto rounded-2xl border border-border/80 bg-bg-surface shadow-card">
+      <div className="w-full overflow-x-auto rounded-2xl border border-border bg-bg-elevated shadow-card">
         <div className="min-w-[860px]">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="bg-bg-base/40 border-b border-border/80">
+              <tr className="bg-bg-surface border-b border-border">
                 {/* Time header column */}
                 <th
                   scope="col"
-                  className="w-36 p-3.5 text-left text-xs font-bold text-text-subtle uppercase tracking-wider border-r border-border/60"
+                  className="w-36 p-3.5 text-left text-xs font-bold text-text-subtle uppercase tracking-wider border-r border-border"
                 >
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-brand" />
@@ -152,7 +152,7 @@ export const WeeklyScheduleMatrix: React.FC<WeeklyScheduleMatrixProps> = ({
                     <th
                       key={day.id}
                       scope="col"
-                      className={`p-3 text-center text-xs font-bold border-r border-border/60 last:border-r-0 transition-colors ${
+                      className={`p-3 text-center text-xs font-bold border-r border-border last:border-r-0 transition-colors ${
                         isToday ? 'bg-brand-dim/30 text-brand' : 'text-text'
                       }`}
                     >
@@ -171,18 +171,18 @@ export const WeeklyScheduleMatrix: React.FC<WeeklyScheduleMatrixProps> = ({
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-border/60">
+            <tbody className="divide-y divide-border">
               {periodRows.map((row, rowIdx) => {
                 const nextRow = periodRows[rowIdx + 1]
                 const gap = nextRow ? getBreakBetweenSlots(row.endTime, nextRow.startTime) : null
 
                 return (
                   <React.Fragment key={row.id}>
-                    <tr className="hover:bg-bg-base/20 transition-colors">
+                    <tr className="hover:bg-hover-bg transition-colors">
                       {/* Period row timing header */}
                       <th
                         scope="row"
-                        className="w-36 p-3.5 border-r border-border/60 bg-bg-base/25 text-left align-top"
+                        className="w-36 p-3.5 border-r border-border bg-bg-surface text-left align-top"
                       >
                         <div className="font-bold text-xs text-text">{row.name}</div>
                         <div className="text-3xs font-semibold text-text-muted mt-1 tabular-nums whitespace-nowrap">
@@ -197,10 +197,10 @@ export const WeeklyScheduleMatrix: React.FC<WeeklyScheduleMatrixProps> = ({
                           return (
                             <td
                               key={day.id}
-                              className="p-2 border-r border-border/60 last:border-r-0 align-top"
+                              className="p-2 border-r border-border last:border-r-0 align-top"
                             >
-                              <div className="h-full min-h-[96px] flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-bg-base/15 p-2 text-center select-none transition-colors">
-                                <span className="text-3xs font-medium text-text-subtle/50">
+                              <div className="h-full min-h-[96px] flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-bg-surface/50 p-2 text-center select-none transition-colors">
+                                <span className="text-3xs font-medium text-text-subtle">
                                   {__( 'Free', 'codeclove-school-management' )}
                                 </span>
                               </div>
@@ -215,13 +215,13 @@ export const WeeklyScheduleMatrix: React.FC<WeeklyScheduleMatrixProps> = ({
                         return (
                           <td
                             key={day.id}
-                            className="p-2 border-r border-border/60 last:border-r-0 align-top"
+                            className="p-2 border-r border-border last:border-r-0 align-top"
                           >
                             <div
                               className={`group relative flex flex-col justify-between h-full min-h-[96px] rounded-xl p-3 border transition-all duration-150 ${
                                 activeNow
                                   ? 'bg-brand-dim/30 border-brand shadow-xs ring-1 ring-brand/40'
-                                  : 'bg-bg-surface border-border/70 hover:border-border-strong hover:shadow-2xs hover:bg-bg-base/30'
+                                  : 'bg-bg-surface border border-border hover:border-border-strong hover:shadow-2xs hover:bg-hover-bg'
                               }`}
                             >
                               <div>
@@ -252,7 +252,7 @@ export const WeeklyScheduleMatrix: React.FC<WeeklyScheduleMatrixProps> = ({
                               </div>
 
                               {/* Meta: Teacher and Room */}
-                              <div className="mt-2.5 pt-1.5 border-t border-border/40 space-y-1 text-3xs text-text-muted">
+                              <div className="mt-2.5 pt-1.5 border-t border-border space-y-1 text-3xs text-text-muted">
                                 {teacher && (
                                   <div
                                     className="flex items-center gap-1 font-medium text-text truncate"
@@ -280,16 +280,16 @@ export const WeeklyScheduleMatrix: React.FC<WeeklyScheduleMatrixProps> = ({
 
                     {/* Friendly break interval spanning across all days */}
                     {gap && (
-                      <tr key={`break-${row.id}`} className="bg-bg-base/40 border-y border-dashed border-border/70">
+                      <tr key={`break-${row.id}`} className="bg-bg-surface border-y border-dashed border-border">
                         <td colSpan={daysList.length + 1} className="py-2.5 px-4 text-center">
-                          <div className="inline-flex items-center gap-2.5 px-3.5 py-1 rounded-full bg-bg-surface border border-border/70 shadow-2xs text-xs">
+                          <div className="inline-flex items-center gap-2.5 px-3.5 py-1 rounded-full bg-bg-surface border border-border shadow-2xs text-xs">
                             <Coffee className="w-3.5 h-3.5 text-brand shrink-0" />
                             <span className="font-bold text-text">{gap.label}</span>
                             <span className="text-border-strong">•</span>
                             <span className="text-text-subtle font-medium tabular-nums">
                               {formatTime(gap.startTime)} – {formatTime(gap.endTime)}
                             </span>
-                            <span className="text-3xs font-semibold text-text-muted bg-bg-base px-2 py-0.5 rounded-full border border-border/60">
+                            <span className="text-3xs font-semibold text-text-muted bg-bg-elevated px-2 py-0.5 rounded-full border border-border">
                               {sprintf( __( '%dm', 'codeclove-school-management' ), gap.durationMinutes )}
                             </span>
                           </div>

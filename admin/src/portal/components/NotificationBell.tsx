@@ -61,7 +61,7 @@ export const NotificationBell: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 hover:border-border bg-bg-surface hover:bg-bg-base text-text-muted hover:text-text transition-all shadow-2xs cursor-pointer"
+        className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border hover:border-border-strong bg-bg-surface hover:bg-hover-bg text-text-muted hover:text-text transition-all shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         aria-label={unreadCount > 0 ? sprintf( __( 'Notifications (%d unread)', 'codeclove-school-management' ), unreadCount ) : __( 'Notifications', 'codeclove-school-management' )}
         aria-expanded={isOpen}
       >
@@ -74,8 +74,8 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-1.5 w-[calc(100vw-2rem)] max-w-80 sm:max-w-none sm:w-96 rounded-xl bg-bg-elevated shadow-modal border border-border/80 z-50 overflow-hidden divide-y divide-border/50 animate-in fade-in-50 slide-in-from-top-1 duration-150">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/60">
+        <div className="absolute right-0 mt-1.5 w-[calc(100vw-2rem)] max-w-80 sm:max-w-none sm:w-96 rounded-xl bg-bg-overlay shadow-modal border border-border z-50 overflow-hidden divide-y divide-border animate-in fade-in-50 slide-in-from-top-1 duration-150">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-text">{__( 'Notifications', 'codeclove-school-management' )}</span>
               {unreadCount > 0 && (
@@ -97,7 +97,7 @@ export const NotificationBell: React.FC = () => {
             )}
           </div>
 
-          <div className="max-h-80 overflow-y-auto divide-y divide-border/50 border-t-0">
+          <div className="max-h-80 overflow-y-auto divide-y divide-border border-t-0">
             {notifications.length === 0 ? (
               <div className="py-8 text-center text-text-subtle text-xs">{__( 'No notifications yet', 'codeclove-school-management' )}</div>
             ) : (
@@ -107,8 +107,8 @@ export const NotificationBell: React.FC = () => {
                   <div
                     key={notif.id}
                     onClick={() => handleNotificationClick(notif.id, notif.is_read, notif.url)}
-                    className={`p-3.5 hover:bg-bg-base/70 transition-colors cursor-pointer flex items-start gap-3 ${
-                      isUnread ? 'bg-bg-base/40' : ''
+                    className={`p-3.5 hover:bg-hover-bg transition-colors cursor-pointer flex items-start gap-3 ${
+                      isUnread ? 'bg-brand-dim/30' : ''
                     }`}
                   >
                     <div className="flex-shrink-0 mt-0.5">
@@ -130,14 +130,14 @@ export const NotificationBell: React.FC = () => {
                         <span>{formatDate(notif.created_at)}</span>
                       </div>
                     </div>
-                    {notif.url && <ExternalLink className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-0.5" />}
+                    {notif.url && <ExternalLink className="w-3.5 h-3.5 text-text-subtle flex-shrink-0 mt-0.5" />}
                   </div>
                 )
               })
             )}
           </div>
 
-          <div className="border-t border-border/60 px-4 py-2.5 text-center">
+          <div className="border-t border-border px-4 py-2.5 text-center">
             <button
               type="button"
               onClick={() => {

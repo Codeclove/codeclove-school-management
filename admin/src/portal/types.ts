@@ -55,6 +55,7 @@ export interface PortalAppearance {
   theme_color?: string
   ui_scale?: string
   mode?: string
+  theme_mode?: string
 }
 
 export interface PortalLocalization {

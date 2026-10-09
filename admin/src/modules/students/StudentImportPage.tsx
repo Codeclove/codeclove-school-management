@@ -216,15 +216,15 @@ export default function StudentImportPage() {
           <span>{__( 'Placement & CSV File', 'codeclove-school-management' )}</span>
         </div>
         <span className="text-text-subtle text-xs">→</span>
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${step === 'preview' ? 'bg-brand-dim text-brand font-semibold border border-brand/30' : step === 'completed' ? 'text-emerald-600 dark:text-emerald-400' : 'text-text-subtle'}`}>
-          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs ${step === 'preview' ? 'bg-brand text-white' : step === 'completed' ? 'bg-emerald-500 text-white' : 'bg-bg-elevated text-text-subtle border border-border'}`}>
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${step === 'preview' ? 'bg-brand-dim text-brand font-semibold border border-brand/30' : step === 'completed' ? 'text-success' : 'text-text-subtle'}`}>
+          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs ${step === 'preview' ? 'bg-brand text-text-inverted' : step === 'completed' ? 'bg-success text-text-inverted' : 'bg-bg-elevated text-text-subtle border border-border'}`}>
             {step === 'completed' ? <CheckCircle2 className="w-3.5 h-3.5" /> : '2'}
           </span>
           <span>{__( 'Verify & Preview', 'codeclove-school-management' )}</span>
         </div>
         <span className="text-text-subtle text-xs">→</span>
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${step === 'completed' ? 'bg-emerald-500 text-white font-semibold' : 'text-text-subtle'}`}>
-          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs ${step === 'completed' ? 'bg-white text-emerald-600' : 'bg-bg-elevated text-text-subtle border border-border'}`}>
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${step === 'completed' ? 'bg-success text-text-inverted font-semibold' : 'text-text-subtle'}`}>
+          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs bg-bg-elevated ${step === 'completed' ? 'text-success' : 'text-text-subtle border border-border'}`}>
             3
           </span>
           <span>{__( 'Import Summary', 'codeclove-school-management' )}</span>
@@ -242,7 +242,7 @@ export default function StudentImportPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-5 pt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-bg-base p-3.5 rounded-lg border border-border">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-bg-surface p-3.5 rounded-lg border border-border">
                 <FormField label={__( 'Academic Session', 'codeclove-school-management' )} required>
                   <Select
                     value={sessionId}
@@ -271,7 +271,7 @@ export default function StudentImportPage() {
                   />
                 </FormField>
               </div>
-              <div className={`border-2 border-dashed rounded-lg p-7 text-center transition-colors ${!sessionId || !unitId ? 'border-border bg-bg-base/40 opacity-70' : 'border-border hover:border-brand bg-bg-surface hover:bg-bg-elevated cursor-pointer'}`}>
+              <div className={`border-2 border-dashed rounded-lg p-7 text-center transition-colors ${!sessionId || !unitId ? 'border-border bg-bg-surface/50 opacity-70' : 'border-border hover:border-brand bg-bg-surface hover:bg-bg-elevated cursor-pointer'}`}>
                 <Upload className="w-8 h-8 text-text-subtle mx-auto mb-2" />
                 <h4 className="text-sm font-semibold text-text mb-1">
                   {__( 'Upload Directory CSV File', 'codeclove-school-management' )}
@@ -320,9 +320,9 @@ export default function StudentImportPage() {
                     <span className="font-semibold text-text block">{__( 'Student Identity:', 'codeclove-school-management' )}</span>
                     <p className="text-text-subtle mb-1">{__( 'Required names:', 'codeclove-school-management' )}</p>
                     <div className="flex flex-wrap gap-1">
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">first_name</code>
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">last_name</code>
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">student_name</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">first_name</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">last_name</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">student_name</code>
                     </div>
                   </div>
                 </div>
@@ -333,9 +333,9 @@ export default function StudentImportPage() {
                     <span className="font-semibold text-text block">{__( 'Parent / Guardian:', 'codeclove-school-management' )}</span>
                     <p className="text-text-subtle mb-1">{__( 'At least one required:', 'codeclove-school-management' )}</p>
                     <div className="flex flex-wrap gap-1">
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">father_name</code>
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">mother_name</code>
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">guardian_name</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">father_name</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">mother_name</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">guardian_name</code>
                     </div>
                   </div>
                 </div>
@@ -346,9 +346,9 @@ export default function StudentImportPage() {
                     <span className="font-semibold text-text block">{__( 'Postal Code Presets:', 'codeclove-school-management' )}</span>
                     <p className="text-text-subtle mb-1">{__( 'Flexible header aliases:', 'codeclove-school-management' )}</p>
                     <div className="flex flex-wrap gap-1">
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">zip_code</code>
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">postcode</code>
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">pincode</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">zip_code</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">postcode</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">pincode</code>
                     </div>
                   </div>
                 </div>
@@ -471,7 +471,7 @@ export default function StudentImportPage() {
             </Thead>
             <Tbody>
               {filteredRows.map((row) => (
-                <Tr key={row.rowIndex} className={!row.isValid ? 'bg-rose-50/30 dark:bg-rose-950/20' : ''}>
+                <Tr key={row.rowIndex} className={!row.isValid ? 'bg-danger-dim/30' : ''}>
                   <Td className="font-mono text-xs text-text-subtle">{row.rowIndex}</Td>
                   <Td>
                     {row.isValid ? (
@@ -487,8 +487,8 @@ export default function StudentImportPage() {
                   <Td className="font-medium text-text">{row.studentName}</Td>
                   <Td className="text-xs">{row.dob} / <span>{formatGender(row.gender)}</span></Td>
                   <Td className="text-xs max-w-xs truncate text-text-subtle">{row.guardianSummary}</Td>
-                  <Td className="text-xs text-rose-600 dark:text-rose-400">
-                    {row.errors.length > 0 ? row.errors.join('; ') : <span className="text-emerald-600 dark:text-emerald-400 font-normal">{__( 'Passed', 'codeclove-school-management' )}</span>}
+                  <Td className="text-xs text-danger">
+                    {row.errors.length > 0 ? row.errors.join('; ') : <span className="text-success font-normal">{__( 'Passed', 'codeclove-school-management' )}</span>}
                   </Td>
                 </Tr>
               ))}
@@ -501,7 +501,7 @@ export default function StudentImportPage() {
       {step === 'completed' && importResult && (
         <Card className="space-y-6 p-6">
           <div className="text-center space-y-2 max-w-md mx-auto">
-            <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
+            <CheckCircle2 className="w-12 h-12 text-success mx-auto" />
             <h3 className="text-xl font-bold text-text">{__( 'Batch Enrollment Complete', 'codeclove-school-management' )}</h3>
             <p className="text-sm text-text-subtle">
               {__( 'Bulk directory processing has successfully finished.', 'codeclove-school-management' )}
@@ -509,13 +509,13 @@ export default function StudentImportPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto text-center">
-            <div className="bg-emerald-50 dark:bg-emerald-950/30 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800">
-              <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{importResult.imported_count}</div>
-              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-300 mt-1">{__( 'Enrolled', 'codeclove-school-management' )}</div>
+            <div className="bg-success-dim/20 p-4 rounded-lg border border-success/30">
+              <div className="text-2xl font-bold text-success">{importResult.imported_count}</div>
+              <div className="text-xs font-semibold text-success mt-1">{__( 'Enrolled', 'codeclove-school-management' )}</div>
             </div>
-            <div className="bg-rose-50 dark:bg-rose-950/30 p-4 rounded-lg border border-rose-200 dark:border-rose-800">
-              <div className="text-2xl font-bold text-rose-700 dark:text-rose-400">{importResult.failed_count}</div>
-              <div className="text-xs font-semibold text-rose-600 dark:text-rose-300 mt-1">{__( 'Failed Records', 'codeclove-school-management' )}</div>
+            <div className="bg-danger-dim/20 p-4 rounded-lg border border-danger/30">
+              <div className="text-2xl font-bold text-danger">{importResult.failed_count}</div>
+              <div className="text-xs font-semibold text-danger mt-1">{__( 'Failed Records', 'codeclove-school-management' )}</div>
             </div>
           </div>
 

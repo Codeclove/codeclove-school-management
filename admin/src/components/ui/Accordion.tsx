@@ -71,7 +71,7 @@ export function AccordionTrigger({ children, className }: AccordionTriggerProps)
       onClick={() => toggle(value)}
       className={cn(
         'w-full flex items-center justify-between px-4 py-3.5 text-start transition-colors duration-100 font-sans',
-        isOpen ? 'bg-brand-dim/30 hover:bg-brand-dim/40' : 'bg-bg-surface hover:bg-bg-base/60',
+        isOpen ? 'bg-brand-dim text-brand' : 'bg-bg-surface text-text hover:bg-hover-bg',
         className
       )}
     >
@@ -94,7 +94,7 @@ export function AccordionContent({ children, className }: AccordionContentProps)
   const { isOpen } = useContext(ItemCtx)
   if (!isOpen) return null
   return (
-    <div className={cn('p-5 border-t border-border bg-bg-base grid grid-cols-1 gap-4', className)}>
+    <div className={cn('p-5 border-t border-border bg-bg-surface grid grid-cols-1 gap-4', className)}>
       {children}
     </div>
   )

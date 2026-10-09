@@ -148,15 +148,15 @@ export function UnifiedCheckoutModal({
     >
       <div className="space-y-4 py-2">
         {sessionUrl ? (
-          <div className="p-5 rounded-xl border bg-success/5 border-success/20 text-center space-y-3">
+          <div className="p-5 rounded-xl border bg-success-dim border-success/30 text-center space-y-3">
             <CheckCircle2 className="w-12 h-12 text-success mx-auto animate-in zoom-in-50 duration-200" />
             <div className="space-y-1">
-              <h4 className="font-semibold text-foreground text-sm">
+              <h4 className="font-semibold text-text text-sm">
                 {selectedGateway === 'paypal'
                   ? __('PayPal Checkout Session Created', 'codeclove-school-management')
                   : __('Stripe Checkout Session Created', 'codeclove-school-management')}
               </h4>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+              <p className="text-xs text-text-muted max-w-sm mx-auto">
                 {selectedGateway === 'paypal'
                   ? __(
                       'A secure PayPal window has been opened. Log in to your PayPal account or pay with card to complete payment.',
@@ -174,7 +174,7 @@ export function UnifiedCheckoutModal({
                 href={sessionUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm w-full sm:w-auto"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-brand text-text-inverted hover:bg-brand-strong transition-colors shadow-sm w-full sm:w-auto"
               >
                 <span>
                   {selectedGateway === 'paypal'
@@ -201,16 +201,16 @@ export function UnifiedCheckoutModal({
         ) : (
           <>
             {/* Invoice Overview Card */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl border bg-muted/20">
+            <div className="flex items-center justify-between p-3.5 rounded-xl border border-border bg-bg-surface">
               <div>
-                <p className="text-xs text-muted-foreground font-medium">
+                <p className="text-xs text-text-muted font-medium">
                   {__('Remaining Balance Due', 'codeclove-school-management')}
                 </p>
-                <p className="text-xl font-bold text-foreground">
+                <p className="text-xl font-bold text-text tabular-nums">
                   {formatCurrency(invoice.balance_minor)}
                 </p>
                 {invoice.student_name && (
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                  <p className="text-[11px] text-text-muted mt-0.5">
                     {sprintf(
                       /* translators: %s: student name */
                       __('Student: %s', 'codeclove-school-management'),
@@ -220,13 +220,13 @@ export function UnifiedCheckoutModal({
                 )}
               </div>
               <div className="text-right">
-                <p className="text-xs text-muted-foreground font-medium">
+                <p className="text-xs text-text-muted font-medium">
                   {__('Invoice Total', 'codeclove-school-management')}
                 </p>
-                <p className="text-sm font-semibold text-muted-foreground">
+                <p className="text-sm font-semibold text-text-muted tabular-nums">
                   {formatCurrency(invoice.total_minor)}
                 </p>
-                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono uppercase border border-border text-muted-foreground mt-1">
+                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono uppercase border border-border text-text-muted mt-1">
                   {invoice.currency}
                 </span>
               </div>
@@ -234,29 +234,29 @@ export function UnifiedCheckoutModal({
 
             {/* Gateway Selector */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+              <label className="text-xs font-semibold text-text flex items-center justify-between">
                 <span>{__('Select Payment Method', 'codeclove-school-management')}</span>
                 {isSelectedTestMode && (
-                  <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                  <span className="text-[10px] font-normal text-warning bg-warning-dim px-2 py-0.5 rounded-full border border-warning/30">
                     {__('Sandbox Active', 'codeclove-school-management')}
                   </span>
                 )}
               </label>
 
               {isLoadingConfig ? (
-                <div className="flex items-center justify-center py-6 border rounded-xl bg-muted/10">
-                  <Spinner className="w-5 h-5 text-primary" />
-                  <span className="text-xs text-muted-foreground ml-2">
+                <div className="flex items-center justify-center py-6 border border-border rounded-xl bg-bg-surface">
+                  <Spinner className="w-5 h-5 text-brand" />
+                  <span className="text-xs text-text-muted ml-2">
                     {__('Loading payment options...', 'codeclove-school-management')}
                   </span>
                 </div>
               ) : activeGateways.length === 0 ? (
-                <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 text-center space-y-1">
-                  <AlertCircle className="w-6 h-6 text-destructive mx-auto" />
-                  <p className="text-xs font-semibold text-destructive">
+                <div className="p-4 rounded-xl border border-danger/30 bg-danger-dim text-center space-y-1">
+                  <AlertCircle className="w-6 h-6 text-danger mx-auto" />
+                  <p className="text-xs font-semibold text-danger">
                     {__('No Payment Gateways Configured', 'codeclove-school-management')}
                   </p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-[11px] text-text-muted">
                     {isPro
                       ? __(
                           'Please configure and enable Stripe or PayPal in Settings → Payment Gateways to accept online payments.',
@@ -270,77 +270,58 @@ export function UnifiedCheckoutModal({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {/* Stripe Card */}
-                  {isStripeAvailable && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedGateway('stripe')}
-                      className={cn(
-                        'relative flex flex-col p-3 rounded-xl border text-left transition-all duration-150',
-                        selectedGateway === 'stripe'
-                          ? 'border-brand ring-2 ring-brand/20 bg-brand/5 shadow-xs'
-                          : 'border-border hover:border-border-strong hover:bg-muted/10'
-                      )}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                          <CreditCard className="w-4 h-4" />
-                        </div>
-                        <div
+                  {[
+                    {
+                      id: 'stripe' as const,
+                      available: isStripeAvailable,
+                      icon: CreditCard,
+                      title: __('Credit / Debit Card', 'codeclove-school-management'),
+                      desc: __('Visa, Mastercard, Apple Pay, Google Pay', 'codeclove-school-management'),
+                    },
+                    {
+                      id: 'paypal' as const,
+                      available: isPaypalAvailable,
+                      icon: Wallet,
+                      title: __('PayPal & Pay Later', 'codeclove-school-management'),
+                      desc: __('PayPal Wallet, Pay in 4, Venmo', 'codeclove-school-management'),
+                    },
+                  ]
+                    .filter((g) => g.available)
+                    .map((g) => {
+                      const isSelected = selectedGateway === g.id
+                      const Icon = g.icon
+                      return (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => setSelectedGateway(g.id)}
                           className={cn(
-                            'w-4 h-4 rounded-full border flex items-center justify-center transition-colors',
-                            selectedGateway === 'stripe'
-                              ? 'border-brand bg-brand text-white'
-                              : 'border-border-strong'
+                            'relative flex flex-col p-3 rounded-xl border text-left transition-all duration-150',
+                            isSelected
+                              ? 'border-brand ring-2 ring-brand/20 bg-brand-dim shadow-xs'
+                              : 'border-border hover:border-border-strong hover:bg-hover-bg'
                           )}
                         >
-                          {selectedGateway === 'stripe' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                        </div>
-                      </div>
-                      <span className="text-xs font-semibold text-foreground">
-                        {__('Credit / Debit Card', 'codeclove-school-management')}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
-                        {__('Visa, Mastercard, Apple Pay, Google Pay', 'codeclove-school-management')}
-                      </span>
-                    </button>
-                  )}
-
-                  {/* PayPal Card */}
-                  {isPaypalAvailable && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedGateway('paypal')}
-                      className={cn(
-                        'relative flex flex-col p-3 rounded-xl border text-left transition-all duration-150',
-                        selectedGateway === 'paypal'
-                          ? 'border-brand ring-2 ring-brand/20 bg-brand/5 shadow-xs'
-                          : 'border-border hover:border-border-strong hover:bg-muted/10'
-                      )}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                          <Wallet className="w-4 h-4" />
-                        </div>
-                        <div
-                          className={cn(
-                            'w-4 h-4 rounded-full border flex items-center justify-center transition-colors',
-                            selectedGateway === 'paypal'
-                              ? 'border-brand bg-brand text-white'
-                              : 'border-border-strong'
-                          )}
-                        >
-                          {selectedGateway === 'paypal' && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                        </div>
-                      </div>
-                      <span className="text-xs font-semibold text-foreground">
-                        {__('PayPal & Pay Later', 'codeclove-school-management')}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
-                        {__('PayPal Wallet, Pay in 4, Venmo', 'codeclove-school-management')}
-                      </span>
-                    </button>
-                  )}
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-brand-dim text-brand flex items-center justify-center shrink-0">
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div
+                              className={cn(
+                                'w-4 h-4 rounded-full border flex items-center justify-center transition-colors',
+                                isSelected
+                                  ? 'border-brand bg-brand text-text-inverted'
+                                  : 'border-border-strong'
+                              )}
+                            >
+                              {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                            </div>
+                          </div>
+                          <span className="text-xs font-semibold text-text">{g.title}</span>
+                          <span className="text-[10px] text-text-subtle mt-0.5 line-clamp-1">{g.desc}</span>
+                        </button>
+                      )
+                    })}
                 </div>
               )}
             </div>
@@ -348,7 +329,7 @@ export function UnifiedCheckoutModal({
             {/* Inputs: Amount and Payer Email */}
             <div className="space-y-3 pt-1">
               <div>
-                <label className="text-xs font-medium text-foreground block mb-1">
+                <label className="text-xs font-medium text-text block mb-1">
                   {__('Payment Amount', 'codeclove-school-management')}
                 </label>
                 <div className="relative">
@@ -362,13 +343,13 @@ export function UnifiedCheckoutModal({
                       const val = parseFloat(e.target.value) || 0
                       setAmountMinor(Math.round(val * 100))
                     }}
-                    className="pr-14 text-sm font-semibold"
+                    className="pr-14 text-sm font-semibold font-mono tabular-nums"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground uppercase font-bold">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-subtle uppercase font-bold">
                     {invoice.currency}
                   </span>
                 </div>
-                <div className="flex items-center justify-between mt-1 text-[11px] text-muted-foreground">
+                <div className="flex items-center justify-between mt-1 text-[11px] text-text-subtle">
                   <span>{__('Partial payments accepted.', 'codeclove-school-management')}</span>
                   {amountMinor !== invoice.balance_minor && (
                     <button
@@ -383,7 +364,7 @@ export function UnifiedCheckoutModal({
               </div>
 
               <div>
-                <label className="text-xs font-medium text-foreground block mb-1">
+                <label className="text-xs font-medium text-text block mb-1">
                   {__('Receipt / Confirmation Email', 'codeclove-school-management')}
                 </label>
                 <Input
@@ -397,7 +378,7 @@ export function UnifiedCheckoutModal({
             </div>
 
             {/* Security Notice */}
-            <div className="p-3 rounded-xl border border-border/70 bg-muted/10 flex items-start gap-2.5 text-xs text-muted-foreground">
+            <div className="p-3 rounded-xl border border-border bg-bg-surface flex items-start gap-2.5 text-xs text-text-muted">
               <ShieldCheck className="w-4 h-4 text-brand shrink-0 mt-0.5" />
               <div className="text-[11px] leading-relaxed">
                 {selectedGateway === 'paypal'

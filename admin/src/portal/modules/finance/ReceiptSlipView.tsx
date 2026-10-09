@@ -186,7 +186,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
   return (
     <div className={cn('space-y-6 max-w-4xl mx-auto pb-12', className)}>
       {/* ─── 1. Breadcrumb & Navigation Bar ──────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div className="flex items-center gap-2 text-xs text-text-muted">
           <Button
             variant="ghost"
@@ -210,7 +210,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
             variant="secondary"
             size="sm"
             onClick={handleCopyReceipt}
-            className="h-8 px-2.5 text-xs font-medium text-text hover:text-brand gap-1.5 border-border/80 shadow-2xs"
+            className="h-8 px-2.5 text-xs font-medium text-text hover:text-brand gap-1.5 border-border shadow-2xs"
             title={__( 'Copy Receipt ID', 'codeclove-school-management' )}
           >
             {copied ? (
@@ -232,7 +232,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
               variant="secondary"
               size="sm"
               onClick={handleViewInvoice}
-              className="h-8 px-2.5 text-xs font-medium gap-1.5 border-border/80 text-text hover:bg-bg-base/70 shadow-2xs"
+              className="h-8 px-2.5 text-xs font-medium gap-1.5 border-border text-text hover:bg-hover-bg shadow-2xs"
             >
               <FileText className="w-3.5 h-3.5 text-brand" />
               <span className="hidden sm:inline">{__( 'View Invoice', 'codeclove-school-management' )}</span>
@@ -254,16 +254,16 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
       </div>
 
       {/* ─── 2. Official Receipt Presentation Card ────────────────────────── */}
-      <Card className="rounded-2xl border border-border/80 bg-bg-surface shadow-card overflow-hidden">
+      <Card className="rounded-2xl overflow-hidden">
         <div className="p-6 sm:p-8 space-y-7">
           {/* Header & Letterhead Section */}
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-border/70">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-border">
             <div className="flex items-start gap-4">
               {logoUrl ? (
                 <img
                   src={logoUrl}
                   alt={siteName}
-                  className="h-14 w-auto max-w-[140px] object-contain shrink-0 rounded-lg p-1 bg-white border border-border/50"
+                  className="h-14 w-auto max-w-[140px] object-contain shrink-0 rounded-lg p-1 bg-white border border-border"
                 />
               ) : (
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-brand text-white shadow-xs">
@@ -293,7 +293,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
             </div>
 
             {/* Receipt Identification Stamp */}
-            <div className="border border-border/80 bg-bg-base/40 rounded-xl p-3.5 sm:text-right shrink-0 min-w-[200px] flex flex-col justify-between">
+            <div className="border border-border bg-bg-surface rounded-xl p-3.5 sm:text-right shrink-0 min-w-[200px] flex flex-col justify-between">
               <div>
                 <span className="text-3xs uppercase font-bold text-text-subtle tracking-wider block">
                   {__( 'Receipt Number', 'codeclove-school-management' )}
@@ -303,7 +303,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
                 </span>
               </div>
 
-              <div className="mt-2.5 pt-2 border-t border-border/60 text-xs">
+              <div className="mt-2.5 pt-2 border-t border-border text-xs">
                 <span className="text-3xs uppercase font-semibold text-text-subtle tracking-wider block">
                   {__( 'Settlement Date', 'codeclove-school-management' )}
                 </span>
@@ -320,7 +320,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
             <h3 className="text-xs font-bold text-text-subtle uppercase tracking-wider mb-3">
               {__( 'Student & Enrollment Metadata', 'codeclove-school-management' )}
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl border border-border/70 bg-bg-base/40 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl border border-border bg-bg-surface text-xs">
               <div>
                 <span className="text-3xs uppercase font-bold text-text-subtle tracking-wider block">
                   {__( 'Student Name', 'codeclove-school-management' )}
@@ -362,7 +362,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
           </div>
 
           {/* ─── 4. Payment Amount Hero Section ────────────────────────────── */}
-          <div className="rounded-xl border border-border/80 bg-bg-base/30 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div className="rounded-xl border border-border bg-bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <div className="space-y-1">
               <span className="text-3xs uppercase font-bold text-text-subtle tracking-wider block">
                 {__( 'Total Amount Received & Cleared', 'codeclove-school-management' )}
@@ -401,8 +401,8 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
 
           {/* ─── 5. Associated Invoice Context & Balance Breakdown ────────── */}
           {targetInvoice && (
-            <div className="rounded-xl border border-border/80 overflow-hidden bg-bg-surface">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-bg-base/50 border-b border-border/70">
+            <div className="rounded-xl border border-border overflow-hidden bg-bg-surface">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-bg-surface border-b border-border">
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-brand" />
                   <span className="text-xs font-bold uppercase tracking-wider text-text-subtle">
@@ -425,7 +425,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border/60 p-4 text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border p-4 text-center">
                 <div className="p-3">
                   <span className="text-3xs uppercase font-bold text-text-subtle tracking-wider block">
                     {__( 'Invoice Total Billed', 'codeclove-school-management' )}
@@ -467,7 +467,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
 
               {/* Optional Itemized Fee Categories Covered */}
               {targetInvoice.line_items && targetInvoice.line_items.length > 0 && (
-                <div className="border-t border-border/60 p-4 bg-bg-base/30 text-xs">
+                <div className="border-t border-border p-4 bg-bg-surface text-xs">
                   <span className="text-3xs font-bold text-text-subtle uppercase tracking-wider block mb-2">
                     {__( 'Fee Categories Covered in this Billing Cycle', 'codeclove-school-management' )}
                   </span>
@@ -475,7 +475,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
                     {targetInvoice.line_items.map((item, idx) => (
                       <span
                         key={item.id ?? idx}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-bg-surface border border-border/60 text-xs text-text-muted"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-bg-elevated border border-border text-xs text-text-muted"
                       >
                         <span className="font-medium text-text">{item.description}</span>
                         <span className="text-text-subtle">({formatCurrency(item.amount, currency)})</span>
@@ -490,7 +490,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
         </div>
 
         {/* ─── 7. Slip Action Dock (Footer) ──────────────────────────────── */}
-        <div className="bg-bg-base/40 border-t border-border/70 p-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-text-subtle">
+        <div className="bg-bg-surface border-t border-border p-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-text-subtle">
           <div className="text-center sm:text-left">
             {sprintf( __( 'Receipt #%s • Issued for %s', 'codeclove-school-management' ), receiptNum, studentName )}
           </div>
@@ -499,7 +499,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
               variant="secondary"
               size="sm"
               onClick={handleBack}
-              className="h-8 px-3 text-xs font-medium border-border/80 text-text"
+              className="h-8 px-3 text-xs font-medium border-border text-text"
             >
               <ArrowLeft className="w-3.5 h-3.5 mr-1" />
               <span>

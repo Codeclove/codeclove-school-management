@@ -3,12 +3,12 @@
  *
  * Displays a list of academic subjects (e.g. Mathematics, Science).
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { subjectSchema, type SubjectFormValues } from '@/schemas/academics'
 import {
-  Plus, Trash2, RefreshCw, BookOpen, AlertTriangle, Pencil, Search, X
+  Plus, Trash2, RefreshCw, AlertTriangle, Pencil, Search, X
 } from 'lucide-react'
 import {
   useSubjects,
@@ -21,17 +21,18 @@ import {
 import { useSession } from '@/lib/session-context'
 import { useLabels } from '@/lib/labels'
 import { useToast } from '@/lib/toast'
+import { onFormError } from '@/lib/form-errors'
 import { useConfirm } from '@/lib/confirm'
 import { useEntity } from '@/lib/useEntity'
 import { AcademicsNav } from './components/AcademicsNav'
-import { TablePagination } from '@/components/ui/TablePagination'
 import { useTableState } from '@/lib/useTableState'
 import { useDebounce } from '@/lib/useDebounce'
 import {
-  Button, Badge, Card, CardContent,
+  DataTable,
+  type DataTableColumn,
+  Button, Badge, Card,
   Modal, ModalFooter, FormField, Input, Select,
-  TableRoot, Thead, Tbody, Tr, Th, Td, TableEmpty, TableSkeleton,
-  PageHeader, Spinner, EmptyState, FormGroupHeader,
+  PageHeader, Spinner,
 } from '@/components/ui'
 import { __, sprintf } from '@/lib/i18n'
 
@@ -89,17 +90,120 @@ export default function SubjectsPage() {
   const subjects = data?.data ?? []
   const total    = data?.total ?? 0
 
+  const typeLabels: Record<string, string> = useMemo(
+    () => ({
+      core: __( 'Core', 'codeclove-school-management' ),
+      elective: __( 'Elective', 'codeclove-school-management' ),
+      activity: __( 'Co-Curricular', 'codeclove-school-management' ),
+      other: __( 'Other', 'codeclove-school-management' ),
+    }),
+    []
+  )
+
+  const typeVariants: Record<string, 'brand' | 'info' | 'default'> = {
+    core: 'brand',
+    elective: 'info',
+    activity: 'default',
+    other: 'default',
+  }
+
+
+  const columns = useMemo<DataTableColumn<Subject>[]>(
+    () => [
+      {
+        key: 'name',
+        header: sprintf( __( '%s Name', 'codeclove-school-management' ), subjectLabelSingular ),
+        type: 'primary',
+        sortable: true,
+        render: (subject) => <span className="font-semibold text-text">{subject.name}</span>,
+      },
+      {
+        key: 'code',
+        header: __( 'Code', 'codeclove-school-management' ),
+        type: 'code',
+        sortable: true,
+        render: (subject) =>
+          subject.code ? (
+            <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text-muted">
+              {subject.code}
+            </span>
+          ) : (
+            <span className="text-text-subtle">—</span>
+          ),
+      },
+      {
+        key: 'type',
+        header: __( 'Type', 'codeclove-school-management' ),
+        type: 'badge',
+        render: (subject) => (
+          <Badge variant={typeVariants[subject.type] ?? 'default'} size="sm">
+            {typeLabels[subject.type] ?? subject.type}
+          </Badge>
+        ),
+      },
+      {
+        key: 'units_count',
+        header: sprintf( __( 'Mapped %s', 'codeclove-school-management' ), unitLabelPlural ),
+        type: 'number',
+        sortable: true,
+        render: (subject) => subject.units_count,
+      },
+      {
+        key: 'status',
+        header: __( 'Status', 'codeclove-school-management' ),
+        type: 'badge',
+        sortable: true,
+        render: (subject) => (
+          <Badge variant={subject.status}>{subject.status}</Badge>
+        ),
+      },
+      {
+        key: 'actions',
+        header: __( 'Actions', 'codeclove-school-management' ),
+        type: 'actions',
+        render: (subject) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setEditTarget(subject)
+                setShowModal(true)
+              }}
+              className="h-8 w-8 text-text-muted hover:text-brand hover:bg-brand-dim/50"
+              title={sprintf( __( 'Edit %s', 'codeclove-school-management' ), subjectLabelSingular )}
+            >
+              <Pencil size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDelete(subject)}
+              className="h-8 w-8 text-text-muted hover:text-danger hover:bg-danger-dim/50"
+              title={sprintf( __( 'Delete %s', 'codeclove-school-management' ), subjectLabelSingular )}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [subjectLabelSingular, unitLabelPlural, typeLabels]
+  )
+
   // Reset page & filters when session changes
   useEffect(() => {
     table.resetPage()
+    table.clearSelection()
     setStatus('')
     setSearch('')
-  }, [session_id, table.resetPage])
+  }, [session_id, table.resetPage, table.clearSelection])
 
   // Reset to page 1 when filters change
   useEffect(() => {
     table.resetPage()
-  }, [status, debouncedSearch, table.resetPage])
+    table.clearSelection()
+  }, [status, debouncedSearch, table.resetPage, table.clearSelection])
 
   return (
     <div className="space-y-5 w-full">
@@ -164,6 +268,7 @@ export default function SubjectsPage() {
                   setSearch('')
                   setStatus('')
                   table.resetPage()
+                  table.clearSelection()
                 }}
               >
                 <X size={12} />
@@ -174,98 +279,51 @@ export default function SubjectsPage() {
         </div>
       </Card>
 
-      {/* Table Card */}
-      <Card className="shadow-sm">
-        <CardContent className="p-0 overflow-hidden">
-          {isError ? (
-            <div className="p-6">
-              <EmptyState
-                title={sprintf( __( 'Could not load %s', 'codeclove-school-management' ), subjectLabelPlural.toLowerCase() )}
-                description={sprintf( __( 'An error occurred while fetching %s from the backend REST API.', 'codeclove-school-management' ), subjectLabelPlural.toLowerCase() )}
-                icon={AlertTriangle}
-                action={
+      <DataTable<Subject>
+        data={subjects}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        emptyState={
+          isError
+            ? {
+                icon: AlertTriangle,
+                message: sprintf( __( 'Could not load %s', 'codeclove-school-management' ), subjectLabelPlural.toLowerCase() ),
+                description: sprintf( __( 'An error occurred while fetching %s from the backend REST API.', 'codeclove-school-management' ), subjectLabelPlural.toLowerCase() ),
+                action: (
                   <Button variant="secondary" size="sm" onClick={() => refetch()} className="gap-1.5">
                     <RefreshCw size={13} />
                     {__( 'Try again', 'codeclove-school-management' )}
                   </Button>
-                }
-              />
-            </div>
-          ) : (
-            <TableRoot>
-              <Thead>
-                <Tr>
-                  <Th type="primary" {...table.getSortProps('name')}>
-                    {sprintf( __( '%s Name', 'codeclove-school-management' ), subjectLabelSingular )}
-                  </Th>
-                  <Th type="code" {...table.getSortProps('code')}>
-                    {__( 'Code', 'codeclove-school-management' )}
-                  </Th>
-                  <Th type="badge">{__( 'Type', 'codeclove-school-management' )}</Th>
-                  <Th type="number" {...table.getSortProps('units_count')}>
-                    {sprintf( __( 'Mapped %s', 'codeclove-school-management' ), unitLabelPlural )}
-                  </Th>
-                  <Th type="badge" {...table.getSortProps('status')}>
-                    {__( 'Status', 'codeclove-school-management' )}
-                  </Th>
-                  <Th type="actions">{__( 'Actions', 'codeclove-school-management' )}</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {isLoading ? (
-                  <TableSkeleton columns={6} rows={5} />
-                ) : subjects.length === 0 ? (
-                  <TableEmpty
-                    colSpan={6}
-                    icon={entity.icon}
-                    message={
-                      search || status
-                        ? __( 'No Subjects Match Filters', 'codeclove-school-management' )
-                        : !session_id
-                        ? __( 'Session Not Selected', 'codeclove-school-management' )
-                        : sprintf( __( 'No %s Found', 'codeclove-school-management' ), subjectLabelPlural )
-                    }
-                    description={
-                      search || status
-                        ? __( 'Try adjusting your search query or status filter.', 'codeclove-school-management' )
-                        : !session_id
-                        ? sprintf( __( 'Select an active %1$s in the header to view %2$s.', 'codeclove-school-management' ), sessionLabelSingular.toLowerCase(), subjectLabelPlural.toLowerCase() )
-                        : sprintf( __( 'Get started by creating your first reusable school %s template.', 'codeclove-school-management' ), subjectLabelSingular.toLowerCase() )
-                    }
-                    action={
-                      !search && !status && session_id && (
-                        <Button size="sm" onClick={() => { setEditTarget(null); setShowModal(true); }}>
-                          {sprintf( __( 'Add %s', 'codeclove-school-management' ), subjectLabelSingular )}
-                        </Button>
-                      )
-                    }
-                  />
-                ) : (
-                  subjects.map((subject) => (
-                    <SubjectRow
-                      key={subject.id}
-                      subject={subject}
-                      onEdit={() => {
-                        setEditTarget(subject)
-                        setShowModal(true)
-                      }}
-                      onDelete={() => handleDelete(subject)}
-                    />
-                  ))
-                )}
-              </Tbody>
-            </TableRoot>
-          )}
-
-          {/* Pagination */}
-          {!isLoading && !isError && (
-            <TablePagination
-              {...table.paginationProps}
-              total={total}
-            />
-          )}
-        </CardContent>
-      </Card>
+                ),
+              }
+            : {
+                icon: entity.icon,
+                message:
+                  search || status
+                    ? __( 'No Subjects Match Filters', 'codeclove-school-management' )
+                    : !session_id
+                    ? __( 'Session Not Selected', 'codeclove-school-management' )
+                    : sprintf( __( 'No %s Found', 'codeclove-school-management' ), subjectLabelPlural ),
+                description:
+                  search || status
+                    ? __( 'Try adjusting your search query or status filter.', 'codeclove-school-management' )
+                    : !session_id
+                    ? sprintf( __( 'Select an active %1$s in the header to view %2$s.', 'codeclove-school-management' ), sessionLabelSingular.toLowerCase(), subjectLabelPlural.toLowerCase() )
+                    : sprintf( __( 'Get started by creating your first reusable school %s template.', 'codeclove-school-management' ), subjectLabelSingular.toLowerCase() ),
+                action:
+                  !search && !status && session_id ? (
+                    <Button size="sm" onClick={() => { setEditTarget(null); setShowModal(true); }}>
+                      {sprintf( __( 'Add %s', 'codeclove-school-management' ), subjectLabelSingular )}
+                    </Button>
+                  ) : undefined,
+              }
+        }
+        keyExtractor={(subject) => subject.id}
+      />
 
       {/* Subject Modal */}
       <SubjectModal
@@ -285,98 +343,6 @@ export default function SubjectsPage() {
   )
 }
 
-// ─── Table Row ────────────────────────────────────────────────────────────────
-
-function SubjectRow({
-  subject,
-  onEdit,
-  onDelete,
-}: {
-  subject: Subject
-  onEdit: () => void
-  onDelete: () => void
-}) {
-  const { getLabel } = useLabels()
-  const subjectLabelSingular = getLabel('subject', false, __( 'Subject', 'codeclove-school-management' ))
-
-  const typeLabels: Record<string, string> = {
-    core: __( 'Core', 'codeclove-school-management' ),
-    elective: __( 'Elective', 'codeclove-school-management' ),
-    activity: __( 'Co-Curricular', 'codeclove-school-management' ),
-    other: __( 'Other', 'codeclove-school-management' ),
-  }
-
-  const typeVariants: Record<string, 'brand' | 'info' | 'default'> = {
-    core: 'brand',
-    elective: 'info',
-    activity: 'default',
-    other: 'default',
-  }
-
-  const statusLabels: Record<string, string> = {
-    active: __( 'Active', 'codeclove-school-management' ),
-    inactive: __( 'Inactive', 'codeclove-school-management' ),
-    archived: __( 'Archived', 'codeclove-school-management' ),
-  }
-
-  const statusVariants: Record<string, 'active' | 'inactive' | 'archived'> = {
-    active: 'active',
-    inactive: 'inactive',
-    archived: 'archived',
-  }
-
-  return (
-    <Tr className="table-row-hover">
-      <Td type="primary">
-        <span className="font-semibold text-text">{subject.name}</span>
-      </Td>
-      <Td type="code">
-        {subject.code ? (
-          <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-bg-base border border-border text-text-muted">
-            {subject.code}
-          </span>
-        ) : (
-          <span className="text-text-subtle">—</span>
-        )}
-      </Td>
-      <Td type="badge">
-        <Badge variant={typeVariants[subject.type] ?? 'default'} size="sm">
-          {typeLabels[subject.type] ?? subject.type}
-        </Badge>
-      </Td>
-      <Td type="number">
-        {subject.units_count}
-      </Td>
-      <Td type="badge">
-        <Badge variant={statusVariants[subject.status] ?? 'inactive'} size="sm" dot>
-          {statusLabels[subject.status] ?? subject.status}
-        </Badge>
-      </Td>
-      <Td type="actions">
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onEdit}
-            className="h-8 w-8 text-text-muted hover:text-brand hover:bg-brand-dim/50"
-            title={sprintf( __( 'Edit %s', 'codeclove-school-management' ), subjectLabelSingular )}
-          >
-            <Pencil size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onDelete}
-            className="h-8 w-8 text-text-muted hover:text-danger hover:bg-danger-dim/50"
-            title={sprintf( __( 'Delete %s', 'codeclove-school-management' ), subjectLabelSingular )}
-          >
-            <Trash2 size={14} />
-          </Button>
-        </div>
-      </Td>
-    </Tr>
-  )
-}
 
 // ─── Subject Modal (Create Only) ────────────────────────────────────────────
 
@@ -396,7 +362,6 @@ function SubjectModal({
   const toast = useToast()
   const { getLabel } = useLabels()
   const subjectLabelSingular = getLabel('subject', false, __( 'Subject', 'codeclove-school-management' ))
-  const unitLabelPlural = getLabel('academic_unit', true, __( 'Academic Units', 'codeclove-school-management' ))
 
   const createMutation = useCreateSubject()
   const updateMutation = useUpdateSubject()
@@ -506,12 +471,7 @@ function SubjectModal({
       }
       size="md"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <FormGroupHeader
-          title={sprintf( __( '%s Details', 'codeclove-school-management' ), subjectLabelSingular )}
-          description={sprintf( __( 'Define the %1$s name, type, and the %2$s it is taught in.', 'codeclove-school-management' ), subjectLabelSingular.toLowerCase(), unitLabelPlural.toLowerCase() )}
-          icon={BookOpen}
-        />
+      <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-4">
         <FormField label={sprintf( __( '%s Name', 'codeclove-school-management' ), subjectLabelSingular )} error={errors.name?.message} required>
           <Input
             {...register('name')}

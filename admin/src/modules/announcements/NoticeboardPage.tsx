@@ -16,16 +16,17 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  Megaphone, Plus, Search, Edit2, Trash2,
+  Megaphone, Plus, Edit2, Trash2,
   AlertCircle, ExternalLink,
 } from 'lucide-react'
 import {
-  Button, Badge, Card, CardContent,
+  DataTable,
+  type DataTableColumn,
+  FilterBar,
+  Button, Badge,
   Modal, ModalFooter, FormField, Input, Textarea, Select,
-  TableRoot, Thead, Tbody, Tr, Th, Td, TableSkeleton,
-  PageHeader, Spinner, Alert, EmptyState,
+  PageHeader, Spinner,
 } from '@/components/ui'
-import { TablePagination } from '@/components/ui/TablePagination'
 import { useTableState } from '@/lib/useTableState'
 import { useDebounce } from '@/lib/useDebounce'
 import { useConfirm } from '@/lib/confirm'
@@ -39,6 +40,8 @@ import {
   useDeleteAnnouncement,
   type AnnouncementItem,
 } from '@/api/notifications'
+
+export type NoticeboardItem = AnnouncementItem
 
 // ─── Constants & Badge Helpers ───────────────────────────────────────────────
 
@@ -135,10 +138,97 @@ export default function NoticeboardPage() {
     }
   }, [searchParams, setSearchParams])
 
-  // Reset page when filters change
+  // Reset page and selection when filters change
   useEffect(() => {
     table.resetPage()
-  }, [debouncedSearch, audienceFilter, eventTypeFilter, table.resetPage])
+    table.clearSelection()
+  }, [debouncedSearch, audienceFilter, eventTypeFilter, table.resetPage, table.clearSelection])
+
+  const columns = useMemo<DataTableColumn<NoticeboardItem>[]>(
+    () => [
+      {
+        key: 'title',
+        header: __('Notice', 'codeclove-school-management'),
+        type: 'primary',
+        render: (item) => (
+          <div className="space-y-1 py-1">
+            <div className="font-semibold text-text text-sm flex items-center gap-1.5">
+              <span>{item.title}</span>
+              {item.url && (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-text-subtle hover:text-brand transition-colors"
+                  title={item.url}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="w-3.5 h-3.5 inline" />
+                </a>
+              )}
+            </div>
+            <p className="text-xs text-text-muted line-clamp-2 leading-relaxed font-normal">
+              {item.content}
+            </p>
+          </div>
+        ),
+      },
+      {
+        key: 'audience',
+        header: __('Audience', 'codeclove-school-management'),
+        type: 'badge',
+        render: (item) => (
+          <Badge variant={AUDIENCE_BADGES[item.audience.toLowerCase()] ?? 'default'} size="sm" className="capitalize">
+            {item.audience}
+          </Badge>
+        ),
+      },
+      {
+        key: 'event_type',
+        header: __('Category', 'codeclove-school-management'),
+        type: 'badge',
+        render: (item) => (
+          <Badge variant={EVENT_TYPE_BADGES[item.event_type.toLowerCase()] ?? 'default'} size="sm" className="capitalize">
+            {item.event_type.replace(/[._]/g, ' ')}
+          </Badge>
+        ),
+      },
+      {
+        key: 'created_at',
+        header: __('Date Posted', 'codeclove-school-management'),
+        type: 'date',
+        render: (item) => formatDate(item.created_at),
+      },
+      {
+        key: 'actions',
+        header: __('Actions', 'codeclove-school-management'),
+        type: 'actions',
+        render: (item) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenEdit(item)}
+              className="h-8 w-8 p-0 text-text-subtle hover:text-brand"
+              title={__('Edit Announcement', 'codeclove-school-management')}
+            >
+              <Edit2 size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDelete(item)}
+              className="h-8 w-8 p-0 text-text-subtle hover:text-danger"
+              title={__('Delete Announcement', 'codeclove-school-management')}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [formatDate]
+  )
 
   const announcements = data?.items ?? []
   const total = data?.total ?? 0
@@ -253,174 +343,71 @@ export default function NoticeboardPage() {
       />
 
       {/* ─── Filter Bar ────────────────────────────────────────────────────── */}
-      <Card className="border-border/80 shadow-card bg-bg-surface">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-subtle" />
-              <input
-                type="text"
-                placeholder={__('Search announcements...', 'codeclove-school-management')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-1.5 text-sm rounded-lg border border-border bg-bg-surface text-text placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand transition-colors"
-              />
-            </div>
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={__('Search announcements...', 'codeclove-school-management')}
+        activeFilterCount={(audienceFilter !== 'all' ? 1 : 0) + (eventTypeFilter !== 'all' ? 1 : 0)}
+        onClearAll={() => {
+          setSearch('')
+          setAudienceFilter('all')
+          setEventTypeFilter('all')
+          table.resetPage()
+          table.clearSelection()
+        }}
+      >
+        <Select
+          value={audienceFilter}
+          onValueChange={setAudienceFilter}
+          options={audienceFilterOptions}
+          className="text-xs w-48"
+        />
 
-            <div className="flex items-center gap-2.5">
-              <Select
-                value={audienceFilter}
-                onValueChange={setAudienceFilter}
-                options={audienceFilterOptions}
-                className="text-xs w-48"
-              />
-
-              <Select
-                value={eventTypeFilter}
-                onValueChange={setEventTypeFilter}
-                options={[{ value: 'all', label: __('All Categories', 'codeclove-school-management') }, ...eventTypes]}
-                className="text-xs w-40"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        <Select
+          value={eventTypeFilter}
+          onValueChange={setEventTypeFilter}
+          options={[{ value: 'all', label: __('All Categories', 'codeclove-school-management') }, ...eventTypes]}
+          className="text-xs w-40"
+        />
+      </FilterBar>
 
       {/* ─── Data Table & Async States ───────────────────────────────────────── */}
-      <Card className="border-border/80 shadow-card bg-bg-surface overflow-hidden">
-        {isLoading ? (
-          <TableRoot responsiveMode="scroll">
-            <Thead>
-              <Tr>
-                <Th type="primary">{__('Notice', 'codeclove-school-management')}</Th>
-                <Th type="badge">{__('Audience', 'codeclove-school-management')}</Th>
-                <Th type="badge">{__('Category', 'codeclove-school-management')}</Th>
-                <Th type="date">{__('Date Posted', 'codeclove-school-management')}</Th>
-                <Th type="actions">{__('Actions', 'codeclove-school-management')}</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              <TableSkeleton columns={5} rows={5} />
-            </Tbody>
-          </TableRoot>
-        ) : isError ? (
-          <div className="p-6">
-            <Alert variant="danger">
-              <AlertCircle className="w-4 h-4 mr-2 shrink-0" />
-              <div className="flex-1">
-                {__('Failed to load announcements. Please check your network connection.', 'codeclove-school-management')}
-              </div>
-              <Button size="sm" variant="secondary" onClick={() => refetch()} className="ml-3">
-                {__('Retry', 'codeclove-school-management')}
-              </Button>
-            </Alert>
-          </div>
-        ) : announcements.length === 0 ? (
-          <div className="py-12">
-            <EmptyState
-              icon={Megaphone}
-              title={__('No announcements found', 'codeclove-school-management')}
-              description={
-                search || audienceFilter !== 'all' || eventTypeFilter !== 'all'
-                  ? __('No notices match the selected search or filter criteria.', 'codeclove-school-management')
-                  : __('Start communicating with your school community by posting your first announcement.', 'codeclove-school-management')
+      <DataTable<NoticeboardItem>
+        data={announcements}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        emptyState={
+          isError
+            ? {
+                icon: AlertCircle,
+                message: __('Failed to load announcements', 'codeclove-school-management'),
+                description: __('Failed to load announcements. Please check your network connection.', 'codeclove-school-management'),
+                action: (
+                  <Button size="sm" variant="secondary" onClick={() => refetch()}>
+                    {__('Retry', 'codeclove-school-management')}
+                  </Button>
+                ),
               }
-              action={
-                <Button onClick={handleOpenCreate} size="sm" className="gap-1.5">
-                  <Plus size={14} /> {__('Create Announcement', 'codeclove-school-management')}
-                </Button>
+            : {
+                icon: Megaphone,
+                message: __('No announcements found', 'codeclove-school-management'),
+                description:
+                  search || audienceFilter !== 'all' || eventTypeFilter !== 'all'
+                    ? __('No notices match the selected search or filter criteria.', 'codeclove-school-management')
+                    : __('Start communicating with your school community by posting your first announcement.', 'codeclove-school-management'),
+                action: (
+                  <Button onClick={handleOpenCreate} size="sm" className="gap-1.5">
+                    <Plus size={14} /> {__('Create Announcement', 'codeclove-school-management')}
+                  </Button>
+                ),
               }
-            />
-          </div>
-        ) : (
-          <>
-            <TableRoot responsiveMode="scroll">
-              <Thead>
-                <Tr>
-                  <Th type="primary">{__('Notice', 'codeclove-school-management')}</Th>
-                  <Th type="badge">{__('Audience', 'codeclove-school-management')}</Th>
-                  <Th type="badge">{__('Category', 'codeclove-school-management')}</Th>
-                  <Th type="date">{__('Date Posted', 'codeclove-school-management')}</Th>
-                  <Th type="actions">{__('Actions', 'codeclove-school-management')}</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {announcements.map((item) => (
-                  <Tr key={item.id} className="hover:bg-bg-base/40 transition-colors">
-                    {/* Notice details */}
-                    <Td type="primary">
-                      <div className="space-y-1 py-1">
-                        <div className="font-semibold text-text text-sm flex items-center gap-1.5">
-                          <span>{item.title}</span>
-                          {item.url && (
-                            <a
-                              href={item.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-text-subtle hover:text-brand transition-colors"
-                              title={item.url}
-                            >
-                              <ExternalLink className="w-3.5 h-3.5 inline" />
-                            </a>
-                          )}
-                        </div>
-                        <p className="text-xs text-text-muted line-clamp-2 leading-relaxed font-normal">
-                          {item.content}
-                        </p>
-                      </div>
-                    </Td>
-
-                    {/* Audience badge */}
-                    <Td type="badge">
-                      <Badge variant={AUDIENCE_BADGES[item.audience.toLowerCase()] ?? 'default'} size="sm" className="capitalize">
-                        {item.audience}
-                      </Badge>
-                    </Td>
-
-                    {/* Event Type badge */}
-                    <Td type="badge">
-                      <Badge variant={EVENT_TYPE_BADGES[item.event_type.toLowerCase()] ?? 'default'} size="sm" className="capitalize">
-                        {item.event_type.replace(/[._]/g, ' ')}
-                      </Badge>
-                    </Td>
-
-                    {/* Date */}
-                    <Td type="date">
-                      {formatDate(item.created_at)}
-                    </Td>
-
-                    {/* Actions */}
-                    <Td type="actions">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenEdit(item)}
-                          className="h-8 w-8 p-0 text-text-subtle hover:text-brand"
-                          title={__('Edit Announcement', 'codeclove-school-management')}
-                        >
-                          <Edit2 size={14} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(item)}
-                          className="h-8 w-8 p-0 text-text-subtle hover:text-danger"
-                          title={__('Delete Announcement', 'codeclove-school-management')}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </TableRoot>
-
-            <TablePagination {...table.paginationProps} total={total} />
-          </>
-        )}
-      </Card>
+        }
+        keyExtractor={(item) => item.id}
+      />
 
       {/* ─── Create / Edit Announcement Modal ───────────────────────────────── */}
       <Modal

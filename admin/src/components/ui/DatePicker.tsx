@@ -327,7 +327,7 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
           <PopoverPrimitive.Content
             align="start"
             sideOffset={4}
-            className="z-[10000] p-3 rounded-lg border border-border bg-bg-overlay shadow-modal outline-none"
+            className="z-[100050] p-3 rounded-lg border border-border bg-bg-overlay shadow-modal outline-none"
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
             <DayPicker
@@ -345,7 +345,7 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
                 month_caption: 'flex justify-between items-center px-1 pb-2 gap-4',
                 caption_label: 'text-sm font-semibold text-text hidden',
                 dropdowns: 'flex gap-1.5 items-center',
-                dropdown: 'bg-bg-base dark:bg-bg-overlay text-text text-xs font-semibold border border-border rounded px-1.5 py-0.5 outline-none cursor-pointer hover:border-border-strong transition-colors',
+                dropdown: 'bg-bg-surface text-text text-xs font-semibold border border-border rounded px-1.5 py-0.5 outline-none cursor-pointer hover:border-border-strong transition-colors',
                 nav: 'flex items-center gap-1',
                 button_previous: cn(
                   'h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center rounded border border-border hover:bg-hover-bg text-text cursor-pointer'
@@ -360,9 +360,9 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
                 day: cn(
                   'h-8 w-8 p-0 font-normal aria-selected:opacity-100 flex items-center justify-center rounded hover:bg-hover-bg transition-colors cursor-pointer text-text text-sm'
                 ),
-                day_button: 'w-full h-full flex items-center justify-center bg-transparent border-none outline-none cursor-pointer',
-                selected: 'bg-brand text-white hover:bg-brand-strong hover:text-white focus:bg-brand focus:text-white',
-                today: 'bg-bg-base border border-brand/40 text-brand font-semibold',
+                day_button: 'w-full h-full flex items-center justify-center bg-transparent border-none outline-none cursor-pointer text-inherit',
+                selected: 'bg-brand text-text-inverted hover:bg-brand-strong hover:text-text-inverted focus:bg-brand focus:text-text-inverted',
+                today: 'border border-brand text-brand font-semibold',
                 outside: 'text-text-muted opacity-40 aria-selected:opacity-30',
                 disabled: 'text-text-muted opacity-20 cursor-not-allowed hover:bg-transparent',
                 hidden: 'invisible',

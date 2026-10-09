@@ -56,7 +56,12 @@ import {
   Button,
   Alert,
   Skeleton,
+  Spinner,
 } from '@/components/ui'
+import { useQueryClient } from '@tanstack/react-query'
+import { useToast } from '@/lib/toast'
+import { queryKeys } from '@/api/query-keys'
+import { importDemoData, dismissDemoDataPrompt, useDemoDataStatus } from '@/api/demo-data'
 import { __, sprintf } from '@/lib/i18n'
 import { ROUTES, PERMISSIONS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
@@ -68,7 +73,8 @@ import type { TerminologyLabels } from '@/api/settings'
 import { useDashboardStats } from '@/api/dashboard'
 import type { DashboardStats, TrendPoint, DashboardRange } from '@/api/dashboard'
 import { useState } from 'react'
-
+import { ReviewPromptBanner } from './components/ReviewPromptBanner'
+import { DemoDataActiveBanner } from './components/DemoDataActiveBanner'
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -77,12 +83,55 @@ export default function DashboardPage() {
   const { getLabel } = useLabels()
   // ponytail: default to 'term' (school-native, not SaaS-generic '30days')
   const [range, setRange] = useState<DashboardRange>('term')
+  const [isImporting, setIsImporting] = useState(false)
+  const [demoPromptDismissedLocally, setDemoPromptDismissedLocally] = useState(false)
+  const { data: demoStatus } = useDemoDataStatus()
+  const queryClient = useQueryClient()
+  const toast       = useToast()
 
   const { data: stats, isLoading, isError, refetch } = useDashboardStats(session?.id, range)
 
+  const handleImportDemo = async () => {
+    setIsImporting(true)
+    try {
+      const res = await importDemoData()
+      if (res.success) {
+        toast.success(res.message || __( 'Demo data imported successfully! Welcome to CodeClove.', 'codeclove-school-management' ))
+        await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
+        await queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all })
+        await queryClient.invalidateQueries({ queryKey: queryKeys.students.all })
+        await queryClient.invalidateQueries({ queryKey: queryKeys.units.all })
+        await queryClient.invalidateQueries({ queryKey: queryKeys.finance.all })
+        await queryClient.invalidateQueries({ queryKey: queryKeys.demoData.all })
+        await refetch()
+      } else {
+        toast.error(res.message || __( 'Failed to import demo data.', 'codeclove-school-management' ))
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : __( 'Failed to import demo data.', 'codeclove-school-management' )
+      toast.error(message)
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  const handleDismissDemoPrompt = async () => {
+    setDemoPromptDismissedLocally(true)
+    try {
+      await dismissDemoDataPrompt()
+      await queryClient.invalidateQueries({ queryKey: queryKeys.demoData.all })
+      toast.info(__( 'Sample data quick start dismissed. You can always import demo data later from Settings > System.', 'codeclove-school-management' ))
+    } catch {
+      // already suppressed locally
+    }
+  }
+
+  const hasZeroStudentsOrSessions =
+    !isLoading &&
+    !isError &&
+    ( (stats?.total_students !== undefined && stats.total_students === 0) || !session || stats?.setup_checklist?.session === false )
   const termLabel    = getLabel('academic_term', false, 'Term')
   const sessionLabel = getLabel('academic_session', false, 'Session')
-
   const RANGES: { key: DashboardRange; label: string }[] = [
     { key: 'term',    label: sprintf( __( 'This %s', 'codeclove-school-management' ), termLabel ) },
     { key: 'session', label: sprintf( __( 'This %s', 'codeclove-school-management' ), sessionLabel ) },
@@ -102,15 +151,102 @@ export default function DashboardPage() {
         termName={stats?.current_term?.name}
       />
 
+      {/* ── Empty State Hero Card (0 students or 0 sessions) ─────────────────── */}
+      {hasZeroStudentsOrSessions && !demoStatus?.imported && !demoStatus?.prompt_dismissed && !demoPromptDismissedLocally && (
+        <Card className="p-5 sm:p-6 border border-brand/25 bg-bg-elevated relative overflow-hidden shadow-sm">
+          {/* Ambient subtle glow accents */}
+          <div className="absolute -top-16 -left-16 w-56 h-56 bg-brand/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-16 -right-16 w-56 h-56 bg-brand/5 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Dismiss button */}
+          <button
+            type="button"
+            onClick={handleDismissDemoPrompt}
+            className="absolute top-3.5 right-3.5 text-text-muted hover:text-text hover:bg-bg-surface/80 rounded-lg p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring border border-transparent hover:border-border z-10"
+            aria-label={__( 'Dismiss sample data quick start', 'codeclove-school-management' )}
+          >
+            <X size={15} />
+          </button>
+
+          <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 pe-8">
+            <div className="space-y-2.5 max-w-3xl">
+              <div className="flex items-center gap-2">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-dim text-brand border border-brand/20">
+                  <Sparkles size={12} className="text-brand" />
+                  <span>{__( 'Quick Start', 'codeclove-school-management' )}</span>
+                </div>
+              </div>
+
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold tracking-tight text-text">
+                  {__( 'Explore CodeClove with Sample Data', 'codeclove-school-management' )}
+                </h2>
+                <p className="text-sm text-text-muted leading-relaxed mt-0.5">
+                  {__( 'Import realistic sample records to explore classes, student profiles, invoices, and attendance before setting up real data.', 'codeclove-school-management' )}
+                </p>
+              </div>
+
+              {/* Feature value chips to inform the user and fill widescreen void */}
+              <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-text-muted">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-bg-surface border border-border font-medium">
+                  <Users size={12} className="text-brand" />
+                  <span>{__( '10 Sample Students', 'codeclove-school-management' )}</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-bg-surface border border-border font-medium">
+                  <BookOpen size={12} className="text-brand" />
+                  <span>{__( '3 Classes & Subjects', 'codeclove-school-management' )}</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-bg-surface border border-border font-medium">
+                  <Receipt size={12} className="text-brand" />
+                  <span>{__( 'Sample Invoices', 'codeclove-school-management' )}</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-bg-surface border border-border font-medium">
+                  <CalendarCheck size={12} className="text-brand" />
+                  <span>{__( 'Attendance Records', 'codeclove-school-management' )}</span>
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 flex-wrap pt-2 lg:pt-0">
+              <Button
+                variant="default"
+                size="default"
+                onClick={handleImportDemo}
+                disabled={isImporting}
+                className="gap-2 font-semibold shadow-sm"
+              >
+                {isImporting ? <Spinner size="sm" /> : <Sparkles size={15} />}
+                {isImporting ? __( 'Importing...', 'codeclove-school-management' ) : __( 'Import Demo Data', 'codeclove-school-management' )}
+              </Button>
+              <Button
+                variant="secondary"
+                size="default"
+                onClick={handleDismissDemoPrompt}
+                className="font-medium text-text border border-border hover:bg-bg-subtle"
+              >
+                {__( 'Set up manually', 'codeclove-school-management' )}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* ── Demo Data Active Banner ────────────────────────────────────────── */}
+      <DemoDataActiveBanner />
+
+      {/* ── Review Prompt Banner (milestone-triggered) ────────────────────────── */}
+      <ReviewPromptBanner />
+
       {/* ── Setup Banner (onboarding only, dismissible) ──────────────────────── */}
       {stats?.setup_checklist && (
         <SetupBanner
           checklist={stats.setup_checklist as unknown as Record<string, boolean>}
           sessionLabel={sessionLabel}
           getLabel={getLabel}
+          onImportDemo={handleImportDemo}
+          isImporting={isImporting}
         />
       )}
-
       {/* ── Operational Strip (Attendance & Action Queue) ───────────────────── */}
       <TodayStrip stats={stats} isLoading={isLoading} />
 
@@ -142,8 +278,8 @@ export default function DashboardPage() {
                   className={cn(
                     'px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 whitespace-nowrap',
                     range === r.key
-                      ? 'bg-brand text-white shadow-sm'
-                      : 'text-text-muted hover:text-text hover:bg-bg-overlay'
+                      ? 'bg-brand text-text-inverted shadow-sm'
+                      : 'text-text-muted hover:text-text hover:bg-hover-bg'
                   )}
                 >
                   {r.label}
@@ -214,10 +350,14 @@ function SetupBanner({
   checklist,
   sessionLabel,
   getLabel,
+  onImportDemo,
+  isImporting,
 }: {
   checklist: Record<string, boolean>
   sessionLabel: string
   getLabel: (key: keyof TerminologyLabels, plural?: boolean, defaultValue?: string) => string
+  onImportDemo?: () => void
+  isImporting?: boolean
 }) {
   const navigate = useNavigate()
   // ponytail: localStorage dismiss, no API call
@@ -249,7 +389,7 @@ function SetupBanner({
             <span className="text-sm font-medium text-text">
               {sprintf( __( '%1$d of %2$d setup steps complete', 'codeclove-school-management' ), completed, total )}
             </span>
-            <div className="flex-1 h-1.5 bg-bg-base rounded-full overflow-hidden min-w-[60px] max-w-[120px]">
+            <div className="flex-1 h-1.5 bg-brand/20 rounded-full overflow-hidden min-w-[60px] max-w-[120px]">
               <div
                 className="h-full bg-brand rounded-full transition-all duration-500"
                 style={{ width: `${progress}%` }}
@@ -265,6 +405,18 @@ function SetupBanner({
         </div>
       </div>
       <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
+        {onImportDemo && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="text-xs flex-shrink-0 gap-1.5"
+            onClick={onImportDemo}
+            disabled={isImporting}
+          >
+            {isImporting ? <Spinner size="xs" /> : <Sparkles size={12} />}
+            {isImporting ? __( 'Importing…', 'codeclove-school-management' ) : __( 'Import Demo Data', 'codeclove-school-management' )}
+          </Button>
+        )}
         {nextStep && (
           <Button
             variant="secondary"
@@ -778,7 +930,7 @@ function RecentActivity({
             return (
               <div
                 key={ev.id}
-                className="px-5 py-3.5 flex items-center gap-3.5 hover:bg-bg-overlay transition-colors overflow-hidden"
+                className="px-5 py-3.5 flex items-center gap-3.5 hover:bg-hover-bg transition-colors overflow-hidden"
               >
                 <EventIcon size={16} className="text-text-muted flex-shrink-0" />
 
@@ -787,7 +939,7 @@ function RecentActivity({
                   <span className="text-text-muted truncate inline-block max-w-[calc(100%-80px)] align-bottom">{detail}</span>
                 </p>
 
-                <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded text-xs font-medium bg-bg-base border border-border text-text-subtle flex-shrink-0">
+                <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded text-xs font-medium bg-bg-surface border border-border text-text-subtle flex-shrink-0">
                   {ev.actor_name || __( 'Administrator', 'codeclove-school-management' )}
                 </span>
 

@@ -17,6 +17,7 @@ import {
 import { useMarkNotificationRead, useNotifications } from '../../api/portal'
 import { formatDate } from '../../lib/formatter'
 import { usePortal } from '../../lib/portal-context'
+import { SegmentedTabs, type SegmentedTab } from '../../components/SegmentedTabs'
 import {
   Button,
   Card,
@@ -43,6 +44,17 @@ export const NotificationsPage: React.FC = () => {
     return notifications
   }, [notifications, filter])
 
+  const tabs = useMemo<Array<SegmentedTab<'all' | 'unread'>>>(
+    () => [
+      { id: 'all', label: __( 'All', 'codeclove-school-management' ) },
+      {
+        id: 'unread',
+        label: __( 'Unread', 'codeclove-school-management' ),
+        count: unreadCount > 0 ? unreadCount : undefined,
+      },
+    ],
+    [unreadCount]
+  )
   const handleMarkSingleRead = (id: number) => {
     markReadMutation.mutate(id)
   }
@@ -73,49 +85,13 @@ export const NotificationsPage: React.FC = () => {
             )}
 
             {/* Filter Tabs (Segmented Capsule Track) */}
-            <div
-              role="tablist"
-              aria-label={__( 'Notification filters', 'codeclove-school-management' )}
-              className="inline-flex items-center bg-bg-base/80 border border-border/80 rounded-xl p-1 gap-1 shadow-2xs"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={filter === 'all'}
-                onClick={() => setFilter('all')}
-                className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none outline-none ${
-                  filter === 'all'
-                    ? 'bg-bg-surface text-brand font-bold shadow-xs'
-                    : 'text-text-muted hover:text-text hover:bg-bg-surface/50'
-                }`}
-              >
-                {__( 'All', 'codeclove-school-management' )}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={filter === 'unread'}
-                onClick={() => setFilter('unread')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer select-none outline-none ${
-                  filter === 'unread'
-                    ? 'bg-bg-surface text-brand font-bold shadow-xs'
-                    : 'text-text-muted hover:text-text hover:bg-bg-surface/50'
-                }`}
-              >
-                <span>{__( 'Unread', 'codeclove-school-management' )}</span>
-                {unreadCount > 0 && (
-                  <span
-                    className={`inline-flex items-center justify-center min-w-[18px] h-4 px-1 text-3xs font-bold rounded-full transition-colors font-mono tabular-nums ${
-                      filter === 'unread'
-                        ? 'bg-brand-dim text-brand'
-                        : 'bg-border/60 text-text-subtle'
-                    }`}
-                  >
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-            </div>
+            <SegmentedTabs<'all' | 'unread'>
+              tabs={tabs}
+              activeTab={filter}
+              onChange={setFilter}
+              ariaLabel={__( 'Notification filters', 'codeclove-school-management' )}
+              size="sm"
+            />
           </div>
         }
       />
@@ -147,16 +123,18 @@ export const NotificationsPage: React.FC = () => {
                   <div
                     key={notif.id}
                     className={`flex items-start justify-between gap-4 p-4 transition-colors ${
-                      isUnread ? 'bg-bg-base/60' : 'bg-bg-surface hover:bg-bg-overlay/60'
+                      isUnread
+                        ? 'bg-brand-dim/30 border-s-2 border-s-brand'
+                        : 'bg-bg-elevated hover:bg-hover-bg'
                     }`}
                   >
                     <div className="flex items-start gap-3 min-w-0 flex-1">
                       {/* Unread indicator dot */}
                       <div className="mt-1.5 flex-shrink-0">
                         {isUnread ? (
-                          <span className="flex h-2.5 w-2.5 rounded-full bg-brand ring-4 ring-brand/10" />
+                          <span className="flex h-2.5 w-2.5 rounded-full bg-brand ring-4 ring-brand-dim" />
                         ) : (
-                          <span className="flex h-2.5 w-2.5 rounded-full bg-border-strong/40" />
+                          <span className="flex h-2.5 w-2.5 rounded-full bg-border-strong" />
                         )}
                       </div>
 

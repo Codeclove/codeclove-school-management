@@ -235,8 +235,8 @@ export default function RolesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         {/* Left Column - Compact Roles List */}
         <div className="lg:col-span-3 space-y-3">
-          <Card className="p-3 space-y-3 border-border/60 shadow-2xs">
-            <div className="flex items-center justify-between border-b border-border/55 pb-2">
+          <Card className="p-3 space-y-3 border-border shadow-2xs">
+            <div className="flex items-center justify-between border-b border-border pb-2">
               <span className="text-2xs font-bold text-text-muted uppercase tracking-wider">{__( 'System Roles', 'codeclove-school-management' )}</span>
               <Button size="sm" variant="default" onClick={handleStartCreate} className="h-6 px-2 text-2xs gap-1 font-semibold">
                 <Plus size={11} />
@@ -250,30 +250,27 @@ export default function RolesPage() {
                 return (
                   <button
                     key={role.id}
+                    type="button"
                     onClick={() => handleSelectRole(role.id)}
-                    className={`w-full flex items-center justify-between p-3 rounded-xl border text-xs transition-all relative font-semibold select-none text-left ${
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border border-transparent text-xs transition-all relative font-semibold select-none text-left ${
                       isActive
-                        ? 'border-transparent bg-brand text-white shadow-md shadow-brand/10'
-                        : 'border-transparent hover:bg-bg-subtle/50 text-text bg-transparent'
+                        ? 'bg-brand text-text-inverted shadow-md'
+                        : 'hover:bg-hover-bg text-text bg-transparent'
                     }`}
                   >
                     <div className="flex flex-col min-w-0 pr-2">
-                      <span className={`font-bold transition-colors ${isActive ? 'text-white' : 'text-text'}`}>
+                      <span className={`font-bold transition-colors ${isActive ? 'text-text-inverted' : 'text-text'}`}>
                         {role.name}
                       </span>
                       {role.description && (
-                        <span className={`text-2xs font-normal transition-colors mt-0.5 truncate max-w-[140px] ${isActive ? 'text-white/80' : 'text-text-muted'}`}>
+                        <span className={`text-2xs mt-0.5 truncate max-w-[140px] transition-colors ${isActive ? 'font-medium text-text-inverted opacity-90' : 'font-normal text-text-muted'}`}>
                           {role.description}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {role.is_locked && <Lock size={10} className={isActive ? 'text-white/85' : 'text-text-subtle'} />}
-                      <span className={`text-3xs font-mono font-bold px-1.5 py-0.5 rounded-md border transition-colors ${
-                        isActive 
-                          ? 'bg-white text-brand border-white shadow-2xs' 
-                          : 'bg-bg-surface text-text-muted border-border'
-                      }`}>
+                      {role.is_locked && <Lock size={10} className={isActive ? 'text-text-inverted opacity-90' : 'text-text-subtle'} />}
+                      <span className={`text-3xs font-mono font-bold px-1.5 py-0.5 rounded-md border border-border transition-colors ${isActive ? 'bg-bg-elevated text-text shadow-2xs' : 'bg-bg-surface text-text-muted'}`}>
                         {role.slug === 'owner' ? '★' : role.permission_count || 0}
                       </span>
                     </div>
@@ -287,13 +284,13 @@ export default function RolesPage() {
         {/* Right Column - Edit / Create Form & Matrix */}
         <div className="lg:col-span-9">
           {isRoleLoading && !isCreating ? (
-            <Card className="p-6 border-border/60">
+            <Card className="p-6 border-border">
               <Skeleton className="h-96 w-full rounded-xl" />
             </Card>
           ) : (
-            <Card className="p-5 space-y-5 border-border/60 shadow-sm">
+            <Card className="p-5 space-y-5 border-border shadow-sm">
               {/* Form Metadata Section - Horizontal & Compact */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/50">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border">
                 <div className="space-y-0.5">
                   <h3 className="text-xs font-bold text-text flex items-center gap-2">
                     <Shield size={14} className="text-brand" />
@@ -313,7 +310,7 @@ export default function RolesPage() {
                       value={roleName}
                       onChange={(e) => setRoleName(e.target.value)}
                       disabled={isLocked && !isCreating}
-                      className="h-8 px-2.5 border border-border rounded-lg text-xs bg-bg-surface text-text placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-brand-ring w-40"
+                      className="h-8 px-2.5 border border-border rounded-lg text-xs bg-bg-surface text-text placeholder:text-text-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand-ring w-40"
                     />
                   </div>
                   <div className="flex items-center gap-2">
@@ -324,7 +321,7 @@ export default function RolesPage() {
                       value={roleDescription}
                       onChange={(e) => setRoleDescription(e.target.value)}
                       disabled={isOwner}
-                      className="h-8 px-2.5 border border-border rounded-lg text-xs bg-bg-surface text-text placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-brand-ring w-56"
+                      className="h-8 px-2.5 border border-border rounded-lg text-xs bg-bg-surface text-text placeholder:text-text-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand-ring w-56"
                     />
                   </div>
                 </div>
@@ -332,7 +329,7 @@ export default function RolesPage() {
 
               {/* Owner Warning / Info Banner */}
               {isOwner && (
-                <div className="bg-brand-dim/20 border border-brand/20 p-3 rounded-lg flex items-start gap-2.5 text-2xs text-brand leading-relaxed">
+                <div className="bg-brand-dim border border-border p-3 rounded-lg flex items-start gap-2.5 text-2xs text-brand leading-relaxed">
                   <ShieldAlert size={14} className="mt-0.5 flex-shrink-0 text-brand" />
                   <div>
                     <strong className="font-bold">{__( 'System Wildcard Role:', 'codeclove-school-management' )}</strong>{' '}
@@ -344,16 +341,16 @@ export default function RolesPage() {
               {/* Permission Matrix */}
               {!isOwner && (
                 <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3 bg-bg-base/30 p-2.5 rounded-lg border border-border/50">
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-bg-surface p-2.5 rounded-lg border border-border">
                     <div>
                       <h4 className="text-xs font-bold text-text uppercase tracking-wider">{__( 'Capability Map', 'codeclove-school-management' )}</h4>
                     </div>
                     {!(isLocked && !isCreating) && (
                       <div className="flex items-center gap-1.5">
-                        <button onClick={() => handleToggleAllPermissions(true)} className="px-2 py-1 text-2xs font-bold text-brand bg-bg-surface border border-border rounded-md hover:bg-bg-subtle/50 transition-colors">
+                        <button type="button" onClick={() => handleToggleAllPermissions(true)} className="px-2 py-1 text-2xs font-bold text-brand bg-bg-surface border border-border rounded-md hover:bg-hover-bg transition-colors">
                           {__( 'Select All', 'codeclove-school-management' )}
                         </button>
-                        <button onClick={() => handleToggleAllPermissions(false)} className="px-2 py-1 text-2xs font-bold text-text-muted bg-bg-surface border border-border rounded-md hover:bg-bg-subtle/50 transition-colors">
+                        <button type="button" onClick={() => handleToggleAllPermissions(false)} className="px-2 py-1 text-2xs font-bold text-text-muted bg-bg-surface border border-border rounded-md hover:bg-hover-bg transition-colors">
                           {__( 'Deselect All', 'codeclove-school-management' )}
                         </button>
                       </div>
@@ -369,14 +366,14 @@ export default function RolesPage() {
                       return (
                         <details
                           key={category}
-                          className="border border-border/60 rounded-lg bg-bg-surface overflow-hidden group transition-all duration-150 open:border-brand/35 open:shadow-xs"
+                          className="border border-border rounded-lg bg-bg-surface overflow-hidden group transition-all duration-150 open:border-brand open:shadow-xs"
                         >
-                          <summary className="flex items-center justify-between px-3.5 py-2.5 bg-bg-base/20 hover:bg-bg-base/40 border-b border-transparent group-open:border-border/45 group-open:bg-bg-base/40 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden transition-colors">
+                          <summary className="flex items-center justify-between px-3.5 py-2.5 bg-bg-surface hover:bg-hover-bg border-b border-border cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden transition-colors">
                             <div className="flex items-center gap-2">
-                              <div className="w-5.5 h-5.5 rounded bg-bg-surface border border-border flex items-center justify-center text-text-muted group-open:text-brand group-open:bg-brand-dim/20 group-open:border-brand/10 transition-colors">
+                              <div className="w-5.5 h-5.5 rounded bg-bg-surface border border-border flex items-center justify-center text-text-muted group-open:text-brand transition-colors">
                                 <CatIcon size={12} />
                               </div>
-                              <span className="text-xs font-bold text-text group-open:text-brand transition-colors">{category}</span>
+                              <span className="text-xs font-bold text-text transition-colors">{category}</span>
                               <Badge variant={checkedInCat.length > 0 ? 'brand' : 'default'} size="sm" className="px-1.5 text-3xs font-bold">
                                 {checkedInCat.length}/{keys.length}
                               </Badge>
@@ -384,7 +381,7 @@ export default function RolesPage() {
                             <ChevronDown size={12} className="transition-transform duration-200 group-open:rotate-180 text-text-subtle group-open:text-brand" />
                           </summary>
 
-                          <div className="p-3 space-y-3 bg-bg-base border-t border-border/50">
+                          <div className="p-3.5 space-y-3 bg-bg-surface border-t border-border">
                             {!(isLocked && !isCreating) && (
                               <div className="flex justify-end">
                                 <button
@@ -404,16 +401,16 @@ export default function RolesPage() {
                                   <div
                                     key={key}
                                     onClick={() => handleTogglePermission(key)}
-                                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-all select-none text-xs font-semibold ${
+                                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border select-none text-xs transition-colors ${
                                       isLocked && !isCreating 
-                                        ? 'cursor-not-allowed opacity-60 bg-bg-base/30 border-border/40' 
+                                        ? 'cursor-not-allowed opacity-60 bg-bg-surface border-border font-semibold' 
                                         : isChecked
-                                        ? 'border-brand/35 bg-brand-dim/15 cursor-pointer shadow-2xs text-brand font-bold'
-                                        : 'border-border/50 hover:border-border hover:bg-bg-surface cursor-pointer bg-bg-surface text-text-muted hover:text-text'
+                                        ? 'border-brand bg-brand-dim cursor-pointer shadow-2xs text-brand font-bold'
+                                        : 'border-border hover:bg-hover-bg cursor-pointer bg-bg-surface text-text font-medium'
                                     }`}
                                   >
                                     <div className={`flex-shrink-0 h-3.5 w-3.5 rounded-[3px] border flex items-center justify-center transition-all ${
-                                      isChecked ? 'bg-brand border-brand text-white' : 'border-border-strong bg-bg-base'
+                                      isChecked ? 'bg-brand border-brand text-text-inverted' : 'border-border-strong bg-bg-surface'
                                     }`}>
                                       {isChecked && <Check size={10} strokeWidth={3} />}
                                     </div>
@@ -431,7 +428,7 @@ export default function RolesPage() {
               )}
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-between border-t border-border/60 pt-4">
+              <div className="flex items-center justify-between border-t border-border pt-4">
                 {!isCreating && selectedRole && !selectedRole.is_system && !selectedRole.is_locked ? (
                   <Button variant="danger" size="sm" onClick={handleDelete} disabled={isPending} className="gap-1.5 h-8 text-xs font-semibold px-3">
                     <Trash2 size={12} />

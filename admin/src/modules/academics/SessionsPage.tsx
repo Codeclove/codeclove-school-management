@@ -29,17 +29,19 @@ import {
 import { useLabels } from '@/lib/labels'
 import { useFormatter } from '@/lib/formatter'
 import { useToast } from '@/lib/toast'
+import { onFormError } from '@/lib/form-errors'
 import { useConfirm } from '@/lib/confirm'
 import { useEntity } from '@/lib/useEntity'
 import {
-  Button, Badge, Card, CardContent,
+  DataTable,
+  type DataTableColumn,
+  Button, Badge, Card,
   Modal, ModalFooter, FormField, Input, Select, DatePicker,
-  TableRoot, Thead, Tbody, Tr, Th, Td, TableEmpty, TableSkeleton,
-  PageHeader, Spinner, EmptyState, FormGroupHeader, Alert,
+  TableRoot, Thead, Tbody, Tr, Th, Td, TableSkeleton,
+  PageHeader, Spinner, Alert,
 } from '@/components/ui'
 import { SESSION_STATUSES } from '@/lib/constants'
 import { AcademicsNav } from './components/AcademicsNav'
-import { TablePagination } from '@/components/ui/TablePagination'
 import { useTableState } from '@/lib/useTableState'
 import { useDebounce } from '@/lib/useDebounce'
 import { __, sprintf } from '@/lib/i18n'
@@ -77,10 +79,105 @@ export default function SessionsPage() {
   const debouncedSearch = useDebounce(search, 350)
   const [statusFilter, setStatusFilter] = useState('')
 
-  // Reset page when filters change
+  const { formatDate } = useFormatter()
+  const statusConfig = useMemo(() => getStatusConfig(), [])
+
+  const columns = useMemo<DataTableColumn<AcademicSession>[]>(
+    () => [
+      {
+        key: 'name',
+        header: __( 'Name', 'codeclove-school-management' ),
+        type: 'primary',
+        render: (session) => (
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-text">{session.name}</span>
+            {session.is_current && (
+              <Badge variant="success" size="sm" dot>
+                {__( 'Current', 'codeclove-school-management' )}
+              </Badge>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: 'start_date',
+        header: __( 'Start Date', 'codeclove-school-management' ),
+        type: 'date',
+        render: (session) => formatDate(session.start_date),
+      },
+      {
+        key: 'end_date',
+        header: __( 'End Date', 'codeclove-school-management' ),
+        type: 'date',
+        render: (session) => formatDate(session.end_date),
+      },
+      {
+        key: 'terms_count',
+        header: __( 'Terms', 'codeclove-school-management' ),
+        type: 'number',
+        render: (session) => session.terms_count ?? 0,
+      },
+      {
+        key: 'status',
+        header: __( 'Status', 'codeclove-school-management' ),
+        type: 'badge',
+        render: (session) => {
+          const cfg = statusConfig[session.status] ?? { label: session.status, variant: 'draft' }
+          return (
+            <Badge variant={cfg.variant} size="sm" dot>
+              {cfg.label}
+            </Badge>
+          )
+        },
+      },
+      {
+        key: 'actions',
+        header: __( 'Actions', 'codeclove-school-management' ),
+        type: 'actions',
+        render: (session) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTermsTarget(session)}
+              className="h-8 w-8 text-text-muted hover:text-brand hover:bg-brand-dim/50"
+              title={sprintf( __( 'Manage %s', 'codeclove-school-management' ), termLabelPlural )}
+            >
+              <CalendarDays size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setEditTarget(session)
+                setShowModal(true)
+              }}
+              className="h-8 w-8 text-text-muted hover:text-brand hover:bg-brand-dim/50"
+              title={sprintf( __( 'Edit %s', 'codeclove-school-management' ), sessionLabelSingular )}
+            >
+              <Pencil size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDelete(session)}
+              className="h-8 w-8 text-text-muted hover:text-danger hover:bg-danger-dim/50"
+              title={sprintf( __( 'Delete %s', 'codeclove-school-management' ), sessionLabelSingular )}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [formatDate, statusConfig, termLabelPlural, sessionLabelSingular]
+  )
+
+  // Reset page and selection when filters change
   useEffect(() => {
     table.resetPage()
-  }, [debouncedSearch, statusFilter, table.resetPage])
+    table.clearSelection()
+  }, [debouncedSearch, statusFilter, table.resetPage, table.clearSelection])
 
   const { data, isLoading, isError, refetch } = useSessions({
     search: debouncedSearch || undefined,
@@ -174,6 +271,7 @@ export default function SessionsPage() {
                   setStatusFilter('')
                   setSearch('')
                   table.resetPage()
+                  table.clearSelection()
                 }}
               >
                 <X size={12} />
@@ -184,87 +282,47 @@ export default function SessionsPage() {
         </div>
       </Card>
 
-      {/* Table Card */}
-      <Card className="shadow-sm">
-        <CardContent className="p-0 overflow-hidden">
-          {isError ? (
-            <div className="p-6">
-              <EmptyState
-                title={__( 'Could not load sessions', 'codeclove-school-management' )}
-                description={__( "The server returned an error. This usually means the backend API isn't connected yet.", 'codeclove-school-management' )}
-                icon={AlertTriangle}
-                action={
+      <DataTable<AcademicSession>
+        data={sessions}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        emptyState={
+          isError
+            ? {
+                icon: AlertTriangle,
+                message: __( 'Could not load sessions', 'codeclove-school-management' ),
+                description: __( "The server returned an error. This usually means the backend API isn't connected yet.", 'codeclove-school-management' ),
+                action: (
                   <Button variant="secondary" size="sm" onClick={() => refetch()} className="gap-1.5">
                     <RefreshCw size={13} />
                     {__( 'Try again', 'codeclove-school-management' )}
                   </Button>
-                }
-              />
-            </div>
-          ) : (
-            <TableRoot>
-              <Thead>
-                <Tr>
-                  <Th type="primary">{__( 'Name', 'codeclove-school-management' )}</Th>
-                  <Th type="date">{__( 'Start Date', 'codeclove-school-management' )}</Th>
-                  <Th type="date">{__( 'End Date', 'codeclove-school-management' )}</Th>
-                  <Th type="number">{__( 'Terms', 'codeclove-school-management' )}</Th>
-                  <Th type="badge">{__( 'Status', 'codeclove-school-management' )}</Th>
-                  <Th type="actions">{__( 'Actions', 'codeclove-school-management' )}</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {isLoading ? (
-                  <TableSkeleton columns={6} rows={5} />
-                ) : sessions.length === 0 ? (
-                  <TableEmpty
-                    colSpan={6}
-                    icon={entity.icon}
-                    message={
-                      search || statusFilter
-                        ? __( 'No Sessions Match Filters', 'codeclove-school-management' )
-                        : sprintf( __( 'No %s Found', 'codeclove-school-management' ), sessionLabelPlural )
-                    }
-                    description={
-                      search || statusFilter
-                        ? __( 'Try adjusting your search query or status filter.', 'codeclove-school-management' )
-                        : __( 'Create an academic session to manage academic terms, classes, enrollments, and billing.', 'codeclove-school-management' )
-                    }
-                    action={
-                      !search && !statusFilter && (
-                        <Button size="sm" onClick={() => { setEditTarget(null); setShowModal(true); }}>
-                          {sprintf( __( 'New %s', 'codeclove-school-management' ), sessionLabelSingular )}
-                        </Button>
-                      )
-                    }
-                  />
-                ) : (
-                  sessions.map((session) => (
-                    <SessionRow
-                      key={session.id}
-                      session={session}
-                      onEdit={() => {
-                        setEditTarget(session)
-                        setShowModal(true)
-                      }}
-                      onDelete={() => handleDelete(session)}
-                      onManageTerms={() => setTermsTarget(session)}
-                    />
-                  ))
-                )}
-              </Tbody>
-            </TableRoot>
-          )}
-
-          {/* Pagination */}
-          {!isLoading && !isError && (
-            <TablePagination
-              {...table.paginationProps}
-              total={total}
-            />
-          )}
-        </CardContent>
-      </Card>
+                ),
+              }
+            : {
+                icon: entity.icon,
+                message:
+                  search || statusFilter
+                    ? __( 'No Sessions Match Filters', 'codeclove-school-management' )
+                    : sprintf( __( 'No %s Found', 'codeclove-school-management' ), sessionLabelPlural ),
+                description:
+                  search || statusFilter
+                    ? __( 'Try adjusting your search query or status filter.', 'codeclove-school-management' )
+                    : __( 'Create an academic session to manage academic terms, classes, enrollments, and billing.', 'codeclove-school-management' ),
+                action:
+                  !search && !statusFilter ? (
+                    <Button size="sm" onClick={() => { setEditTarget(null); setShowModal(true); }}>
+                      {sprintf( __( 'New %s', 'codeclove-school-management' ), sessionLabelSingular )}
+                    </Button>
+                  ) : undefined,
+              }
+        }
+        keyExtractor={(session) => session.id}
+      />
 
       {/* Session Modal (Create & Edit) */}
       <SessionModal
@@ -284,80 +342,6 @@ export default function SessionsPage() {
   )
 }
 
-// ─── Table Row ────────────────────────────────────────────────────────────────
-
-function SessionRow({
-  session,
-  onEdit,
-  onDelete,
-  onManageTerms,
-}: {
-  session: AcademicSession
-  onEdit: () => void
-  onDelete: () => void
-  onManageTerms: () => void
-}) {
-  const { formatDate } = useFormatter()
-  const { getLabel } = useLabels()
-  const sessionLabelSingular = getLabel('academic_session', false, __( 'Academic Session', 'codeclove-school-management' ))
-  const termLabelPlural = getLabel('academic_term', true, __( 'Academic Terms', 'codeclove-school-management' ))
-
-  const cfg = useMemo(() => getStatusConfig()[session.status] ?? { label: session.status, variant: 'draft' }, [session.status])
-
-  return (
-    <Tr className="table-row-hover">
-      <Td type="primary">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-text">{session.name}</span>
-          {session.is_current && (
-            <Badge variant="success" size="sm" dot>{__( 'Current', 'codeclove-school-management' )}</Badge>
-          )}
-        </div>
-      </Td>
-      <Td type="date">{formatDate(session.start_date)}</Td>
-      <Td type="date">{formatDate(session.end_date)}</Td>
-      <Td type="number">
-        {session.terms_count ?? 0}
-      </Td>
-      <Td type="badge">
-        <Badge variant={cfg.variant} size="sm" dot>
-          {cfg.label}
-        </Badge>
-      </Td>
-      <Td type="actions">
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onManageTerms}
-            className="h-8 w-8 text-text-muted hover:text-brand hover:bg-brand-dim/50"
-            title={sprintf( __( 'Manage %s', 'codeclove-school-management' ), termLabelPlural )}
-          >
-            <CalendarDays size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onEdit}
-            className="h-8 w-8 text-text-muted hover:text-brand hover:bg-brand-dim/50"
-            title={sprintf( __( 'Edit %s', 'codeclove-school-management' ), sessionLabelSingular )}
-          >
-            <Pencil size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onDelete}
-            className="h-8 w-8 text-text-muted hover:text-danger hover:bg-danger-dim/50"
-            title={sprintf( __( 'Delete %s', 'codeclove-school-management' ), sessionLabelSingular )}
-          >
-            <Trash2 size={14} />
-          </Button>
-        </div>
-      </Td>
-    </Tr>
-  )
-}
 
 // ─── Session Modal (Create & Edit) ───────────────────────────────────────────
 
@@ -465,15 +449,10 @@ function SessionModal({
       }
       size="lg"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-4">
         {errorMsg && (
           <Alert variant="danger">{errorMsg}</Alert>
         )}
-        <FormGroupHeader
-          title={sprintf( __( '%s Details', 'codeclove-school-management' ), sessionLabelSingular )}
-          description={sprintf( __( 'Define the name, date range, and status for this %s.', 'codeclove-school-management' ), sessionLabelSingular.toLowerCase() )}
-          icon={CalendarDays}
-        />
         <FormField label={sprintf( __( '%s Name', 'codeclove-school-management' ), sessionLabelSingular )} error={errors.name?.message} required>
           <Input
             {...register('name')}
@@ -540,6 +519,34 @@ function SessionModal({
 
 // ─── Manage Terms Modal ──────────────────────────────────────────────────────
 
+export function calculateTermSplits(startStr: string, endStr: string, count: number, label: string) {
+  const start = new Date(startStr + 'T00:00:00')
+  const end = new Date(endStr + 'T00:00:00')
+  const totalDays = Math.round((end.getTime() - start.getTime()) / 864e5) + 1
+  const daysPerTerm = Math.floor(totalDays / count)
+  const prefix = count === 2 ? 'Semester' : count === 4 ? 'Quarter' : label
+  const code = count === 2 ? 'S' : count === 4 ? 'Q' : 'T'
+
+  // ponytail: en-CA locale formats natively as YYYY-MM-DD
+  const toYMD = (d: Date) => d.toLocaleDateString('en-CA')
+
+  return Array.from({ length: count }, (_, i) => {
+    const s = new Date(start)
+    s.setDate(s.getDate() + i * daysPerTerm)
+    const e = i === count - 1 ? end : new Date(start)
+    if (i !== count - 1) {
+      e.setDate(e.getDate() + (i + 1) * daysPerTerm - 1)
+    }
+    const finalEnd = e > end ? end : e
+    return {
+      name: `${prefix} ${i + 1}`,
+      code: `${code}${i + 1}`,
+      start_date: toYMD(s),
+      end_date: toYMD(finalEnd),
+    }
+  })
+}
+
 function ManageTermsModal({
   session,
   onClose,
@@ -562,57 +569,56 @@ function ManageTermsModal({
 
   const [editingId, setEditingId] = useState<number | null>(null)
   const [isAdding, setIsAdding] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  // Form states for inline editing/adding
-  const [name, setName] = useState('')
-  const [code, setCode] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [status, setStatus] = useState<'active' | 'inactive' | 'archived'>('active')
+  const initialForm: { name: string; code: string; startDate: string; endDate: string; status: AcademicTerm['status'] } = {
+    name: '', code: '', startDate: '', endDate: '', status: 'active'
+  }
+  const [form, setForm] = useState(initialForm)
   const [errorMsg, setErrorMsg] = useState('')
+
+  const setField = (field: keyof typeof initialForm, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }))
+    setErrorMsg('')
+  }
 
   const startEdit = (term: AcademicTerm) => {
     setEditingId(term.id)
     setIsAdding(false)
-    setName(term.name)
-    setCode(term.code || '')
-    setStartDate(term.start_date)
-    setEndDate(term.end_date)
-    setStatus(term.status)
+    setForm({
+      name: term.name,
+      code: term.code || '',
+      startDate: term.start_date,
+      endDate: term.end_date,
+      status: term.status,
+    })
     setErrorMsg('')
   }
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      setErrorMsg(__( 'Name is required', 'codeclove-school-management' ))
-      return
-    }
-    if (!startDate || !endDate) {
-      setErrorMsg(__( 'Dates are required', 'codeclove-school-management' ))
-      return
-    }
-    if (startDate >= endDate) {
-      setErrorMsg(__( 'End date must be after start date', 'codeclove-school-management' ))
-      return
-    }
-    // Must fall within session dates
-    if (startDate < session.start_date || endDate > session.end_date) {
-      setErrorMsg(
-        sprintf(
-          __( 'Dates must fall within %1$s range: %2$s to %3$s', 'codeclove-school-management' ),
-          sessionLabelSingular.toLowerCase(),
-          formatDate(session.start_date),
-          formatDate(session.end_date)
-        )
+  const validateDates = () => {
+    if (!form.name.trim()) return __( 'Name is required', 'codeclove-school-management' )
+    if (!form.startDate || !form.endDate) return __( 'Dates are required', 'codeclove-school-management' )
+    if (form.startDate >= form.endDate) return __( 'End date must be after start date', 'codeclove-school-management' )
+    if (form.startDate < session.start_date || form.endDate > session.end_date) {
+      return sprintf(
+        __( 'Dates must fall within %1$s range: %2$s to %3$s', 'codeclove-school-management' ),
+        sessionLabelSingular.toLowerCase(),
+        formatDate(session.start_date),
+        formatDate(session.end_date)
       )
-      return
     }
+    return null
+  }
+
+  const handleSave = () => {
+    const err = validateDates()
+    if (err) { setErrorMsg(err); return }
 
     if (editingId) {
       updateMutation.mutate(
         {
           id: editingId,
-          data: { name, code, start_date: startDate, end_date: endDate, status },
+          data: { name: form.name, code: form.code, start_date: form.startDate, end_date: form.endDate, status: form.status },
         },
         {
           onSuccess: () => {
@@ -620,8 +626,8 @@ function ManageTermsModal({
             refetch()
             toast.success(sprintf( __( '%s updated successfully!', 'codeclove-school-management' ), termLabelSingular ))
           },
-          onError: (err) => {
-            setErrorMsg(err.message || sprintf( __( 'Failed to update %s', 'codeclove-school-management' ), termLabelSingular.toLowerCase() ))
+          onError: (error) => {
+            setErrorMsg(error.message || sprintf( __( 'Failed to update %s', 'codeclove-school-management' ), termLabelSingular.toLowerCase() ))
           },
         }
       )
@@ -629,48 +635,23 @@ function ManageTermsModal({
   }
 
   const handleAdd = () => {
-    if (!name.trim()) {
-      setErrorMsg(__( 'Name is required', 'codeclove-school-management' ))
-      return
-    }
-    if (!startDate || !endDate) {
-      setErrorMsg(__( 'Dates are required', 'codeclove-school-management' ))
-      return
-    }
-    if (startDate >= endDate) {
-      setErrorMsg(__( 'End date must be after start date', 'codeclove-school-management' ))
-      return
-    }
-    // Must fall within session dates
-    if (startDate < session.start_date || endDate > session.end_date) {
-      setErrorMsg(
-        sprintf(
-          __( 'Dates must fall within %1$s range: %2$s to %3$s', 'codeclove-school-management' ),
-          sessionLabelSingular.toLowerCase(),
-          formatDate(session.start_date),
-          formatDate(session.end_date)
-        )
-      )
-      return
-    }
+    const err = validateDates()
+    if (err) { setErrorMsg(err); return }
 
     createMutation.mutate(
       {
         session_id: session.id,
-        data: { name, code, start_date: startDate, end_date: endDate, status },
+        data: { name: form.name, code: form.code, start_date: form.startDate, end_date: form.endDate, status: form.status },
       },
       {
         onSuccess: () => {
           setIsAdding(false)
-          setName('')
-          setCode('')
-          setStartDate('')
-          setEndDate('')
+          setForm(initialForm)
           refetch()
           toast.success(sprintf( __( '%s created successfully!', 'codeclove-school-management' ), termLabelSingular ))
         },
-        onError: (err) => {
-          setErrorMsg(err.message || sprintf( __( 'Failed to create %s', 'codeclove-school-management' ), termLabelSingular.toLowerCase() ))
+        onError: (error) => {
+          setErrorMsg(error.message || sprintf( __( 'Failed to create %s', 'codeclove-school-management' ), termLabelSingular.toLowerCase() ))
         },
       }
     )
@@ -688,13 +669,34 @@ function ManageTermsModal({
         refetch()
         toast.success(sprintf( __( '%s deleted successfully!', 'codeclove-school-management' ), termLabelSingular ))
       },
-      onError: (err: any) => {
-        toast.error(err.message || sprintf( __( 'Failed to delete %s.', 'codeclove-school-management' ), termLabelSingular.toLowerCase() ))
+      onError: (err: unknown) => {
+        const msg = err instanceof Error ? err.message : sprintf( __( 'Failed to delete %s.', 'codeclove-school-management' ), termLabelSingular.toLowerCase() )
+        toast.error(msg)
       }
     })
   }
 
-  const isPending = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending
+  const handleGeneratePresets = async (count: number) => {
+    const splits = calculateTermSplits(session.start_date, session.end_date, count, termLabelSingular)
+    setIsGenerating(true)
+    try {
+      for (const item of splits) {
+        await createMutation.mutateAsync({
+          session_id: session.id,
+          data: { ...item, status: 'active' },
+        })
+      }
+      refetch()
+      toast.success(sprintf( __( '%d terms generated successfully!', 'codeclove-school-management' ), count ))
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : __( 'Failed to generate terms', 'codeclove-school-management' )
+      toast.error(msg)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const isPending = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending || isGenerating
 
   return (
     <Modal
@@ -709,109 +711,209 @@ function ManageTermsModal({
       size="lg"
     >
       <div className="space-y-4">
+        {/* Parent Session Boundary Card */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-bg-surface border border-border text-xs">
+          <div className="flex items-center gap-2">
+            <CalendarDays size={14} className="text-brand shrink-0" />
+            <span className="text-text-muted">{sessionLabelSingular} {__( 'Period:', 'codeclove-school-management' )}</span>
+            <span className="font-semibold font-mono text-text">
+              {formatDate(session.start_date)} &mdash; {formatDate(session.end_date)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-text-muted">
+            <span>{__( 'Configured:', 'codeclove-school-management' )}</span>
+            <Badge variant="outline" size="sm" className="font-mono">
+              {terms.length} {terms.length === 1 ? termLabelSingular : termLabelPlural}
+            </Badge>
+          </div>
+        </div>
+
         {errorMsg && (
           <Alert variant="danger">{errorMsg}</Alert>
         )}
 
-        <TableRoot>
-          <Thead>
-            <Tr>
-              <Th type="primary">{__( 'Name', 'codeclove-school-management' )}</Th>
-              <Th type="code">{__( 'Code', 'codeclove-school-management' )}</Th>
-              <Th type="date">{__( 'Start Date', 'codeclove-school-management' )}</Th>
-              <Th type="date">{__( 'End Date', 'codeclove-school-management' )}</Th>
-              <Th type="actions" />
-            </Tr>
-          </Thead>
-          <Tbody>
-            {isLoading ? (
-              <TableSkeleton columns={5} rows={3} />
-            ) : (
-              <>
-                {terms.length === 0 && !isAdding && (
-                  <Tr>
-                    <Td colSpan={5} className="text-center py-4 text-text-muted text-sm">
-                      {sprintf(
-                        __( 'No %1$s in this %2$s. Click "Add %3$s" to create one.', 'codeclove-school-management' ),
-                        termLabelPlural.toLowerCase(),
-                        sessionLabelSingular.toLowerCase(),
-                        termLabelSingular
-                      )}
-                    </Td>
-                  </Tr>
-                )}
+        {/* Quick Partition Presets (shown when session has 0 terms and not currently adding) */}
+        {terms.length === 0 && !isAdding && !editingId && (
+          <div className="p-4 text-center rounded-xl border border-dashed border-border bg-bg-surface/50 space-y-2.5">
+            <p className="text-xs text-text-muted">
+              {__( 'Auto-partition dates into:', 'codeclove-school-management' )}
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {([
+                [2, sprintf( __( '%d Semesters', 'codeclove-school-management' ), 2 )],
+                [3, sprintf( __( '%d Terms', 'codeclove-school-management' ), 3 )],
+                [4, sprintf( __( '%d Quarters', 'codeclove-school-management' ), 4 )],
+              ] as const).map(([cnt, label]) => (
+                <Button
+                  key={cnt}
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => handleGeneratePresets(cnt)}
+                  disabled={isPending}
+                  className="text-xs h-7 px-3 font-medium"
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
 
-              {terms.map((term) => {
-                const isEditing = editingId === term.id
-                if (isEditing) {
+        {/* Dedicated Form Card (Stacked layout for Add or Edit — eliminates horizontal table overflow) */}
+        {(isAdding || editingId !== null) && (
+          <div className="p-4 rounded-xl bg-bg-surface border border-border space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-border/80">
+              <p className="text-xs font-semibold text-text uppercase tracking-wider">
+                {editingId
+                  ? sprintf( __( 'Edit %s', 'codeclove-school-management' ), termLabelSingular )
+                  : sprintf( __( 'Add %s', 'codeclove-school-management' ), termLabelSingular )}
+              </p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-text-muted hover:text-text"
+                onClick={() => {
+                  setIsAdding(false)
+                  setEditingId(null)
+                  setErrorMsg('')
+                }}
+                title={__( 'Cancel', 'codeclove-school-management' )}
+              >
+                <X size={14} />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <FormField label={sprintf( __( '%s Name', 'codeclove-school-management' ), termLabelSingular )} required>
+                <Input
+                  value={form.name}
+                  onChange={(e) => setField('name', e.target.value)}
+                  placeholder={__( 'e.g. Term 1, Semester 1', 'codeclove-school-management' )}
+                />
+              </FormField>
+
+              <FormField label={__( 'Short Code', 'codeclove-school-management' )}>
+                <Input
+                  value={form.code}
+                  onChange={(e) => setField('code', e.target.value)}
+                  placeholder={__( 'e.g. T1, S1', 'codeclove-school-management' )}
+                  className="font-mono text-sm"
+                />
+              </FormField>
+
+              <FormField label={__( 'Start Date', 'codeclove-school-management' )} required>
+                <DatePicker
+                  value={form.startDate}
+                  onChange={(v) => setField('startDate', v)}
+                  minDate={new Date(session.start_date + 'T00:00:00')}
+                  maxDate={new Date(session.end_date + 'T23:59:59')}
+                />
+              </FormField>
+
+              <FormField label={__( 'End Date', 'codeclove-school-management' )} required>
+                <DatePicker
+                  value={form.endDate}
+                  onChange={(v) => setField('endDate', v)}
+                  minDate={new Date(session.start_date + 'T00:00:00')}
+                  maxDate={new Date(session.end_date + 'T23:59:59')}
+                />
+              </FormField>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setIsAdding(false)
+                  setEditingId(null)
+                  setErrorMsg('')
+                }}
+              >
+                {__( 'Cancel', 'codeclove-school-management' )}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={editingId ? handleSave : handleAdd}
+                disabled={isPending}
+              >
+                {isPending && <Spinner size="xs" className="mr-1.5" />}
+                {editingId
+                  ? __( 'Save Changes', 'codeclove-school-management' )
+                  : sprintf( __( 'Add %s', 'codeclove-school-management' ), termLabelSingular )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Existing Terms List (Read-only table — zero horizontal overflow) */}
+        <div>
+          <TableRoot>
+            <Thead>
+              <Tr>
+                <Th>{sprintf( __( '%s Name', 'codeclove-school-management' ), termLabelSingular )}</Th>
+                <Th className="w-24 font-mono">{__( 'Code', 'codeclove-school-management' )}</Th>
+                <Th className="w-32">{__( 'Start Date', 'codeclove-school-management' )}</Th>
+                <Th className="w-32">{__( 'End Date', 'codeclove-school-management' )}</Th>
+                <Th className="w-24 text-right">{__( 'Actions', 'codeclove-school-management' )}</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {isLoading ? (
+                <TableSkeleton columns={5} rows={3} />
+              ) : terms.length === 0 ? (
+                <Tr>
+                  <Td colSpan={5} className="text-center py-5 text-text-muted text-xs">
+                    {sprintf(
+                      __( 'No %1$s in this %2$s yet.', 'codeclove-school-management' ),
+                      termLabelPlural.toLowerCase(),
+                      sessionLabelSingular.toLowerCase()
+                    )}
+                  </Td>
+                </Tr>
+              ) : (
+                terms.map((term) => {
+                  const isEditingThis = editingId === term.id
                   return (
-                    <Tr key={term.id} className="bg-brand-dim/10">
-                      <Td className="p-1">
-                        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={__( 'e.g. Quarter 1', 'codeclove-school-management' )} />
-                      </Td>
-                      <Td className="p-1">
-                        <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder={__( 'e.g. Q1', 'codeclove-school-management' )} />
-                      </Td>
-                      <Td className="p-1">
-                        <DatePicker value={startDate} onChange={setStartDate} />
-                      </Td>
-                      <Td className="p-1">
-                        <DatePicker value={endDate} onChange={setEndDate} />
-                      </Td>
-                      <Td className="p-1">
-                        <div className="flex justify-end gap-1">
-                          <Button size="sm" onClick={handleSave} disabled={isPending}>{__( 'Save', 'codeclove-school-management' )}</Button>
-                          <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>{__( 'Cancel', 'codeclove-school-management' )}</Button>
+                    <Tr
+                      key={term.id}
+                      className={isEditingThis ? 'bg-brand-dim/40 ring-1 ring-brand-ring/40' : undefined}
+                    >
+                      <Td className="font-medium text-text">{term.name}</Td>
+                      <Td className="font-mono text-xs text-text-subtle">{term.code || '—'}</Td>
+                      <Td className="font-mono text-xs text-text-muted">{formatDate(term.start_date)}</Td>
+                      <Td className="font-mono text-xs text-text-muted">{formatDate(term.end_date)}</Td>
+                      <Td className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => startEdit(term)}
+                            disabled={isPending}
+                            title={__( 'Edit', 'codeclove-school-management' )}
+                          >
+                            <Pencil size={12} className="text-text-muted hover:text-brand" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete(term.id)}
+                            disabled={isPending}
+                            title={__( 'Delete', 'codeclove-school-management' )}
+                          >
+                            <Trash2 size={12} className="text-danger" />
+                          </Button>
                         </div>
                       </Td>
                     </Tr>
                   )
-                }
-
-                return (
-                  <Tr key={term.id}>
-                    <Td type="primary">{term.name}</Td>
-                    <Td type="code">{term.code || '—'}</Td>
-                    <Td type="date">{formatDate(term.start_date)}</Td>
-                    <Td type="date">{formatDate(term.end_date)}</Td>
-                    <Td type="actions">
-                      <div className="flex justify-end gap-1">
-                        <Button size="sm" variant="secondary" onClick={() => startEdit(term)}>{__( 'Edit', 'codeclove-school-management' )}</Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDelete(term.id)} disabled={isPending}>
-                          <Trash2 size={11} className="text-danger" />
-                        </Button>
-                      </div>
-                    </Td>
-                  </Tr>
-                )
-              })}
-
-              {isAdding && (
-                <Tr className="bg-brand-dim/10">
-                  <Td className="p-1">
-                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={__( 'e.g. Quarter 1', 'codeclove-school-management' )} />
-                  </Td>
-                  <Td className="p-1">
-                    <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder={__( 'e.g. Q1', 'codeclove-school-management' )} />
-                  </Td>
-                  <Td className="p-1">
-                    <DatePicker value={startDate} onChange={setStartDate} />
-                  </Td>
-                  <Td className="p-1">
-                    <DatePicker value={endDate} onChange={setEndDate} />
-                  </Td>
-                  <Td className="p-1">
-                    <div className="flex justify-end gap-1">
-                      <Button size="sm" onClick={handleAdd} disabled={isPending}>{__( 'Add', 'codeclove-school-management' )}</Button>
-                      <Button size="sm" variant="secondary" onClick={() => setIsAdding(false)}>{__( 'Cancel', 'codeclove-school-management' )}</Button>
-                    </div>
-                  </Td>
-                </Tr>
+                })
               )}
-            </>
-          )}
-        </Tbody>
-      </TableRoot>
+            </Tbody>
+          </TableRoot>
+        </div>
 
         {!isAdding && !editingId && (
           <div className="flex justify-start">
@@ -820,15 +922,13 @@ function ManageTermsModal({
               variant="secondary"
               onClick={() => {
                 setIsAdding(true)
-                setName('')
-                setCode('')
-                setStartDate('')
-                setEndDate('')
+                setEditingId(null)
+                setForm({ ...initialForm, startDate: session.start_date, endDate: session.end_date })
                 setErrorMsg('')
               }}
-              className="gap-1"
+              className="gap-1.5"
             >
-              <Plus size={12} />
+              <Plus size={13} />
               {sprintf( __( 'Add %s', 'codeclove-school-management' ), termLabelSingular )}
             </Button>
           </div>

@@ -48,11 +48,19 @@ describe('Portal CSS Isolation & Token Integrity', () => {
     })
 
     it('must declare all core border and shadow tokens', () => {
-      expect(portalCss).toMatch(/--border:\s*#e2e8f0/i)
-      expect(portalCss).toMatch(/--border-subtle:\s*#f1f5f9/i)
-      expect(portalCss).toMatch(/--border-strong:\s*#cbd5e1/i)
+      expect(portalCss).toMatch(/--border:\s*#cbd5e1/i)
+      expect(portalCss).toMatch(/--border-subtle:\s*rgba\(0,\s*0,\s*0,\s*0\.04\)/i)
+      expect(portalCss).toMatch(/--border-strong:\s*#7c8ba1/i)
       expect(portalCss).toContain('--shadow-card:')
       expect(portalCss).toContain('--shadow-card-md:')
+    })
+
+    it('must declare dark mode surface, border, and text tokens for #codeclove-portal-root.dark', () => {
+      expect(portalCss).toMatch(/#codeclove-portal-root\.dark/i)
+      expect(portalCss).toMatch(/--bg-base:\s*#09090b/i)
+      expect(portalCss).toMatch(/--bg-elevated:\s*#1c1c26/i)
+      expect(portalCss).toMatch(/--border:\s*rgba\(255,\s*255,\s*255,\s*0\.16\)/i)
+      expect(portalCss).toMatch(/--text:\s*#f8fafc/i)
     })
   })
 })

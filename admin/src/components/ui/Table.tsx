@@ -72,7 +72,7 @@ export interface TableRootProps extends React.HTMLAttributes<HTMLTableElement> {
 export function TableRoot({
   className,
   containerClassName,
-  responsiveMode,
+  responsiveMode: _responsiveMode,
   ...props
 }: TableRootProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -105,22 +105,18 @@ export function TableRoot({
       )}
     >
       {/* Scroll indicator shadows (only active in scroll mode) */}
-      {true && (
-        <>
-          <div
-            className={cn(
-              'pointer-events-none absolute start-0 top-0 bottom-0 z-20 w-6 bg-gradient-to-r rtl:bg-gradient-to-l from-bg-elevated via-bg-elevated/80 to-transparent transition-opacity duration-200',
-              hasScrollLeft ? 'opacity-100' : 'opacity-0'
-            )}
-          />
-          <div
-            className={cn(
-              'pointer-events-none absolute end-0 top-0 bottom-0 z-20 w-6 bg-gradient-to-l rtl:bg-gradient-to-r from-bg-elevated via-bg-elevated/80 to-transparent transition-opacity duration-200',
-              hasScrollRight ? 'opacity-100' : 'opacity-0'
-            )}
-          />
-        </>
-      )}
+      <div
+        className={cn(
+          'pointer-events-none absolute start-0 top-0 bottom-0 z-20 w-6 bg-gradient-to-r rtl:bg-gradient-to-l from-bg-elevated to-transparent transition-opacity duration-200',
+          hasScrollLeft ? 'opacity-100' : 'opacity-0'
+        )}
+      />
+      <div
+        className={cn(
+          'pointer-events-none absolute end-0 top-0 bottom-0 z-20 w-6 bg-gradient-to-l rtl:bg-gradient-to-r from-bg-elevated to-transparent transition-opacity duration-200',
+          hasScrollRight ? 'opacity-100' : 'opacity-0'
+        )}
+      />
 
       <div
         ref={scrollRef}
@@ -150,7 +146,7 @@ export function Thead({
   return (
     <thead
       className={cn(
-        'border-b border-border bg-bg-base/90 sticky top-0 z-10 backdrop-blur-sm',
+        'border-b border-border bg-bg-surface sticky top-0 z-10',
         className
       )}
       {...props}
@@ -166,7 +162,7 @@ export function Tbody({
 }: React.HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <tbody
-      className={cn('divide-y divide-border/60', className)}
+      className={cn('divide-y divide-border', className)}
       {...props}
     />
   )
@@ -181,7 +177,7 @@ export function Tr({
   return (
     <tr
       className={cn(
-        'group hover:bg-hover-bg/60 transition-colors duration-150',
+        'group hover:bg-hover-bg transition-colors duration-150',
         className
       )}
       {...props}
@@ -227,7 +223,7 @@ export function Th({
     <th
       className={cn(
         'group px-3 py-3 sm:px-4 sm:py-3.5 text-xs font-semibold uppercase tracking-wider text-text-subtle',
-        'whitespace-nowrap select-none bg-bg-base/90',
+        'whitespace-nowrap select-none bg-bg-surface',
         isRight ? 'text-end' : isCenter ? 'text-center' : 'text-start',
         sortable && 'cursor-pointer hover:text-text transition-colors',
         priorityClass,
@@ -251,7 +247,7 @@ export function Th({
             ) : sorted === 'desc' ? (
               <ArrowDown size={13} className="text-brand stroke-[2.25]" />
             ) : (
-              <ArrowUpDown size={13} className="text-text-subtle/50 group-hover:text-text-muted transition-colors" />
+              <ArrowUpDown size={13} className="text-text-subtle opacity-60 group-hover:opacity-100 group-hover:text-text-muted transition-colors" />
             )}
           </span>
         </span>

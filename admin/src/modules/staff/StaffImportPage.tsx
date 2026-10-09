@@ -209,7 +209,7 @@ export default function StaffImportPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-5 pt-4">
-              <div className="bg-bg-base p-3.5 rounded-lg border border-border">
+              <div className="bg-bg-surface p-3.5 rounded-lg border border-border">
                 <FormField label={__( 'Default Staff System Role (Optional)', 'codeclove-school-management' )}>
                   <Select
                     value={roleId}
@@ -262,9 +262,9 @@ export default function StaffImportPage() {
                     <span className="font-semibold text-text block">{__( 'Mandatory Identity:', 'codeclove-school-management' )}</span>
                     <p className="text-text-subtle mb-1">{__( 'Name and unique email:', 'codeclove-school-management' )}</p>
                     <div className="flex flex-wrap gap-1">
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">first_name</code>
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">last_name</code>
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">email</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">first_name</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">last_name</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">email</code>
                     </div>
                   </div>
                 </div>
@@ -275,9 +275,9 @@ export default function StaffImportPage() {
                     <span className="font-semibold text-text block">{__( 'Employment Details:', 'codeclove-school-management' )}</span>
                     <p className="text-text-subtle mb-1">{__( 'Position & department:', 'codeclove-school-management' )}</p>
                     <div className="flex flex-wrap gap-1">
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">department</code>
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">designation</code>
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">joined_on</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">department</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">designation</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">joined_on</code>
                     </div>
                   </div>
                 </div>
@@ -288,9 +288,9 @@ export default function StaffImportPage() {
                     <span className="font-semibold text-text block">{__( 'Postal Code Presets:', 'codeclove-school-management' )}</span>
                     <p className="text-text-subtle mb-1">{__( 'Flexible header aliases:', 'codeclove-school-management' )}</p>
                     <div className="flex flex-wrap gap-1">
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">zip_code</code>
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">postcode</code>
-                      <code className="px-1.5 py-0.5 rounded bg-bg-base border border-border text-text font-mono text-2xs">pincode</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">zip_code</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">postcode</code>
+                      <code className="px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text font-mono text-2xs">pincode</code>
                     </div>
                   </div>
                 </div>
@@ -403,8 +403,8 @@ export default function StaffImportPage() {
           <TableRoot>
             <Thead>
               <Tr>
-                <Th>{__( 'Row #', 'codeclove-school-management' )}</Th>
-                <Th>{__( 'Status', 'codeclove-school-management' )}</Th>
+                <Th type="number">{__( 'Row #', 'codeclove-school-management' )}</Th>
+                <Th type="badge">{__( 'Status', 'codeclove-school-management' )}</Th>
                 <Th>{__( 'Staff Name', 'codeclove-school-management' )}</Th>
                 <Th>{__( 'Email Address', 'codeclove-school-management' )}</Th>
                 <Th>{__( 'Department / Designation', 'codeclove-school-management' )}</Th>
@@ -413,9 +413,9 @@ export default function StaffImportPage() {
             </Thead>
             <Tbody>
               {filteredRows.map((row) => (
-                <Tr key={row.rowIndex} className={!row.isValid ? 'bg-rose-50/30 dark:bg-rose-950/20' : ''}>
-                  <Td className="font-mono text-xs text-text-subtle">{row.rowIndex}</Td>
-                  <Td>
+                <Tr key={row.rowIndex} className={!row.isValid ? 'bg-danger-dim' : ''}>
+                  <Td type="number" className="font-mono text-xs text-text-subtle tabular-nums">{row.rowIndex}</Td>
+                  <Td type="badge">
                     {row.isValid ? (
                       <Badge variant="success" className="gap-1">
                         <CheckCircle2 className="w-3 h-3" /> {__( 'Ready', 'codeclove-school-management' )}
@@ -464,20 +464,20 @@ export default function StaffImportPage() {
           <TableRoot>
             <Thead>
               <Tr>
-                <Th>{__( 'Row #', 'codeclove-school-management' )}</Th>
+                <Th type="number">{__( 'Row #', 'codeclove-school-management' )}</Th>
                 <Th>{__( 'Staff Number', 'codeclove-school-management' )}</Th>
                 <Th>{__( 'Full Name', 'codeclove-school-management' )}</Th>
-                <Th>{__( 'Status', 'codeclove-school-management' )}</Th>
+                <Th type="badge">{__( 'Status', 'codeclove-school-management' )}</Th>
                 <Th>{__( 'Details', 'codeclove-school-management' )}</Th>
               </Tr>
             </Thead>
             <Tbody>
               {importResult.details.map((item, idx) => (
                 <Tr key={idx}>
-                  <Td className="font-mono text-xs text-text-subtle">{item.row}</Td>
+                  <Td type="number" className="font-mono text-xs text-text-subtle tabular-nums">{item.row}</Td>
                   <Td className="font-mono text-xs font-medium text-text">{item.staff_number || '-'}</Td>
                   <Td className="font-medium text-text">{item.name}</Td>
-                  <Td>
+                  <Td type="badge">
                     {item.status === 'success' ? (
                       <Badge variant="success">{__( 'Success', 'codeclove-school-management' )}</Badge>
                     ) : (

@@ -72,10 +72,6 @@ final class MeController extends BaseController {
 			return false;
 		}
 
-		// Deny WP administrators from accessing self-service profile endpoint.
-		if ( current_user_can( 'manage_options' ) ) {
-			return false;
-		}
 
 		return $this->verify_nonce( $request );
 	}
@@ -85,15 +81,66 @@ final class MeController extends BaseController {
 	 */
 	private function get_current_staff_id(): ?int {
 		global $wpdb;
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return null;
+		}
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Resolving current staff member ID.
 		$staff_id = $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT id FROM %i WHERE user_id = %d AND deleted_at IS NULL',
+				'SELECT id FROM %i WHERE user_id = %d AND deleted_at IS NULL LIMIT 1',
 				Schema::staff_members(),
-				get_current_user_id()
+				$user_id
 			)
 		);
-		return $staff_id ? (int) $staff_id : null;
+		if ( $staff_id ) {
+			return (int) $staff_id;
+		}
+
+		$wp_user = get_userdata( $user_id );
+		if ( ! $wp_user || empty( $wp_user->user_email ) ) {
+			return null;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Resolving staff by email.
+		$staff_by_email = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT id, user_id FROM %i WHERE email = %s AND deleted_at IS NULL LIMIT 1',
+				Schema::staff_members(),
+				$wp_user->user_email
+			),
+			ARRAY_A
+		);
+		if ( $staff_by_email ) {
+			if ( empty( $staff_by_email['user_id'] ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Link user_id to staff record.
+				$wpdb->update( Schema::staff_members(), [ 'user_id' => $user_id ], [ 'id' => (int) $staff_by_email['id'] ] );
+			}
+			return (int) $staff_by_email['id'];
+		}
+
+		// Auto-provision staff record for WP administrators
+		if ( current_user_can( 'manage_options' ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Query owner role.
+			$owner_role_id = (int) $wpdb->get_var(
+				$wpdb->prepare( 'SELECT id FROM %i WHERE slug = %s', Schema::roles(), 'owner' )
+			);
+
+			$created = $this->service->create_staff_member( [
+				'user_id'     => $user_id,
+				'role_id'     => $owner_role_id ?: null,
+				'first_name'  => $wp_user->first_name ?: ( $wp_user->display_name ?: 'Admin' ),
+				'last_name'   => $wp_user->last_name ?: 'User',
+				'email'       => $wp_user->user_email,
+				'designation' => 'Administrator',
+				'status'      => 'active',
+			] );
+
+			return is_array( $created ) && isset( $created['id'] ) ? (int) $created['id'] : null;
+		}
+
+		return null;
 	}
 
 	/**

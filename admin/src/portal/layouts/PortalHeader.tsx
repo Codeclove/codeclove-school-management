@@ -67,7 +67,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
 
   return (
     <header
-      className={`shrink-0 flex h-14 sm:h-16 w-full items-center justify-between border-b border-border/70 bg-bg-surface px-4 sm:px-6 lg:px-8 relative z-20 ${
+      className={`shrink-0 flex h-14 sm:h-16 w-full items-center justify-between border-b border-border bg-bg-surface px-4 sm:px-6 lg:px-8 relative z-20 ${
         isMaximized ? '' : 'rounded-t-2xl'
       }`}
     >
@@ -79,7 +79,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
           aria-expanded={isMobileOpen}
           aria-controls="codeclove-portal-mobile-drawer"
           aria-label={isMobileOpen ? __( 'Close navigation menu', 'codeclove-school-management' ) : __( 'Open navigation menu', 'codeclove-school-management' )}
-          className="rounded-lg p-2 text-text-subtle hover:text-text hover:bg-bg-base transition-colors border border-transparent hover:border-border/50 lg:hidden cursor-pointer"
+          className="rounded-lg p-2 text-text-subtle hover:text-text hover:bg-hover-bg transition-colors border border-transparent hover:border-border lg:hidden cursor-pointer"
         >
           {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -98,7 +98,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
           <StudentSwitcher />
 
           {students.length > 1 && (
-            <div className="h-5 w-px bg-border/70 hidden sm:block mx-0.5" />
+            <div className="h-5 w-px bg-border hidden sm:block mx-0.5" />
           )}
           {/* Notifications (Pro only) */}
           {isPro && <NotificationBell />}
@@ -107,7 +107,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
           <button
             type="button"
             onClick={onToggleMaximize}
-            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-border/70 hover:border-border bg-bg-surface hover:bg-bg-base text-text-muted hover:text-text transition-all shadow-2xs cursor-pointer"
+            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-border hover:border-border-strong bg-bg-surface hover:bg-hover-bg text-text-muted hover:text-text transition-all shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             title={isMaximized ? __( 'Minimize Portal (Esc)', 'codeclove-school-management' ) : __( 'Maximize Portal (Esc)', 'codeclove-school-management' )}
             aria-label={isMaximized ? __( 'Minimize Portal', 'codeclove-school-management' ) : __( 'Maximize Portal', 'codeclove-school-management' )}
           >
@@ -119,7 +119,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
             <button
               type="button"
               onClick={() => setIsUserMenuOpen((prev) => !prev)}
-              className="flex h-10 items-center gap-2 pl-1.5 pr-2.5 rounded-xl border border-border/70 hover:border-border bg-bg-surface hover:bg-bg-base transition-all shadow-2xs text-left cursor-pointer"
+              className="flex h-10 items-center gap-2 pl-1.5 pr-2.5 rounded-xl border border-border hover:border-border-strong bg-bg-surface hover:bg-hover-bg transition-all shadow-2xs text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               aria-expanded={isUserMenuOpen}
               aria-haspopup="true"
             >
@@ -147,7 +147,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
 
             {/* Dropdown Menu */}
             {isUserMenuOpen && (
-              <div className="absolute right-0 mt-1.5 w-60 rounded-xl bg-bg-elevated shadow-modal border border-border/80 py-1 z-50 divide-y divide-border/50 animate-in fade-in-50 slide-in-from-top-1 duration-150">
+              <div className="absolute right-0 mt-1.5 w-60 rounded-xl bg-bg-overlay shadow-modal border border-border py-1 z-50 divide-y divide-border animate-in fade-in-50 slide-in-from-top-1 duration-150">
                 {/* Identity Header */}
                 <div className="px-3.5 py-2.5">
                   <p className="text-xs font-bold text-text truncate">
@@ -174,7 +174,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
                   <Link
                     to="/profile"
                     onClick={() => setIsUserMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-text hover:bg-bg-base hover:text-brand transition-colors"
+                    className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-text hover:bg-hover-bg hover:text-brand transition-colors"
                   >
                     <UserIcon className="w-4 h-4 text-text-subtle" />
                     <span>{__( 'My Profile', 'codeclove-school-management' )}</span>

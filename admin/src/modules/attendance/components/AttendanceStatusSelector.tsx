@@ -32,7 +32,7 @@ const PRIMARY_STATUSES = [
     labelKey: 'Late',
     shortLabelKey: 'Late',
     icon: Clock,
-    activeBg: 'bg-amber-500 text-white shadow-xs ring-1 ring-amber-400 font-semibold',
+    activeBg: 'bg-amber-400 text-amber-950 shadow-xs ring-1 ring-amber-500 font-semibold',
   },
   {
     key: 'on_leave',
@@ -46,7 +46,7 @@ const PRIMARY_STATUSES = [
 const SECONDARY_STATUSES = [
   { key: 'half_day', labelKey: 'Half Day', icon: Sun, color: 'text-orange-500' },
   { key: 'excused', labelKey: 'Excused', icon: ShieldCheck, color: 'text-sky-500' },
-  { key: 'holiday', labelKey: 'Holiday', icon: CalendarOff, color: 'text-slate-400' },
+  { key: 'holiday', labelKey: 'Holiday', icon: CalendarOff, color: 'text-text-subtle' },
 ] as const
 
 const ALL_STATUS_KEYS = ['present', 'absent', 'late', 'on_leave', 'half_day', 'excused', 'holiday'] as const
@@ -66,17 +66,11 @@ export function AttendanceStatusSelector({
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (disabled) return
-    const currentIndex = ALL_STATUS_KEYS.indexOf(status as typeof ALL_STATUS_KEYS[number])
-    if (currentIndex === -1) return
-
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+    const delta = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : (e.key === 'ArrowLeft' || e.key === 'ArrowUp') ? -1 : 0
+    if (delta) {
       e.preventDefault()
-      const nextKey = ALL_STATUS_KEYS[(currentIndex + 1) % ALL_STATUS_KEYS.length]
-      if (nextKey) onChange(nextKey)
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      e.preventDefault()
-      const prevKey = ALL_STATUS_KEYS[(currentIndex - 1 + ALL_STATUS_KEYS.length) % ALL_STATUS_KEYS.length]
-      if (prevKey) onChange(prevKey)
+      const nextIndex = (ALL_STATUS_KEYS.indexOf(status as (typeof ALL_STATUS_KEYS)[number]) + delta + ALL_STATUS_KEYS.length) % ALL_STATUS_KEYS.length
+      onChange(ALL_STATUS_KEYS[nextIndex]!)
     }
   }
 
@@ -96,7 +90,7 @@ export function AttendanceStatusSelector({
       } ${
         secondaryMatch
           ? 'bg-violet-600 text-white font-semibold shadow-xs ring-1 ring-violet-500'
-          : 'bg-transparent text-text-muted hover:text-text hover:bg-bg-subtle/80 font-medium'
+          : 'bg-transparent text-text-muted hover:text-text hover:bg-hover-bg font-medium'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       title={secLabel || __('More Statuses', 'codeclove-school-management')}
     >
@@ -144,20 +138,22 @@ export function AttendanceStatusSelector({
             tabIndex={isSelected || (!isPrimarySelected && !secondaryMatch && item.key === 'present') ? 0 : -1}
             disabled={disabled}
             onClick={() => onChange(item.key)}
-            className={`relative select-none transition-transform duration-100 touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+            className={`relative select-none transition-transform duration-100 touch-manipulation group focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
               fullWidth
                 ? 'w-full min-h-[46px] h-11.5 px-0.5 py-1 rounded-lg flex flex-col items-center justify-center gap-0.5 active:scale-95'
                 : 'inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs rounded-md'
             } ${
               isSelected
                 ? item.activeBg
-                : 'bg-transparent text-text-muted hover:text-text hover:bg-bg-subtle/80 font-medium'
+                : 'bg-transparent text-text-muted hover:text-text hover:bg-hover-bg font-medium'
             } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             <Icon
               size={fullWidth ? 15 : 13}
               className={`shrink-0 ${
-                isSelected ? 'text-white stroke-[2.5]' : 'text-text-subtle group-hover:text-text'
+                isSelected
+                  ? (item.key === 'late' ? 'text-amber-950 stroke-[2.5]' : 'text-white stroke-[2.5]')
+                  : 'text-text-subtle group-hover:text-text'
               }`}
             />
             <span className={`leading-none ${fullWidth ? 'text-3xs font-semibold mt-0.5 truncate' : 'hidden sm:inline'}`}>
@@ -187,7 +183,7 @@ export function AttendanceStatusSelector({
                 setDropdownOpen(false)
               }}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${
-                isSecSelected ? 'bg-brand-dim text-brand font-semibold' : 'hover:bg-bg-surface text-text-muted hover:text-text'
+                isSecSelected ? 'bg-brand-dim text-brand font-semibold' : 'hover:bg-hover-bg text-text-muted hover:text-text'
               }`}
             >
               <SecIcon size={14} className={sec.color} />

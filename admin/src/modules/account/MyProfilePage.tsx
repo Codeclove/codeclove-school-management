@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { User, Sun, Moon, Monitor, Eye, EyeOff } from 'lucide-react'
 import { useMe, useUpdateMe, type UpdateMePayload } from '@/api/me'
 import { useTheme } from '@/lib/theme'
@@ -11,15 +10,10 @@ import {
 import { api } from '@/lib/api-client'
 
 export default function MyProfilePage() {
-  const navigate = useNavigate()
   const toast = useToast()
   const { theme, setTheme } = useTheme()
   const { data: me, isLoading } = useMe()
   const updateMeMutation = useUpdateMe()
-
-  const config = window.CodeCloveConfig
-  const isAdmin = config?.currentUser?.isAdmin
-
   const [activeTab, setActiveTab] = useState<'profile' | 'preferences'>('profile')
   const [showCurrentPass, setShowCurrentPass] = useState(false)
   const [showNewPass, setShowNewPass] = useState(false)
@@ -53,12 +47,7 @@ export default function MyProfilePage() {
   const [photoUrl, setPhotoUrl] = useState('')
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
 
-  useEffect(() => {
-    if (isAdmin) {
-      navigate('/settings')
-    }
-  }, [isAdmin, navigate])
-
+  // Load profile details when me data arrives
   useEffect(() => {
     if (me) {
       setForm(prev => ({
@@ -78,10 +67,6 @@ export default function MyProfilePage() {
       }
     }
   }, [me])
-
-  if (isAdmin) {
-    return null
-  }
 
   if (isLoading) {
     return (

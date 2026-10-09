@@ -58,7 +58,7 @@ export const Dropdown = React.forwardRef<
           align={align}
           sideOffset={sideOffset}
           className={cn(
-            'z-[10000] min-w-[160px] overflow-hidden rounded-lg p-1',
+            'z-[100050] min-w-[160px] overflow-hidden rounded-lg p-1',
             'bg-bg-overlay border border-border shadow-modal outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
             'animate-slide-down',
             className
@@ -104,8 +104,8 @@ export function DropdownItem({
         'flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm cursor-default select-none',
         'transition-colors duration-100 outline-none',
         danger
-          ? 'text-danger data-[highlighted]:bg-danger/10'
-          : 'text-text-muted data-[highlighted]:bg-[var(--hover-bg)] data-[highlighted]:text-text',
+          ? 'text-danger data-[highlighted]:bg-danger-dim'
+          : 'text-text-muted data-[highlighted]:bg-hover-bg data-[highlighted]:text-text',
         disabled && 'opacity-50 pointer-events-none',
         className
       )}

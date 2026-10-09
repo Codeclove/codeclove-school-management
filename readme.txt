@@ -5,7 +5,7 @@ Donate link: https://codeclove.com/plugins/codeclove-school-management-pro/
 Requires at least: 6.5
 Tested up to: 7.1.2
 Requires PHP: 8.1
-Stable tag: 1.0.5
+Stable tag: 1.0.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,9 +15,29 @@ school management for WordPress. Unlimited students, no monthly fees. Admissions
 
 **CodeClove School Management System** handles student records, staff directories, academic sessions, daily attendance, fee invoicing, and a parent-student self-service portal — all from your WordPress admin. No SaaS fees, no student caps, no data leaving your server.
 
+🔗 **Quick Links & Resources:**
+* 🚀 **[Try Live Interactive Demo](https://demo.codeclove.com/school-management-pro/?utm_source=wporg&utm_medium=readme&utm_campaign=demo)** — Test-drive the admin dashboard and student portal with preloaded school data.
+* ⭐ **[Upgrade to CodeClove Pro](https://codeclove.com/plugins/codeclove-school-management-pro/?utm_source=wporg&utm_medium=readme&utm_campaign=pro_header)** — Unlock online payments, master timetable, and automated SMS alerts.
+* 🔄 **[Compare Free vs Pro](https://codeclove.com/plugins/codeclove-school-management-pro/#compare?utm_source=wporg&utm_medium=readme&utm_campaign=compare_anchor)** — View full side-by-side feature comparison.
+* 📖 **[Documentation & Guides](https://docs.codeclove.com/school-management-pro/?utm_source=wporg&utm_medium=readme&utm_campaign=docs)** — Step-by-step guides for grading scales and admissions.
+
 = Works worldwide — built-in presets for India, US, and UK =
 
 Pick your country during setup and the plugin configures grading conventions, phone formats, currency symbols, academic terms, and date formats automatically. Built-in presets cover India (CBSE/ICSE), United States (K-12), and United Kingdom (Key Stages). Every setting is fully customizable for any other country or curriculum.
+
+= Free vs Pro Comparison =
+
+* **Student & Staff Directory:** Free includes unlimited records | Pro includes unlimited records
+* **Country Presets (IN, US, GB):** Free includes full presets | Pro includes full presets
+* **Student & Guardian Portal:** Free includes full self-service portal | Pro includes full self-service portal
+* **Daily Attendance Register:** Free includes student & staff register | Pro includes auto-marking & teacher substitution sync
+* **Fee Invoicing & Receipts:** Free includes fee heads & offline payments | Pro includes automated fee defaulter statements & reminders
+* **Online Payment Gateways:** Free (offline only) | Pro includes Stripe, PayPal, Razorpay & UPI
+* **Timetable & Scheduling:** Free (none) | Pro includes drag-and-drop weekly timetable matrix & substitution manager
+* **Automated Notifications:** Free includes standard WP email | Pro includes SMS (Twilio, MSG91) & WhatsApp messaging
+* **Year-End Student Promotion:** Free (manual) | Pro includes 1-click batch cohort promotion between sessions
+* **Role Permissions Matrix:** Free includes predefined roles | Pro includes granular capability builder per role
+* **Support:** Free via WP.org community forums | Pro includes priority engineering helpdesk
 
 = Free features =
 
@@ -34,19 +54,17 @@ Pick your country during setup and the plugin configures grading conventions, ph
 * **Dark mode.** Full dark theme for the admin interface.
 * **Zero tracking.** No Google Fonts, no external CDNs, no analytics calls. Everything loads from your server.
 
-= School Management Pro =
+= Why Upgrade to CodeClove Pro? =
 
-The free plugin covers daily operations. [School Management Pro](https://codeclove.com/plugins/codeclove-school-management-pro/) is **$59/year** and adds:
+The free plugin covers complete daily school operations. [CodeClove Pro](https://codeclove.com/plugins/codeclove-school-management-pro/?utm_source=wporg&utm_medium=readme&utm_campaign=pro_benefits) is designed for institutions requiring automated billing, parent communication, and schedule coordination:
 
-* **Revenue analytics.** Fee collection graphs, forecasting, and payment mode breakdowns.
-* **Defaulter tracking.** Automatic overdue invoice reports.
-* **Online payments.** Stripe, PayPal, Razorpay, and Indian UPI checkout.
-* **Timetable builder.** Weekly schedule matrix with teacher substitution handling.
-* **SMS notifications.** Twilio, Vonage, Fast2SMS, and MSG91 integrations.
-* **Noticeboard.** School-wide or targeted announcements and circulars.
-* **Batch promotion.** Move students between academic sessions at year-end in one operation.
-* **Permission matrix.** Capability control per role across teachers, accountants, and staff.
-* **Priority support.** Email and ticket support with onboarding help.
+* **Eliminate Manual Fee Chasing:** Accept card and digital payments directly via Stripe and PayPal. Automatically generate fee defaulter statements with 1-click reminders.
+* **Master Timetable & Substitutions:** Drag-and-drop weekly timetable matrix with teacher clash detection and daily absent teacher substitution manager.
+* **Instant SMS & WhatsApp Alerts:** Keep parents informed about student absences, exam announcements, and due dates via Twilio, Vonage, or Fast2SMS.
+* **1-Click Session Rollover:** Promote entire cohorts into their next grade level and clone class structures without re-entering data.
+* **100% Seamless Data Parity:** Upgrade anytime with zero migration — your existing free data is preserved with zero downtime.
+
+👉 **[View Pro Features, Pricing & Live Demo →](https://codeclove.com/plugins/codeclove-school-management-pro/?utm_source=wporg&utm_medium=readme&utm_campaign=pro_cta)**
 
 == Installation ==
 
@@ -114,11 +132,17 @@ Third-party libraries in the compiled output:
 All bundled libraries are open-source and GPL-compatible.
 
 == Changelog ==
+= 1.0.6 =
+* Feature: Added voluntary deactivation feedback survey to understand user needs.
+* Fix: Routed feedback and bug report receiver to correct telemetry destination.
+* Tweak: Hardened HTTP timeout and payload structure for in-dashboard bug reporting.
+
 = 1.0.5 =
 * Feature: Enhanced student admissions and portal workflow.
 * Fix: Allow initial staff attendance submission with default present statuses.
 * Tweak: Modernized fee stationery letterhead and statement header layout.
 * Tweak: Updated compatibility and core asset optimizations.
+
 = 1.0.3 =
 * Tweak: Improved readme short description to fit WordPress.org 150-character limit.
 * Tweak: Corrected "Tested up to" version to 7.1.2.

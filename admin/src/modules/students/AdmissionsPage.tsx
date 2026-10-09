@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSession } from '@/lib/session-context'
 import { __, sprintf } from '@/lib/i18n'
 import {
-  Search, AlertTriangle, Eye, Pencil, X, Download, Trash2
+  Search, Eye, Pencil, X, Download, Trash2
 } from 'lucide-react'
 import {
   useAdmissions,
@@ -18,13 +18,12 @@ import {
 import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
 import {
-  Button, Badge, Card, CardContent,
+  Button, Badge, Card,
   FormField, Input, Select,
-  TableRoot, Thead, Tbody, Tr, Th, Td, TableEmpty, TableSkeleton,
-  PageHeader, EmptyState, Modal, ModalFooter,
+  PageHeader, Modal, ModalFooter,
+  DataTable, type DataTableColumn,
   type BadgeProps
 } from '@/components/ui'
-import { TablePagination } from '@/components/ui/TablePagination'
 import { useTableState } from '@/lib/useTableState'
 import { useDebounce } from '@/lib/useDebounce'
 import { useFormatter } from '@/lib/formatter'
@@ -58,7 +57,7 @@ export default function AdmissionsPage() {
   const debouncedSearch = useDebounce(search, 350)
 
   const table = useTableState()
-  const { selectedIds, toggleSelect, toggleSelectAll, isSelected, isAllSelected, clearSelection } = table
+  const { selectedIds, clearSelection } = table
 
   const statusConfig: Record<
     AdmissionApplication['status'],
@@ -79,12 +78,14 @@ export default function AdmissionsPage() {
   // Reset class level filter if the globally active session changes
   useEffect(() => {
     setUnitId('')
-  }, [sessionId])
+    table.clearSelection()
+  }, [sessionId, table.clearSelection])
 
-  // Reset page when filters change
+  // Reset page and selection when filters change
   useEffect(() => {
     table.resetPage()
-  }, [unitId, status, datePreset, debouncedSearch, table.resetPage])
+    table.clearSelection()
+  }, [unitId, status, datePreset, debouncedSearch, table.resetPage, table.clearSelection])
 
   const getDateRange = (preset: string) => {
     if (!preset) return { date_from: undefined, date_to: undefined }
@@ -293,6 +294,99 @@ export default function AdmissionsPage() {
     link.click()
   }
 
+  const columns: DataTableColumn<AdmissionApplication>[] = useMemo(
+    () => [
+      {
+        key: 'reference_number',
+        header: __( 'Reference', 'codeclove-school-management' ),
+        type: 'code',
+        sortable: true,
+        sortKey: 'reference_number',
+        render: (app) => app.reference_number,
+      },
+      {
+        key: 'student_first_name',
+        header: __( 'Applicant Name', 'codeclove-school-management' ),
+        type: 'primary',
+        sortable: true,
+        sortKey: 'student_first_name',
+        render: (app) => `${app.student_first_name} ${app.student_last_name}`,
+      },
+      {
+        key: 'academic_unit_id',
+        header: unitLabelSingular,
+        render: (app) => {
+          const matchedUnit = units.find((u) => u.id === app.academic_unit_id)
+          return matchedUnit?.name ?? '—'
+        },
+      },
+      {
+        key: 'guardian_name',
+        header: sprintf(__( 'Primary %s', 'codeclove-school-management' ), guardianLabelSingular),
+        render: (app) => app.guardian_name || '—',
+      },
+      {
+        key: 'submitted_at',
+        header: __( 'Submission Date', 'codeclove-school-management' ),
+        type: 'date',
+        sortable: true,
+        sortKey: 'submitted_at',
+        render: (app) => formatDate(app.submitted_at),
+      },
+      {
+        key: 'status',
+        header: __( 'Status', 'codeclove-school-management' ),
+        type: 'badge',
+        sortable: true,
+        sortKey: 'status',
+        render: (app) => {
+          const statusCfg = statusConfig[app.status] ?? { label: app.status, variant: 'default' as const }
+          return (
+            <Badge variant={statusCfg.variant} size="sm">
+              {statusCfg.label}
+            </Badge>
+          )
+        },
+      },
+      {
+        key: 'actions',
+        header: __( 'Actions', 'codeclove-school-management' ),
+        type: 'actions',
+        render: (app) => (
+          <div className="flex items-center justify-end gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/students/admissions/${app.id}`)}
+              className="h-8 w-8 text-text-subtle hover:text-brand"
+              title={__( 'View Details', 'codeclove-school-management' )}
+            >
+              <Eye size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/students/admissions/${app.id}/edit`)}
+              className="h-8 w-8 text-text-subtle hover:text-brand"
+              title={__( 'Edit Application', 'codeclove-school-management' )}
+            >
+              <Pencil size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleSingleDelete(app.id, `${app.student_first_name} ${app.student_last_name}`)}
+              className="h-8 w-8 text-text-subtle hover:text-danger"
+              title={__( 'Delete Record', 'codeclove-school-management' )}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [unitLabelSingular, guardianLabelSingular, units, statusConfig, formatDate, navigate]
+  )
   return (
     <div className="space-y-5 w-full">
       <PageHeader
@@ -375,6 +469,7 @@ export default function AdmissionsPage() {
                   setDatePreset('')
                   setSearch('')
                   table.resetPage()
+                  table.clearSelection()
                 }}
               >
                 <X size={12} />
@@ -395,181 +490,75 @@ export default function AdmissionsPage() {
         </div>
       </Card>
 
-      {/* Applications List */}
-      <Card className="shadow-sm">
-        {selectedIds.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 flex-wrap px-4 py-2 bg-brand-dim/10 border-b border-border/60 text-xs font-semibold text-brand rounded-t-lg">
-            <span>{sprintf(__( '%1$d %2$s(s) selected', 'codeclove-school-management' ), selectedIds.length, admissionLabelSingular.toLowerCase())}</span>
-            <div className="flex items-center gap-2">
-              <Select
-                value=""
-                onValueChange={(val) => {
-                  if (val === 'delete') {
-                    handleBulkDelete()
-                  } else if (val === 'convert') {
-                    setConvertModalOpen(true)
-                  } else if (val === 'export') {
-                    handleExportCSV()
-                  } else if (val.startsWith('status:')) {
-                    handleBulkStatus(val.replace('status:', ''))
-                  }
-                }}
-                placeholder={__( 'Bulk Actions', 'codeclove-school-management' )}
-                options={[
-                  { value: '', label: __( 'Bulk Actions', 'codeclove-school-management' ) },
-                  ...Object.entries(statusConfig).map(([k, v]) => ({
-                    value: `status:${k}`,
-                    label: sprintf(__( 'Mark %s', 'codeclove-school-management' ), v.label),
-                  })),
-                  { value: 'convert', label: __( 'Convert to Students', 'codeclove-school-management' ) },
-                  { value: 'export', label: __( 'Export Selected to CSV', 'codeclove-school-management' ) },
-                  { value: 'delete', label: __( 'Delete Selected', 'codeclove-school-management' ) },
-                ]}
-                className="h-7 text-xs w-full sm:w-48 bg-bg-base"
-              />
-            </div>
-          </div>
-        )}
-        <CardContent className="p-0 overflow-hidden">
-          {isError ? (
-            <EmptyState
-              title={sprintf(__( 'Could not load %s', 'codeclove-school-management' ), admissionLabelPlural.toLowerCase())}
-              description={sprintf(__( 'An error occurred while loading the %s logs.', 'codeclove-school-management' ), admissionLabelSingular.toLowerCase())}
-              icon={AlertTriangle}
-              action={<Button size="sm" onClick={() => refetch()}>{__( 'Try again', 'codeclove-school-management' )}</Button>}
-            />
-          ) : (
-            <TableRoot>
-              <Thead>
-                <Tr>
-                  <Th className="w-10">
-                    <input
-                      type="checkbox"
-                      checked={applications.length > 0 && isAllSelected(applications.map(a => a.id))}
-                      onChange={() => toggleSelectAll(applications.map(a => a.id))}
-                      className="rounded border-border text-brand focus:ring-brand"
-                    />
-                  </Th>
-                  <Th type="code" {...table.getSortProps('reference_number')}>{__( 'Reference', 'codeclove-school-management' )}</Th>
-                  <Th type="primary" {...table.getSortProps('student_first_name')}>{__( 'Applicant Name', 'codeclove-school-management' )}</Th>
-                  <Th>{unitLabelSingular}</Th>
-                  <Th>{sprintf(__( 'Primary %s', 'codeclove-school-management' ), guardianLabelSingular)}</Th>
-                  <Th type="date" {...table.getSortProps('submitted_at')}>{__( 'Submission Date', 'codeclove-school-management' )}</Th>
-                  <Th type="badge" {...table.getSortProps('status')}>{__( 'Status', 'codeclove-school-management' )}</Th>
-                  <Th type="actions">{__( 'Actions', 'codeclove-school-management' )}</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {isLoading ? (
-                  <TableSkeleton columns={8} rows={5} />
-                ) : applications.length === 0 ? (
-                  <TableEmpty
-                    colSpan={8}
-                    icon={entity.icon}
-                    message={
-                      debouncedSearch || unitId || status
-                        ? __( 'No Applications Match Filters', 'codeclove-school-management' )
-                        : sprintf(__( 'No %s Found', 'codeclove-school-management' ), admissionLabelPlural)
-                    }
-                    description={
-                      debouncedSearch || unitId || status
-                        ? __( 'Try adjusting your search query, class level, or status filter.', 'codeclove-school-management' )
-                        : __( 'No admission applications are currently registered in the database.', 'codeclove-school-management' )
-                    }
-                    action={
-                      (debouncedSearch || unitId || status || datePreset) ? (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => {
-                            setUnitId('')
-                            setStatus('')
-                            setDatePreset('')
-                            setSearch('')
-                            table.resetPage()
-                          }}
-                        >
-                          {__( 'Clear Filters', 'codeclove-school-management' )}
-                        </Button>
-                      ) : undefined
-                    }
-                  />
-                ) : (
-                  applications.map((app) => {
-                    const matchedUnit = units.find((u) => u.id === app.academic_unit_id)
-                    const statusCfg = statusConfig[app.status] ?? { label: app.status, variant: 'default' }
-                    const formattedDate = formatDate(app.submitted_at)
-
-                    return (
-                      <Tr key={app.id} className="table-row-hover">
-                        <Td className="w-10">
-                          <input
-                            type="checkbox"
-                            checked={isSelected(app.id)}
-                            onChange={() => toggleSelect(app.id)}
-                            className="rounded border-border text-brand focus:ring-brand"
-                          />
-                        </Td>
-                        <Td type="code">{app.reference_number}</Td>
-                        <Td type="primary">
-                          {app.student_first_name} {app.student_last_name}
-                        </Td>
-                        <Td>{matchedUnit?.name ?? '—'}</Td>
-                        <Td>{app.guardian_name}</Td>
-                        <Td type="date">{formattedDate}</Td>
-                        <Td type="badge">
-                          <Badge variant={statusCfg.variant} size="sm">
-                            {statusCfg.label}
-                          </Badge>
-                        </Td>
-                        <Td type="actions">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => navigate(`/students/admissions/${app.id}`)}
-                              className="h-8 w-8 text-text-subtle hover:text-brand"
-                              title={__( 'View Details', 'codeclove-school-management' )}
-                            >
-                              <Eye size={14} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => navigate(`/students/admissions/${app.id}/edit`)}
-                              className="h-8 w-8 text-text-subtle hover:text-brand"
-                              title={__( 'Edit Application', 'codeclove-school-management' )}
-                            >
-                              <Pencil size={14} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleSingleDelete(app.id, `${app.student_first_name} ${app.student_last_name}`)}
-                              className="h-8 w-8 text-text-subtle hover:text-danger"
-                              title={__( 'Delete Record', 'codeclove-school-management' )}
-                            >
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
-                        </Td>
-                      </Tr>
-                    )
-                  })
-                )}
-              </Tbody>
-            </TableRoot>
-          )}
-        </CardContent>
-
-        {/* Pagination */}
-        {!isLoading && !isError && (
-          <TablePagination
-            {...table.paginationProps}
-            total={total}
+      {/* Applications Data Table */}
+      <DataTable<AdmissionApplication>
+        data={applications}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        errorMessage={sprintf(__( 'Could not load %s', 'codeclove-school-management' ), admissionLabelPlural.toLowerCase())}
+        onRetry={() => refetch()}
+        selectable
+        onRowClick={(app) => navigate(`/students/admissions/${app.id}`)}
+        bulkActions={
+          <Select
+            value=""
+            onValueChange={(val) => {
+              if (val === 'delete') {
+                handleBulkDelete()
+              } else if (val === 'convert') {
+                setConvertModalOpen(true)
+              } else if (val === 'export') {
+                handleExportCSV()
+              } else if (val.startsWith('status:')) {
+                handleBulkStatus(val.replace('status:', ''))
+              }
+            }}
+            placeholder={__( 'Bulk Actions', 'codeclove-school-management' )}
+            options={[
+              { value: '', label: __( 'Bulk Actions', 'codeclove-school-management' ) },
+              ...Object.entries(statusConfig).map(([k, v]) => ({
+                value: `status:${k}`,
+                label: sprintf(__( 'Mark %s', 'codeclove-school-management' ), v.label),
+              })),
+              { value: 'convert', label: __( 'Convert to Students', 'codeclove-school-management' ) },
+              { value: 'export', label: __( 'Export Selected to CSV', 'codeclove-school-management' ) },
+              { value: 'delete', label: __( 'Delete Selected', 'codeclove-school-management' ) },
+            ]}
+            className="h-7 text-xs w-full sm:w-48 bg-bg-surface"
           />
-        )}
-      </Card>
+        }
+        emptyState={{
+          icon: entity.icon,
+          message:
+            debouncedSearch || unitId || status || datePreset
+              ? __( 'No Applications Match Filters', 'codeclove-school-management' )
+              : sprintf(__( 'No %s Found', 'codeclove-school-management' ), admissionLabelPlural),
+          description:
+            debouncedSearch || unitId || status || datePreset
+              ? __( 'Try adjusting your search query, class level, or status filter.', 'codeclove-school-management' )
+              : __( 'No admission applications are currently registered in the database.', 'codeclove-school-management' ),
+          action:
+            debouncedSearch || unitId || status || datePreset ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setUnitId('')
+                  setStatus('')
+                  setDatePreset('')
+                  setSearch('')
+                  table.resetPage()
+                  table.clearSelection()
+                }}
+              >
+                {__( 'Clear Filters', 'codeclove-school-management' )}
+              </Button>
+            ) : undefined,
+        }}
+      />
 
       {/* Bulk Conversion Modal */}
       <Modal

@@ -18,6 +18,7 @@ import { useLabels } from '@/lib/labels'
 import { useFormatter } from '@/lib/formatter'
 import { useSession } from '@/lib/session-context'
 import { useSettings } from '@/api/settings'
+import { onFormError } from '@/lib/form-errors'
 import {
   Button,
   PageHeader,
@@ -60,6 +61,8 @@ export default function CreateInvoicePage() {
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null)
   const [selectedStudent, setSelectedStudent]   = useState<FullStudent | null>(null)
   const [showDropdown, setShowDropdown]         = useState(false)
+  const [studentError, setStudentError]         = useState<string | null>(null)
+  const [attemptedSubmit, setAttemptedSubmit]   = useState(false)
 
   const { data: studentDetailsData } = useStudentDetails(selectedStudentId ?? 0)
 
@@ -222,6 +225,7 @@ export default function CreateInvoicePage() {
     setSelectedStudent(s)
     setStudentSearch('')
     setShowDropdown(false)
+    setStudentError(null)
   }
 
   const clearStudent = () => {
@@ -235,8 +239,11 @@ export default function CreateInvoicePage() {
   const [duplicateWarning, setDuplicateWarning] = useState<{ existing_invoice_id: number; status: 'draft' | 'issued' } | null>(null)
 
   const handleFormSubmit = (status: 'draft' | 'issued', force = false) => {
+    setAttemptedSubmit(true)
     if (!selectedStudentId) {
-      toast.error(sprintf(__('Please select a %s.', 'codeclove-school-management'), studentLabel.toLowerCase()))
+      const err = sprintf(__('Please select a %s.', 'codeclove-school-management'), studentLabel.toLowerCase())
+      setStudentError(err)
+      toast.error(err)
       return
     }
     if (lineItems.some(li => !li.description.trim())) {
@@ -248,7 +255,6 @@ export default function CreateInvoicePage() {
       try {
         // Force flag is accepted by server to bypass duplicate invoice block
         const payload = {
-          student_id:           selectedStudentId,
           academic_session_id:  session?.id,
           academic_term_id:     values.termId ? Number(values.termId) : undefined,
           issue_date:           values.issueDate,
@@ -286,7 +292,7 @@ export default function CreateInvoicePage() {
         const message = err instanceof Error ? err.message : ''
         toast.error(message || sprintf(__('Failed to create %s', 'codeclove-school-management'), invoiceLabel.toLowerCase()))
       }
-    })()
+    }, onFormError)()
   }
 
   const studentEnrollmentLabel = (s: FullStudent): string => {
@@ -341,23 +347,21 @@ export default function CreateInvoicePage() {
       />
 
       {duplicateWarning && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+        <div className="bg-warning-dim border border-warning/30 rounded-xl p-4 text-sm text-text flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
           <div>
-            <p className="font-semibold">{__('Duplicate Invoice Warning', 'codeclove-school-management')}</p>
-            <p>{__('An active invoice containing the same fee type(s) already exists for this student, term, and academic session. You can view the existing invoice or proceed to create another one.', 'codeclove-school-management')}</p>
+            <p className="font-semibold text-warning">{__('Duplicate Invoice Warning', 'codeclove-school-management')}</p>
+            <p className="text-xs text-text-muted mt-0.5">{__('An active invoice containing the same fee type(s) already exists for this student, term, and academic session. You can view the existing invoice or proceed to create another one.', 'codeclove-school-management')}</p>
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="secondary"
               size="sm"
-              className="border-amber-300 text-amber-900 hover:bg-amber-100"
               onClick={() => navigate(`/finance/invoices/${duplicateWarning.existing_invoice_id}`)}
             >
               {__('View Existing Invoice', 'codeclove-school-management')}
             </Button>
             <Button
               size="sm"
-              className="bg-amber-600 hover:bg-amber-700 text-white"
               onClick={() => {
                 handleFormSubmit(duplicateWarning.status, true)
                 setDuplicateWarning(null)
@@ -368,7 +372,6 @@ export default function CreateInvoicePage() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-amber-800 hover:bg-amber-100"
               onClick={() => setDuplicateWarning(null)}
             >
               {__('Cancel', 'codeclove-school-management')}
@@ -415,7 +418,7 @@ export default function CreateInvoicePage() {
               </div>
 
               {/* Step 2 — Student search + list */}
-              <FormField label={studentLabel} required>
+              <FormField label={studentLabel} required error={studentError || undefined}>
                 {selectedStudent ? (
                   /* ── Confirmed student card ── */
                   <div className="flex items-start justify-between gap-3 p-3 rounded-lg border border-brand/40 bg-brand/5">
@@ -479,16 +482,21 @@ export default function CreateInvoicePage() {
                           : __('Type student name or ID to search…', 'codeclove-school-management')
                       }
                       value={studentSearch}
+                      error={Boolean(studentError)}
+                      aria-invalid={Boolean(studentError)}
                       onChange={(e) => {
                         setStudentSearch(e.target.value)
                         setShowDropdown(true)
+                        if (studentError) {
+                          setStudentError(null)
+                        }
                       }}
                       onFocus={() => setShowDropdown(hasClassFilter || studentSearch.length >= 2)}
                       autoFocus={!hasClassFilter}
                     />
 
                     {showDropdown && !selectedStudentId && (
-                      <div className="absolute left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto bg-bg-surface border border-border rounded-lg shadow-xl">
+                      <div className="absolute left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto bg-bg-overlay border border-border rounded-lg shadow-xl">
                         {studentsList.length === 0 ? (
                           <div className="px-4 py-3 text-xs text-text-muted">
                             {studentSearch.length >= 2
@@ -503,7 +511,7 @@ export default function CreateInvoicePage() {
                                 key={s.id}
                                 type="button"
                                 onClick={() => selectStudent(s)}
-                                className="w-full text-left cursor-pointer px-4 py-2.5 hover:bg-bg-base transition-colors border-b border-border/30 last:border-0"
+                                className="w-full text-left cursor-pointer px-4 py-2.5 hover:bg-hover-bg transition-colors border-b border-border/30 last:border-0"
                               >
                                 <div className="flex items-center justify-between gap-2">
                                   <span className="font-semibold text-text text-xs">
@@ -576,7 +584,7 @@ export default function CreateInvoicePage() {
                 </div>
 
                 {lineItems.map((li, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-[2fr_3fr_2fr_2fr_auto] gap-2 items-end border border-border/40 md:border-0 p-3 md:p-0 rounded-lg md:rounded-none bg-bg-base/20 md:bg-transparent">
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-[2fr_3fr_2fr_2fr_auto] gap-2 items-end border border-border md:border-0 p-3 md:p-0 rounded-lg md:rounded-none bg-bg-surface md:bg-transparent">
                     {/* Fee Type */}
                     <div>
                       <label className="md:hidden text-2xs uppercase font-semibold text-text-muted block mb-1">{__('Fee Type', 'codeclove-school-management')}</label>
@@ -596,6 +604,8 @@ export default function CreateInvoicePage() {
                         type="text"
                         placeholder={__('e.g. Term 2 Tuition', 'codeclove-school-management')}
                         value={li.description}
+                        error={attemptedSubmit && !li.description.trim()}
+                        aria-invalid={attemptedSubmit && !li.description.trim()}
                         onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                         required
                       />
@@ -610,6 +620,7 @@ export default function CreateInvoicePage() {
                         placeholder="0.00"
                         value={li.fee_amount}
                         onChange={(e) => updateLineItem(index, 'fee_amount', e.target.value)}
+                        className="font-mono text-sm"
                       />
                     </div>
                     {/* Concession */}
@@ -622,6 +633,7 @@ export default function CreateInvoicePage() {
                         placeholder="0.00"
                         value={li.concession}
                         onChange={(e) => updateLineItem(index, 'concession', e.target.value)}
+                        className="font-mono text-sm"
                       />
                     </div>
                     {/* Remove */}
@@ -655,6 +667,7 @@ export default function CreateInvoicePage() {
                     min="0"
                     placeholder="0.00"
                     {...register('invoiceDiscount')}
+                    className="font-mono text-sm"
                   />
                 </FormField>
                 <FormField label={__('Reason', 'codeclove-school-management')} error={errors.discountNote?.message} hint={__('e.g. Sibling discount, Merit scholarship', 'codeclove-school-management')}>
@@ -684,7 +697,7 @@ export default function CreateInvoicePage() {
                   return (
                     <div key={i} className="flex justify-between text-xs">
                       <span className="text-text-muted truncate max-w-[60%]">{li.description || sprintf(__('Item %d', 'codeclove-school-management'), i + 1)}</span>
-                      <span className="text-text font-medium">{formatCurrency(Math.round(net * 100))}</span>
+                      <span className="text-text font-medium tabular-nums">{formatCurrency(Math.round(net * 100))}</span>
                     </div>
                   )
                 })}
@@ -693,17 +706,17 @@ export default function CreateInvoicePage() {
               <div className="border-t border-border pt-3 space-y-2 text-xs">
                 <div className="flex justify-between text-text-muted">
                   <span>{__('Fee Subtotal', 'codeclove-school-management')}</span>
-                  <span className="font-medium text-text">{formatCurrency(Math.round(lineSubtotal * 100))}</span>
+                  <span className="font-medium text-text tabular-nums">{formatCurrency(Math.round(lineSubtotal * 100))}</span>
                 </div>
                 {invoiceDiscountAmt > 0 && (
                   <div className="flex justify-between text-success">
                     <span>{__('Concession', 'codeclove-school-management')}</span>
-                    <span className="font-medium">− {formatCurrency(Math.round(invoiceDiscountAmt * 100))}</span>
+                    <span className="font-medium tabular-nums">− {formatCurrency(Math.round(invoiceDiscountAmt * 100))}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm font-bold text-text border-t border-border pt-2">
                   <span>{__('Net Payable', 'codeclove-school-management')}</span>
-                  <span className="text-brand">{formatCurrency(Math.round(netPayable * 100))}</span>
+                  <span className="text-brand tabular-nums">{formatCurrency(Math.round(netPayable * 100))}</span>
                 </div>
               </div>
 

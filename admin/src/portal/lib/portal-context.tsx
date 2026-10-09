@@ -99,17 +99,38 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
   const logoUrl = school?.logo || window.CodeClovePortalConfig?.logoUrl
   const logoutUrl = window.CodeClovePortalConfig?.logoutUrl ?? '/wp-login.php?action=logout'
 
-  // Apply appearance theme color and UI display scale to portal root element
+  // Apply appearance theme color, UI display scale, and dark mode to portal root element
   useEffect(() => {
     const root = document.getElementById('codeclove-portal-root')
     if (!root) return
 
     const themeColor = settings?.appearance?.theme_color || 'classic_indigo'
     const uiScale = settings?.appearance?.ui_scale || '100%'
+    const rawMode = settings?.appearance?.theme_mode || settings?.appearance?.mode
 
     root.setAttribute('data-theme-color', themeColor)
     root.style.setProperty('--codeclove-view-scale', uiScale)
-  }, [settings?.appearance?.theme_color, settings?.appearance?.ui_scale])
+
+    const applyThemeMode = () => {
+      const isDark = rawMode === 'dark' || (rawMode !== 'light' && window.matchMedia?.('(prefers-color-scheme: dark)')?.matches)
+      root.classList.toggle('dark', Boolean(isDark))
+    }
+
+    applyThemeMode()
+
+    if (!rawMode || rawMode === 'system') {
+      const mql = window.matchMedia?.('(prefers-color-scheme: dark)')
+      if (mql) {
+        mql.addEventListener('change', applyThemeMode)
+        return () => mql.removeEventListener('change', applyThemeMode)
+      }
+    }
+  }, [
+    settings?.appearance?.theme_color,
+    settings?.appearance?.ui_scale,
+    settings?.appearance?.theme_mode,
+    settings?.appearance?.mode,
+  ])
 
   const value: PortalContextValue = {
     currentStudent,

@@ -5,7 +5,7 @@ import { Bell, Mail, Server, Eye, ChevronDown, ChevronUp, AlertCircle, CheckCirc
 import type { UseFormRegister, Control, UseFormWatch, Path } from 'react-hook-form'
 import type { CodeCloveSettings } from '@/api/settings'
 import { useSendTestEmail } from '@/api/settings'
-import { FormGroup, FormInput, FormSelect, FormCheckbox } from '../components/SettingsFormPrimitives'
+import { FormGroup, FormInput, FormSelect, FormCheckbox, FormTextarea } from '../components/SettingsFormPrimitives'
 import { Button, Card, Spinner } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { __ } from '@/lib/i18n'
@@ -17,43 +17,6 @@ interface NotificationsTabProps {
   control: Control<CodeCloveSettings>
   watch: UseFormWatch<CodeCloveSettings>
 }
-
-interface FormTextareaProps {
-  label: string
-  name: Path<CodeCloveSettings>
-  register: Register
-  placeholder?: string
-  className?: string
-  rows?: number
-}
-
-function FormTextarea({
-  label,
-  name,
-  register,
-  placeholder,
-  className,
-  rows = 5,
-}: FormTextareaProps) {
-  return (
-    <div className="space-y-1 col-span-full">
-      <label className="text-xs font-semibold text-text-muted">{label}</label>
-      <textarea
-        placeholder={placeholder}
-        rows={rows}
-        {...register(name)}
-        className={cn(
-          'w-full p-3 rounded border border-border bg-bg-surface text-sm text-text transition-colors duration-100',
-          'placeholder:text-text-subtle',
-          'hover:border-border-strong',
-          'focus:outline-none focus:ring-1 focus:ring-brand-ring focus:border-brand',
-          className
-        )}
-      />
-    </div>
-  )
-}
-
 export function NotificationsTab({ register, control, watch }: NotificationsTabProps) {
   const mailDriver = watch('notifications.mail_driver') as 'wp_mail' | 'smtp' | undefined
   const [openTemplate, setOpenTemplate] = useState<string | null>(null)
@@ -296,7 +259,7 @@ export function NotificationsTab({ register, control, watch }: NotificationsTabP
               className={cn(
                 'flex items-start gap-3 p-3 rounded-lg text-xs leading-normal',
                 testResult.success
-                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'
+                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                   : 'bg-danger-dim border border-danger/20 text-danger'
               )}
             >
@@ -347,7 +310,7 @@ export function NotificationsTab({ register, control, watch }: NotificationsTabP
                     'w-full flex items-center justify-between px-4 py-3.5 text-start transition-colors duration-100 font-sans',
                     isOpen
                       ? 'bg-brand-dim/40 hover:bg-brand-dim/50'
-                      : 'bg-bg-surface hover:bg-bg-base/60'
+                      : 'bg-bg-surface hover:bg-hover-bg'
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -360,8 +323,8 @@ export function NotificationsTab({ register, control, watch }: NotificationsTabP
                       )}
                     />
                     <div>
-                      <h4 className={cn('text-xs font-semibold leading-snug', isOpen ? 'text-brand' : 'text-text')}>{tpl.title}</h4>
-                      <p className="text-3xs text-text-muted mt-0.5 leading-normal">{tpl.desc}</p>
+                      <h4 className="text-sm font-semibold text-text">{tpl.title}</h4>
+                      <p className="text-xs text-text-muted mt-0.5 leading-normal">{tpl.desc}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -378,7 +341,7 @@ export function NotificationsTab({ register, control, watch }: NotificationsTabP
                           </span>
                         )}
                         {!isStudentEnabled && !isGuardianEnabled && (
-                          <span className="text-2xs font-semibold bg-bg-base text-text-muted border border-border px-2 py-0.5 rounded-full italic">
+                          <span className="text-2xs font-semibold bg-bg-surface text-text-muted border border-border px-2 py-0.5 rounded-full italic">
                             {__( 'No Recipients', 'codeclove-school-management' )}
                           </span>
                         )}
@@ -392,7 +355,7 @@ export function NotificationsTab({ register, control, watch }: NotificationsTabP
 
                 {/* Collapsible Content */}
                 {isOpen && (
-                  <div className="p-5 border-t border-brand/20 bg-bg-base grid grid-cols-1 gap-4">
+                  <div className="p-5 border-t border-border bg-bg-surface/50 grid grid-cols-1 gap-4">
                     <div className="flex flex-col sm:flex-row gap-6 border-b border-border pb-4">
                       <FormCheckbox
                         label={__( 'Enable Template', 'codeclove-school-management' )}
@@ -430,7 +393,7 @@ export function NotificationsTab({ register, control, watch }: NotificationsTabP
                     />
 
                     {/* Placeholder Cheat Sheet */}
-                    <div className="col-span-full border border-border p-3 rounded-lg bg-bg-surface space-y-1.5">
+                    <div className="col-span-full border border-border p-3.5 rounded-lg bg-bg-surface space-y-2">
                       <span className="text-2xs font-bold text-text-muted uppercase tracking-wider">{__( 'Available Placeholders', 'codeclove-school-management' )}</span>
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {tpl.placeholders.map((ph) => {
@@ -447,10 +410,10 @@ export function NotificationsTab({ register, control, watch }: NotificationsTabP
                               role="button"
                               tabIndex={0}
                               className={cn(
-                                'inline-flex items-center gap-1 px-2 py-0.5 rounded border font-mono text-2xs select-all cursor-pointer transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-brand-ring focus:border-brand',
+                                'inline-flex items-center gap-1 px-2.5 py-1 rounded-md border font-mono text-2xs select-all cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-brand-ring',
                                 copied
-                                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500'
-                                  : 'border-border bg-bg-base text-brand hover:border-brand-ring hover:bg-brand-dim/30'
+                                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                  : 'border-border bg-bg-surface text-text hover:border-brand hover:text-brand hover:bg-brand-dim/30'
                               )}
                               title={__( 'Click to copy', 'codeclove-school-management' )}
                               onClick={() => copyPlaceholder(ph)}

@@ -561,7 +561,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
         {/* Backdrop overlay */}
         <DialogPrimitive.Overlay
           className={cn(
-            'fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm',
+            'fixed inset-0 z-[100000] bg-black/60 dark:bg-black/75 backdrop-blur-sm',
             'data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out'
           )}
         />
@@ -571,9 +571,9 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
           onOpenAutoFocus={(e) => e.preventDefault()}
           className={cn(
             'codeclove-command-palette-content',
-            'fixed z-[100] left-1/2 top-[12vh] -translate-x-1/2',
+            'fixed z-[100001] left-1/2 top-[12vh] -translate-x-1/2',
             'w-[calc(100vw-2rem)] max-w-xl flex flex-col',
-            'bg-white/95 dark:bg-[#121218]/95 backdrop-blur-xl border border-border rounded-xl shadow-modal overflow-hidden outline-none',
+            'bg-bg-overlay/95 backdrop-blur-xl border border-border dark:border-white/15 rounded-xl shadow-modal overflow-hidden outline-none',
             'data-[state=open]:animate-command-palette-in data-[state=closed]:animate-command-palette-out',
             'shadow-[0_24px_50px_-12px_rgba(0,0,0,0.3)] dark:shadow-[#000000]/80'
           )}
@@ -636,7 +636,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
                             <div
                               className={cn(
                                 'p-1.5 rounded-md flex-shrink-0 transition-colors',
-                                isSelected ? 'bg-brand/10 text-brand' : 'bg-bg-base text-text-subtle'
+                                isSelected ? 'bg-brand/10 text-brand' : 'bg-bg-surface border border-border text-text-subtle'
                               )}
                             >
                               <Icon size={14} />
@@ -671,7 +671,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
           </div>
 
           {/* Footer help commands */}
-          <div className="flex items-center justify-between px-4 py-2 bg-bg-base/60 border-t border-border/80 text-2xs text-text-muted font-medium select-none">
+          <div className="flex items-center justify-between px-4 py-2 bg-bg-surface border-t border-border text-2xs text-text-muted font-medium select-none">
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
                 <kbd className="bg-bg-elevated px-1 py-0.5 rounded border border-border shadow-3xs">↑</kbd>

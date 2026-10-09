@@ -487,7 +487,7 @@ export function FeedbackModal() {
                 </p>
               </div>
               <a
-                href="https://codeclove.com/docs"
+                href="https://docs.codeclove.com/school-management-pro/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline pt-1"
