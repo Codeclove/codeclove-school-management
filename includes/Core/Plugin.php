@@ -315,13 +315,13 @@ final class Plugin {
 						<?php echo esc_html( $message ); ?>
 					</p>
 					<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-						<a href="<?php echo $review_url; ?>" target="_blank" rel="noopener noreferrer" class="button button-primary codeclove-review-btn" data-action="reviewed" style="background: #2563eb; border-color: #2563eb;">
+						<a href="<?php echo esc_url( $review_url ); ?>" target="_blank" rel="noopener noreferrer" class="button button-primary codeclove-review-btn" data-action="reviewed" style="background: #2563eb; border-color: #2563eb;">
 							★ <?php esc_html_e( 'Leave a 5-Star Review', 'codeclove-school-management' ); ?>
 						</a>
 						<button type="button" class="button button-secondary codeclove-review-btn" data-action="maybe_later">
 							<?php esc_html_e( 'Remind Me Later (14 Days)', 'codeclove-school-management' ); ?>
 						</button>
-						<a href="<?php echo $support_url; ?>" target="_blank" rel="noopener noreferrer" class="button button-secondary">
+						<a href="<?php echo esc_url( $support_url ); ?>" target="_blank" rel="noopener noreferrer" class="button button-secondary">
 							<?php esc_html_e( 'Support Forum', 'codeclove-school-management' ); ?>
 						</a>
 						<button type="button" class="button button-link codeclove-review-btn" data-action="never" style="color: #64748b; text-decoration: none;">
@@ -338,11 +338,11 @@ final class Plugin {
 				if (!notice) return;
 
 				function dismiss(action) {
-					fetch('<?php echo $rest_url; ?>', {
+					fetch('<?php echo esc_url_raw( $rest_url ); ?>', {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',
-							'X-WP-Nonce': '<?php echo $nonce; ?>'
+							'X-WP-Nonce': '<?php echo esc_js( $nonce ); ?>'
 						},
 						body: JSON.stringify({ action: action })
 					}).catch(function(err) {

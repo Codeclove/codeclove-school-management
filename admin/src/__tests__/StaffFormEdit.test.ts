@@ -106,7 +106,7 @@ describe('Staff edit schema validation regression', () => {
     expect(result.success).toBe(true)
   })
 
-  it('rejects update password if less than 6 characters when provided', () => {
+  it('validates a staff member with a linked WP user', () => {
     const editValues: StaffFormValues = {
       staff_number: 'STF-001',
       title: 'Mr.',
@@ -140,13 +140,10 @@ describe('Staff edit schema validation regression', () => {
       user_id: 12,
       create_user: false,
       username: 'johndoe',
-      password: '123', // Too short
+      password: '',
     }
 
     const result = staffSchema.safeParse(editValues)
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error.issues[0]?.message).toContain('at least 6 characters')
-    }
+    expect(result.success).toBe(true)
   })
 })

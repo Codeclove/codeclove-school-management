@@ -159,7 +159,8 @@ final class PortalShortcode {
 
 		// Dev server: if Vite dev server is running on localhost, load directly for live HMR.
 		if ( self::is_vite_dev_active() ) {
-			return implode( "\n", [
+			// phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedScript
+			$dev_html = implode( "\n", [
 				'<script type="module">',
 				"\timport RefreshRuntime from 'http://localhost:5174/@react-refresh';",
 				"\tRefreshRuntime.injectIntoGlobalHook(window);",
@@ -174,6 +175,8 @@ final class PortalShortcode {
 				'<div id="codeclove-portal-root" class="codeclove-portal-app"></div>',
 				'<script type="module" src="http://localhost:5174/src/portal/main.tsx"></script>',
 			] );
+			// phpcs:enable WordPress.WP.EnqueuedResources.NonEnqueuedScript
+			return $dev_html;
 		}
 
 		$build_dir = CODECLOVE_DIR . 'assets/build/portal/';
@@ -299,17 +302,18 @@ final class PortalShortcode {
 	 * @return bool
 	 */
 	private static function is_vite_dev_active(): bool {
-		if ( defined( 'CODECLOVE_DEV' ) && ! CODECLOVE_DEV ) {
+		if ( ! ( defined( 'CODECLOVE_DEV' ) && CODECLOVE_DEV ) ) {
 			return false;
 		}
 
-		$ctx = @stream_context_create( [ 'http' => [ 'timeout' => 0.05 ] ] );
-		$fp  = @fopen( 'http://127.0.0.1:5174/@vite/client', 'r', false, $ctx );
-		if ( is_resource( $fp ) ) {
-			fclose( $fp );
-			return true;
-		}
+		$response = wp_remote_get(
+			'http://127.0.0.1:5174/@vite/client',
+			[
+				'timeout'   => 0.2,
+				'sslverify' => false,
+			]
+		);
 
-		return false;
+		return ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response );
 	}
 }

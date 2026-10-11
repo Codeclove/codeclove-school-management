@@ -60,7 +60,9 @@ final class ReviewPromptService {
 		$students_count = 0;
 		if ( class_exists( Schema::class ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Review milestone active students count.
-			$count = $wpdb->get_var( 'SELECT COUNT(*) FROM ' . Schema::students() . ' WHERE deleted_at IS NULL' );
+			$count = $wpdb->get_var(
+				$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NULL', Schema::students() )
+			);
 			$students_count = null !== $count ? (int) $count : 0;
 		}
 

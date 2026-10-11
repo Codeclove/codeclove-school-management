@@ -194,7 +194,6 @@ export default function StaffForm({
     register,
     handleSubmit,
     reset,
-    watch,
     setValue,
     control,
     formState: { errors },
@@ -237,7 +236,6 @@ export default function StaffForm({
     },
   })
 
-  const createUserChecked = watch('create_user')
 
   // Load details into form when initialData changes
   useEffect(() => {
@@ -702,73 +700,23 @@ export default function StaffForm({
           <h4 className="text-xs font-bold text-text">{__( 'WordPress User Account', 'codeclove-school-management' )}</h4>
 
           {initialData?.user_id ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField label={__( 'Username', 'codeclove-school-management' )}>
-                <Input
-                  {...register('username')}
-                  className="h-9 bg-bg-surface opacity-75 cursor-not-allowed"
-                  disabled
-                  placeholder="e.g. alicesmith"
-                />
-              </FormField>
-              <FormField label={__( 'Update Password', 'codeclove-school-management' )} error={errors.password?.message}>
-                <Input
-                  type="password"
-                  {...register('password')}
-                  placeholder="e.g. ••••••••"
-                  error={!!errors.password}
-                  className="h-9"
-                  disabled={isPending}
-                />
-                <p className="text-2xs text-text-muted mt-1 leading-normal">
-                  {__( 'Leave blank to keep current password.', 'codeclove-school-management' )}
+            <div className="p-3 rounded-lg border border-border bg-bg-surface space-y-2">
+              <div>
+                <span className="text-xs font-semibold text-text">
+                  {__( 'Linked WordPress Account:', 'codeclove-school-management' )}{' '}
+                  <span className="font-mono text-brand font-medium">{initialData.username || `ID #${initialData.user_id}`}</span>
+                </span>
+                <p className="text-2xs text-text-muted mt-0.5">
+                  {__( 'This staff member is linked to a WordPress user account. Password changes and user credentials are securely managed through native WordPress user administration.', 'codeclove-school-management' )}
                 </p>
-              </FormField>
+              </div>
             </div>
           ) : (
-            <>
-              <div className="p-2.5 rounded-lg border border-border bg-bg-surface hover:bg-hover-bg flex items-center gap-2 select-none cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="create_user_checkbox"
-                  {...register('create_user')}
-                  className="rounded border-border text-brand focus:ring-brand w-4 h-4"
-                  disabled={isPending}
-                />
-                <label htmlFor="create_user_checkbox" className="flex flex-col cursor-pointer flex-1">
-                  <span className="text-xs font-semibold text-text leading-tight">
-                    {__( 'Create WordPress User Account', 'codeclove-school-management' )}
-                  </span>
-                  <span className="text-2xs text-text-muted mt-0.5">
-                    {sprintf( __( 'Generate a login account for this %s.', 'codeclove-school-management' ), staffLabelSingular.toLowerCase() )}
-                  </span>
-                </label>
-              </div>
-
-              {createUserChecked && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                  <FormField label={__( 'Username', 'codeclove-school-management' )} error={errors.username?.message} required>
-                    <Input
-                      {...register('username')}
-                      placeholder="e.g. alicesmith"
-                      error={!!errors.username}
-                      className="h-9"
-                      disabled={isPending}
-                    />
-                  </FormField>
-                  <FormField label={__( 'Password', 'codeclove-school-management' )} error={errors.password?.message} required>
-                    <Input
-                      type="password"
-                      {...register('password')}
-                      placeholder="e.g. ••••••••"
-                      error={!!errors.password}
-                      className="h-9"
-                      disabled={isPending}
-                    />
-                  </FormField>
-                </div>
-              )}
-            </>
+            <div className="p-3 rounded-lg border border-border bg-bg-surface space-y-1">
+              <p className="text-xs text-text-muted leading-relaxed">
+                {__( 'Staff members are matched to WordPress user accounts automatically by email address, or can be linked to an existing account. To grant WordPress dashboard access, create an account in WordPress Users > Add New.', 'codeclove-school-management' )}
+              </p>
+            </div>
           )}
         </div>
       </Card>

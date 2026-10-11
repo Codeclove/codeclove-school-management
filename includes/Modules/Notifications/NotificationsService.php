@@ -421,9 +421,12 @@ final class NotificationsService {
 
 		if ( ! $driver ) {
 			$provider = $notifications['whatsapp_provider'] ?? 'none';
-			$err      = 'none' === $provider
-				? __( 'WhatsApp notifications are disabled or no provider is selected. Please select a provider and save settings.', 'codeclove-school-management' )
-				: sprintf( __( "Unable to initialize WhatsApp driver for '%s'. Please verify your credentials.", 'codeclove-school-management' ), $provider );
+			if ( 'none' === $provider ) {
+				$err = __( 'WhatsApp notifications are disabled or no provider is selected. Please select a provider and save settings.', 'codeclove-school-management' );
+			} else {
+				/* translators: %s: WhatsApp provider name */
+				$err = sprintf( __( "Unable to initialize WhatsApp driver for '%s'. Please verify your credentials.", 'codeclove-school-management' ), $provider );
+			}
 			AuditLogger::log(
 				'notification.whatsapp_failed',
 				[
@@ -524,6 +527,7 @@ final class NotificationsService {
 		$this->notify_permission(
 			'staff.view',
 			__( 'New Staff Application Received', 'codeclove-school-management' ),
+			/* translators: 1: applicant name, 2: role/designation, 3: reference number */
 			sprintf( __( 'A new staff application has been submitted by %1$s for %2$s (Ref: %3$s).', 'codeclove-school-management' ), $applicant, $role, $ref_number ),
 			'staff_application',
 			'/staff'

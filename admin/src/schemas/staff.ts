@@ -34,31 +34,6 @@ export const staffSchema = z.object({
   create_user: z.boolean().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
-}).superRefine((data, ctx) => {
-  if (data.user_id) {
-    if (data.password && data.password.length > 0 && data.password.length < 6) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Password must be at least 6 characters',
-        path: ['password'],
-      })
-    }
-  } else if (data.create_user) {
-    if (!data.username || data.username.trim().length < 3) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Username must be at least 3 characters',
-        path: ['username'],
-      })
-    }
-    if (!data.password || data.password.length < 6) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Password must be at least 6 characters',
-        path: ['password'],
-      })
-    }
-  }
 })
 
 export type StaffFormData = z.infer<typeof staffSchema>

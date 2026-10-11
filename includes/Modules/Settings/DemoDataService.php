@@ -197,14 +197,20 @@ final class DemoDataService {
 		$prompt_dismissed = (bool) get_option( self::OPTION_PROMPT_DISMISSED, false );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$student_count = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . Schema::students() . ' WHERE deleted_at IS NULL' );
+		$student_count = (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NULL', Schema::students() )
+		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$raw_session_count = @$wpdb->get_var( 'SELECT COUNT(*) FROM ' . Schema::sessions() . ' WHERE deleted_at IS NULL' );
+		$raw_session_count = $wpdb->get_var(
+			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NULL', Schema::sessions() )
+		);
 		if ( null === $raw_session_count ) {
 			// Fallback in case academic_sessions table does not have deleted_at column.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$raw_session_count = $wpdb->get_var( 'SELECT COUNT(*) FROM ' . Schema::sessions() );
+			$raw_session_count = $wpdb->get_var(
+				$wpdb->prepare( 'SELECT COUNT(*) FROM %i', Schema::sessions() )
+			);
 		}
 		$session_count = (int) $raw_session_count;
 
@@ -912,10 +918,10 @@ final class DemoDataService {
 		}
 
 		$placeholders = implode( ',', array_fill( 0, count( $filtered_ids ), '%d' ) );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		$wpdb->query(
 			$wpdb->prepare(
-				"DELETE FROM %i WHERE id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"DELETE FROM %i WHERE id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 				$table,
 				...$filtered_ids
 			)

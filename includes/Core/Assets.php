@@ -79,6 +79,7 @@ final class Assets {
 
 		// Dev server: if Vite dev server is running on localhost, load directly for live HMR.
 		if ( $this->is_vite_dev_active() ) {
+			// phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedScript
 			$head_extras = implode( "\n\t\t", [
 				'<script type="module">',
 				"\timport RefreshRuntime from 'http://localhost:5174/@react-refresh';",
@@ -93,6 +94,7 @@ final class Assets {
 				'</script>',
 			] );
 			$body_scripts = '<script type="module" src="http://localhost:5174/src/main.tsx"></script>';
+			// phpcs:enable WordPress.WP.EnqueuedResources.NonEnqueuedScript
 
 			$this->render_html( $head_extras, $body_scripts );
 			return;
@@ -129,18 +131,19 @@ final class Assets {
 	 * @return bool
 	 */
 	private function is_vite_dev_active(): bool {
-		if ( defined( 'CODECLOVE_DEV' ) && ! CODECLOVE_DEV ) {
+		if ( ! ( defined( 'CODECLOVE_DEV' ) && CODECLOVE_DEV ) ) {
 			return false;
 		}
 
-		$ctx = @stream_context_create( [ 'http' => [ 'timeout' => 0.05 ] ] );
-		$fp  = @fopen( 'http://127.0.0.1:5174/@vite/client', 'r', false, $ctx );
-		if ( is_resource( $fp ) ) {
-			fclose( $fp );
-			return true;
-		}
+		$response = wp_remote_get(
+			'http://127.0.0.1:5174/@vite/client',
+			[
+				'timeout'   => 0.2,
+				'sslverify' => false,
+			]
+		);
 
-		return false;
+		return ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response );
 	}
 
 	/**
