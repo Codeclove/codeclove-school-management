@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Star, Sparkles, X, HelpCircle } from 'lucide-react'
+import { Star, X } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { dismissReviewPrompt, type ReviewPromptAction } from '@/api/review-prompt'
@@ -20,10 +20,6 @@ export function ReviewPromptBanner() {
     config?.review_url ||
     'https://wordpress.org/support/plugin/codeclove-school-management/reviews/#new-post'
 
-  const supportUrl =
-    config?.supportUrl ||
-    config?.support_url ||
-    'https://wordpress.org/support/plugin/codeclove-school-management/'
 
   const triggerReason = config?.triggerReason ?? config?.trigger_reason ?? 'students_count'
   const studentsCount = config?.studentsCount ?? config?.students_count ?? 5
@@ -33,7 +29,7 @@ export function ReviewPromptBanner() {
     triggerReason === 'days_passed'
       ? sprintf(
           __(
-            "You've been using CodeClove for %d days! If you find it helpful, would you consider leaving us a quick 5-star review?",
+            "You've been using CodeClove for %d days! If you find it helpful, we'd love an honest review on WordPress.org.",
             'codeclove-school-management'
           ),
           daysPassed
@@ -64,15 +60,12 @@ export function ReviewPromptBanner() {
         <div className="space-y-2 flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-semibold text-text">
-              {__( 'Loving CodeClove? ⭐', 'codeclove-school-management' )}
+              {__( 'Loving CodeClove?', 'codeclove-school-management' )}
             </h3>
-            <div className="flex items-center gap-1 text-amber-500" aria-label="5 stars">
-              <div className="flex items-center gap-0.5" aria-hidden="true">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                ))}
-              </div>
-              <Sparkles className="w-4 h-4 ml-0.5 text-amber-500" />
+            <div className="flex items-center gap-0.5" aria-hidden="true">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+              ))}
             </div>
           </div>
           <p className="text-sm text-text-muted leading-relaxed max-w-3xl">
@@ -84,7 +77,7 @@ export function ReviewPromptBanner() {
               onClick={handleReview}
               className="gap-1.5 font-medium bg-amber-600 hover:bg-amber-700 text-white shadow-sm border-0"
             >
-              ★ {__( 'Leave a 5-Star Review', 'codeclove-school-management' )}
+              {__( 'Leave a Review', 'codeclove-school-management' )}
             </Button>
             <Button
               variant="secondary"
@@ -105,15 +98,6 @@ export function ReviewPromptBanner() {
             >
               {__( "Don't Ask Again", 'codeclove-school-management' )}
             </Button>
-            <a
-              href={supportUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-brand hover:text-brand-strong hover:underline font-medium ml-1"
-            >
-              <HelpCircle className="w-4 h-4" />
-              <span>{__( 'Need Help?', 'codeclove-school-management' )}</span>
-            </a>
           </div>
         </div>
         <button

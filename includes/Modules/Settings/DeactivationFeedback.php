@@ -144,6 +144,13 @@ final class DeactivationFeedback {
 						<input type="text" id="codeclove-detail-input" class="codeclove-detail-input" style="width:100%; padding:7px 10px; font-size:12.5px; border:1px solid #cbd5e1; border-radius:6px; outline:none; box-sizing:border-box;" placeholder="">
 					</div>
 
+				<p style="margin:12px 0 0; font-size:11px; color:#94a3b8; line-height:1.5;">
+					<?php printf(
+						/* translators: %s: privacy policy link */
+						esc_html__( 'Submitting sends your reason, plugin version, and site URL to CodeClove. %s', 'codeclove-school-management' ),
+						'<a href="https://codeclove.com/privacy-policy/" target="_blank" rel="noopener noreferrer" style="color:#94a3b8;">Privacy Policy</a>'
+					); ?>
+				</p>
 					<div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:14px; border-top:1px solid #f1f5f9;">
 						<button type="button" id="codeclove-btn-cancel" style="background:none; border:none; padding:4px 6px; color:#94a3b8; font-size:13px; cursor:pointer; text-decoration:none; font-weight:500; transition:color 0.15s ease;">
 							<?php esc_html_e( 'Cancel', 'codeclove-school-management' ); ?>

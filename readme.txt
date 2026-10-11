@@ -1,11 +1,10 @@
 === CodeClove School Management System ===
 Contributors: codeclove
 Tags: school management, student management, attendance, school, education
-Donate link: https://codeclove.com/plugins/codeclove-school-management-pro/
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.7
+Stable tag: 1.0.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -198,46 +197,52 @@ An optional survey is shown when an administrator deactivates the plugin. Submis
 * **Terms of Service:** https://codeclove.com/terms/
 * **Privacy Policy:** https://codeclove.com/privacy-policy/
 
+== Privacy Policy ==
+
+This plugin does not collect any data by default.
+
+The voluntary deactivation survey (shown only when an administrator deactivates the plugin) may transmit: the selected reason, optional comment, plugin version, WordPress version, PHP version, site locale, and site URL to CodeClove's feedback server at https://feedback.codeclove.com. Submission is entirely optional — clicking "Skip & Deactivate" sends nothing.
+
+For full details see: https://codeclove.com/privacy-policy/
+
 == Changelog ==
 
+= 1.0.8 =
+* Fix: Duplicate Timetable item in sidebar navigation.
+* Fix: Pro settings tabs now show an upgrade panel in-tab rather than leaving Settings.
+* Fix: Promotion & Rollover correctly marked as Pro-only instead of "coming soon".
+* Fix: Defaulters Report preview replaced fake figures with neutral placeholders.
+* Compliance: Review prompt no longer solicits a specific star rating.
+* Compliance: Removed Donate link header (was pointing to a sales page).
+* Compliance: Deactivation modal now discloses what data is submitted and links to Privacy Policy.
+* Compliance: Added Privacy Policy section to readme.
+
 = 1.0.7 =
-* Security: Staff endpoints no longer create or reset WordPress user accounts directly; profiles now link to existing users only.
-* Security: Role hierarchy checks enforced on staff role assignments.
-* Fix: Replaced dev-server probes with WordPress HTTP API, scoped to development mode only.
-* Compliance: Updated "Tested up to" to 7.1 and added external services disclosure.
+* Security: Staff profile endpoints no longer create or reset WordPress user accounts.
+* Security: Role hierarchy enforced on staff role assignments.
+* Fix: Dev-server probe scoped to development mode only.
 
 = 1.0.6 =
-* Feature: Added voluntary deactivation feedback survey to understand user needs.
-* Fix: Routed feedback and bug report receiver to correct telemetry destination.
-* Tweak: Hardened HTTP timeout and payload structure for in-dashboard bug reporting.
+* Feature: Voluntary deactivation feedback survey.
+* Fix: Feedback telemetry routed to correct endpoint.
 
 = 1.0.5 =
-* Feature: Enhanced student admissions and portal workflow.
-* Fix: Allow initial staff attendance submission with default present statuses.
-* Tweak: Modernized fee stationery letterhead and statement header layout.
-* Tweak: Updated compatibility and core asset optimizations.
+* Feature: Improved student admissions and portal workflow.
+* Fix: Initial staff attendance submission now allowed with default statuses.
+* Tweak: Fee statement and letterhead layout refresh.
 
 = 1.0.3 =
-* Tweak: Improved readme short description to fit WordPress.org 150-character limit.
-* Tweak: Corrected "Tested up to" version to 7.1.2.
-* Tweak: Updated plugin tags: replaced learning management and fees management with school erp and education management.
-* Tweak: Added Donate link pointing to Pro upgrade page.
+* Tweak: Readme description trimmed to WP.org 150-character limit.
+* Tweak: Plugin tags updated for better discoverability.
 
 = 1.0.2 =
-* Fix: Date picker calendar selection and event handling inside modal dialogs.
-* Fix: Prevent modal dismissal when interacting with portaled overlays.
-* Fix: Prevent text input focus from capturing keyboard typing in date fields.
-* Tweak: Add ArrowDown keyboard shortcut to open calendar picker.
+* Fix: Date picker selection and keyboard handling inside modal dialogs.
+* Fix: Modal dismissal no longer triggered by portaled overlay interaction.
 
 = 1.0.1 =
-* Fix: Input sanitization at REST API controller boundaries.
-* Fix: Remove deprecated print_emoji_styles hook before rendering the SPA shell.
-* Fix: timetable queries in attendance and portal services
+* Fix: Input sanitization at REST API boundaries.
+* Fix: Deprecated print_emoji_styles hook removed from SPA shell.
+* Fix: Timetable queries in attendance and portal services.
 
 = 1.0.0 =
 * Initial release.
-* Academic structure: sessions, units, groups, subjects.
-* Student directory with guardian profile management.
-* Staff and faculty directory with role assignments.
-* Daily student attendance marking and reports.
-* Country presets for India, United States, and United Kingdom.

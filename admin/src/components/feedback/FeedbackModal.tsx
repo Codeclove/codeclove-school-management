@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Modal,
   ModalFooter,
@@ -156,8 +156,10 @@ export function FeedbackModal() {
   const [view, setView] = useState<'form' | 'tickets'>('form')
   const [tickets, setTickets] = useState<TicketItem[]>([])
   const [isLoadingTickets, setIsLoadingTickets] = useState<boolean>(false)
+  const [isClearingTickets, setIsClearingTickets] = useState<boolean>(false)
   const [expandedTicketId, setExpandedTicketId] = useState<number | null>(null)
   const [diagnosticsData, setDiagnosticsData] = useState<DiagnosticsData | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const licenseInfo = diagnosticsData?.report?.license || window.CodeCloveConfig?.license || {
     status: isPro ? 'active' : 'free',
@@ -177,6 +179,21 @@ export function FeedbackModal() {
       .catch(() => {})
       .finally(() => setIsLoadingTickets(false))
   }
+
+  function clearTickets() {
+    setIsClearingTickets(true)
+    api.delete<{ tickets: TicketItem[] }>('system/tickets')
+      .then(() => setTickets([]))
+      .catch(() => {})
+      .finally(() => setIsClearingTickets(false))
+  }
+
+  // Scroll modal content to top whenever the view or active tab changes
+  // so that switching tabs never leaves stale scroll position showing
+  // residual content from the previous view.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' })
+  }, [view, activeTab])
 
   // Sync state whenever modal is opened
   useEffect(() => {
@@ -606,7 +623,7 @@ export function FeedbackModal() {
         </div>
       ) : (
         /* ─── Pro User View (Professional Segmented Navigation) ─────── */
-        <div className="space-y-3.5">
+        <div className="space-y-3.5" ref={scrollRef}>
           {/* Prominent High-Contrast 3-Tab Segmented Control */}
           <div
             className="grid grid-cols-3 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-xs font-medium gap-1"
@@ -662,16 +679,30 @@ export function FeedbackModal() {
             <div className="space-y-3 pt-1">
               <div className="flex items-center justify-between text-xs text-text-muted px-0.5">
                 <span>{__('Track resolution status of your direct submissions', 'codeclove-school-management')}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={loadTickets}
-                  disabled={isLoadingTickets}
-                  className="text-xs h-7.5 gap-1.5 text-text-muted hover:text-text px-2"
-                >
-                  <RefreshCw className={cn('w-3 h-3', isLoadingTickets && 'animate-spin')} />
-                  <span>{__( 'Refresh', 'codeclove-school-management' )}</span>
-                </Button>
+                <div className="flex items-center gap-1">
+                  {tickets.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearTickets}
+                      disabled={isClearingTickets || isLoadingTickets}
+                      className="text-xs h-7.5 gap-1.5 text-text-muted hover:text-danger px-2"
+                    >
+                      <X className="w-3 h-3" />
+                      <span>{__( 'Clear All', 'codeclove-school-management' )}</span>
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={loadTickets}
+                    disabled={isLoadingTickets}
+                    className="text-xs h-7.5 gap-1.5 text-text-muted hover:text-text px-2"
+                  >
+                    <RefreshCw className={cn('w-3 h-3', isLoadingTickets && 'animate-spin')} />
+                    <span>{__( 'Refresh', 'codeclove-school-management' )}</span>
+                  </Button>
+                </div>
               </div>
 
               {isLoadingTickets && tickets.length === 0 ? (

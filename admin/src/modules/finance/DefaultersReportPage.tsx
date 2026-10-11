@@ -17,7 +17,6 @@ import {
   Input,
   Select,
   DataTable,
-  StatCard,
   type DataTableColumn,
 } from '@/components/ui'
 
@@ -165,39 +164,23 @@ export default function DefaultersReportPage() {
         />
 
         {/* Preview KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label={__('Total Overdue', 'codeclove-school-management')}
-            value={formatCurrency(4825000)}
-            icon={TrendingUp}
-            iconBg="bg-danger-dim"
-            iconColor="text-danger"
-            subtext={__('Across all academic classes', 'codeclove-school-management')}
-          />
-          <StatCard
-            label={__('30+ Days Arrears', 'codeclove-school-management')}
-            value={formatCurrency(2850000)}
-            icon={Clock}
-            iconBg="bg-amber-500/15"
-            iconColor="text-amber-500"
-            subtext={__('Short-term pending invoices', 'codeclove-school-management')}
-          />
-          <StatCard
-            label={__('60+ Days Arrears', 'codeclove-school-management')}
-            value={formatCurrency(1975000)}
-            icon={Calendar}
-            iconBg="bg-danger-dim"
-            iconColor="text-danger"
-            subtext={__('Critical recovery threshold', 'codeclove-school-management')}
-          />
-          <StatCard
-            label={__('Defaulters Count', 'codeclove-school-management')}
-            value={sprintf(__('%d Students', 'codeclove-school-management'), 34)}
-            icon={Users}
-            iconBg="bg-brand-dim"
-            iconColor="text-brand"
-            subtext={__('Students with unpaid terms', 'codeclove-school-management')}
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-hidden="true">
+          {[
+            { label: __('Total Overdue', 'codeclove-school-management'),    icon: TrendingUp, iconBg: 'bg-danger-dim',      iconColor: 'text-danger' },
+            { label: __('30+ Days Arrears', 'codeclove-school-management'), icon: Clock,      iconBg: 'bg-amber-500/15',   iconColor: 'text-amber-500' },
+            { label: __('60+ Days Arrears', 'codeclove-school-management'), icon: Calendar,   iconBg: 'bg-danger-dim',      iconColor: 'text-danger' },
+            { label: __('Defaulters Count', 'codeclove-school-management'), icon: Users,      iconBg: 'bg-brand-dim',      iconColor: 'text-brand' },
+          ].map(({ label, icon: Icon, iconBg, iconColor }) => (
+            <div key={label} className="rounded-xl border border-border bg-bg-elevated p-4 flex items-center gap-3 opacity-40 select-none pointer-events-none">
+              <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
+                <Icon className={`w-5 h-5 ${iconColor}`} />
+              </div>
+              <div className="space-y-2 flex-1 min-w-0">
+                <div className="text-xs text-text-muted">{label}</div>
+                <div className="h-5 w-24 bg-border/60 rounded" />
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Blurred Sample Table with In-Flow Glassmorphism Lock Card */}

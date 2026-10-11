@@ -13,7 +13,7 @@
  */
 import { useState, useMemo, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import {
   School,
   Globe,
@@ -36,6 +36,7 @@ import {
   Bell,
   History,
   CreditCard,
+  Lock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button, Card, PageHeader, Spinner, Modal, ModalFooter, Skeleton } from '@/components/ui'
@@ -115,7 +116,6 @@ interface DiffItem {
 export default function SettingsPage() {
   const isPro = window.CodeCloveConfig?.isPro ?? false
   const visibleTabs = TABS
-  const navigate = useNavigate()
   const toast = useToast()
   const { data: settings, isLoading, isError } = useSettings()
   const updateSettingsMutation = useUpdateSettings()
@@ -138,27 +138,15 @@ export default function SettingsPage() {
       return
     }
     if (tabFromUrl && visibleTabs.some((t) => t.id === tabFromUrl)) {
-      const targetTab = TABS.find((t) => t.id === tabFromUrl)
-      if (!isPro && targetTab?.pro) {
-        const featureParam = PRO_TAB_UPGRADE_MAP[tabFromUrl]
-        navigate(featureParam ? `/pro-upgrade?feature=${featureParam}` : '/pro-upgrade', { replace: true })
-        return
-      }
       if (tabFromUrl !== activeTab) {
         setActiveTab(tabFromUrl)
       }
     }
-  }, [tabFromUrl, activeTab, isPro, navigate])
+  }, [tabFromUrl, activeTab, visibleTabs])
 
   const currentTab = visibleTabs.find((t) => t.id === activeTab) ?? visibleTabs[0]
 
   const handleTabChange = (tabId: TabId) => {
-    const targetTab = TABS.find((t) => t.id === tabId)
-    if (!isPro && targetTab?.pro) {
-      const featureParam = PRO_TAB_UPGRADE_MAP[tabId]
-      navigate(featureParam ? `/pro-upgrade?feature=${featureParam}` : '/pro-upgrade')
-      return
-    }
     setActiveTab(tabId)
     setSearchParams({ tab: tabId })
   }
@@ -406,6 +394,29 @@ export default function SettingsPage() {
                 />
               )
             })()
+          )}
+          {!isPro && TABS.find((t) => t.id === activeTab)?.pro && (
+            <div className="flex flex-col items-center justify-center text-center py-16 px-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-500">
+                <Lock size={22} />
+              </div>
+              <div className="space-y-1.5 max-w-sm">
+                <p className="text-base font-semibold text-text">
+                  {__( 'Pro Feature', 'codeclove-school-management' )}
+                </p>
+                <p className="text-sm text-text-muted leading-relaxed">
+                  {__( 'This settings tab is available in CodeClove Pro. Upgrade to configure payment gateways, SMS alerts, WhatsApp notifications, and activity logs.', 'codeclove-school-management' )}
+                </p>
+              </div>
+              <a
+                href={window.CodeCloveConfig?.proUrl ?? '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors shadow-sm"
+              >
+                {__( 'Upgrade to Pro', 'codeclove-school-management' )}
+              </a>
+            </div>
           )}
         </div>
       </form>

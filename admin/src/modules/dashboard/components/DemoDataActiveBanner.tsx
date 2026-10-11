@@ -46,7 +46,7 @@ export function DemoDataActiveBanner({
     const isConfirmed = await confirm({
       title: __( 'Clear Demo Data', 'codeclove-school-management' ),
       message: __(
-        'Are you sure you want to clear all sample demo data? This will wipe demo classes, students, and invoices.',
+        'Are you sure you want to clear all sample demo data? This will permanently remove all demo classes, students, and invoices.',
         'codeclove-school-management'
       ),
       variant: 'danger',
@@ -111,7 +111,7 @@ export function DemoDataActiveBanner({
             </h3>
             <p className="text-sm text-text-muted leading-relaxed max-w-3xl">
               {__(
-                'You are currently exploring CodeClove with demo classes, students, and invoices. When ready for real school operations, wipe sample records in 1 click.',
+                "You are currently exploring CodeClove with demo classes, students, and invoices. Remove sample records when you're ready for real school operations.",
                 'codeclove-school-management'
               )}
             </p>

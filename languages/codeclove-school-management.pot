@@ -12966,10 +12966,6 @@ msgstr ""
 msgid "Please select a student to view their records."
 msgstr ""
 
-#: src/portal/layouts/PortalSidebar.js:50
-msgid "Powered by"
-msgstr ""
-
 #: src/portal/layouts/PortalSidebar.js:51
 msgid "Navigation menu"
 msgstr ""

@@ -298,14 +298,14 @@ final class Plugin {
 		} else {
 			$message = sprintf(
 				/* translators: %d: number of days */
-				__( "You've been using CodeClove for %d days! If you find it helpful, would you consider leaving us a quick 5-star review?", 'codeclove-school-management' ),
+				__( "You've been using CodeClove for %d days! If you find it helpful, we'd love an honest review on WordPress.org.", 'codeclove-school-management' ),
 				$days_passed
 			);
 		}
 		?>
 		<div id="codeclove-review-admin-notice" class="notice notice-info is-dismissible" style="padding: 12px 16px; border-left-color: #f59e0b; position: relative;">
 			<div style="display: flex; align-items: flex-start; gap: 12px;">
-				<div style="font-size: 20px; line-height: 1; margin-top: 2px;">⭐</div>
+			<div style="font-size: 20px; line-height: 1; margin-top: 2px;" aria-hidden="true">🎓</div>
 				<div style="flex: 1;">
 					<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
 						<strong style="font-size: 14px; color: #1e293b;"><?php esc_html_e( 'Loving CodeClove?', 'codeclove-school-management' ); ?></strong>
@@ -316,7 +316,7 @@ final class Plugin {
 					</p>
 					<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
 						<a href="<?php echo esc_url( $review_url ); ?>" target="_blank" rel="noopener noreferrer" class="button button-primary codeclove-review-btn" data-action="reviewed" style="background: #2563eb; border-color: #2563eb;">
-							★ <?php esc_html_e( 'Leave a 5-Star Review', 'codeclove-school-management' ); ?>
+					<?php esc_html_e( 'Leave a Review', 'codeclove-school-management' ); ?>
 						</a>
 						<button type="button" class="button button-secondary codeclove-review-btn" data-action="maybe_later">
 							<?php esc_html_e( 'Remind Me Later (14 Days)', 'codeclove-school-management' ); ?>

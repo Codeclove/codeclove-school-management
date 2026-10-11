@@ -18,7 +18,6 @@ import StudentAdmitPage from './modules/students/StudentAdmitPage'
 import StudentImportPage from './modules/students/StudentImportPage'
 import StudentProfilePage from './modules/students/StudentProfilePage'
 import StudentEditPage    from './modules/students/StudentEditPage'
-import PromotionPage       from './modules/students/PromotionPage'
 import AdmissionsPage       from './modules/students/AdmissionsPage'
 import AdmissionDetailPage  from './modules/students/AdmissionDetailPage'
 import AdmissionEditPage    from './modules/students/AdmissionEditPage'
@@ -144,9 +143,6 @@ export default function App() {
               {isPro && proRoutes.map((route) => (
                 <Route key={route.path} path={route.path} element={route.element} />
               ))}
-              {!isPro && (
-                <Route path={ROUTES.TIMETABLE} element={<Navigate to="/pro-upgrade?feature=timetable" replace />} />
-              )}
 
               {/* ── Students ──────────────────────────────────────────── */}
               <Route path={ROUTES.STUDENT_DIRECTORY} element={<StudentDirectoryPage />} />
@@ -162,7 +158,7 @@ export default function App() {
                 <Route index element={<StudentDailyAttendance />} />
                 <Route path="monthly" element={<StudentMonthlyAttendance />} />
               </Route>
-              {isPro && <Route path={ROUTES.PROMOTION_ROLLOVER} element={<PromotionPage />} />}
+              {!isPro && <Route path={ROUTES.PROMOTION_ROLLOVER} element={<ComingSoon module={__( 'Promotion & Rollover', 'codeclove-school-management' )} icon={Users} color="text-brand" bg="bg-brand-dim" proOnly />} />}
               <Route path="/students/*"       element={<ComingSoon module="Students"             icon={Users}         color="text-brand"    bg="bg-brand-dim" />} />
 
               {/* ── Staff & HR ────────────────────────────────────────── */}
@@ -230,32 +226,50 @@ function ComingSoon({
   icon: Icon,
   color,
   bg,
+  proOnly = false,
 }: {
   module: string
   icon: typeof GraduationCap
   color: string
   bg: string
+  proOnly?: boolean
 }) {
   return (
     <div className="flex h-full items-center justify-center min-h-[400px]">
       <div className="text-center space-y-4 max-w-sm">
-        <div
-          className={`w-14 h-14 rounded-2xl ${bg} flex items-center justify-center mx-auto`}
-        >
+        <div className={`w-14 h-14 rounded-2xl ${bg} flex items-center justify-center mx-auto`}>
           <Icon size={24} className={color} />
         </div>
         <div className="space-y-1.5">
           <p className="text-base font-semibold text-text">{module}</p>
-          <p className="text-sm text-text-muted leading-relaxed">
-            This module is coming in the next phase. The{' '}
-            <span className="font-medium text-text">Academic Sessions</span> module
-            is live — start there to set up your first academic year.
-          </p>
+          {proOnly ? (
+            <p className="text-sm text-text-muted leading-relaxed">
+              {__( 'This feature is available in CodeClove Pro.', 'codeclove-school-management' )}
+            </p>
+          ) : (
+            <p className="text-sm text-text-muted leading-relaxed">
+              This module is coming in the next phase. The{' '}
+              <span className="font-medium text-text">Academic Sessions</span> module
+              is live — start there to set up your first academic year.
+            </p>
+          )}
         </div>
-        <div className="inline-flex items-center gap-1.5 text-xs text-brand font-medium bg-brand-dim px-3 py-1.5 rounded-full">
-          <span className="w-1.5 h-1.5 rounded-full bg-brand" />
-          Scheduled for next sprint
-        </div>
+        {proOnly ? (
+          <a
+            href={window.CodeCloveConfig?.proUrl ?? '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-amber-500 font-semibold bg-amber-500/15 border border-amber-500/25 px-3 py-1.5 rounded-full hover:bg-amber-500/25 transition-colors"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            {__( 'Available in Pro', 'codeclove-school-management' )}
+          </a>
+        ) : (
+          <div className="inline-flex items-center gap-1.5 text-xs text-brand font-medium bg-brand-dim px-3 py-1.5 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+            Scheduled for next sprint
+          </div>
+        )}
       </div>
     </div>
   )
