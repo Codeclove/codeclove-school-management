@@ -198,12 +198,10 @@ An optional survey is shown when an administrator deactivates the plugin. Submis
 == Changelog ==
 
 = 1.0.7 =
-* Compliance: Removed in-dashboard bug report / feedback feature (Pro-only); free version makes zero external calls except the optional deactivation survey.
-* Compliance: Corrected "Tested up to" to 7.1, confirmed against the WordPress version API.
-* Hardening: Removed direct WordPress user creation and password resets from staff management endpoints to prevent privilege escalation; staff profiles now link securely to native WordPress user accounts.
-* Security: Enforced strict role hierarchy checks on staff role assignments.
-* Compliance: Replaced fopen dev-server probes with WordPress HTTP API (wp_remote_get) scoped strictly to development mode.
-* Documentation: Added explicit external services disclosures and updated compatibility tags for WordPress 7.1.
+* Security: Staff endpoints no longer create or reset WordPress user accounts directly; profiles now link to existing users only.
+* Security: Role hierarchy checks enforced on staff role assignments.
+* Fix: Replaced dev-server probes with WordPress HTTP API, scoped to development mode only.
+* Compliance: Updated "Tested up to" to 7.1 and added external services disclosure.
 
 = 1.0.6 =
 * Feature: Added voluntary deactivation feedback survey to understand user needs.
