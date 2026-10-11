@@ -69,19 +69,22 @@ Run the setup wizard, choose your country, and the plugin configures itself:
 
 = Free vs Pro comparison =
 
-| Feature | Free | Pro |
-|---|---|---|
-| Unlimited student & staff records | ✓ | ✓ |
-| Country presets (IN, US, GB) | ✓ | ✓ |
-| Student & guardian portal | ✓ | ✓ |
-| Daily attendance register | ✓ | ✓ |
-| Fee heads & offline payments | ✓ | ✓ |
-| Online payments (Stripe, PayPal, Razorpay, UPI) | — | ✓ |
-| Timetable & substitution manager | — | ✓ |
-| SMS & WhatsApp notifications (Twilio, MSG91) | — | ✓ |
-| 1-click session rollover & batch promotion | — | ✓ |
-| Granular role permissions builder | — | ✓ |
-| Priority engineering support | — | ✓ |
+**Included in Free and Pro:**
+
+* Unlimited student & staff records
+* Country presets for India, US, and UK
+* Student & guardian self-service portal
+* Daily attendance register (student & staff)
+* Fee heads, invoicing & offline payments
+
+**Pro only:**
+
+* Online payments — Stripe, PayPal, Razorpay, UPI
+* Drag-and-drop timetable & substitution manager
+* SMS & WhatsApp notifications — Twilio, MSG91
+* 1-click session rollover & batch student promotion
+* Granular role permissions builder
+* Priority engineering support
 
 👉 **[View Pro features, pricing, and live demo →](https://codeclove.com/plugins/codeclove-school-management-pro/?utm_source=wporg&utm_medium=readme&utm_campaign=pro_cta)**
 
