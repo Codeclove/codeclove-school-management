@@ -1,0 +1,124 @@
+name: Validate readme.txt
+
+on:
+  push:
+    branches: [main]
+    paths: [readme.txt]
+  pull_request:
+    paths: [readme.txt]
+
+jobs:
+  validate:
+    name: WP.org Readme Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run readme validations
+        run: |
+          set -euo pipefail
+          README="readme.txt"
+          ERRORS=0
+
+          fail() { echo "❌ $1"; ERRORS=$((ERRORS + 1)); }
+          pass() { echo "✅ $1"; }
+
+          # ── 1. Required headers ──────────────────────────────────────────
+          for header in "Stable tag" "Tested up to" "Requires at least" "Requires PHP" "Tags" "License"; do
+            if grep -qi "^${header}:" "$README"; then
+              pass "Header present: ${header}"
+            else
+              fail "Missing header: ${header}"
+            fi
+          done
+
+          # ── 2. Short description ≤ 150 codepoints ───────────────────────
+          # Line immediately after the license URI block (first blank line after headers)
+          SHORT=$(awk '/^$/{found++} found==1 && /^[^=]/{print; exit}' "$README")
+          LEN=$(python3 -c "print(len('${SHORT//\'/\'\\\'\'}'))")
+          if [ "$LEN" -le 150 ]; then
+            pass "Short description: ${LEN} chars (≤150)"
+          else
+            fail "Short description too long: ${LEN} chars (max 150) — '${SHORT}'"
+          fi
+
+          # ── 3. Tags: 1–5 tags, none unknown-risky ───────────────────────
+          TAGS_LINE=$(grep -i "^Tags:" "$README" | head -1)
+          TAG_COUNT=$(echo "$TAGS_LINE" | tr ',' '\n' | grep -c '\S' || true)
+          if [ "$TAG_COUNT" -ge 1 ] && [ "$TAG_COUNT" -le 5 ]; then
+            pass "Tags: ${TAG_COUNT} tag(s)"
+          else
+            fail "Tags: must be 1–5, found ${TAG_COUNT}"
+          fi
+
+          # ── 4. Tested up to is major.minor only (not patch) ─────────────
+          TESTED=$(grep -i "^Tested up to:" "$README" | awk -F: '{print $2}' | tr -d ' ')
+          DOTS=$(echo "$TESTED" | tr -cd '.' | wc -c)
+          if [ "$DOTS" -le 1 ]; then
+            pass "Tested up to: ${TESTED} (major.minor format)"
+          else
+            fail "Tested up to: '${TESTED}' — use major.minor only (e.g. 7.1, not 7.1.2)"
+          fi
+
+          # ── 5. Required sections ─────────────────────────────────────────
+          for section in "== Description ==" "== Installation ==" "== Changelog ==" "== Frequently Asked Questions =="; do
+            if grep -qF "$section" "$README"; then
+              pass "Section present: ${section}"
+            else
+              fail "Missing section: ${section}"
+            fi
+          done
+
+          # ── 6. No Markdown pipe tables (unsupported by WP.org parser) ────
+          if grep -qP '^\|.+\|.+\|' "$README"; then
+            fail "Markdown pipe table detected — WP.org parser does not render tables. Use lists instead."
+            grep -nP '^\|.+\|.+\|' "$README" | head -5 | while read -r line; do echo "   → $line"; done
+          else
+            pass "No Markdown pipe tables"
+          fi
+
+          # ── 7. No bare HTML (WP.org strips most tags) ────────────────────
+          if grep -qiP '<(?!--)[a-z]' "$README"; then
+            fail "Raw HTML detected — WP.org strips most HTML tags from readme content."
+            grep -niP '<(?!--)[a-z]' "$README" | grep -v "^[0-9]*:==" | head -5 | while read -r line; do echo "   → $line"; done
+          else
+            pass "No raw HTML"
+          fi
+
+          # ── 8. Stable tag present in Changelog ──────────────────────────
+          STABLE=$(grep -i "^Stable tag:" "$README" | awk -F: '{print $2}' | tr -d ' ')
+          if grep -qF "= ${STABLE} =" "$README"; then
+            pass "Changelog entry for stable tag ${STABLE}"
+          else
+            fail "No changelog entry for Stable tag: ${STABLE}"
+          fi
+
+          # ── 9. Version in plugin header matches Stable tag ───────────────
+          PLUGIN_PHP="codeclove-school-management.php"
+          if [ -f "$PLUGIN_PHP" ]; then
+            PLUGIN_VER=$(grep -i "^ \* Version:" "$PLUGIN_PHP" | awk '{print $NF}' | tr -d ' ')
+            if [ "$PLUGIN_VER" = "$STABLE" ]; then
+              pass "Plugin header version matches Stable tag: ${STABLE}"
+            else
+              fail "Version mismatch — plugin header: '${PLUGIN_VER}', Stable tag: '${STABLE}'"
+            fi
+          fi
+
+          # ── 10. External Services section if any endpoint is referenced ──
+          if grep -qiP 'https?://' "$README"; then
+            if grep -qF "== External Services ==" "$README"; then
+              pass "External Services section present"
+            else
+              fail "URLs found in readme but no '== External Services ==' section"
+            fi
+          fi
+
+          # ── Result ───────────────────────────────────────────────────────
+          echo ""
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "❌ ${ERRORS} check(s) failed — fix before releasing."
+            exit 1
+          else
+            echo "🎉 All readme checks passed."
+          fi

@@ -4,11 +4,68 @@ on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
+  validate:
+    name: Validate readme.txt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run readme validations
+        run: |
+          set -euo pipefail
+          README="readme.txt"
+          ERRORS=0
+
+          fail() { echo "❌ $1"; ERRORS=$((ERRORS + 1)); }
+          pass() { echo "✅ $1"; }
+
+          for header in "Stable tag" "Tested up to" "Requires at least" "Requires PHP" "Tags" "License"; do
+            grep -qi "^${header}:" "$README" && pass "Header: ${header}" || fail "Missing header: ${header}"
+          done
+
+          SHORT=$(awk '/^$/{found++} found==1 && /^[^=]/{print; exit}' "$README")
+          LEN=$(python3 -c "print(len('${SHORT//\'/\'\\\'\'}'))")
+          [ "$LEN" -le 150 ] && pass "Short description: ${LEN} chars" || fail "Short description too long: ${LEN}/150 — '${SHORT}'"
+
+          TAG_COUNT=$(grep -i "^Tags:" "$README" | head -1 | tr ',' '\n' | grep -c '\S' || true)
+          { [ "$TAG_COUNT" -ge 1 ] && [ "$TAG_COUNT" -le 5 ]; } && pass "Tags: ${TAG_COUNT}" || fail "Tags must be 1–5, found ${TAG_COUNT}"
+
+          TESTED=$(grep -i "^Tested up to:" "$README" | awk -F: '{print $2}' | tr -d ' ')
+          DOTS=$(echo "$TESTED" | tr -cd '.' | wc -c)
+          [ "$DOTS" -le 1 ] && pass "Tested up to: ${TESTED}" || fail "Tested up to '${TESTED}' — use major.minor only (e.g. 7.1)"
+
+          for section in "== Description ==" "== Installation ==" "== Changelog ==" "== Frequently Asked Questions =="; do
+            grep -qF "$section" "$README" && pass "Section: ${section}" || fail "Missing section: ${section}"
+          done
+
+          if grep -qP '^\|.+\|.+\|' "$README"; then
+            fail "Markdown pipe table found — WP.org does not render tables. Use lists."
+          else
+            pass "No Markdown pipe tables"
+          fi
+
+          STABLE=$(grep -i "^Stable tag:" "$README" | awk -F: '{print $2}' | tr -d ' ')
+          grep -qF "= ${STABLE} =" "$README" && pass "Changelog entry for ${STABLE}" || fail "No changelog entry for Stable tag ${STABLE}"
+
+          if [ -f "codeclove-school-management.php" ]; then
+            PLUGIN_VER=$(grep -i "^ \* Version:" codeclove-school-management.php | awk '{print $NF}' | tr -d ' ')
+            [ "$PLUGIN_VER" = "$STABLE" ] && pass "Plugin version matches Stable tag: ${STABLE}" || fail "Version mismatch — plugin: '${PLUGIN_VER}', Stable tag: '${STABLE}'"
+          fi
+
+          echo ""
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "❌ ${ERRORS} check(s) failed — fix before releasing."
+            exit 1
+          fi
+          echo "🎉 All readme checks passed."
+
   deploy:
     name: Production SVN Deployment
     runs-on: ubuntu-latest
+    needs: validate
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
