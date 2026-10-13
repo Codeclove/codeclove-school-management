@@ -7,6 +7,7 @@ Requires PHP: 8.1
 Stable tag: 1.0.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
+Business Model: freemium
 
 School management for WordPress. Students, staff, admissions, attendance, fee invoicing, and parent portal. Unlimited records, no monthly fees.
 
@@ -179,9 +180,11 @@ All bundled libraries are open-source and GPL-compatible.
 
 == Upgrade Notice ==
 
+= 1.0.8 =
+Compliance and stability update. Fixes sidebar navigation, Pro settings tabs, and session rollover. Recommended for all users.
+
 = 1.0.7 =
 Security and compliance update. Removes in-dashboard external feedback from the free version, hardens staff endpoint security to prevent privilege escalation, and replaces dev-server probes with the WordPress HTTP API. Recommended for all users.
-
 == External Services ==
 
 This plugin makes no background or automatic network requests. The one external connection below is strictly opt-in and triggered only by an explicit administrator action.
