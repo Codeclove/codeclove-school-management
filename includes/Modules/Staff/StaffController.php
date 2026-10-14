@@ -145,6 +145,77 @@ final class StaffController extends BaseController {
 				],
 			]
 		);
+
+		register_rest_route(
+			$this->namespace,
+			'/staff-applications',
+			[
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_staff_applications' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff_applications.view', $request ); },
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/staff-applications/bulk-action',
+			[
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'bulk_staff_applications_action' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool {
+						$action = $request->get_json_params()['action'] ?? '';
+						$cap    = ( 'delete' === $action ) ? 'staff_applications.delete' : 'staff_applications.edit';
+						return $this->can( $cap, $request );
+					},
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/staff-applications/(?P<id>\d+)',
+			[
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_staff_application' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff_applications.view', $request ); },
+				],
+				[
+					'methods'             => 'PATCH',
+					'callback'            => [ $this, 'update_staff_application' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff_applications.edit', $request ); },
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/staff-applications/(?P<id>\d+)/status',
+			[
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'update_staff_application_status' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool {
+						return $this->can( 'staff_applications.approve', $request ) || $this->can( 'staff_applications.edit', $request );
+					},
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/staff-applications/(?P<id>\d+)/convert',
+			[
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'convert_staff_application' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff_applications.convert', $request ); },
+				],
+			]
+		);
 	}
 
 	/**
@@ -384,4 +455,144 @@ final class StaffController extends BaseController {
 
 		return $this->success( $result );
 	}
+
+	/**
+	 * Gets a paginated list of staff applications.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response
+	 */
+	public function get_staff_applications( WP_REST_Request $request ): WP_REST_Response {
+		$pagination = $this->get_pagination( $request );
+		$params     = [
+			'limit'        => $pagination['per_page'],
+			'offset'       => $pagination['offset'],
+			'search'       => sanitize_text_field( (string) ( $request->get_param( 'search' ) ?: '' ) ),
+			'status'       => sanitize_key( (string) ( $request->get_param( 'status' ) ?: '' ) ),
+			'desired_role' => sanitize_text_field( (string) ( $request->get_param( 'desired_role' ) ?: '' ) ),
+			'department'   => sanitize_text_field( (string) ( $request->get_param( 'department' ) ?: '' ) ),
+			'date_from'    => sanitize_text_field( (string) ( $request->get_param( 'date_from' ) ?: '' ) ),
+			'date_to'      => sanitize_text_field( (string) ( $request->get_param( 'date_to' ) ?: '' ) ),
+			'orderby'      => sanitize_key( (string) ( $request->get_param( 'orderby' ) ?: 'created_at' ) ),
+			'order'        => sanitize_key( (string) ( $request->get_param( 'order' ) ?: 'DESC' ) ),
+		];
+
+		$result = $this->service->get_staff_applications( $params );
+		return $this->paginated( $result['items'], $result['total'], $pagination['page'], $pagination['per_page'] );
+	}
+
+	/**
+	 * Gets a single staff application profile.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function get_staff_application( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$id   = (int) $request->get_param( 'id' );
+		$item = $this->service->get_staff_application( $id );
+		if ( ! $item ) {
+			return $this->error( 'not_found', __( 'Staff application not found.', 'codeclove-school-management' ), 404 );
+		}
+		return $this->success( $item );
+	}
+
+	/**
+	 * Updates a single staff application profile.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function update_staff_application( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$id     = (int) $request->get_param( 'id' );
+		$params = $this->json_body( $request );
+		if ( is_wp_error( $params ) ) {
+			return $params;
+		}
+
+		$result = $this->service->update_staff_application( $id, $params );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		AuditLogger::log(
+			'staff_application.updated',
+			[
+				'application_id' => $id,
+				'applicant_name' => $result['first_name'] . ' ' . $result['last_name'],
+			]
+		);
+
+		return $this->success( $result );
+	}
+
+	/**
+	 * Updates the status of a staff application.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function update_staff_application_status( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$id     = (int) $request->get_param( 'id' );
+		$params = $this->json_body( $request );
+		if ( is_wp_error( $params ) ) {
+			return $params;
+		}
+
+		$status  = (string) ( $params['status'] ?? '' );
+		$reason  = (string) ( $params['reason'] ?? '' );
+		$message = (string) ( $params['message'] ?? '' );
+		if ( empty( $status ) ) {
+			return $this->error( 'missing_status', __( 'Status is required.', 'codeclove-school-management' ), 400 );
+		}
+
+		$result = $this->service->update_staff_application_status( $id, $status, $reason, $message );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		return $this->success( $result );
+	}
+
+	/**
+	 * Converts an accepted staff application to an active staff member.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function convert_staff_application( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$id     = (int) $request->get_param( 'id' );
+		$params = $this->json_body( $request );
+		if ( is_wp_error( $params ) ) {
+			$params = [];
+		}
+
+		$result = $this->service->convert_staff_application( $id, $params );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		return $this->success( $result, 201 );
+	}
+
+	/**
+	 * Performs bulk actions on staff applications.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function bulk_staff_applications_action( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$params = $this->json_body( $request );
+		if ( is_wp_error( $params ) ) {
+			return $params;
+		}
+
+		$action  = (string) ( $params['action'] ?? '' );
+		$ids     = (array) ( $params['ids'] ?? [] );
+		$payload = (array) ( $params['params'] ?? $params );
+
+		$result = $this->service->bulk_staff_applications_action( $ids, $action, $payload );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		return $this->success( $result );
+	}
+
 }

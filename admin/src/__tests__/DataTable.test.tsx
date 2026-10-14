@@ -106,8 +106,14 @@ describe('DataTable<T> Component', () => {
 
       expect(html).toContain('Edit Alpha')
     })
-  })
 
+    it('applies whitespace-nowrap to code, badge, and number cells to prevent awkward wrapping', () => {
+      const html = renderToString(
+        <DataTable data={sampleData} columns={sampleColumns} />
+      )
+      expect(html).toContain('whitespace-nowrap')
+    })
+  })
   describe('Async UI States', () => {
     it('renders loading skeleton when isLoading is true', () => {
       const html = renderToString(

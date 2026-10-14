@@ -5,6 +5,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { queryKeys } from '@/api/query-keys'
 import type { StaffFormData } from '../schemas/staff'
+import type { PaginatedResponse } from '@/api/academics'
+import type { StaffAppStatus } from '@/lib/constants'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -207,3 +209,178 @@ export async function getStaffImportTemplate(): Promise<{ headers: string[]; sam
   return res.data
 }
 
+
+
+// ─── Staff Applications ───────────────────────────────────────────────────────
+
+export interface StaffApplication {
+  id: number
+  reference_number: string
+  status: StaffAppStatus | string
+  source: string
+  desired_role: string
+  department: string
+  first_name: string
+  middle_name?: string | null
+  last_name: string
+  preferred_name?: string | null
+  date_of_birth?: string | null
+  gender?: string | null
+  email: string
+  phone?: string | null
+  address_json?: string | null
+  experience_json?: string | null
+  custom_fields_json?: string | null
+  photo_id?: number | null
+  submitted_at: string
+  reviewed_at?: string | null
+  decision_at?: string | null
+  converted_staff_member_id?: number | null
+  converted_user_id?: number | null
+  status_history?: Array<{
+    id: number
+    staff_application_id: number
+    from_status: string | null
+    to_status: string
+    reason: string
+    message: string
+    visibility?: string
+    changed_by?: number | null
+    actor_name?: string | null
+    changed_at: string
+  }>
+  created_at: string
+  updated_at: string
+}
+
+export interface StaffApplicationFilters {
+  page?: number
+  per_page?: number
+  search?: string
+  status?: string
+  desired_role?: string
+  department?: string
+  date_from?: string
+  date_to?: string
+  orderby?: string
+  order?: 'asc' | 'desc' | ''
+}
+
+export function useStaffApplications(filters: StaffApplicationFilters = {}) {
+  const params: Record<string, any> = {
+    page: filters.page ?? 1,
+    per_page: filters.per_page ?? 10,
+    search: filters.search,
+    status: filters.status,
+    desired_role: filters.desired_role,
+    department: filters.department,
+    date_from: filters.date_from,
+    date_to: filters.date_to,
+    orderby: filters.orderby || undefined,
+    order: filters.order || undefined,
+  }
+
+  return useQuery<PaginatedResponse<StaffApplication>>({
+    queryKey: queryKeys.staff.applications.list(filters),
+    queryFn: async () => {
+      const res = await api.list<StaffApplication[]>(`staff-applications${toQueryString(params)}`)
+      return {
+        data: res.data,
+        total: res.pagination.total,
+        page: res.pagination.current_page,
+        per_page: res.pagination.per_page,
+        total_pages: res.pagination.total_pages,
+      }
+    },
+  })
+}
+
+export function useStaffApplicationDetails(id: number) {
+  return useQuery<StaffApplication>({
+    queryKey: queryKeys.staff.applications.detail(id),
+    queryFn: async () => {
+      const res = await api.get<StaffApplication>(`staff-applications/${id}`)
+      return res.data
+    },
+    enabled: !!id,
+  })
+}
+
+export function useUpdateStaffApplicationStatus() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, status, reason, message }: { id: number; status: string; reason?: string; message?: string }) => {
+      const res = await api.post<StaffApplication>(`staff-applications/${id}/status`, { status, reason, message })
+      return res.data
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.applications.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.applications.detail(variables.id) })
+    },
+  })
+}
+
+export interface UpdateStaffApplicationPayload {
+  id: number
+  first_name: string
+  middle_name?: string
+  last_name?: string
+  desired_role?: string
+  department?: string
+  gender?: string
+  email: string
+  phone?: string
+  date_of_birth?: string
+  address?: string
+  city?: string
+  state?: string
+  postal_code?: string
+  country?: string
+  qualification?: string
+  specialization?: string
+  experience_years?: string
+  experience_details?: string
+  cover_letter?: string
+  remarks?: string
+}
+
+export function useUpdateStaffApplication() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: UpdateStaffApplicationPayload) => {
+      const res = await api.patch<StaffApplication>(`staff-applications/${id}`, payload)
+      return res.data
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.applications.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.applications.detail(variables.id) })
+    },
+  })
+}
+
+export function useConvertStaffApplication() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, payload }: { id: number; payload?: { role_id?: number | null; designation?: string; department?: string; user_id?: number | null } }) => {
+      const res = await api.post<{ application_id: number; staff_id: number; staff_number: string }>(`staff-applications/${id}/convert`, payload || {})
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.applications.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.all })
+    },
+  })
+}
+
+export function useBulkStaffApplicationsAction() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: { action: 'delete' | 'status'; ids: number[]; status?: string }) => {
+      const res = await api.post<{ action: string; deleted_count?: number; updated_count?: number; errors?: string[] }>('staff-applications/bulk-action', payload)
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.applications.all })
+    },
+  })
+}

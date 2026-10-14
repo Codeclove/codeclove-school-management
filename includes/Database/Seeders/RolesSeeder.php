@@ -110,7 +110,7 @@ final class RolesSeeder implements SeederInterface {
 			'staff_attendance.view', 'staff_attendance.add', 'staff_attendance.edit', 'staff_attendance.delete',
 			'staff.view', 'staff.add', 'staff.edit',
 			'staff_onboarding.view', 'staff_onboarding.add', 'staff_onboarding.edit',
-			'staff_applications.view', 'staff_applications.add', 'staff_applications.edit', 'staff_applications.approve', 'staff_applications.convert',
+			'staff_applications.view', 'staff_applications.add', 'staff_applications.edit', 'staff_applications.approve', 'staff_applications.convert', 'staff_applications.delete',
 			'leave_requests.view', 'leave_requests.add', 'leave_requests.edit', 'leave_requests.delete', 'leave_requests.approve',
 			'fee_types.view', 'fee_types.add', 'fee_types.edit', 'fee_types.delete',
 			'invoices.view', 'invoices.add', 'invoices.edit', 'invoices.delete',
@@ -152,7 +152,7 @@ final class RolesSeeder implements SeederInterface {
 			'staff.view', 'staff.add', 'staff.edit', 'staff.delete',
 			'staff_attendance.view', 'staff_attendance.add', 'staff_attendance.edit', 'staff_attendance.delete',
 			'staff_onboarding.view', 'staff_onboarding.add', 'staff_onboarding.edit',
-			'staff_applications.view', 'staff_applications.add', 'staff_applications.edit', 'staff_applications.approve', 'staff_applications.convert',
+			'staff_applications.view', 'staff_applications.add', 'staff_applications.edit', 'staff_applications.approve', 'staff_applications.convert', 'staff_applications.delete',
 			'leave_requests.view', 'leave_requests.add', 'leave_requests.edit', 'leave_requests.delete', 'leave_requests.approve', 'dashboard.view',
 		],
 		'receptionist'       => [

@@ -444,7 +444,7 @@ final class FinanceService {
 				LEFT JOIN %i r
 					ON r.fee_type_id = ft.id AND r.academic_unit_id = e.academic_unit_id
 				WHERE ft.id = %d AND ft.deleted_at IS NULL
-				LIMIT 1', Schema::fee_types(), Schema::enrollments(), Schema::fee_type_class_rates(), $student_id, $session_id, $fee_type_id ),
+			LIMIT 1', Schema::fee_types(), Schema::enrollments(), $student_id, $session_id, Schema::fee_type_class_rates(), $fee_type_id ),
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -2176,7 +2176,7 @@ final class FinanceService {
 				ORDER BY days_overdue DESC, i.balance_minor DESC
 				LIMIT %d OFFSET %d';
 
-		$select_binds = array_merge( [ $invoices_table, $students_table, $units_table, $current_date ], $binds, [ $limit, $offset ] );
+		$select_binds = array_merge( [ $current_date, $invoices_table, $students_table, $units_table ], $binds, [ $limit, $offset ] );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$results = $wpdb->get_results(

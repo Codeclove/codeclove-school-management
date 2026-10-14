@@ -16,9 +16,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use CodeClove\Database\Schema;
-use CodeClove\Shared\IdentifierService;
 use CodeClove\Core\Logger;
+use CodeClove\Core\Permissions;
+use CodeClove\Database\Schema;
+use CodeClove\Database\Transaction;
+use CodeClove\Modules\Settings\SettingsRepository;
+use CodeClove\Shared\AuditLogger;
+use CodeClove\Shared\IdentifierService;
 use WP_Error;
 
 /**
@@ -1082,4 +1086,553 @@ final class StaffService {
 			'events'           => $events ?: [],
 		];
 	}
+
+	/**
+	 * Maps raw staff application database row to clean API representation.
+	 *
+	 * @param array $app
+	 * @return array
+	 */
+	public function map_staff_application( array $app ): array {
+		$custom_fields = json_decode( (string) ( $app['custom_fields_json'] ?? '{}' ), true ) ?: [];
+		return [
+			'id'                        => (int) $app['id'],
+			'reference_number'          => $app['reference_number'],
+			'status'                    => $app['status'],
+			'source'                    => $app['source'],
+			'desired_role'              => $app['desired_role'] ?? '',
+			'department'                => $app['department'] ?? '',
+			'first_name'                => $app['first_name'],
+			'middle_name'               => $app['middle_name'] ?? '',
+			'last_name'                 => $app['last_name'],
+			'preferred_name'            => $app['preferred_name'] ?? '',
+			'date_of_birth'             => $app['date_of_birth'] ?? '',
+			'gender'                    => ! empty( $app['gender'] ) ? $app['gender'] : ( $custom_fields['gender'] ?? '' ),
+			'email'                     => $app['email'],
+			'phone'                     => $app['phone'] ?? '',
+			'address_json'              => $app['address_json'] ?? '',
+			'experience_json'           => $app['experience_json'] ?? '',
+			'custom_fields_json'        => $app['custom_fields_json'] ?? '',
+			'photo_id'                  => ! empty( $app['photo_id'] ) ? (int) $app['photo_id'] : null,
+			'submitted_at'              => $app['submitted_at'] ?: $app['created_at'],
+			'reviewed_at'               => $app['reviewed_at'] ?? '',
+			'decision_at'               => $app['decision_at'] ?? '',
+			'converted_staff_member_id' => ! empty( $app['converted_staff_member_id'] ) ? (int) $app['converted_staff_member_id'] : null,
+			'converted_user_id'         => ! empty( $app['converted_user_id'] ) ? (int) $app['converted_user_id'] : null,
+			'status_history'            => $this->db_get_staff_app_events( (int) $app['id'] ),
+			'created_at'                => $app['created_at'],
+			'updated_at'                => $app['updated_at'],
+		];
+	}
+
+	/**
+	 * Gets timeline history events for a staff application.
+	 *
+	 * @param int $app_id
+	 * @return array
+	 */
+	public function db_get_staff_app_events( int $app_id ): array {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$events = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT e.*, COALESCE(u.display_name, u.user_login) AS actor_name
+				 FROM %i e
+				 LEFT JOIN %i u ON e.changed_by = u.ID
+				 WHERE e.staff_application_id = %d
+				 ORDER BY e.id ASC',
+				Schema::staff_app_events(),
+				$wpdb->users,
+				$app_id
+			),
+			ARRAY_A
+		);
+		return is_array( $events ) ? $events : [];
+	}
+
+	/**
+	 * Gets staff applications matching arguments.
+	 *
+	 * @param array $args
+	 * @return array{items: array, total: int}
+	 */
+	public function get_staff_applications( array $args = [] ): array {
+		global $wpdb;
+
+		$defaults = [
+			'limit'        => 25,
+			'offset'       => 0,
+			'search'       => '',
+			'status'       => '',
+			'desired_role' => '',
+			'department'   => '',
+			'date_from'    => '',
+			'date_to'      => '',
+			'orderby'      => 'created_at',
+			'order'        => 'DESC',
+		];
+		$params = array_merge( $defaults, $args );
+
+		$table = Schema::staff_apps();
+		$where = [ 'deleted_at IS NULL' ];
+		$binds = [];
+
+		if ( '' !== $params['status'] ) {
+			$where[] = 'status = %s';
+			$binds[] = $params['status'];
+		}
+
+		if ( '' !== $params['desired_role'] ) {
+			$where[] = 'desired_role = %s';
+			$binds[] = $params['desired_role'];
+		}
+
+		if ( '' !== $params['department'] ) {
+			$where[] = 'department = %s';
+			$binds[] = $params['department'];
+		}
+
+		if ( ! empty( $params['date_from'] ) ) {
+			$where[] = 'DATE(COALESCE(submitted_at, created_at)) >= %s';
+			$binds[] = $params['date_from'];
+		}
+
+		if ( ! empty( $params['date_to'] ) ) {
+			$where[] = 'DATE(COALESCE(submitted_at, created_at)) <= %s';
+			$binds[] = $params['date_to'];
+		}
+
+		if ( '' !== $params['search'] ) {
+			$like    = '%' . $wpdb->esc_like( $params['search'] ) . '%';
+			$where[] = '(first_name LIKE %s OR last_name LIKE %s OR email LIKE %s OR phone LIKE %s OR reference_number LIKE %s)';
+			array_push( $binds, $like, $like, $like, $like, $like );
+		}
+
+		$where_sql = implode( ' AND ', $where );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$count_query = "SELECT COUNT(*) FROM %i WHERE {$where_sql}";
+		$total       = (int) ( empty( $binds )
+			? $wpdb->get_var( $wpdb->prepare( $count_query, $table ) )
+			: $wpdb->get_var( $wpdb->prepare( $count_query, $table, ...$binds ) ) );
+
+		$whitelist = [
+			'created_at'       => 'created_at',
+			'submitted_at'     => 'submitted_at',
+			'first_name'       => 'first_name',
+			'last_name'        => 'last_name',
+			'status'           => 'status',
+			'reference_number' => 'reference_number',
+			'desired_role'     => 'desired_role',
+		];
+		$orderby_sql = $whitelist[ $params['orderby'] ] ?? 'created_at';
+		$order_sql   = strtoupper( (string) $params['order'] ) === 'ASC' ? 'ASC' : 'DESC';
+
+		$query_binds = array_merge( [ $table ], $binds, [ (int) $params['limit'], (int) $params['offset'] ] );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM %i WHERE {$where_sql} ORDER BY {$orderby_sql} {$order_sql}, id DESC LIMIT %d OFFSET %d",
+				...$query_binds
+			),
+			ARRAY_A
+		);
+
+		$items = array_map( [ $this, 'map_staff_application' ], is_array( $rows ) ? $rows : [] );
+
+		return [
+			'items' => $items,
+			'total' => $total,
+		];
+	}
+
+	/**
+	 * Gets a single staff application by ID.
+	 *
+	 * @param int $id
+	 * @return array|null
+	 */
+	public function get_staff_application( int $id ): ?array {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE id = %d AND deleted_at IS NULL',
+				Schema::staff_apps(),
+				$id
+			),
+			ARRAY_A
+		);
+		return $row ? $this->map_staff_application( $row ) : null;
+	}
+
+	/**
+	 * Updates an existing staff application profile.
+	 *
+	 * @param int   $id
+	 * @param array $payload
+	 * @return array|WP_Error
+	 */
+	public function update_staff_application( int $id, array $payload ): array|WP_Error {
+		global $wpdb;
+
+		$app = $this->get_staff_application( $id );
+		if ( ! $app ) {
+			return new WP_Error( 'not_found', __( 'Staff application not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
+		}
+
+		if ( ! empty( $app['converted_staff_member_id'] ) ) {
+			return new WP_Error( 'already_converted', __( 'Cannot edit an applicant who has already been hired.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+
+		$first_name = isset( $payload['first_name'] ) ? sanitize_text_field( (string) $payload['first_name'] ) : $app['first_name'];
+		$last_name  = isset( $payload['last_name'] ) ? sanitize_text_field( (string) $payload['last_name'] ) : $app['last_name'];
+		$email      = isset( $payload['email'] ) ? sanitize_email( (string) $payload['email'] ) : $app['email'];
+
+		if ( empty( $first_name ) || empty( $last_name ) ) {
+			return new WP_Error( 'validation_failed', __( 'First name and last name are required.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+
+		if ( empty( $email ) || ! is_email( $email ) ) {
+			return new WP_Error( 'validation_failed', __( 'A valid email address is required.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+
+		// Parse existing address, experience, custom fields
+		$existing_address = json_decode( (string) ( $app['address_json'] ?? '{}' ), true ) ?: [];
+		$address_data = [
+			'address'     => isset( $payload['address'] ) ? sanitize_text_field( (string) $payload['address'] ) : ( $existing_address['address'] ?? '' ),
+			'city'        => isset( $payload['city'] ) ? sanitize_text_field( (string) $payload['city'] ) : ( $existing_address['city'] ?? '' ),
+			'state'       => isset( $payload['state'] ) ? sanitize_text_field( (string) $payload['state'] ) : ( $existing_address['state'] ?? '' ),
+			'postal_code' => isset( $payload['postal_code'] ) ? sanitize_text_field( (string) $payload['postal_code'] ) : ( $existing_address['postal_code'] ?? '' ),
+			'country'     => isset( $payload['country'] ) ? sanitize_text_field( (string) $payload['country'] ) : ( $existing_address['country'] ?? '' ),
+		];
+
+		$existing_exp = json_decode( (string) ( $app['experience_json'] ?? '{}' ), true ) ?: [];
+		$experience_data = [
+			'years'   => isset( $payload['experience_years'] ) ? sanitize_text_field( (string) $payload['experience_years'] ) : ( $existing_exp['years'] ?? '' ),
+			'details' => isset( $payload['experience_details'] ) ? sanitize_textarea_field( (string) $payload['experience_details'] ) : ( $existing_exp['details'] ?? '' ),
+		];
+
+		$existing_custom = json_decode( (string) ( $app['custom_fields_json'] ?? '{}' ), true ) ?: [];
+		$custom_data = [
+			'gender'         => isset( $payload['gender'] ) ? sanitize_text_field( (string) $payload['gender'] ) : ( $existing_custom['gender'] ?? '' ),
+			'qualification'  => isset( $payload['qualification'] ) ? sanitize_text_field( (string) $payload['qualification'] ) : ( $existing_custom['qualification'] ?? '' ),
+			'specialization' => isset( $payload['specialization'] ) ? sanitize_text_field( (string) $payload['specialization'] ) : ( $existing_custom['specialization'] ?? '' ),
+			'cover_letter'   => isset( $payload['cover_letter'] ) ? sanitize_textarea_field( (string) $payload['cover_letter'] ) : ( $existing_custom['cover_letter'] ?? '' ),
+			'remarks'        => isset( $payload['remarks'] ) ? sanitize_textarea_field( (string) $payload['remarks'] ) : ( $existing_custom['remarks'] ?? '' ),
+		];
+
+		$update_data = [
+			'first_name'         => $first_name,
+			'middle_name'        => isset( $payload['middle_name'] ) ? sanitize_text_field( (string) $payload['middle_name'] ) : $app['middle_name'],
+			'last_name'          => $last_name,
+			'desired_role'       => isset( $payload['desired_role'] ) ? sanitize_text_field( (string) $payload['desired_role'] ) : $app['desired_role'],
+			'department'         => isset( $payload['department'] ) ? sanitize_text_field( (string) $payload['department'] ) : $app['department'],
+			'email'              => $email,
+			'phone'              => isset( $payload['phone'] ) ? sanitize_text_field( (string) $payload['phone'] ) : $app['phone'],
+			'date_of_birth'      => ! empty( $payload['date_of_birth'] ) ? sanitize_text_field( (string) $payload['date_of_birth'] ) : null,
+			'address_json'       => wp_json_encode( $address_data ),
+			'experience_json'    => wp_json_encode( $experience_data ),
+			'custom_fields_json' => wp_json_encode( $custom_data ),
+			'updated_at'         => current_time( 'mysql', true ),
+		];
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( Schema::staff_apps(), $update_data, [ 'id' => $id ] );
+
+		return $this->get_staff_application( $id );
+	}
+
+	/**
+	 * Updates the status of a staff application.
+	 *
+	 * @param int    $id
+	 * @param string $status
+	 * @param string $reason
+	 * @param string $message
+	 * @return array|WP_Error
+	 */
+	public function update_staff_application_status( int $id, string $status, string $reason = '', string $message = '' ): array|WP_Error {
+		global $wpdb;
+
+		$app = $this->get_staff_application( $id );
+		if ( ! $app ) {
+			return new WP_Error( 'not_found', __( 'Staff application not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
+		}
+
+		if ( ! empty( $app['converted_staff_member_id'] ) ) {
+			return new WP_Error( 'already_converted', __( 'Cannot modify status of an applicant who has already been hired.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+
+		$status = sanitize_key( $status );
+		if ( 'hired' === $status ) {
+			return new WP_Error( 'invalid_status', __( 'Status "hired" is reserved exclusively for the hire and conversion workflow.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+		$now    = current_time( 'mysql', true );
+
+		$update = [
+			'status'     => $status,
+			'updated_at' => $now,
+		];
+		if ( empty( $app['reviewed_at'] ) ) {
+			$update['reviewed_at'] = $now;
+		}
+		if ( in_array( $status, [ 'accepted', 'rejected', 'hired', 'withdrawn' ], true ) ) {
+			$update['decision_at'] = $now;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( Schema::staff_apps(), $update, [ 'id' => $id ] );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->insert(
+			Schema::staff_app_events(),
+			[
+				'staff_application_id' => $id,
+				'from_status'          => $app['status'],
+				'to_status'            => $status,
+				'reason'               => sanitize_text_field( $reason ?: 'Status updated' ),
+				'message'              => sanitize_textarea_field( $message ?: sprintf( __( 'Application status updated to %s.', 'codeclove-school-management' ), $status ) ),
+				'visibility'           => 'internal',
+				'changed_by'           => get_current_user_id() ?: null,
+				'changed_at'           => $now,
+			]
+		);
+
+		$updated = $this->get_staff_application( $id );
+		AuditLogger::log(
+			'staff_application.status_changed',
+			[
+				'application_id' => $id,
+				'from_status'    => $app['status'],
+				'to_status'      => $status,
+				'applicant'      => $app['first_name'] . ' ' . $app['last_name'],
+			]
+		);
+
+		do_action( 'codeclove_staff_application_status_changed', $id, $status, $app['status'], $updated );
+
+		return $updated;
+	}
+
+	/**
+	 * Converts an accepted staff application to an active staff member record.
+	 *
+	 * @param int   $id
+	 * @param array $params
+	 * @return array|WP_Error
+	 */
+	public function convert_staff_application( int $id, array $params = [] ): array|WP_Error {
+		global $wpdb;
+
+		$app = $this->get_staff_application( $id );
+		if ( ! $app ) {
+			return new WP_Error( 'not_found', __( 'Staff application not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
+		}
+
+		if ( ! empty( $app['converted_staff_member_id'] ) ) {
+			return new WP_Error( 'already_converted', __( 'This applicant has already been hired and converted into a staff member.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+
+		$settings   = ( new SettingsRepository() )->get_settings();
+		$onboarding = $settings['staff_onboarding'] ?? [];
+		$behavior   = $onboarding['login_creation_behavior'] ?? 'invite';
+
+		return Transaction::run( function() use ( $wpdb, $id, $app, $params, $behavior, $onboarding ) {
+			$caller_id = get_current_user_id();
+			$can_manage_roles = current_user_can( 'manage_options' ) || ( class_exists( Permissions::class ) && \CodeClove\Core\Permissions::check( $caller_id, 'roles_permissions.manage' ) );
+
+			// Security: disallow arbitrary user_id unless authorized to manage roles
+			$user_id = ( $can_manage_roles && ! empty( $params['user_id'] ) ) ? (int) $params['user_id'] : null;
+
+			if ( ! $user_id && in_array( $behavior, [ 'immediate', 'invite' ], true ) ) {
+				$existing_user = get_user_by( 'email', $app['email'] );
+				if ( $existing_user ) {
+					$user_id = $existing_user->ID;
+				} else {
+					$username = sanitize_user( current( explode( '@', $app['email'] ) ), true );
+					if ( empty( $username ) || username_exists( $username ) ) {
+						$username = 'staff_' . wp_generate_password( 6, false, false );
+					}
+					$password = wp_generate_password( 18, true, true );
+					$user_id  = wp_create_user( $username, $password, $app['email'] );
+					if ( is_wp_error( $user_id ) ) {
+						return $user_id;
+					}
+
+					wp_update_user( [
+						'ID'         => $user_id,
+						'first_name' => $app['first_name'],
+						'last_name'  => $app['last_name'],
+						'role'       => 'subscriber',
+					] );
+
+					if ( 'invite' === $behavior ) {
+						$key = get_password_reset_key( get_userdata( $user_id ) );
+						if ( ! is_wp_error( $key ) ) {
+							$reset_url   = network_site_url( "wp-login.php?action=rp&key=$key&login=" . rawurlencode( $username ), 'login' );
+							$school_name = get_bloginfo( 'name' );
+							/* translators: 1: school name, 2: applicant name, 3: password reset URL */
+							$msg = sprintf(
+								__( "Hello %2\$s,
+
+Welcome to %1\$s! An employee account has been created for you.
+
+Please set your account password by visiting the following link:
+%3\$s
+
+Best regards,
+%1\$s Administration", 'codeclove-school-management' ),
+								$school_name,
+								$app['first_name'],
+								$reset_url
+							);
+							wp_mail( $app['email'], sprintf( __( 'Your %s Staff Account Has Been Created', 'codeclove-school-management' ), $school_name ), $msg );
+						}
+					}
+				}
+			}
+
+			// Resolve role ID
+			$role_id = ! empty( $params['role_id'] ) ? (int) $params['role_id'] : null;
+			if ( ! $role_id && ! empty( $onboarding['default_role'] ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$role_id = (int) $wpdb->get_var(
+					$wpdb->prepare( 'SELECT id FROM %i WHERE slug = %s LIMIT 1', Schema::roles(), $onboarding['default_role'] )
+				);
+			}
+
+			$address_data  = json_decode( (string) $app['address_json'], true ) ?: [];
+			$staff_payload = [
+				'first_name'      => $app['first_name'],
+				'middle_name'     => $app['middle_name'],
+				'last_name'       => $app['last_name'],
+				'preferred_name'  => $app['preferred_name'],
+				'date_of_birth'   => $app['date_of_birth'],
+				'gender'          => $app['gender'] ?: 'male',
+				'email'           => $app['email'],
+				'phone'           => $app['phone'],
+				'designation'     => ! empty( $params['designation'] ) ? sanitize_text_field( $params['designation'] ) : ( $app['desired_role'] ?: 'Staff Member' ),
+				'department'      => ! empty( $params['department'] ) ? sanitize_text_field( $params['department'] ) : ( $app['department'] ?: '' ),
+				'role_id'         => $role_id ?: null,
+				'user_id'         => $user_id ?: null,
+				'status'          => 'active',
+				'joined_on'       => current_time( 'Y-m-d' ),
+				'address'         => $address_data['address'] ?? '',
+				'city'            => $address_data['city'] ?? '',
+				'state'           => $address_data['state'] ?? '',
+				'postal_code'     => $address_data['postal_code'] ?? ( $address_data['zip'] ?? '' ),
+				'country'         => $address_data['country'] ?? '',
+			];
+
+			$staff_member = $this->create_staff_member( $staff_payload );
+			if ( is_wp_error( $staff_member ) ) {
+				return $staff_member;
+			}
+			$staff_id = (int) $staff_member['id'];
+
+			$now = current_time( 'mysql', true );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->update(
+				Schema::staff_apps(),
+				[
+					'status'                    => 'hired',
+					'converted_staff_member_id' => $staff_id,
+					'converted_user_id'         => $user_id,
+					'decision_at'               => $now,
+					'updated_at'                => $now,
+				],
+				[ 'id' => $id ]
+			);
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::staff_app_events(),
+				[
+					'staff_application_id' => $id,
+					'from_status'          => $app['status'],
+					'to_status'            => 'hired',
+					'reason'               => 'Hired & Converted to Staff',
+					'message'              => sprintf( __( 'Candidate hired as %s and converted into staff member record #%d.', 'codeclove-school-management' ), $staff_member['designation'], $staff_id ),
+					'visibility'           => 'internal',
+					'changed_by'           => get_current_user_id() ?: null,
+					'changed_at'           => $now,
+				]
+			);
+
+			AuditLogger::log(
+				'staff_application.converted',
+				[
+					'application_id'  => $id,
+					'staff_member_id' => $staff_id,
+					'applicant'       => $app['first_name'] . ' ' . $app['last_name'],
+				]
+			);
+
+			do_action( 'codeclove_staff_application_converted', $id, $staff_id, $staff_member );
+
+			return [
+				'application_id' => $id,
+				'staff_id'       => $staff_id,
+				'staff_number'   => $staff_member['staff_number'],
+				'staff_member'   => $staff_member,
+			];
+		} );
+	}
+
+	/**
+	 * Performs bulk actions on staff applications.
+	 *
+	 * @param array  $ids
+	 * @param string $action
+	 * @param array  $params
+	 * @return array|WP_Error
+	 */
+	public function bulk_staff_applications_action( array $ids, string $action, array $params = [] ): array|WP_Error {
+		global $wpdb;
+
+		if ( empty( $ids ) ) {
+			return new WP_Error( 'invalid_ids', __( 'No application IDs provided.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+
+		$sanitized_ids = array_map( 'intval', $ids );
+		$count         = 0;
+		$errors        = [];
+
+		if ( 'delete' === $action ) {
+			$now = current_time( 'mysql', true );
+			foreach ( $sanitized_ids as $app_id ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->update( Schema::staff_apps(), [ 'deleted_at' => $now ], [ 'id' => $app_id ] );
+				$count++;
+			}
+			return [
+				'action'        => 'delete',
+				'deleted_count' => $count,
+			];
+		}
+
+		if ( 'status' === $action ) {
+			$new_status = sanitize_key( $params['status'] ?? '' );
+			if ( empty( $new_status ) ) {
+				return new WP_Error( 'missing_status', __( 'Status parameter is required.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+			}
+			foreach ( $sanitized_ids as $app_id ) {
+				$res = $this->update_staff_application_status( $app_id, $new_status, 'Bulk Status Update' );
+				if ( is_wp_error( $res ) ) {
+					$errors[] = sprintf( __( 'Application #%d: %s', 'codeclove-school-management' ), $app_id, $res->get_error_message() );
+				} else {
+					$count++;
+				}
+			}
+			return [
+				'action'        => 'status',
+				'updated_count' => $count,
+				'errors'        => $errors,
+			];
+		}
+
+		return new WP_Error( 'invalid_action', __( 'Unsupported bulk action.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+	}
+
 }

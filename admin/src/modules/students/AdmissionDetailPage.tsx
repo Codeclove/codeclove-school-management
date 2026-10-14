@@ -11,6 +11,7 @@ import {
   Mail,
   MapPin,
   History,
+  BookOpen,
 } from 'lucide-react'
 import {
   useAdmissionDetails,
@@ -101,6 +102,12 @@ function getTimelineEvents(application: AdmissionApplication): TimelineEvent[] {
       if (!evt.from_status && evt.to_status === 'submitted') {
         title = __( 'Application Submitted', 'codeclove-school-management' )
       }
+      const actor = evt.actor_name
+        ? evt.actor_name
+        : (!evt.from_status || !evt.changed_by
+            ? __( 'Applicant (Public Form)', 'codeclove-school-management' )
+            : __( 'School Administrator', 'codeclove-school-management' ))
+
       return {
         status: evt.to_status,
         title,
@@ -110,7 +117,7 @@ function getTimelineEvents(application: AdmissionApplication): TimelineEvent[] {
           statusLabel
         ),
         timestamp: evt.changed_at,
-        actor: evt.actor_name || __( 'System Auto', 'codeclove-school-management' ),
+        actor,
         completed: true,
       }
     })
@@ -122,7 +129,7 @@ function getTimelineEvents(application: AdmissionApplication): TimelineEvent[] {
     title: sprintf( __( 'Application %s', 'codeclove-school-management' ), currentLabel ),
     description: sprintf( __( 'Current status is %s.', 'codeclove-school-management' ), currentLabel ),
     timestamp: application.submitted_at || application.created_at,
-    actor: __( 'System Auto', 'codeclove-school-management' ),
+    actor: __( 'Applicant (Public Form)', 'codeclove-school-management' ),
     completed: true,
   }]
 }
@@ -261,7 +268,7 @@ export default function AdmissionDetailPage() {
             />
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2.5">
-                <h2 className="text-xl font-bold text-text">
+                <h2 className="text-xl font-bold text-text capitalize">
                   {fullName}
                 </h2>
                 <Badge variant={statusVariant} size="sm">
@@ -302,14 +309,26 @@ export default function AdmissionDetailPage() {
               {__( 'Edit Details', 'codeclove-school-management' )}
             </Button>
 
-            {application.status === 'accepted' && (
+            {application.status !== 'admitted' ? (
               <Button
+                variant={application.status === 'accepted' ? 'default' : 'secondary'}
                 onClick={() => navigate(`/students/admissions/${application.id}/convert`)}
                 className="gap-1.5"
               >
                 {__( 'Approve & Convert', 'codeclove-school-management' )}
                 <ArrowRight size={14} />
               </Button>
+            ) : (
+              application.converted_student_id && (
+                <Button
+                  variant="secondary"
+                  onClick={() => navigate(`/students/${application.converted_student_id}`)}
+                  className="gap-1.5"
+                >
+                  <User size={14} />
+                  {__( 'View Student Profile', 'codeclove-school-management' )}
+                </Button>
+              )
             )}
           </div>
         </div>
@@ -452,7 +471,7 @@ export default function AdmissionDetailPage() {
             />
 
             {hasStructuredParents ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={cn("grid gap-4", parents.length > 1 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
                 {parents.map((parent) => (
                   <div key={parent.title} className="p-3.5 rounded-lg border border-border/70 bg-bg-surface space-y-2.5">
                     <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
@@ -583,41 +602,11 @@ export default function AdmissionDetailPage() {
             )}
           </Card>
 
-          {/* Document Checklist Card (conditional) */}
-          {requiredDocs.length > 0 && (
-            <Card className="p-6 space-y-4">
-              <FormGroupHeader
-                title={__( 'Required Document Checklist', 'codeclove-school-management' )}
-                description={__( 'Verify and mark off mandatory admission documents submitted by the applicant.', 'codeclove-school-management' )}
-                icon={ClipboardList}
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {requiredDocs.map((doc) => {
-                  const isChecked = Boolean(approvedDocs[doc])
-                  return (
-                    <label
-                      key={doc}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-border bg-bg-surface hover:bg-hover-bg cursor-pointer select-none group transition-all duration-100 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-ring"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleDoc(doc)}
-                        className="h-4 w-4 rounded border-border text-brand accent-brand cursor-pointer"
-                      />
-                      <span className={cn('text-xs font-medium transition-colors', isChecked ? 'text-text-muted line-through' : 'text-text group-hover:text-brand')}>
-                        {doc.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                      </span>
-                    </label>
-                  )
-                })}
-              </div>
-            </Card>
-          )}
+
         </div>
 
-        {/* Right Column (Sidebar: Audit timeline) — spans 1 */}
-        <div className="lg:col-span-1">
+        {/* Right Column (Sidebar: Audit timeline, Checklist & Summary) — spans 1 */}
+        <div className="lg:col-span-1 space-y-6">
           <Card className="p-5 space-y-4">
             <FormGroupHeader
               title={__( 'Audit History & Timeline', 'codeclove-school-management' )}
@@ -658,6 +647,67 @@ export default function AdmissionDetailPage() {
                   </div>
                 )
               })}
+            </div>
+          </Card>
+
+          {/* Document Checklist Card */}
+          {requiredDocs.length > 0 && (
+            <Card className="p-5 space-y-4">
+              <FormGroupHeader
+                title={__( 'Document Checklist', 'codeclove-school-management' )}
+                description={__( 'Verify mandatory admission documents.', 'codeclove-school-management' )}
+                icon={ClipboardList}
+              />
+              <div className="space-y-2">
+                {requiredDocs.map((doc) => {
+                  const isChecked = Boolean(approvedDocs[doc])
+                  return (
+                    <label
+                      key={doc}
+                      className="flex items-center gap-2.5 p-2.5 rounded-lg border border-border bg-bg-surface hover:bg-hover-bg cursor-pointer select-none group transition-all duration-100"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleDoc(doc)}
+                        className="h-4 w-4 rounded border-border text-brand accent-brand cursor-pointer"
+                      />
+                      <span className={cn('text-xs font-medium transition-colors', isChecked ? 'text-text-muted line-through' : 'text-text group-hover:text-brand')}>
+                        {doc.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* Application Quick Summary Card */}
+          <Card className="p-5 space-y-3">
+            <FormGroupHeader
+              title={__( 'Application Summary', 'codeclove-school-management' )}
+              description={__( 'Overview of current registration.', 'codeclove-school-management' )}
+              icon={BookOpen}
+            />
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-text-muted">{__( 'Reference No.', 'codeclove-school-management' )}</span>
+                <span className="font-mono font-medium text-text">{application.reference_number}</span>
+              </div>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-text-muted">{__( 'Intended Class', 'codeclove-school-management' )}</span>
+                <span className="font-medium text-text">{matchedUnit?.name || '—'}</span>
+              </div>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-text-muted">{__( 'Academic Session', 'codeclove-school-management' )}</span>
+                <span className="font-medium text-text">{matchedSession?.name.replace('Academic Year ', '') || '—'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-text-muted">{__( 'Current Status', 'codeclove-school-management' )}</span>
+                <Badge variant={statusVariant} size="sm">
+                  {statusLabel.toUpperCase()}
+                </Badge>
+              </div>
             </div>
           </Card>
         </div>

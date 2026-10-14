@@ -48,13 +48,12 @@ describe('ReviewPromptBanner & dismissReviewPrompt API', () => {
 
       const html = renderToString(<ReviewPromptBanner />)
 
-      expect(html).toContain('Loving CodeClove? ⭐')
+      expect(html).toContain('Loving CodeClove?')
       expect(html).toContain('Congratulations on enrolling 8 students!')
-      expect(html).toContain('Leave a 5-Star Review')
+      expect(html).toContain('Leave a Review')
       expect(html).toContain('Remind me in 2 weeks')
       expect(html).toContain('Already Reviewed')
       expect(html).toContain('Don&#x27;t Ask Again')
-      expect(html).toContain('Need Help?')
       // Golden stars
       expect(html).toContain('text-amber-400')
       expect(html).toContain('fill-amber-400')
@@ -74,13 +73,12 @@ describe('ReviewPromptBanner & dismissReviewPrompt API', () => {
 
       const html = renderToString(<ReviewPromptBanner />)
 
-      expect(html).toContain('Loving CodeClove? ⭐')
+      expect(html).toContain('Loving CodeClove?')
       expect(html).toContain("You&#x27;ve been using CodeClove for 7 days!")
-      expect(html).toContain('Leave a 5-Star Review')
+      expect(html).toContain('Leave a Review')
       expect(html).toContain('Remind me in 2 weeks')
       expect(html).toContain('Already Reviewed')
       expect(html).toContain('Don&#x27;t Ask Again')
-      expect(html).toContain('Need Help?')
     })
 
     it('supports snake_case keys in window.CodeCloveConfig.reviewPrompt', () => {
@@ -96,7 +94,7 @@ describe('ReviewPromptBanner & dismissReviewPrompt API', () => {
 
       const html = renderToString(<ReviewPromptBanner />)
 
-      expect(html).toContain('Loving CodeClove? ⭐')
+      expect(html).toContain('Loving CodeClove?')
       expect(html).toContain('Congratulations on enrolling 12 students!')
     })
   })

@@ -139,7 +139,7 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
 
   describe('1. Fee Defaulters Sidebar Navigation & PRO Badge', () => {
     it('renders Defaulters Report in sidebar for Free users with an amber PRO badge pill', () => {
-      // @ts-ignore
+      // @ts-expect-error test mock override
       window.CodeCloveConfig.isPro = false
 
       const html = renderToString(
@@ -162,7 +162,7 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
     })
 
     it('does not render PRO badge for Pro users in sidebar Defaulters Report item', () => {
-      // @ts-ignore
+      // @ts-expect-error test mock override
       window.CodeCloveConfig.isPro = true
 
       const html = renderToString(
@@ -182,7 +182,7 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
     })
 
     it('renders Timetable in sidebar for Free users with PRO badge redirecting to upgrade page', () => {
-      // @ts-ignore
+      // @ts-expect-error test mock override
       window.CodeCloveConfig.isPro = false
 
       const html = renderToString(
@@ -201,7 +201,7 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
     })
 
     it('renders Timetable in sidebar for Pro users navigating to /academics/timetable without PRO badge', () => {
-      // @ts-ignore
+      // @ts-expect-error test mock override
       window.CodeCloveConfig.isPro = true
 
       const html = renderToString(
@@ -222,7 +222,7 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
 
   describe('2. DefaultersReportPage Contextual Pro Lock', () => {
     it('renders contextual pro lock preview page when isPro is false', () => {
-      // @ts-ignore
+      // @ts-expect-error test mock override
       window.CodeCloveConfig.isPro = false
 
       const html = renderToString(
@@ -263,7 +263,7 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
 
   describe('3. InvoiceDetailPage Contextual Pro Button & ProGatewayLockModal', () => {
     it('renders Pay Online Pro button alongside Record Payment when isPro is false', () => {
-      // @ts-ignore
+      // @ts-expect-error test mock override
       window.CodeCloveConfig.isPro = false
 
       const html = renderToString(
@@ -304,7 +304,7 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
 
   describe('4. PaymentsPage Contextual Pro Banner', () => {
     it('renders contextual online payments banner when isPro is false', () => {
-      // @ts-ignore
+      // @ts-expect-error test mock override
       window.CodeCloveConfig.isPro = false
 
       const html = renderToString(
@@ -324,7 +324,7 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
     })
 
     it('does not render contextual online payments banner when isPro is true', () => {
-      // @ts-ignore
+      // @ts-expect-error test mock override
       window.CodeCloveConfig.isPro = true
 
       const html = renderToString(
@@ -344,7 +344,7 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
 
   describe('5. RecordPaymentPage Inline Pro Contextual Banner for UPI/Card', () => {
     it('renders inline contextual banner explaining automated UPI when isPro is false', () => {
-      // @ts-ignore
+      // @ts-expect-error test mock override
       window.CodeCloveConfig.isPro = false
 
       const html = renderToString(

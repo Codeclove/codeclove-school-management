@@ -42,7 +42,7 @@ export default function FeeTypesPage() {
   const [frequency, setFrequency] = useState('all')
   const [scope, setScope] = useState('all')
   const [hasOverrides, setHasOverrides] = useState<'all' | 'yes' | 'no'>('all')
-  const table = useTableState({ defaultPerPage: 25 })
+  const table = useTableState({ defaultPerPage: 10 })
 
   // Reset page when debounced search changes
   useEffect(() => {

@@ -103,7 +103,7 @@ export default function NoticeboardPage() {
   ], [])
 
   // Table & Filters
-  const table = useTableState({ defaultPerPage: 20 })
+  const table = useTableState({ defaultPerPage: 10 })
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 350)
   const [audienceFilter, setAudienceFilter] = useState('all')

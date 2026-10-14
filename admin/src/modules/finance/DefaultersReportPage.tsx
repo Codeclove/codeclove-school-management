@@ -34,8 +34,8 @@ export default function DefaultersReportPage() {
   const [unitId, setUnitId] = useState('all')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 350)
-  const [daysOverdueMin, setDaysOverdueMin] = useState('30')
-  const table = useTableState({ defaultPerPage: 25 })
+  const [daysOverdueMin, setDaysOverdueMin] = useState('')
+  const table = useTableState({ defaultPerPage: 10 })
 
   // Fetch Class Levels
   const { data: unitsData } = useUnits({
@@ -48,7 +48,7 @@ export default function DefaultersReportPage() {
   useEffect(() => {
     setUnitId('all')
     setSearch('')
-    setDaysOverdueMin('30')
+    setDaysOverdueMin('')
     table.resetPage()
   }, [session?.id])
 
@@ -70,7 +70,7 @@ export default function DefaultersReportPage() {
     { enabled: isPro }
   )
   const defaulters = reportData?.data || []
-  const total = reportData?.total || 0
+  const total = reportData?.pagination?.total || 0
 
   const columns = useMemo<DataTableColumn<DefaulterRow>[]>(
     () => [
@@ -105,8 +105,11 @@ export default function DefaultersReportPage() {
         key: 'days_overdue',
         header: __('Days Overdue', 'codeclove-school-management'),
         type: 'number',
-        className: 'text-danger font-medium',
-        render: (row) => sprintf(_n('%d day', '%d days', row.days_overdue, 'codeclove-school-management'), row.days_overdue),
+        render: (row) => (
+          <span className="text-danger font-medium">
+            {sprintf(_n('%d day', '%d days', row.days_overdue, 'codeclove-school-management'), row.days_overdue)}
+          </span>
+        ),
       },
       {
         key: 'total_minor',
@@ -118,8 +121,11 @@ export default function DefaultersReportPage() {
         key: 'balance_minor',
         header: __('Outstanding Balance', 'codeclove-school-management'),
         type: 'number',
-        className: 'text-danger font-semibold',
-        render: (row) => formatCurrency(row.balance_minor),
+        render: (row) => (
+          <span className="text-danger font-semibold">
+            {formatCurrency(row.balance_minor)}
+          </span>
+        ),
       },
       {
         key: 'actions',
@@ -151,7 +157,6 @@ export default function DefaultersReportPage() {
           description={__('Identify overdue student balances, aging receivables, and collection arrears across classes.', 'codeclove-school-management')}
           breadcrumbs={[
             { label: __('Finance', 'codeclove-school-management'), href: '/finance' },
-            { label: __('Invoices', 'codeclove-school-management'), href: '/finance/invoices' },
             { label: pageBreadcrumb },
           ]}
           onBack={() => navigate('/finance/invoices')}
@@ -275,8 +280,7 @@ export default function DefaultersReportPage() {
         title={pageTitle}
         description={__('List of students with outstanding unpaid or partially paid overdue invoices.', 'codeclove-school-management')}
         breadcrumbs={[
-          { label: __('Finance', 'codeclove-school-management') },
-          { label: __('Dashboard', 'codeclove-school-management'), href: '/finance' },
+          { label: __('Finance', 'codeclove-school-management'), href: '/finance' },
           { label: pageBreadcrumb },
         ]}
         onBack={() => navigate('/finance')}
@@ -337,13 +341,13 @@ export default function DefaultersReportPage() {
             </div>
 
             <div className="flex items-center gap-2 h-9">
-              {(search || unitId || daysOverdueMin !== '30') && (
+              {(Boolean(search) || (unitId && unitId !== 'all') || Boolean(daysOverdueMin)) && (
                 <Button
                   variant="ghost"
                   onClick={() => {
                     setSearch('')
                     setUnitId('all')
-                    setDaysOverdueMin('30')
+                    setDaysOverdueMin('')
                     table.resetPage()
                   }}
                   className="text-xs text-text-muted hover:text-text gap-1"

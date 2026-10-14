@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, X, GraduationCap, Phone } from 'lucide-react'
 import { useForm } from 'react-hook-form'
@@ -153,7 +153,7 @@ export default function CreateInvoicePage() {
     session_id: session?.id ?? 0,
   })
 
-  const applyResolvedAmount = useCallback(() => {
+  useEffect(() => {
     if (!resolvedFeeData || !pendingResolve) return
     setLineItems(prev => {
       const next = [...prev]
@@ -168,7 +168,6 @@ export default function CreateInvoicePage() {
     setPendingResolve(null)
   }, [resolvedFeeData, pendingResolve])
 
-  if (resolvedFeeData && pendingResolve) applyResolvedAmount()
 
   // ── Totals ──────────────────────────────────────────────────────────────────
   const lineSubtotal = lineItems.reduce((sum, li) =>
@@ -255,6 +254,7 @@ export default function CreateInvoicePage() {
       try {
         // Force flag is accepted by server to bypass duplicate invoice block
         const payload = {
+          student_id:           selectedStudentId,
           academic_session_id:  session?.id,
           academic_term_id:     values.termId ? Number(values.termId) : undefined,
           issue_date:           values.issueDate,
@@ -385,8 +385,8 @@ export default function CreateInvoicePage() {
         <div className="lg:col-span-2 space-y-5">
 
           {/* Student Picker ─────────────────────────────────────── */}
-          <Card>
-            <CardContent className="py-6 space-y-4">
+          <Card className="overflow-visible relative z-20">
+            <CardContent className="py-6 space-y-4 overflow-visible">
               <p className="text-xs font-semibold text-text uppercase tracking-wider pb-2 border-b border-border">
                 {__('Billing Details', 'codeclove-school-management')}
               </p>

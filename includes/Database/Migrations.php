@@ -314,6 +314,39 @@ final class Migrations {
   KEY idx_event_type (event_type),
   KEY idx_created_at (created_at)
 ) $cc;" );
+
+		// Backfill legacy admission applications missing academic_session_id.
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i a
+				INNER JOIN %i u ON a.academic_unit_id = u.id
+				SET a.academic_session_id = u.academic_session_id
+				WHERE a.academic_session_id IS NULL AND a.academic_unit_id IS NOT NULL',
+				Schema::applications(),
+				Schema::units()
+			)
+		);
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$active_session_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT id FROM %i WHERE is_current = %d LIMIT 1',
+				Schema::sessions(),
+				1
+			)
+		);
+		if ( $active_session_id > 0 ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query(
+				$wpdb->prepare(
+					'UPDATE %i SET academic_session_id = %d WHERE academic_session_id IS NULL',
+					Schema::applications(),
+					$active_session_id
+				)
+			);
+		}
 	}
 
 	// ─── Student Tables ───────────────────────────────────────────────────────

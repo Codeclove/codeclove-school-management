@@ -94,7 +94,6 @@ export function ConfirmDialog({
 
   const config = VARIANT_CONFIG[variant] ?? VARIANT_CONFIG.default
   const IconComponent = config.icon
-
   const handleOpenChange = (nextOpen: boolean) => {
     // Prevent closing via backdrop, Escape key, or close button while action is running
     if (isPending) return
@@ -119,7 +118,7 @@ export function ConfirmDialog({
       open={open}
       onOpenChange={handleOpenChange}
       title={
-        <div className="flex items-center gap-2.5">
+        <span className="flex items-center gap-2.5">
           <span
             className={cn(
               'flex items-center justify-center w-8 h-8 rounded-lg shrink-0',
@@ -130,7 +129,7 @@ export function ConfirmDialog({
             <IconComponent size={16} className={config.iconClass} />
           </span>
           <span className="leading-tight font-semibold text-text">{title}</span>
-        </div>
+        </span>
       }
       description={description}
       size="sm"

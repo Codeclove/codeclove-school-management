@@ -85,7 +85,7 @@ describe('Demo Data API & DemoDataActiveBanner', () => {
 
       expect(html).toContain('Sample School Records Active')
       expect(html).toContain(
-        'You are currently exploring CodeClove with demo classes, students, and invoices. When ready for real school operations, wipe sample records in 1 click.'
+        'You are currently exploring CodeClove with demo classes, students, and invoices.'
       )
       expect(html).toContain('Clear Sample Data')
       expect(html).toContain('border-amber-500/30')

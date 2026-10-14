@@ -1,7 +1,19 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, RotateCcw, Printer, X, SlidersHorizontal, QrCode, Sparkles } from 'lucide-react'
+import {
+  Search,
+  RotateCcw,
+  Printer,
+  X,
+  SlidersHorizontal,
+  QrCode,
+  Sparkles,
+  Plus,
+  CheckCircle2,
+  Calendar,
+} from 'lucide-react'
 import { __, sprintf } from '@/lib/i18n'
+import { cn } from '@/lib/utils'
 import { getMethodLabel } from './finance-utils'
 import {
   usePayments,
@@ -33,6 +45,8 @@ import {
   Input,
   Select,
   DatePicker,
+  StatCard,
+  PersonAvatar,
 } from '@/components/ui'
 
 export default function PaymentsPage() {
@@ -83,7 +97,7 @@ export default function PaymentsPage() {
   const [status, setStatus] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const table = useTableState({ defaultPerPage: 25 })
+  const table = useTableState({ defaultPerPage: 10 })
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   // Reset filters on session change
@@ -118,6 +132,27 @@ export default function PaymentsPage() {
   const list = data?.data || []
   const total = data?.pagination?.total || 0
 
+  const metrics = useMemo(() => {
+    let totalCollectedMinor = 0
+    let totalReversedMinor = 0
+    let collectedTodayMinor = 0
+    const todayStr = new Date().toISOString().slice(0, 10)
+
+    list.forEach((p) => {
+      const amtMinor = p.amount_minor ?? 0
+      if (p.status === 'completed') {
+        totalCollectedMinor += amtMinor
+        if (p.paid_on && p.paid_on.startsWith(todayStr)) {
+          collectedTodayMinor += amtMinor
+        }
+      } else if (p.status === 'refunded' || p.status === 'cancelled') {
+        totalReversedMinor += amtMinor
+      }
+    })
+
+    return { totalCollectedMinor, collectedTodayMinor, totalReversedMinor }
+  }, [list])
+
   const handleReversePayment = async (paymentId: number, invoiceId: number) => {
     const isConfirmed = await confirm({
       title: __('Reverse Payment Receipt', 'codeclove-school-management'),
@@ -146,72 +181,127 @@ export default function PaymentsPage() {
         key: 'payment_number',
         header: __('Receipt #', 'codeclove-school-management'),
         type: 'code',
-        render: (row) => row.payment_number,
+        className: 'whitespace-nowrap min-w-[130px]',
+        render: (row) => (
+          <button
+            type="button"
+            onClick={() => handlePrintReceipt(row)}
+            className="font-mono text-xs font-semibold text-text hover:text-brand hover:underline transition-colors text-left"
+            title={__('Print Receipt', 'codeclove-school-management')}
+          >
+            {row.payment_number}
+          </button>
+        ),
       },
       {
         key: 'student',
         header: studentLabel,
         type: 'primary',
+        className: 'min-w-[180px]',
         render: (row) => (
-          <div>
-            <div>
-              {row.student_first_name} {row.student_last_name}
-            </div>
-            <div className="text-2xs text-text-muted font-mono">{row.student_number}</div>
-          </div>
+          <button
+            type="button"
+            onClick={() => row.student_id && navigate(`/students/${row.student_id}`)}
+            className="text-left group/student flex items-center gap-2.5 transition-colors cursor-pointer"
+            title={__('View Student Profile', 'codeclove-school-management')}
+          >
+            <PersonAvatar
+              name={`${row.student_first_name || ''} ${row.student_last_name || ''}`.trim() || __('Student', 'codeclove-school-management')}
+              subtitle={row.student_number || undefined}
+              size="sm"
+            />
+          </button>
         ),
       },
       {
         key: 'invoice_number',
         header: __('Invoice #', 'codeclove-school-management'),
         type: 'code',
-        render: (row) => row.invoice_number || '—',
+        className: 'whitespace-nowrap min-w-[130px]',
+        render: (row) =>
+          row.invoice_id ? (
+            <button
+              type="button"
+              onClick={() => navigate(`/finance/invoices/${row.invoice_id}`)}
+              className="font-mono text-xs font-medium text-brand hover:underline transition-colors"
+              title={__('View Invoice', 'codeclove-school-management')}
+            >
+              {row.invoice_number || '—'}
+            </button>
+          ) : (
+            <span className="font-mono text-xs text-text-subtle">{row.invoice_number || '—'}</span>
+          ),
       },
       {
         key: 'paid_on',
         header: __('Payment Date', 'codeclove-school-management'),
         type: 'date',
+        className: 'whitespace-nowrap min-w-[110px]',
         render: (row) => formatDate(row.paid_on),
       },
       {
         key: 'method',
         header: __('Method', 'codeclove-school-management'),
         type: 'badge',
+        className: 'whitespace-nowrap min-w-[120px]',
         render: (row) => (
-          <span className="text-xs text-text-muted font-medium bg-bg-surface border border-border px-2 py-1 rounded inline-block">
+          <span className="text-xs text-text-muted font-medium bg-bg-surface border border-border px-2.5 py-1 rounded-md inline-block whitespace-nowrap">
             {getMethodLabel(row.method)}
           </span>
         ),
       },
       {
+        key: 'status',
+        header: __('Status', 'codeclove-school-management'),
+        type: 'badge',
+        className: 'whitespace-nowrap min-w-[100px]',
+        render: (row) => {
+          const variant =
+            row.status === 'completed'
+              ? 'success'
+              : row.status === 'pending'
+              ? 'warning'
+              : 'danger'
+          const label =
+            row.status === 'completed'
+              ? __('Completed', 'codeclove-school-management')
+              : row.status === 'cancelled'
+              ? __('Reversed', 'codeclove-school-management')
+              : row.status === 'refunded'
+              ? __('Refunded', 'codeclove-school-management')
+              : row.status === 'failed'
+              ? __('Failed', 'codeclove-school-management')
+              : row.status
+          return (
+            <Badge variant={variant} size="sm" className="whitespace-nowrap">
+              {label}
+            </Badge>
+          )
+        },
+      },
+      {
         key: 'amount',
         header: __('Amount', 'codeclove-school-management'),
         type: 'number',
+        className: 'whitespace-nowrap min-w-[110px]',
         render: (row) => (
-          <div className={`tabular-nums font-semibold ${row.status === 'completed' ? 'text-success' : 'text-danger line-through'}`}>
-            {formatCurrency(row.amount_minor)}
-            {row.status !== 'completed' && (
-              <Badge
-                variant={
-                  row.status === 'refunded' || row.status === 'failed' || row.status === 'cancelled'
-                    ? 'danger'
-                    : 'warning'
-                }
-                size="sm"
-                className="ml-1.5 align-middle"
-              >
-                {row.status}
-              </Badge>
+          <span
+            className={cn(
+              'tabular-nums font-semibold',
+              row.status === 'completed' ? 'text-success' : 'text-text-muted line-through'
             )}
-          </div>
+          >
+            {formatCurrency(row.amount_minor)}
+          </span>
         ),
       },
       {
         key: 'actions',
         header: __('Actions', 'codeclove-school-management'),
         type: 'actions',
+        className: 'min-w-[90px]',
         render: (row) => (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-end gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -231,8 +321,8 @@ export default function PaymentsPage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => handleReversePayment(row.id, row.invoice_id)}
-                className="h-8 w-8 text-text-subtle hover:text-danger"
-                title={__('Reverse Payment', 'codeclove-school-management')}
+                className="h-8 w-8 text-text-subtle hover:text-danger hover:bg-danger-dim/30"
+                title={__('Reverse Payment Receipt', 'codeclove-school-management')}
               >
                 <RotateCcw size={14} />
               </Button>
@@ -241,7 +331,7 @@ export default function PaymentsPage() {
         ),
       },
     ],
-    [studentLabel, formatDate, formatCurrency, isPrintLoading]
+    [studentLabel, formatDate, formatCurrency, isPrintLoading, navigate]
   )
 
   return (
@@ -250,8 +340,46 @@ export default function PaymentsPage() {
         title={paymentLabelPlural}
         description={__('Journal ledger records of all manual payments and receipts collected for the current session.', 'codeclove-school-management')}
         breadcrumbs={[{ label: __('Finance', 'codeclove-school-management') }, { label: paymentLabelPlural }]}
+        actions={
+          <Button
+            size="sm"
+            onClick={() => navigate('/finance/payments/record')}
+            className="flex items-center gap-1.5 font-semibold text-xs h-9"
+            disabled={!session}
+          >
+            <Plus className="h-4 w-4" />
+            {__('Record Payment', 'codeclove-school-management')}
+          </Button>
+        }
       />
 
+      {/* Financial Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label={__('Total Collected', 'codeclove-school-management')}
+          value={formatCurrency(metrics.totalCollectedMinor)}
+          icon={CheckCircle2}
+          iconColor="text-success"
+          iconBg="bg-success-dim"
+          compact={true}
+        />
+        <StatCard
+          label={__('Collected Today', 'codeclove-school-management')}
+          value={formatCurrency(metrics.collectedTodayMinor)}
+          icon={Calendar}
+          iconColor="text-brand"
+          iconBg="bg-brand-dim"
+          compact={true}
+        />
+        <StatCard
+          label={__('Reversals & Refunds', 'codeclove-school-management')}
+          value={formatCurrency(metrics.totalReversedMinor)}
+          icon={RotateCcw}
+          iconColor="text-warning"
+          iconBg="bg-warning-dim"
+          compact={true}
+        />
+      </div>
       {/* Filters */}
       <Card className="p-4">
         <div className="flex flex-col gap-4">
@@ -423,7 +551,8 @@ export default function PaymentsPage() {
           description: __('Payments will appear here once recorded against outstanding student invoices.', 'codeclove-school-management'),
           icon: entity.icon,
           action: (
-            <Button size="sm" onClick={() => navigate('/finance/payments/record')}>
+            <Button size="sm" onClick={() => navigate('/finance/payments/record')} className="gap-1.5">
+              <Plus size={14} />
               {__('Record Payment', 'codeclove-school-management')}
             </Button>
           ),

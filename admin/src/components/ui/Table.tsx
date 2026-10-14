@@ -41,26 +41,27 @@ const COLUMN_TYPE_CONFIG: Record<TableColumnType, {
   },
   code: {
     align: 'left',
-    thClass: 'w-24 sm:w-28',
-    tdClass: 'font-mono text-xs text-text-subtle',
+    thClass: 'w-28 sm:w-36 whitespace-nowrap',
+    tdClass: 'font-mono text-xs text-text-subtle whitespace-nowrap',
   },
   number: {
     align: 'right',
-    tdClass: 'tabular-nums font-medium text-text',
+    tdClass: 'tabular-nums font-medium text-text whitespace-nowrap',
   },
   date: {
     align: 'left',
-    thClass: 'w-32 sm:w-36',
-    tdClass: 'font-mono text-xs text-text-muted',
+    thClass: 'w-32 sm:w-36 whitespace-nowrap',
+    tdClass: 'font-mono text-xs text-text-muted whitespace-nowrap',
   },
   badge: {
     align: 'center',
-    thClass: 'w-28',
+    thClass: 'w-32 whitespace-nowrap',
+    tdClass: 'whitespace-nowrap',
   },
   actions: {
     align: 'right',
-    thClass: 'w-24 sm:w-28 pe-6',
-    tdClass: 'pe-6',
+    thClass: 'w-24 sm:w-28 pe-6 whitespace-nowrap',
+    tdClass: 'pe-6 whitespace-nowrap',
   },
 }
 

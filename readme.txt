@@ -4,7 +4,7 @@ Tags: school management, student management, attendance, school, education
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.8
+Stable tag: 1.0.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Business Model: freemium
@@ -180,6 +180,9 @@ All bundled libraries are open-source and GPL-compatible.
 
 == Upgrade Notice ==
 
+= 1.0.9 =
+Public admissions shortcode session association fix, staff recruitment applications portal, and general stability improvements. Recommended for all users.
+
 = 1.0.8 =
 Compliance and stability update. Fixes sidebar navigation, Pro settings tabs, and session rollover. Recommended for all users.
 
@@ -209,6 +212,13 @@ The voluntary deactivation survey (shown only when an administrator deactivates 
 For full details see: https://codeclove.com/privacy-policy/
 
 == Changelog ==
+
+= 1.0.9 =
+* Fix: Public admissions submitted via shortcode now properly associate with the active academic session and display in the admin applications list.
+* Feature: Public staff application shortcode and status tracking support.
+* Feature: Staff applications review list and detail review workflow.
+* Tweak: Cleaner confirmation dialogs and improved accessibility across data tables.
+* Tweak: Refined session promotion workflow step layout.
 
 = 1.0.8 =
 * Fix: Duplicate Timetable item in sidebar navigation.

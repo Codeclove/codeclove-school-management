@@ -525,12 +525,12 @@ final class NotificationsService {
 		}
 
 		$this->notify_permission(
-			'staff.view',
+			'staff_applications.view',
 			__( 'New Staff Application Received', 'codeclove-school-management' ),
 			/* translators: 1: applicant name, 2: role/designation, 3: reference number */
 			sprintf( __( 'A new staff application has been submitted by %1$s for %2$s (Ref: %3$s).', 'codeclove-school-management' ), $applicant, $role, $ref_number ),
 			'staff_application',
-			'/staff'
+			'/staff/applications'
 		);
 	}
 

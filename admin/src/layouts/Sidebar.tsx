@@ -154,6 +154,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
       id: 'staff', label: getLabel('staff_member', true, __( 'Staff & HR', 'codeclove-school-management' )), icon: UserCog,
       items: [
         { label: `${getLabel('staff_member', false, __( 'Staff', 'codeclove-school-management' ))} ${__( 'Directory', 'codeclove-school-management' )}`,      to: ROUTES.STAFF_DIRECTORY,    icon: Briefcase,   permission: PERMISSIONS.STAFF_VIEW, end: true },
+        { label: __( 'Staff Applications', 'codeclove-school-management' ),                                         to: ROUTES.STAFF_APPLICATIONS, icon: ClipboardList, permission: PERMISSIONS.STAFF_APPS_VIEW },
         { label: __( 'Staff Attendance', 'codeclove-school-management' ),                                           to: '/staff/attendance',       icon: CalendarCheck, permission: PERMISSIONS.STAFF_ATTENDANCE_VIEW },
         { label: __( 'Roles & Permissions', 'codeclove-school-management' ),  to: ROUTES.ROLES_PERMISSIONS,  icon: ShieldCheck,         permission: PERMISSIONS.ROLES_MANAGE },
       ],

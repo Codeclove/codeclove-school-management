@@ -2,7 +2,7 @@
  * TanStack Query hooks for the Finance API.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api-client'
+import { api, type ApiPaginatedResponse } from '@/lib/api-client'
 import { queryKeys } from '@/api/query-keys'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -475,12 +475,9 @@ export interface DefaulterFilters {
 
 /** Hook to retrieve fee defaulters report. */
 export function useDefaultersReport(filters?: DefaulterFilters, options?: { enabled?: boolean }) {
-  return useQuery<{ data: DefaulterRow[]; total: number }>({
+  return useQuery<ApiPaginatedResponse<DefaulterRow[]>>({
     queryKey: queryKeys.finance.defaulters(filters),
-    queryFn: async () => {
-      const response = await api.get<{ data: DefaulterRow[]; total: number }>(`finance/reports/defaulters${toQueryString(filters)}`)
-      return response.data
-    },
+    queryFn: async () => api.list<DefaulterRow[]>(`finance/reports/defaulters${toQueryString(filters)}`),
     ...options,
   })
 }

@@ -42,7 +42,7 @@ describe('Settings Pro Direct Upgrade Links', () => {
   })
 
   it('renders all Pro tabs in Settings sidebar with PRO badges for Free users', () => {
-    // @ts-ignore
+    // @ts-expect-error test mock override
     window.CodeCloveConfig.isPro = false
 
     const html = renderToString(
@@ -73,7 +73,7 @@ describe('Settings Pro Direct Upgrade Links', () => {
   })
 
   it('binds direct pro-upgrade feature URLs to Pro tab items in Free edition', () => {
-    // @ts-ignore
+    // @ts-expect-error test mock override
     window.CodeCloveConfig.isPro = false
 
     const html = renderToString(
@@ -105,7 +105,7 @@ describe('Settings Pro Direct Upgrade Links', () => {
   })
 
   it('does not render PRO badge or pro-upgrade attributes for Pro users', () => {
-    // @ts-ignore
+    // @ts-expect-error test mock override
     window.CodeCloveConfig.isPro = true
 
     const html = renderToString(

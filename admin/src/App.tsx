@@ -24,6 +24,9 @@ import AdmissionEditPage    from './modules/students/AdmissionEditPage'
 import AdmissionConvertPage from './modules/students/AdmissionConvertPage'
 import RolesPage from './modules/staff/RolesPage'
 import StaffDirectoryPage from './modules/staff/StaffDirectoryPage'
+import StaffApplicationsPage from './modules/staff/StaffApplicationsPage'
+import StaffApplicationDetailPage from './modules/staff/StaffApplicationDetailPage'
+import StaffApplicationEditPage from './modules/staff/StaffApplicationEditPage'
 import StaffFormPage from './modules/staff/StaffFormPage'
 import StaffImportPage from './modules/staff/StaffImportPage'
 import StaffProfilePage from './modules/staff/StaffProfilePage'
@@ -163,6 +166,9 @@ export default function App() {
 
               {/* ── Staff & HR ────────────────────────────────────────── */}
               <Route path={ROUTES.STAFF_DIRECTORY}   element={<StaffDirectoryPage />} />
+              <Route path={ROUTES.STAFF_APPLICATIONS} element={<StaffApplicationsPage />} />
+              <Route path="/staff/applications/:id" element={<StaffApplicationDetailPage />} />
+              <Route path="/staff/applications/:id/edit" element={<StaffApplicationEditPage />} />
               <Route path="/staff/new"     element={<StaffFormPage />} />
               <Route path="/staff/import"  element={<StaffImportPage />} />
               <Route path="/staff/:id"     element={<StaffProfilePage />} />

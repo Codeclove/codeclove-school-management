@@ -41,7 +41,7 @@ abstract class BaseController extends WP_REST_Controller {
 	/**
 	 * Default per-page limit for paginated list endpoints.
 	 */
-	protected int $default_per_page = 25;
+	protected int $default_per_page = 10;
 
 	/**
 	 * Maximum per-page limit to prevent over-fetching.

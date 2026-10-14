@@ -93,6 +93,7 @@ final class RolesController extends BaseController {
 			'staff_applications.edit' => 'Edit Staff Applications',
 			'staff_applications.approve' => 'Approve Staff Applications',
 			'staff_applications.convert' => 'Convert Staff Application',
+			'staff_applications.delete' => 'Delete Staff Applications',
 			'leave_requests.view' => 'View Leave Requests',
 			'leave_requests.add' => 'Add Leave Requests',
 			'leave_requests.edit' => 'Edit Leave Requests',

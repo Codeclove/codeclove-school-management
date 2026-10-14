@@ -17,7 +17,7 @@ import { useToast } from '@/lib/toast'
 import { useLabels } from '@/lib/labels'
 import { GENDER_OPTIONS } from '@/lib/constants'
 import {
-  Button, FormField, Input, Select, PageHeader, Spinner, EmptyState, FormGroup, DatePicker, Skeleton
+  Button, FormField, Input, Select, PageHeader, Spinner, EmptyState, FormGroup, DatePicker, Skeleton, Badge
 } from '@/components/ui'
 import { __, sprintf } from '@/lib/i18n'
 import { onFormError } from '@/lib/form-errors'
@@ -316,6 +316,20 @@ export default function AdmissionEditPage() {
           { label: __( 'Edit', 'codeclove-school-management' ) }
         ]}
       />
+
+      {/* Reference & Status Bar */}
+      <div className="flex items-center justify-between p-3.5 rounded-lg border border-border bg-bg-surface text-xs">
+        <div className="flex items-center gap-3">
+          <span className="text-text-muted">{__( 'Reference Number:', 'codeclove-school-management' )}</span>
+          <span className="font-mono font-medium text-text">{application.reference_number}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-text-muted">{__( 'Current Status:', 'codeclove-school-management' )}</span>
+          <Badge variant="brand" size="sm">
+            {application.status.toUpperCase()}
+          </Badge>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-6">
         {/* Card 1: Student Details */}

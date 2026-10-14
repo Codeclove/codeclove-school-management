@@ -135,15 +135,21 @@ final class Assets {
 			return false;
 		}
 
-		$response = wp_remote_get(
-			'http://127.0.0.1:5174/@vite/client',
-			[
-				'timeout'   => 0.2,
-				'sslverify' => false,
-			]
-		);
+		foreach ( [ 'http://localhost:5174/@vite/client', 'http://127.0.0.1:5174/@vite/client' ] as $url ) {
+			$response = wp_remote_get(
+				$url,
+				[
+					'timeout'   => 0.3,
+					'sslverify' => false,
+				]
+			);
 
-		return ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response );
+			if ( ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

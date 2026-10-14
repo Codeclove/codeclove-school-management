@@ -74,6 +74,16 @@ final class AdmissionsService {
 			ARRAY_A
 		);
 		$active_session_id = $active_session ? (int) $active_session['id'] : 0;
+		if ( ! $active_session_id ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$active_session_id = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT id FROM %i WHERE status = %s ORDER BY id DESC LIMIT 1',
+					Schema::sessions(),
+					'active'
+				)
+			);
+		}
 
 		if ( empty( $payload['student_first_name'] ) || empty( $payload['student_last_name'] ) ) {
 			return new WP_Error( 'codeclove_validation_failed', __( 'Student first name and last name are required.', 'codeclove-school-management' ), 400 );
@@ -172,8 +182,28 @@ final class AdmissionsService {
 			: (string) ( ( new \CodeClove\Modules\Settings\SettingsRepository() )->get_settings()['admissions']['default_status'] ?? 'submitted' );
 		$source      = ! empty( $payload['source'] ) ? sanitize_text_field( $payload['source'] ) : ( $is_inquiry ? 'inquiry_form' : 'public_form' );
 
+		// Resolve session: check payload, infer from academic unit, or fall back to active session.
+		$session_id = ! empty( $payload['academic_session_id'] ) ? (int) $payload['academic_session_id'] : 0;
+		if ( ! $session_id && ! empty( $payload['academic_unit_id'] ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$unit_session = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT academic_session_id FROM %i WHERE id = %d',
+					Schema::units(),
+					(int) $payload['academic_unit_id']
+				)
+			);
+			if ( $unit_session > 0 ) {
+				$session_id = $unit_session;
+			}
+		}
+		if ( ! $session_id && $active_session_id > 0 ) {
+			$session_id = $active_session_id;
+		}
+
 		$insert_data = [
 			'reference_number'      => $ref_number,
+			'academic_session_id'   => $session_id > 0 ? $session_id : null,
 			'academic_unit_id'      => ! empty( $payload['academic_unit_id'] ) ? (int) $payload['academic_unit_id'] : null,
 			'student_first_name'    => sanitize_text_field( $payload['student_first_name'] ),
 			'student_middle_name'   => ! empty( $payload['student_middle_name'] ) ? sanitize_text_field( $payload['student_middle_name'] ) : '',
@@ -187,6 +217,7 @@ final class AdmissionsService {
 			'custom_fields_json'    => wp_json_encode( $custom_data ),
 			'status'                => $status,
 			'source'                => $source,
+			'submitted_at'          => $now,
 			'created_at'            => $now,
 			'updated_at'            => $now,
 		];
@@ -810,8 +841,23 @@ final class AdmissionsService {
 		}
 
 		if ( null !== $params['academic_session_id'] && 0 !== $params['academic_session_id'] ) {
-			$query   .= ' AND academic_session_id = %d';
-			$binds[] = (int) $params['academic_session_id'];
+			$session_filter_id = (int) $params['academic_session_id'];
+			// Match explicit session, or fallback for legacy/unscoped applications if this is current session.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$is_current = (bool) $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT 1 FROM %i WHERE id = %d AND is_current = 1',
+					Schema::sessions(),
+					$session_filter_id
+				)
+			);
+			if ( $is_current ) {
+				$query   .= ' AND (academic_session_id = %d OR academic_session_id IS NULL)';
+				$binds[] = $session_filter_id;
+			} else {
+				$query   .= ' AND academic_session_id = %d';
+				$binds[] = $session_filter_id;
+			}
 		}
 
 		if ( null !== $params['academic_unit_id'] && 0 !== $params['academic_unit_id'] ) {
@@ -883,8 +929,23 @@ final class AdmissionsService {
 		}
 
 		if ( ! empty( $args['academic_session_id'] ) ) {
-			$query   .= ' AND academic_session_id = %d';
-			$binds[] = (int) $args['academic_session_id'];
+			$session_filter_id = (int) $args['academic_session_id'];
+			// Match explicit session, or fallback for legacy/unscoped applications if this is current session.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$is_current = (bool) $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT 1 FROM %i WHERE id = %d AND is_current = 1',
+					Schema::sessions(),
+					$session_filter_id
+				)
+			);
+			if ( $is_current ) {
+				$query   .= ' AND (academic_session_id = %d OR academic_session_id IS NULL)';
+				$binds[] = $session_filter_id;
+			} else {
+				$query   .= ' AND academic_session_id = %d';
+				$binds[] = $session_filter_id;
+			}
 		}
 
 		if ( ! empty( $args['academic_unit_id'] ) ) {
@@ -981,24 +1042,23 @@ final class AdmissionsService {
 	 */
 	private function db_get_status_events( int $app_id ): array {
 		global $wpdb;
-		$table = Schema::app_events();
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Admission application status events query.
 		$results = $wpdb->get_results(
-			$wpdb->prepare( 'SELECT * FROM %i WHERE application_id = %d ORDER BY changed_at ASC', Schema::app_events(), $app_id ),
+			$wpdb->prepare(
+				'SELECT e.*, COALESCE(u.display_name, u.user_login) AS actor_name
+				 FROM %i e
+				 LEFT JOIN %i u ON e.changed_by = u.ID
+				 WHERE e.application_id = %d
+				 ORDER BY e.changed_at ASC, e.id ASC',
+				Schema::app_events(),
+				$wpdb->users,
+				$app_id
+			),
 			ARRAY_A
 		);
 
-		if ( ! is_array( $results ) ) {
-			return [];
-		}
-
-		return array_map( function( $e ) {
-			$user_id = ! empty( $e['changed_by'] ) ? (int) $e['changed_by'] : 0;
-			$user    = $user_id ? get_userdata( $user_id ) : null;
-			$e['actor_name'] = $user ? $user->display_name : ( 'submitted' === $e['to_status'] && empty( $e['from_status'] ) ? 'System Auto' : 'Staff Administrator' ); // ponytail: simple actor name resolution
-			return $e;
-		}, $results );
+		return is_array( $results ) ? $results : [];
 	}
 
 	/**

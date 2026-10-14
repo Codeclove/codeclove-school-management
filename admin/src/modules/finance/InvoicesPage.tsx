@@ -78,7 +78,7 @@ export default function InvoicesPage() {
   }
 
   const table = useTableState({
-    defaultPerPage: 25,
+    defaultPerPage: 10,
     defaultOrderBy: 'created_at',
     defaultOrder: 'desc',
   })

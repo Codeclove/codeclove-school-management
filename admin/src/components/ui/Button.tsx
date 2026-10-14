@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 const buttonVariants = cva(
   // Base styles
   [
-    'inline-flex items-center justify-center gap-1.5 font-medium',
+    'inline-flex items-center justify-center gap-1.5 font-medium whitespace-nowrap',
     'rounded transition-all duration-100 focus-visible:ring-2',
     'focus-visible:ring-brand-ring focus-visible:ring-offset-1',
     'focus-visible:ring-offset-bg-base disabled:opacity-50',

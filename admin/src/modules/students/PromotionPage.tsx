@@ -95,21 +95,6 @@ export default function PromotionPage() {
     per_page: 500,
   })
   const allActiveStudents = studentsListResult?.data ?? []
-
-  const [studentSearchQuery, setStudentSearchQuery] = useState('')
-  const [isSearchFocused, setIsSearchFocused] = useState(false)
-
-  const filteredStudents = useMemo(() => {
-    if (!allActiveStudents) return []
-    const query = studentSearchQuery.toLowerCase().trim()
-    if (!query) return allActiveStudents.slice(0, 10) // Show first 10 when empty search
-    return allActiveStudents.filter((s) => {
-      const fullName = `${s.first_name} ${s.last_name}`.toLowerCase()
-      const number = (s.student_number || '').toLowerCase()
-      return fullName.includes(query) || number.includes(query)
-    })
-  }, [allActiveStudents, studentSearchQuery])
-
   // ─── Queries & Mutations ──────────────────────────────────────────────────────
   const { data: sessionsData } = useSessions({ per_page: 100 })
   const sessions = sessionsData?.data ?? []
@@ -384,7 +369,7 @@ export default function PromotionPage() {
       <Card>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-6 h-6 rounded-full bg-bg-surface border border-border flex items-center justify-center text-xs font-semibold text-text-muted">
+            <div className="w-6 h-6 rounded-full bg-brand-dim text-brand border border-brand/25 flex items-center justify-center text-xs font-bold shrink-0">
               01
             </div>
             <div>
@@ -458,10 +443,10 @@ export default function PromotionPage() {
 
       {/* ─── PROMOTION SCOPE ──────────────────────────────────────────────────────── */}
       {sourceSessionId && targetSessionId && !isStructureEmpty && (
-        <Card>
-          <CardContent className="space-y-4">
+        <Card className="overflow-visible relative z-20">
+          <CardContent className="space-y-4 overflow-visible">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-6 h-6 rounded-full bg-bg-surface border border-border flex items-center justify-center text-xs font-semibold text-text-muted">
+              <div className="w-6 h-6 rounded-full bg-brand-dim text-brand border border-brand/25 flex items-center justify-center text-xs font-bold shrink-0">
                 02
               </div>
               <div>
@@ -481,7 +466,6 @@ export default function PromotionPage() {
                     setPromotionScope('all')
                     setSelectedScopeUnitId('')
                     setSelectedScopeStudentId('')
-                    setStudentSearchQuery('')
                   }}
                   className="accent-brand"
                 />
@@ -497,7 +481,6 @@ export default function PromotionPage() {
                     setPromotionScope('class')
                     setSelectedScopeUnitId('')
                     setSelectedScopeStudentId('')
-                    setStudentSearchQuery('')
                   }}
                   className="accent-brand"
                 />
@@ -513,7 +496,6 @@ export default function PromotionPage() {
                     setPromotionScope('student')
                     setSelectedScopeUnitId('')
                     setSelectedScopeStudentId('')
-                    setStudentSearchQuery('')
                   }}
                   className="accent-brand"
                 />
@@ -535,76 +517,18 @@ export default function PromotionPage() {
             )}
 
             {promotionScope === 'student' && (
-              <div className="max-w-md animate-fade-in relative" onBlur={(e) => {
-                // Delay hiding dropdown so that clicks register on list items
-                if (!e.currentTarget.contains(e.relatedTarget)) {
-                  setTimeout(() => setIsSearchFocused(false), 200)
-                }
-              }}>
-                <FormField label={__( 'Search & Select Student', 'codeclove-school-management' )} required>
-                  <div className="relative">
-                    <Input
-                      value={studentSearchQuery}
-                      onChange={(e) => {
-                        setStudentSearchQuery(e.target.value)
-                        setSelectedScopeStudentId('') // Reset selection when user typing
-                      }}
-                      onFocus={() => setIsSearchFocused(true)}
-                      placeholder={__( 'Type student name or ID...', 'codeclove-school-management' )}
-                      className="pr-8"
-                    />
-                    {selectedScopeStudentId && (
-                      <button
-                        onClick={() => {
-                          setSelectedScopeStudentId('')
-                          setStudentSearchQuery('')
-                        }}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-subtle hover:text-text text-xs font-semibold"
-                        type="button"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
+              <div className="max-w-md animate-fade-in">
+                <FormField label={__( 'Select Student', 'codeclove-school-management' )} required>
+                  <Select
+                    value={selectedScopeStudentId}
+                    onValueChange={setSelectedScopeStudentId}
+                    options={allActiveStudents.map((s) => ({
+                      value: s.id.toString(),
+                      label: `${s.first_name} ${s.last_name} (${s.student_number})`,
+                    }))}
+                    placeholder={__( 'Select student...', 'codeclove-school-management' )}
+                  />
                 </FormField>
-
-                {/* Autocomplete Search Dropdown */}
-                {isSearchFocused && (
-                  <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-lg border border-border bg-bg-overlay shadow-modal z-50 p-1 space-y-0.5">
-                    {filteredStudents.length === 0 ? (
-                      <div className="p-3 text-xs text-text-subtle text-center">
-                        {sprintf( __( 'No active students found matching "%s"', 'codeclove-school-management' ), studentSearchQuery )}
-                      </div>
-                    ) : (
-                      filteredStudents.map((s) => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onMouseDown={() => {
-                            setSelectedScopeStudentId(s.id.toString())
-                            setStudentSearchQuery(`${s.first_name} ${s.last_name} (${s.student_number})`)
-                            setIsSearchFocused(false)
-                          }}
-                          className={`w-full flex items-center justify-between text-left px-3 py-2 rounded text-xs transition-colors duration-100 hover:bg-hover-bg/40 ${
-                            selectedScopeStudentId === s.id.toString()
-                              ? 'bg-brand-dim text-brand font-semibold'
-                              : 'text-text-muted hover:text-text'
-                          }`}
-                        >
-                          <div>
-                            <p className="font-semibold">{s.first_name} {s.last_name}</p>
-                            <p className="text-text-subtle font-mono text-2xs">{s.student_number}</p>
-                          </div>
-                          {s.enrollment && (
-                            <Badge variant="default" size="sm" className="text-2xs">
-                              {s.enrollment.academic_unit_id ? (sourceUnits.find((u) => u.id === s.enrollment?.academic_unit_id)?.name || __( 'Class', 'codeclove-school-management' )) : __( 'No Class', 'codeclove-school-management' )}
-                            </Badge>
-                          )}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
               </div>
             )}
           </CardContent>
@@ -616,7 +540,7 @@ export default function PromotionPage() {
         <Card>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-6 h-6 rounded-full bg-bg-surface border border-border flex items-center justify-center text-xs font-semibold text-text-muted">
+              <div className="w-6 h-6 rounded-full bg-brand-dim text-brand border border-brand/25 flex items-center justify-center text-xs font-bold shrink-0">
                 03
               </div>
               <div>
@@ -680,7 +604,7 @@ export default function PromotionPage() {
       {sourceSessionId && targetSessionId && !isStructureEmpty && isSelectionComplete && (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-6 h-6 rounded-full bg-bg-surface border border-border flex items-center justify-center text-xs font-semibold text-text-muted flex-shrink-0">
+            <div className="w-6 h-6 rounded-full bg-brand-dim text-brand border border-brand/25 flex items-center justify-center text-xs font-bold shrink-0">
               {promotionScope === 'student' ? '03' : '04'}
             </div>
             <div className="flex-1">
@@ -1018,29 +942,29 @@ export default function PromotionPage() {
           {/* ─── FLOATING FOOTER ACTION BAR ────────────────────────────────────────────── */}
           {students && students.length > 0 && (
             <div className="p-4 rounded-xl border border-border bg-bg-surface/85 backdrop-blur-md shadow-md flex items-center justify-between gap-4 sticky bottom-4 z-40">
-              <div className="space-y-0.5">
-                <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-                  {__( 'Promotion Selection Summary', 'codeclove-school-management' )}
-                </span>
-                <p className="text-sm font-semibold text-text">
-                  {sprintf(
-                    __( '%1$d Promotes, %2$d Detains, %3$d Graduates, %4$d Withdraws', 'codeclove-school-management' ),
-                    stats.promote,
-                    stats.detain,
-                    stats.graduate,
-                    stats.withdraw
-                  )}
-                </p>
-              </div>
+          <div className="space-y-0.5">
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+              {__( 'Promotion Selection Summary', 'codeclove-school-management' )}
+            </span>
+            <p className="text-sm font-semibold text-text">
+              {sprintf(
+                __( '%1$d Promotes, %2$d Detains, %3$d Graduates, %4$d Withdraws', 'codeclove-school-management' ),
+                stats.promote,
+                stats.detain,
+                stats.graduate,
+                stats.withdraw
+              )}
+            </p>
+          </div>
 
-              <Button onClick={() => setPreviewModalOpen(true)} className="gap-1.5 shadow-md">
-                <RefreshCw size={14} />
-                {promotionScope === 'all' ? __( 'Preview Rollover', 'codeclove-school-management' ) : promotionScope === 'class' ? __( 'Preview Class Rollover', 'codeclove-school-management' ) : __( 'Preview Student Rollover', 'codeclove-school-management' )}
-              </Button>
-            </div>
-          )}
+          <Button onClick={() => setPreviewModalOpen(true)} className="gap-1.5 shadow-md">
+            <RefreshCw size={14} />
+            {promotionScope === 'all' ? __( 'Preview Rollover', 'codeclove-school-management' ) : promotionScope === 'class' ? __( 'Preview Class Rollover', 'codeclove-school-management' ) : __( 'Preview Student Rollover', 'codeclove-school-management' )}
+          </Button>
         </div>
       )}
+    </div>
+  )}
 
       {/* ─── PREVIEW MODAL ────────────────────────────────────────────────────────── */}
       <ConfirmDialog
@@ -1049,13 +973,8 @@ export default function PromotionPage() {
         onConfirm={handleExecuteRollover}
         title={__( 'Confirm Academic Rollover', 'codeclove-school-management' )}
         variant="danger"
-        confirmText={
-          promotionScope === 'all'
-            ? __( 'Confirm & Execute Rollover', 'codeclove-school-management' )
-            : promotionScope === 'class'
-            ? __( 'Confirm & Execute Class Rollover', 'codeclove-school-management' )
-            : __( 'Confirm & Execute Student Rollover', 'codeclove-school-management' )
-        }
+        className="max-w-md"
+        confirmText={__( 'Execute Rollover', 'codeclove-school-management' )}
         isLoading={executeMutation.isPending}
       >
         <div className="space-y-4">

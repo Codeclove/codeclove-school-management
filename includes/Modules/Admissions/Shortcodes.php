@@ -42,32 +42,66 @@ final class Shortcodes {
 	}
 
 	/**
+	 * Helper to fetch active academic session ID.
+	 */
+	private static function get_active_session_id(): int {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT id FROM %i WHERE is_current = %d LIMIT 1',
+				Schema::sessions(),
+				1
+			)
+		);
+		if ( ! $id ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$id = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT id FROM %i WHERE status = %s ORDER BY id DESC LIMIT 1',
+					Schema::sessions(),
+					'active'
+				)
+			);
+		}
+		return $id;
+	}
+
+	/**
 	 * Helper to fetch active academic units (classes/grades).
 	 *
 	 * @return array<int, array{id: int, name: string}>
 	 */
 	private static function get_academic_units(): array {
 		global $wpdb;
+		$current_session_id = self::get_active_session_id();
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Shortcode academic units query.
-		$units = $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT u.id, u.name FROM %i u
-				WHERE u.status = %s
-				  AND (
-				    u.academic_session_id = (SELECT id FROM %i WHERE status = %s ORDER BY id DESC LIMIT %d)
-				    OR NOT EXISTS (SELECT 1 FROM %i WHERE status = %s)
-				  )
-				ORDER BY u.id ASC',
-				Schema::units(),
-				'active',
-				Schema::sessions(),
-				'active',
-				1,
-				Schema::sessions(),
-				'active'
-			),
-			ARRAY_A
-		);
+		if ( $current_session_id > 0 ) {
+			$units = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT u.id, u.name FROM %i u
+					WHERE u.status = %s AND u.academic_session_id = %d
+					ORDER BY u.level_order ASC, u.id ASC',
+					Schema::units(),
+					'active',
+					$current_session_id
+				),
+				ARRAY_A
+			);
+		} else {
+			$units = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT u.id, u.name FROM %i u
+					WHERE u.status = %s
+					ORDER BY u.level_order ASC, u.id ASC',
+					Schema::units(),
+					'active'
+				),
+				ARRAY_A
+			);
+		}
+
 		return $units ?: [];
 	}
 
@@ -177,6 +211,9 @@ final class Shortcodes {
 			<form id="<?php echo esc_attr( $form_id ); ?>" action="#">
 				<input type="hidden" name="status" value="<?php echo esc_attr( $is_inquiry ? 'inquiry' : 'submitted' ); ?>">
 				<input type="hidden" name="source" value="<?php echo esc_attr( $is_inquiry ? 'inquiry_form' : 'public_form' ); ?>">
+				<?php $active_sid = self::get_active_session_id(); if ( $active_sid > 0 ) : ?>
+					<input type="hidden" name="academic_session_id" value="<?php echo esc_attr( (string) $active_sid ); ?>">
+				<?php endif; ?>
 
 				<div class="codeclove-section-title"><?php esc_html_e( 'Student Details', 'codeclove-school-management' ); ?></div>
 				<div class="codeclove-form-grid">

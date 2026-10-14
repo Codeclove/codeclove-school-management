@@ -2,9 +2,11 @@
 /**
  * Demo Data Service.
  *
- * Populates realistic sample school records (academic sessions, classes, subjects,
- * staff, students, fee types, invoices, attendance, and noticeboard announcements)
- * so that new installations do not face an empty screen.
+ * Populates realistic sample school records (academic sessions, terms, classes,
+ * sections, subjects, staff members with photos, students with photos, fee types,
+ * invoices, payments, attendance history, admissions applications,
+ * noticeboard announcements, and school branding) so that new installations
+ * present an engaging, fully operational school out of the box.
  *
  * @package CodeClove\Modules\Settings
  */
@@ -48,6 +50,16 @@ final class DemoDataService {
 	public const OPTION_PROMPT_DISMISSED = 'codeclove_demo_prompt_dismissed';
 
 	/**
+	 * WordPress option backup of previous settings before demo data import.
+	 */
+	public const OPTION_PREV_SETTINGS = 'codeclove_demo_prev_settings';
+
+	/**
+	 * WordPress post meta key used to identify demo media attachments.
+	 */
+	public const DEMO_META_KEY = '_codeclove_demo_asset';
+
+	/**
 	 * Dismisses the demo data onboarding prompt.
 	 *
 	 * @return bool
@@ -73,15 +85,19 @@ final class DemoDataService {
 			];
 		}
 
-		set_transient( self::LOCK_TRANSIENT, 1, 60 );
+		set_transient( self::LOCK_TRANSIENT, 1, 120 );
 
 		try {
-			// Clear any previous demo data first to prevent duplicate key collisions.
+			// Clear any previous demo data first to ensure an idempotent run.
 			$this->clear();
 
-			$result = Transaction::run(
-				function () use ( $country ): array {
-					return $this->seed_demo_records( $country );
+			// Pre-resolve or upload demo media attachments.
+			$media_data = $this->prepare_demo_media();
+
+			// Execute database population inside a transaction.
+			Transaction::run(
+				function () use ( $country, $media_data ): array {
+					return $this->seed_demo_records( $country, $media_data );
 				}
 			);
 
@@ -106,7 +122,7 @@ final class DemoDataService {
 	}
 
 	/**
-	 * Clears demo records from the database and removes the demo data imported option.
+	 * Clears demo records from the database, removes media attachments, and cleans options.
 	 *
 	 * @return array{success: bool, message: string}
 	 */
@@ -124,6 +140,9 @@ final class DemoDataService {
 			$this->delete_by_ids( Schema::line_items(), $ids['line_item_ids'] ?? [] );
 			$this->delete_by_ids( Schema::invoices(), $ids['invoice_ids'] ?? [] );
 			$this->delete_by_ids( Schema::attendance(), $ids['attendance_ids'] ?? [] );
+			$this->delete_by_ids( Schema::staff_attendance(), $ids['staff_attendance_ids'] ?? [] );
+			$this->delete_by_ids( Schema::app_events(), $ids['app_event_ids'] ?? [] );
+			$this->delete_by_ids( Schema::applications(), $ids['application_ids'] ?? [] );
 			$this->delete_by_ids( Schema::student_guardians(), $ids['student_guardian_ids'] ?? [] );
 			$this->delete_by_ids( Schema::student_subjects(), $ids['student_subject_ids'] ?? [] );
 			$this->delete_by_ids( Schema::enrollments(), $ids['enrollment_ids'] ?? [] );
@@ -138,7 +157,30 @@ final class DemoDataService {
 			$this->delete_by_ids( Schema::fee_types(), $ids['fee_type_ids'] ?? [] );
 			$this->delete_by_ids( Schema::notifications(), $ids['notification_ids'] ?? [] );
 
-			// Also clean any demo records matching prefix in case IDs were missing or legacy.
+			// Clean demo media attachments.
+			$attachment_ids = array_filter( array_map( 'intval', $ids['attachment_ids'] ?? [] ) );
+			// Also find any lingering demo attachments via meta.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$lingering_meta_ids = $wpdb->get_col(
+				$wpdb->prepare( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s", self::DEMO_META_KEY )
+			);
+			if ( ! empty( $lingering_meta_ids ) ) {
+				$attachment_ids = array_merge( $attachment_ids, array_map( 'intval', $lingering_meta_ids ) );
+			}
+			$attachment_ids = array_unique( $attachment_ids );
+
+			if ( ! empty( $attachment_ids ) ) {
+				if ( ! function_exists( 'wp_delete_attachment' ) ) {
+					require_once ABSPATH . 'wp-admin/includes/image.php';
+					require_once ABSPATH . 'wp-admin/includes/file.php';
+					require_once ABSPATH . 'wp-admin/includes/media.php';
+				}
+				foreach ( $attachment_ids as $att_id ) {
+					wp_delete_attachment( $att_id, true );
+				}
+			}
+
+			// Clean fallback prefix queries in case records were created outside tracked IDs.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE code LIKE %s', Schema::sessions(), 'DEMO-%' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -156,11 +198,20 @@ final class DemoDataService {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE payment_number LIKE %s', Schema::payments(), 'DEMO-%' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE title LIKE %s', Schema::notifications(), '%CodeClove (Demo)%' ) );
+			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE reference_number LIKE %s', Schema::applications(), 'DEMO-%' ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE title LIKE %s OR content LIKE %s', Schema::notifications(), '%CodeClove (Demo)%', '%(Demo)%' ) );
+
+			// Restore previous settings if backed up.
+			$prev_settings = get_option( self::OPTION_PREV_SETTINGS, null );
+			if ( is_array( $prev_settings ) ) {
+				( new SettingsRepository() )->update_settings( $prev_settings );
+			}
 
 			delete_option( self::OPTION_IMPORTED );
 			delete_option( self::OPTION_RECORD_IDS );
 			delete_option( self::OPTION_PROMPT_DISMISSED );
+			delete_option( self::OPTION_PREV_SETTINGS );
 
 			return [
 				'success' => true,
@@ -202,17 +253,9 @@ final class DemoDataService {
 		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$raw_session_count = $wpdb->get_var(
-			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NULL', Schema::sessions() )
+		$session_count = (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT COUNT(*) FROM %i', Schema::sessions() )
 		);
-		if ( null === $raw_session_count ) {
-			// Fallback in case academic_sessions table does not have deleted_at column.
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$raw_session_count = $wpdb->get_var(
-				$wpdb->prepare( 'SELECT COUNT(*) FROM %i', Schema::sessions() )
-			);
-		}
-		$session_count = (int) $raw_session_count;
 
 		$should_show_prompt = ( ! $imported && ! $prompt_dismissed && 0 === $student_count && 0 === $session_count );
 
@@ -227,22 +270,156 @@ final class DemoDataService {
 	}
 
 	/**
-	 * Generates lightweight, realistic sample records.
+	 * Pre-resolves or registers demo media files as WordPress attachments.
 	 *
-	 * @param string $country Country preset input.
-	 * @return array Created IDs map.
+	 * @return array{
+	 *     student_photo_ids: int[],
+	 *     staff_photo_ids: int[],
+	 *     logo_id: int|null,
+	 *     logo_url: string,
+	 *     attachment_ids: int[]
+	 * }
 	 */
-	private function seed_demo_records( string $country ): array {
+	private function prepare_demo_media(): array {
+		$plugin_dir = defined( 'CODECLOVE_DIR' ) ? CODECLOVE_DIR : plugin_dir_path( dirname( __DIR__, 2 ) . '/codeclove-school-management.php' );
+		$plugin_url = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : plugin_dir_url( dirname( __DIR__, 2 ) . '/codeclove-school-management.php' );
+
+		$created_ids       = [];
+		$student_photo_ids = [];
+		$staff_photo_ids   = [];
+
+		// 1. Student photos (10 files)
+		for ( $i = 1; $i <= 10; $i++ ) {
+			$file = $plugin_dir . "assets/demo/students/student_{$i}.jpg";
+			$att_id = $this->resolve_demo_attachment( $file, 'students', "Demo Student Photo {$i}", 'image/jpeg' );
+			if ( $att_id ) {
+				$student_photo_ids[ $i - 1 ] = $att_id;
+				$created_ids[]               = $att_id;
+			}
+		}
+
+		// 2. Staff photos (8 files)
+		for ( $i = 1; $i <= 8; $i++ ) {
+			$file = $plugin_dir . "assets/demo/staff/staff_{$i}.jpg";
+			$att_id = $this->resolve_demo_attachment( $file, 'staff', "Demo Staff Photo {$i}", 'image/jpeg' );
+			if ( $att_id ) {
+				$staff_photo_ids[ $i - 1 ] = $att_id;
+				$created_ids[]             = $att_id;
+			}
+		}
+
+		// 3. School Logo
+		$logo_file = $plugin_dir . 'assets/demo/school-logo.png';
+		$logo_id   = $this->resolve_demo_attachment( $logo_file, 'logo', 'Demo School Logo', 'image/png' );
+		if ( $logo_id ) {
+			$created_ids[] = $logo_id;
+			$logo_url      = wp_get_attachment_url( $logo_id ) ?: ( $plugin_url . 'assets/demo/school-logo.png' );
+		} else {
+			$logo_url = $plugin_url . 'assets/demo/school-logo.png';
+		}
+
+		return [
+			'student_photo_ids' => $student_photo_ids,
+			'staff_photo_ids'   => $staff_photo_ids,
+			'logo_id'           => $logo_id,
+			'logo_url'          => $logo_url,
+			'attachment_ids'    => array_values( array_unique( $created_ids ) ),
+		];
+	}
+
+	/**
+	 * Resolves or uploads a demo media file as a WordPress attachment.
+	 *
+	 * @param string $source_path Absolute path to the source image file.
+	 * @param string $category    Subcategory string ('students', 'staff', 'logo').
+	 * @param string $title       Attachment title.
+	 * @param string $mime_type   MIME type ('image/jpeg', 'image/png').
+	 * @return int|null WordPress attachment ID or null on failure.
+	 */
+	private function resolve_demo_attachment( string $source_path, string $category, string $title, string $mime_type = 'image/jpeg' ): ?int {
 		global $wpdb;
 
-		$now     = current_time( 'mysql' );
-		$today   = current_time( 'Y-m-d' );
-		$cur_year = (int) gmdate( 'Y' );
+		if ( ! file_exists( $source_path ) ) {
+			return null;
+		}
+
+		$filename = basename( $source_path );
+		$meta_val = "demo_{$category}_{$filename}";
+
+		// Check if already created and valid.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$existing_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s LIMIT 1",
+				self::DEMO_META_KEY,
+				$meta_val
+			)
+		);
+
+		if ( $existing_id > 0 && get_post( $existing_id ) ) {
+			return $existing_id;
+		}
+
+		$contents = file_get_contents( $source_path );
+		if ( false === $contents ) {
+			return null;
+		}
+
+		if ( ! function_exists( 'wp_upload_bits' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+		if ( ! function_exists( 'wp_insert_attachment' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+			require_once ABSPATH . 'wp-admin/includes/media.php';
+		}
+
+		$upload = wp_upload_bits( "codeclove_demo_{$category}_{$filename}", null, $contents );
+		if ( ! empty( $upload['error'] ) || empty( $upload['file'] ) ) {
+			return null;
+		}
+
+		$attachment = [
+			'post_mime_type' => $mime_type,
+			'post_title'     => $title,
+			'post_content'   => '',
+			'post_status'    => 'inherit',
+			'guid'           => $upload['url'],
+		];
+
+		$attach_id = wp_insert_attachment( $attachment, $upload['file'] );
+		if ( is_wp_error( $attach_id ) || ! ( $attach_id > 0 ) ) {
+			return null;
+		}
+
+		if ( function_exists( 'wp_generate_attachment_metadata' ) ) {
+			$attach_data = wp_generate_attachment_metadata( (int) $attach_id, $upload['file'] );
+			wp_update_attachment_metadata( (int) $attach_id, $attach_data );
+		}
+
+		update_post_meta( (int) $attach_id, self::DEMO_META_KEY, $meta_val );
+
+		return (int) $attach_id;
+	}
+
+	/**
+	 * Generates realistic, fully populated school sample records.
+	 *
+	 * @param string $country    Country preset input ('IN', 'US', 'GB').
+	 * @param array  $media_data Pre-resolved media attachments map.
+	 * @return array Created IDs map.
+	 */
+	private function seed_demo_records( string $country, array $media_data = [] ): array {
+		global $wpdb;
+
+		$now       = current_time( 'mysql' );
+		$today     = current_time( 'Y-m-d' );
+		$cur_year  = (int) gmdate( 'Y' );
 		$next_year = $cur_year + 1;
 
 		// Detect country preset and currency.
-		$settings = ( new SettingsRepository() )->get_settings();
-		$country_code = strtoupper( trim( $country ) );
+		$settings_repo = new SettingsRepository();
+		$settings      = $settings_repo->get_settings();
+		$country_code  = strtoupper( trim( $country ) );
 		if ( ! in_array( $country_code, [ 'IN', 'US', 'GB' ], true ) ) {
 			$setting_preset = strtoupper( (string) ( $settings['education_system']['preset'] ?? '' ) );
 			if ( in_array( $setting_preset, [ 'IN', 'US', 'GB' ], true ) ) {
@@ -285,10 +462,58 @@ final class DemoDataService {
 			'line_item_ids'        => [],
 			'payment_ids'          => [],
 			'attendance_ids'       => [],
+			'staff_attendance_ids' => [],
+			'application_ids'      => [],
+			'app_event_ids'        => [],
 			'notification_ids'     => [],
+			'attachment_ids'       => $media_data['attachment_ids'] ?? [],
 		];
 
-		// ── 1. Academic Session & Term ─────────────────────────────────────────
+		// ── 0. School Settings & Logo Update ──────────────────────────────────
+		if ( ! get_option( self::OPTION_PREV_SETTINGS ) ) {
+			update_option( self::OPTION_PREV_SETTINGS, $settings, false );
+		}
+
+		$demo_school_info = match ( $country_code ) {
+			'GB' => [
+				'name'    => "St. Jude's International Grammar School",
+				'code'    => 'SJG-2026',
+				'email'   => 'admissions@stjudesgrammar.edu.uk',
+				'phone'   => '+44 20 7946 0192',
+				'website' => 'https://stjudesgrammar.edu.uk',
+				'address' => '24 St. Jude\'s Way, Westminster, London, SW1P 3PB',
+			],
+			'US' => [
+				'name'    => 'Oakridge International Preparatory Academy',
+				'code'    => 'OAK-2026',
+				'email'   => 'admissions@oakridgeprep.org',
+				'phone'   => '+1 (555) 234-5678',
+				'website' => 'https://oakridgeprep.org',
+				'address' => '740 Academy Parkway, Springfield, OR 97477',
+			],
+			default => [
+				'name'    => 'Greenwood International Academy',
+				'code'    => 'GIA-2026',
+				'email'   => 'admissions@greenwoodacademy.edu.in',
+				'phone'   => '+91 22 2876 5432',
+				'website' => 'https://greenwoodacademy.edu.in',
+				'address' => 'Plot 42, Knowledge Park, Bandra Kurla Complex, Mumbai, Maharashtra 400051',
+			],
+		};
+
+		$updated_settings                   = $settings;
+		$updated_settings['school']['name'] = $demo_school_info['name'];
+		$updated_settings['school']['code'] = $demo_school_info['code'];
+		if ( ! empty( $media_data['logo_url'] ) ) {
+			$updated_settings['school']['logo'] = $media_data['logo_url'];
+		}
+		$updated_settings['school']['email']   = $demo_school_info['email'];
+		$updated_settings['school']['phone']   = $demo_school_info['phone'];
+		$updated_settings['school']['website'] = $demo_school_info['website'];
+		$updated_settings['school']['address'] = $demo_school_info['address'];
+		$settings_repo->update_settings( $updated_settings );
+
+		// ── 1. Academic Session & Terms ────────────────────────────────────────
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->insert(
 			Schema::sessions(),
@@ -303,10 +528,10 @@ final class DemoDataService {
 				'updated_at' => $now,
 			]
 		);
-		$session_id = (int) $wpdb->insert_id;
+		$session_id                   = (int) $wpdb->insert_id;
 		$tracked_ids['session_ids'][] = $session_id;
 
-		// 1 Term so current term resolver and dashboard term filter works smoothly.
+		// Term 1 (Active)
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->insert(
 			Schema::terms(),
@@ -322,8 +547,26 @@ final class DemoDataService {
 				'updated_at'          => $now,
 			]
 		);
-		$term_id = (int) $wpdb->insert_id;
+		$term_id                   = (int) $wpdb->insert_id;
 		$tracked_ids['term_ids'][] = $term_id;
+
+		// Term 2 (Upcoming)
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->insert(
+			Schema::terms(),
+			[
+				'academic_session_id' => $session_id,
+				'name'                => 'Term 2',
+				'code'                => 'DEMO-T2',
+				'starts_on'           => gmdate( 'Y-m-d', strtotime( '+4 months +1 day' ) ),
+				'ends_on'             => gmdate( 'Y-m-d', strtotime( '+10 months' ) ),
+				'sort_order'          => 2,
+				'status'              => 'inactive',
+				'created_at'          => $now,
+				'updated_at'          => $now,
+			]
+		);
+		$tracked_ids['term_ids'][] = (int) $wpdb->insert_id;
 
 		// ── 2. Academic Units & Sections ───────────────────────────────────────
 		$unit_labels = match ( $country_code ) {
@@ -350,12 +593,12 @@ final class DemoDataService {
 					'updated_at'          => $now,
 				]
 			);
-			$u_id = (int) $wpdb->insert_id;
-			$unit_ids[] = $u_id;
+			$u_id                   = (int) $wpdb->insert_id;
+			$unit_ids[]             = $u_id;
 			$tracked_ids['unit_ids'][] = $u_id;
 
 			// Add sections (Section A & Section B)
-			foreach ( [ 'Section A', 'Section B' ] as $g_idx => $sec_name ) {
+			foreach ( [ 'Section A', 'Section B' ] as $sec_name ) {
 				$sec_code = 'A' === substr( $sec_name, -1 ) ? 'A' : 'B';
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$wpdb->insert(
@@ -370,9 +613,9 @@ final class DemoDataService {
 						'updated_at'       => $now,
 					]
 				);
-				$g_id = (int) $wpdb->insert_id;
-				$group_ids[ $u_id ][] = $g_id;
-				$tracked_ids['group_ids'][] = $g_id;
+				$g_id                        = (int) $wpdb->insert_id;
+				$group_ids[ $u_id ][]        = $g_id;
+				$tracked_ids['group_ids'][]  = $g_id;
 			}
 		}
 
@@ -398,8 +641,8 @@ final class DemoDataService {
 					'updated_at' => $now,
 				]
 			);
-			$s_id = (int) $wpdb->insert_id;
-			$subject_ids[] = $s_id;
+			$s_id                      = (int) $wpdb->insert_id;
+			$subject_ids[]             = $s_id;
 			$tracked_ids['subject_ids'][] = $s_id;
 
 			// Link to each academic unit
@@ -419,113 +662,500 @@ final class DemoDataService {
 			}
 		}
 
-		// ── 4. Staff Members ───────────────────────────────────────────────────
+		// ── 4. Staff Members (8 Staff matching 8 Profile Photos) ───────────────
 		$staff_data = match ( $country_code ) {
 			'GB' => [
-				[ 'first' => 'Claire', 'last' => 'Higgins', 'title' => 'Ms.', 'email' => 'claire.higgins@example.com', 'role' => 'Teacher', 'desig' => 'Lead Teacher', 'dept' => 'Academics', 'num' => 'DEMO-STF-101' ],
-				[ 'first' => 'Philip', 'last' => 'Hughes',  'title' => 'Mr.', 'email' => 'philip.hughes@example.com',  'role' => 'Admin',   'desig' => 'Operations Manager', 'dept' => 'Administration', 'num' => 'DEMO-STF-102' ],
-				[ 'first' => 'Rachel', 'last' => 'Bennett', 'title' => 'Mrs.', 'email' => 'rachel.bennett@example.com', 'role' => 'Accountant', 'desig' => 'Bursar', 'dept' => 'Finance', 'num' => 'DEMO-STF-103' ],
+				[
+					'first'   => 'Claire',
+					'last'    => 'Higgins',
+					'title'   => 'Ms.',
+					'email'   => 'claire.higgins@example.com',
+					'phone'   => '+44 7911 123401',
+					'role'    => 'Teacher',
+					'desig'   => 'Senior Academic Teacher',
+					'dept'    => 'Academics',
+					'num'     => 'DEMO-STF-101',
+					'cat'     => 'teaching',
+					'quals'   => [ [ 'degree' => 'PGCE Primary Education', 'institution' => 'University of Cambridge', 'year' => 2017 ] ],
+					'address' => [ 'street' => '14 Kensington High St', 'city' => 'London', 'state' => 'Greater London', 'zip' => 'W8 4PT', 'country' => 'GB' ],
+				],
+				[
+					'first'   => 'Philip',
+					'last'    => 'Hughes',
+					'title'   => 'Dr.',
+					'email'   => 'philip.hughes@example.com',
+					'phone'   => '+44 7911 123402',
+					'role'    => 'Admin',
+					'desig'   => 'Head of School & Principal',
+					'dept'    => 'Administration',
+					'num'     => 'DEMO-STF-102',
+					'cat'     => 'administrative',
+					'quals'   => [ [ 'degree' => 'Ph.D. Educational Leadership', 'institution' => 'University of Oxford', 'year' => 2012 ] ],
+					'address' => [ 'street' => '22 College Road', 'city' => 'London', 'state' => 'Greater London', 'zip' => 'SE21 7HN', 'country' => 'GB' ],
+				],
+				[
+					'first'   => 'Rachel',
+					'last'    => 'Bennett',
+					'title'   => 'Mrs.',
+					'email'   => 'rachel.bennett@example.com',
+					'phone'   => '+44 7911 123403',
+					'role'    => 'Accountant',
+					'desig'   => 'Bursar & Finance Director',
+					'dept'    => 'Finance',
+					'num'     => 'DEMO-STF-103',
+					'cat'     => 'administrative',
+					'quals'   => [ [ 'degree' => 'ACA Chartered Accountant', 'institution' => 'ICAEW', 'year' => 2014 ] ],
+					'address' => [ 'street' => '8 Victoria Street', 'city' => 'London', 'state' => 'Greater London', 'zip' => 'SW1H 0EX', 'country' => 'GB' ],
+				],
+				[
+					'first'   => 'James',
+					'last'    => 'Watson',
+					'title'   => 'Mr.',
+					'email'   => 'james.watson@example.com',
+					'phone'   => '+44 7911 123404',
+					'role'    => 'Teacher',
+					'desig'   => 'Head of Science Department',
+					'dept'    => 'Academics',
+					'num'     => 'DEMO-STF-104',
+					'cat'     => 'teaching',
+					'quals'   => [ [ 'degree' => 'M.Sc. Physics', 'institution' => 'Imperial College London', 'year' => 2016 ] ],
+					'address' => [ 'street' => '33 Queen Street', 'city' => 'London', 'state' => 'Greater London', 'zip' => 'EC4R 1AP', 'country' => 'GB' ],
+				],
+				[
+					'first'   => 'Fiona',
+					'last'    => 'Clark',
+					'title'   => 'Mrs.',
+					'email'   => 'fiona.clark@example.com',
+					'phone'   => '+44 7911 123405',
+					'role'    => 'Teacher',
+					'desig'   => 'English Language Faculty',
+					'dept'    => 'Academics',
+					'num'     => 'DEMO-STF-105',
+					'cat'     => 'teaching',
+					'quals'   => [ [ 'degree' => 'M.A. English Literature', 'institution' => 'University of Edinburgh', 'year' => 2018 ] ],
+					'address' => [ 'street' => '19 Baker Street', 'city' => 'London', 'state' => 'Greater London', 'zip' => 'W1U 8ED', 'country' => 'GB' ],
+				],
+				[
+					'first'   => 'Alistair',
+					'last'    => 'Campbell',
+					'title'   => 'Mr.',
+					'email'   => 'alistair.campbell@example.com',
+					'phone'   => '+44 7911 123406',
+					'role'    => 'Admin',
+					'desig'   => 'Operations & Facilities Registrar',
+					'dept'    => 'Administration',
+					'num'     => 'DEMO-STF-106',
+					'cat'     => 'administrative',
+					'quals'   => [ [ 'degree' => 'B.A. Business Administration', 'institution' => "King's College London", 'year' => 2015 ] ],
+					'address' => [ 'street' => '45 Millbank', 'city' => 'London', 'state' => 'Greater London', 'zip' => 'SW1P 4RS', 'country' => 'GB' ],
+				],
+				[
+					'first'   => 'Eleanor',
+					'last'    => 'Davies',
+					'title'   => 'Ms.',
+					'email'   => 'eleanor.davies@example.com',
+					'phone'   => '+44 7911 123407',
+					'role'    => 'Teacher',
+					'desig'   => 'Student Wellbeing Counselor',
+					'dept'    => 'Student Welfare',
+					'num'     => 'DEMO-STF-107',
+					'cat'     => 'administrative',
+					'quals'   => [ [ 'degree' => 'M.Sc. Child Psychology', 'institution' => 'UCL', 'year' => 2019 ] ],
+					'address' => [ 'street' => '12 Richmond Road', 'city' => 'London', 'state' => 'Greater London', 'zip' => 'TW1 3EE', 'country' => 'GB' ],
+				],
+				[
+					'first'   => 'Harry',
+					'last'    => 'Edwards',
+					'title'   => 'Mr.',
+					'email'   => 'harry.edwards@example.com',
+					'phone'   => '+44 7911 123408',
+					'role'    => 'Teacher',
+					'desig'   => 'Athletics & PE Director',
+					'dept'    => 'Athletics',
+					'num'     => 'DEMO-STF-108',
+					'cat'     => 'teaching',
+					'quals'   => [ [ 'degree' => 'B.Sc. Sports Science', 'institution' => 'Loughborough University', 'year' => 2016 ] ],
+					'address' => [ 'street' => '50 Wimbledon Hill Rd', 'city' => 'London', 'state' => 'Greater London', 'zip' => 'SW19 7PA', 'country' => 'GB' ],
+				],
 			],
 			'US' => [
-				[ 'first' => 'Sarah',  'last' => 'Jenkins',  'title' => 'Ms.', 'email' => 'sarah.jenkins@example.com',  'role' => 'Teacher', 'desig' => 'Lead Teacher', 'dept' => 'Academics', 'num' => 'DEMO-STF-101' ],
-				[ 'first' => 'Mark',   'last' => 'Anderson', 'title' => 'Mr.', 'email' => 'mark.anderson@example.com', 'role' => 'Admin',   'desig' => 'Administrator', 'dept' => 'Administration', 'num' => 'DEMO-STF-102' ],
-				[ 'first' => 'Emily',  'last' => 'Davis',    'title' => 'Mrs.', 'email' => 'emily.davis@example.com',    'role' => 'Accountant', 'desig' => 'Finance Officer', 'dept' => 'Finance', 'num' => 'DEMO-STF-103' ],
+				[
+					'first'   => 'Sarah',
+					'last'    => 'Jenkins',
+					'title'   => 'Ms.',
+					'email'   => 'sarah.jenkins@example.com',
+					'phone'   => '+1 555-014-1001',
+					'role'    => 'Teacher',
+					'desig'   => 'Senior Academic Teacher',
+					'dept'    => 'Academics',
+					'num'     => 'DEMO-STF-101',
+					'cat'     => 'teaching',
+					'quals'   => [ [ 'degree' => 'M.Ed. Curriculum & Instruction', 'institution' => 'Stanford University', 'year' => 2016 ] ],
+					'address' => [ 'street' => '742 Evergreen Terrace', 'city' => 'Springfield', 'state' => 'OR', 'zip' => '97477', 'country' => 'US' ],
+				],
+				[
+					'first'   => 'Mark',
+					'last'    => 'Anderson',
+					'title'   => 'Dr.',
+					'email'   => 'mark.anderson@example.com',
+					'phone'   => '+1 555-014-1002',
+					'role'    => 'Admin',
+					'desig'   => 'Head of School & Principal',
+					'dept'    => 'Administration',
+					'num'     => 'DEMO-STF-102',
+					'cat'     => 'administrative',
+					'quals'   => [ [ 'degree' => 'Ed.D. Educational Administration', 'institution' => 'Harvard University', 'year' => 2011 ] ],
+					'address' => [ 'street' => '120 Oakridge Blvd', 'city' => 'Springfield', 'state' => 'OR', 'zip' => '97477', 'country' => 'US' ],
+				],
+				[
+					'first'   => 'Emily',
+					'last'    => 'Davis',
+					'title'   => 'Mrs.',
+					'email'   => 'emily.davis@example.com',
+					'phone'   => '+1 555-014-1003',
+					'role'    => 'Accountant',
+					'desig'   => 'Chief Financial Officer',
+					'dept'    => 'Finance',
+					'num'     => 'DEMO-STF-103',
+					'cat'     => 'administrative',
+					'quals'   => [ [ 'degree' => 'B.S. Accounting & CPA', 'institution' => 'UC Berkeley', 'year' => 2013 ] ],
+					'address' => [ 'street' => '305 Pine Street', 'city' => 'Springfield', 'state' => 'OR', 'zip' => '97477', 'country' => 'US' ],
+				],
+				[
+					'first'   => 'David',
+					'last'    => 'Miller',
+					'title'   => 'Mr.',
+					'email'   => 'david.miller@example.com',
+					'phone'   => '+1 555-014-1004',
+					'role'    => 'Teacher',
+					'desig'   => 'STEM & Science Coordinator',
+					'dept'    => 'Academics',
+					'num'     => 'DEMO-STF-104',
+					'cat'     => 'teaching',
+					'quals'   => [ [ 'degree' => 'M.S. Applied Physics', 'institution' => 'MIT', 'year' => 2015 ] ],
+					'address' => [ 'street' => '510 Elm Avenue', 'city' => 'Springfield', 'state' => 'OR', 'zip' => '97477', 'country' => 'US' ],
+				],
+				[
+					'first'   => 'Jessica',
+					'last'    => 'Taylor',
+					'title'   => 'Mrs.',
+					'email'   => 'jessica.taylor@example.com',
+					'phone'   => '+1 555-014-1005',
+					'role'    => 'Teacher',
+					'desig'   => 'Language Arts Specialist',
+					'dept'    => 'Academics',
+					'num'     => 'DEMO-STF-105',
+					'cat'     => 'teaching',
+					'quals'   => [ [ 'degree' => 'M.A. English Education', 'institution' => 'Columbia University', 'year' => 2017 ] ],
+					'address' => [ 'street' => '820 Maple Court', 'city' => 'Springfield', 'state' => 'OR', 'zip' => '97477', 'country' => 'US' ],
+				],
+				[
+					'first'   => 'Robert',
+					'last'    => 'Brown',
+					'title'   => 'Mr.',
+					'email'   => 'robert.brown@example.com',
+					'phone'   => '+1 555-014-1006',
+					'role'    => 'Admin',
+					'desig'   => 'Campus Operations Registrar',
+					'dept'    => 'Administration',
+					'num'     => 'DEMO-STF-106',
+					'cat'     => 'administrative',
+					'quals'   => [ [ 'degree' => 'B.S. Operations Management', 'institution' => 'University of Oregon', 'year' => 2014 ] ],
+					'address' => [ 'street' => '440 Cedar Way', 'city' => 'Springfield', 'state' => 'OR', 'zip' => '97477', 'country' => 'US' ],
+				],
+				[
+					'first'   => 'Amanda',
+					'last'    => 'White',
+					'title'   => 'Ms.',
+					'email'   => 'amanda.white@example.com',
+					'phone'   => '+1 555-014-1007',
+					'role'    => 'Teacher',
+					'desig'   => 'Student Guidance Counselor',
+					'dept'    => 'Student Welfare',
+					'num'     => 'DEMO-STF-107',
+					'cat'     => 'administrative',
+					'quals'   => [ [ 'degree' => 'M.S. Counseling Psychology', 'institution' => 'NYU', 'year' => 2018 ] ],
+					'address' => [ 'street' => '915 Birch Lane', 'city' => 'Springfield', 'state' => 'OR', 'zip' => '97477', 'country' => 'US' ],
+				],
+				[
+					'first'   => 'Michael',
+					'last'    => 'Evans',
+					'title'   => 'Coach',
+					'email'   => 'michael.evans@example.com',
+					'phone'   => '+1 555-014-1008',
+					'role'    => 'Teacher',
+					'desig'   => 'Athletics & PE Director',
+					'dept'    => 'Athletics',
+					'num'     => 'DEMO-STF-108',
+					'cat'     => 'teaching',
+					'quals'   => [ [ 'degree' => 'B.S. Kinesiology', 'institution' => 'Penn State', 'year' => 2015 ] ],
+					'address' => [ 'street' => '625 Willow Drive', 'city' => 'Springfield', 'state' => 'OR', 'zip' => '97477', 'country' => 'US' ],
+				],
 			],
-			default => [
-				[ 'first' => 'Sunita', 'last' => 'Rao',     'title' => 'Mrs.', 'email' => 'sunita.rao@example.com',     'role' => 'Teacher', 'desig' => 'Senior Teacher', 'dept' => 'Academics', 'num' => 'DEMO-STF-101' ],
-				[ 'first' => 'Ramesh', 'last' => 'Nair',    'title' => 'Mr.',  'email' => 'ramesh.nair@example.com',    'role' => 'Admin',   'desig' => 'Administrator', 'dept' => 'Administration', 'num' => 'DEMO-STF-102' ],
-				[ 'first' => 'Kavita', 'last' => 'Mehta',   'title' => 'Ms.',  'email' => 'kavita.mehta@example.com',   'role' => 'Accountant', 'desig' => 'Chief Accountant', 'dept' => 'Finance', 'num' => 'DEMO-STF-103' ],
+			default => [ // IN
+				[
+					'first'   => 'Sunita',
+					'last'    => 'Rao',
+					'title'   => 'Mrs.',
+					'email'   => 'sunita.rao@example.com',
+					'phone'   => '+91 98765 43211',
+					'role'    => 'Teacher',
+					'desig'   => 'Senior Academic Teacher',
+					'dept'    => 'Academics',
+					'num'     => 'DEMO-STF-101',
+					'cat'     => 'teaching',
+					'quals'   => [ [ 'degree' => 'M.Sc. Mathematics, B.Ed.', 'institution' => 'Delhi University', 'year' => 2015 ] ],
+					'address' => [ 'street' => 'Flat 402, Sea Green Apts, Worli', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'zip' => '400018', 'country' => 'IN' ],
+				],
+				[
+					'first'   => 'Ramesh',
+					'last'    => 'Nair',
+					'title'   => 'Dr.',
+					'email'   => 'ramesh.nair@example.com',
+					'phone'   => '+91 98765 43212',
+					'role'    => 'Admin',
+					'desig'   => 'Head of School & Principal',
+					'dept'    => 'Administration',
+					'num'     => 'DEMO-STF-102',
+					'cat'     => 'administrative',
+					'quals'   => [ [ 'degree' => 'Ph.D. Education Administration', 'institution' => 'TISS Mumbai', 'year' => 2010 ] ],
+					'address' => [ 'street' => 'B-12, Palm Grove Enclave, Bandra West', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'zip' => '400050', 'country' => 'IN' ],
+				],
+				[
+					'first'   => 'Kavita',
+					'last'    => 'Mehta',
+					'title'   => 'Ms.',
+					'email'   => 'kavita.mehta@example.com',
+					'phone'   => '+91 98765 43213',
+					'role'    => 'Accountant',
+					'desig'   => 'Chief Accountant & Bursar',
+					'dept'    => 'Finance',
+					'num'     => 'DEMO-STF-103',
+					'cat'     => 'administrative',
+					'quals'   => [ [ 'degree' => 'FCA, Chartered Accountant', 'institution' => 'ICAI', 'year' => 2013 ] ],
+					'address' => [ 'street' => 'A-701, Silver Arch, Powai', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'zip' => '400076', 'country' => 'IN' ],
+				],
+				[
+					'first'   => 'Vikram',
+					'last'    => 'Joshi',
+					'title'   => 'Mr.',
+					'email'   => 'vikram.joshi@example.com',
+					'phone'   => '+91 98765 43214',
+					'role'    => 'Teacher',
+					'desig'   => 'Head of Science Department',
+					'dept'    => 'Academics',
+					'num'     => 'DEMO-STF-104',
+					'cat'     => 'teaching',
+					'quals'   => [ [ 'degree' => 'M.Sc. Physics, B.Ed.', 'institution' => 'IIT Bombay', 'year' => 2016 ] ],
+					'address' => [ 'street' => '104, Blue Heaven Towers, Andheri East', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'zip' => '400069', 'country' => 'IN' ],
+				],
+				[
+					'first'   => 'Ananya',
+					'last'    => 'Sen',
+					'title'   => 'Mrs.',
+					'email'   => 'ananya.sen@example.com',
+					'phone'   => '+91 98765 43215',
+					'role'    => 'Teacher',
+					'desig'   => 'English Language Faculty',
+					'dept'    => 'Academics',
+					'num'     => 'DEMO-STF-105',
+					'cat'     => 'teaching',
+					'quals'   => [ [ 'degree' => 'M.A. English Literature', 'institution' => 'Jadavpur University', 'year' => 2017 ] ],
+					'address' => [ 'street' => '503, Gulmohar Heights, Juhu', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'zip' => '400049', 'country' => 'IN' ],
+				],
+				[
+					'first'   => 'Rajesh',
+					'last'    => 'Verma',
+					'title'   => 'Mr.',
+					'email'   => 'rajesh.verma@example.com',
+					'phone'   => '+91 98765 43216',
+					'role'    => 'Admin',
+					'desig'   => 'Operations & Facilities Registrar',
+					'dept'    => 'Administration',
+					'num'     => 'DEMO-STF-106',
+					'cat'     => 'administrative',
+					'quals'   => [ [ 'degree' => 'MBA Operations', 'institution' => 'NMIMS Mumbai', 'year' => 2014 ] ],
+					'address' => [ 'street' => 'C-204, Green Acres, Thane West', 'city' => 'Thane', 'state' => 'Maharashtra', 'zip' => '400601', 'country' => 'IN' ],
+				],
+				[
+					'first'   => 'Priya',
+					'last'    => 'Sharma',
+					'title'   => 'Ms.',
+					'email'   => 'priya.sharma@example.com',
+					'phone'   => '+91 98765 43217',
+					'role'    => 'Teacher',
+					'desig'   => 'Student Guidance Counselor',
+					'dept'    => 'Student Welfare',
+					'num'     => 'DEMO-STF-107',
+					'cat'     => 'administrative',
+					'quals'   => [ [ 'degree' => 'M.A. Applied Psychology', 'institution' => 'Mumbai University', 'year' => 2019 ] ],
+					'address' => [ 'street' => '201, Sunshine Villa, Khar West', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'zip' => '400052', 'country' => 'IN' ],
+				],
+				[
+					'first'   => 'Arjun',
+					'last'    => 'Kapoor',
+					'title'   => 'Mr.',
+					'email'   => 'arjun.kapoor@example.com',
+					'phone'   => '+91 98765 43218',
+					'role'    => 'Teacher',
+					'desig'   => 'Director of Sports & Physical Education',
+					'dept'    => 'Athletics',
+					'num'     => 'DEMO-STF-108',
+					'cat'     => 'teaching',
+					'quals'   => [ [ 'degree' => 'M.P.Ed. Physical Education', 'institution' => 'LNIPE Gwalior', 'year' => 2015 ] ],
+					'address' => [ 'street' => '304, Sports City Enclave, Chembur', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'zip' => '400071', 'country' => 'IN' ],
+				],
 			],
 		};
 
-		foreach ( $staff_data as $stf ) {
+		$staff_ids = [];
+		foreach ( $staff_data as $s_idx => $stf ) {
+			$photo_id = $media_data['staff_photo_ids'][ $s_idx ] ?? null;
+
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->insert(
 				Schema::staff_members(),
 				[
-					'staff_number'    => $stf['num'],
-					'title'           => $stf['title'],
-					'first_name'      => $stf['first'],
-					'last_name'       => $stf['last'],
-					'email'           => $stf['email'],
-					'phone'           => '+91 98765 43210',
-					'department'      => $stf['dept'],
-					'designation'     => $stf['desig'],
-					'staff_category'  => 'teaching' === strtolower( $stf['role'] ) ? 'teaching' : 'administrative',
-					'employment_type' => 'full_time',
-					'joined_on'       => gmdate( 'Y-m-d', strtotime( '-6 months' ) ),
-					'status'          => 'active',
-					'created_at'      => $now,
-					'updated_at'      => $now,
+					'staff_number'            => $stf['num'],
+					'title'                   => $stf['title'],
+					'first_name'              => $stf['first'],
+					'last_name'               => $stf['last'],
+					'email'                   => $stf['email'],
+					'phone'                   => $stf['phone'],
+					'department'              => $stf['dept'],
+					'designation'             => $stf['desig'],
+					'staff_category'          => $stf['cat'],
+					'employment_type'         => 'full_time',
+					'joined_on'               => gmdate( 'Y-m-d', strtotime( '-' . ( 6 + $s_idx * 2 ) . ' months' ) ),
+					'photo_id'                => $photo_id,
+					'address_json'            => wp_json_encode( $stf['address'] ),
+					'qualifications_json'     => wp_json_encode( $stf['quals'] ),
+					'emergency_contact_json'  => wp_json_encode( [
+						'name'         => $stf['first'] . ' Emergency Contact',
+						'relationship' => 'Spouse',
+						'phone'        => $stf['phone'],
+					] ),
+					'status'                  => 'active',
+					'created_at'              => $now,
+					'updated_at'              => $now,
 				]
 			);
-			$tracked_ids['staff_ids'][] = (int) $wpdb->insert_id;
+			$st_id                      = (int) $wpdb->insert_id;
+			$staff_ids[]                = $st_id;
+			$tracked_ids['staff_ids'][] = $st_id;
 		}
 
-		// ── 5. Students & Guardians ────────────────────────────────────────────
+		// ── 5. Staff Attendance (Past 5 School Days) ───────────────────────────
+		$staff_days = [];
+		$ts_cursor  = time();
+		while ( count( $staff_days ) < 5 ) {
+			$dow = (int) gmdate( 'N', $ts_cursor );
+			if ( $dow <= 5 ) {
+				$staff_days[] = gmdate( 'Y-m-d', $ts_cursor );
+			}
+			$ts_cursor -= 86400;
+		}
+
+		foreach ( $staff_ids as $s_idx => $st_id ) {
+			foreach ( $staff_days as $d_idx => $day_str ) {
+				$st_status = 'present';
+				$st_note   = null;
+				if ( 0 === $d_idx && 3 === $s_idx ) {
+					$st_status = 'late';
+					$st_note   = 'Morning traffic delay on highway.';
+				} elseif ( 2 === $d_idx && 6 === $s_idx ) {
+					$st_status = 'half_day';
+					$st_note   = 'Attended district counselor conference in afternoon.';
+				}
+
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->insert(
+					Schema::staff_attendance(),
+					[
+						'staff_member_id' => $st_id,
+						'attendance_date' => $day_str,
+						'status'          => $st_status,
+						'note'            => $st_note,
+						'created_at'      => $now,
+						'updated_at'      => $now,
+					]
+				);
+				$tracked_ids['staff_attendance_ids'][] = (int) $wpdb->insert_id;
+			}
+		}
+
+		// ── 6. Students & Guardians (10 Students matching 10 Profile Photos) ────
 		$students_data = match ( $country_code ) {
 			'GB' => [
-				[ 'first' => 'George',  'last' => 'Taylor',    'gender' => 'male',   'dob' => '2018-05-14', 'g_first' => 'Richard',  'g_last' => 'Taylor' ],
-				[ 'first' => 'Olivia',  'last' => 'Wilson',    'gender' => 'female', 'dob' => '2018-08-22', 'g_first' => 'Paul',     'g_last' => 'Wilson' ],
-				[ 'first' => 'Harry',   'last' => 'Davies',    'gender' => 'male',   'dob' => '2017-03-10', 'g_first' => 'Edward',   'g_last' => 'Davies' ],
-				[ 'first' => 'Amelia',  'last' => 'Evans',     'gender' => 'female', 'dob' => '2017-11-05', 'g_first' => 'George',   'g_last' => 'Evans' ],
-				[ 'first' => 'Jack',    'last' => 'Thomas',    'gender' => 'male',   'dob' => '2017-07-19', 'g_first' => 'Arthur',   'g_last' => 'Thomas' ],
-				[ 'first' => 'Isla',    'last' => 'Roberts',   'gender' => 'female', 'dob' => '2016-02-28', 'g_first' => 'William',  'g_last' => 'Roberts' ],
-				[ 'first' => 'Charlie', 'last' => 'Walker',    'gender' => 'male',   'dob' => '2016-09-12', 'g_first' => 'John',     'g_last' => 'Walker' ],
-				[ 'first' => 'Mia',     'last' => 'Wright',    'gender' => 'female', 'dob' => '2016-12-01', 'g_first' => 'Henry',    'g_last' => 'Wright' ],
-				[ 'first' => 'Freddie', 'last' => 'Robinson',  'gender' => 'male',   'dob' => '2015-04-18', 'g_first' => 'Albert',   'g_last' => 'Robinson' ],
-				[ 'first' => 'Poppy',   'last' => 'Thompson',  'gender' => 'female', 'dob' => '2015-10-30', 'g_first' => 'Charles',  'g_last' => 'Thompson' ],
+				[ 'first' => 'George',  'last' => 'Taylor',    'gender' => 'male',   'dob' => '2018-05-14', 'g_first' => 'Richard',  'g_last' => 'Taylor',    'phone' => '+44 7700 900101', 'rel' => 'Father' ],
+				[ 'first' => 'Olivia',  'last' => 'Wilson',    'gender' => 'female', 'dob' => '2018-08-22', 'g_first' => 'Sarah',    'g_last' => 'Wilson',    'phone' => '+44 7700 900102', 'rel' => 'Mother' ],
+				[ 'first' => 'Harry',   'last' => 'Davies',    'gender' => 'male',   'dob' => '2017-03-10', 'g_first' => 'Edward',   'g_last' => 'Davies',    'phone' => '+44 7700 900103', 'rel' => 'Father' ],
+				[ 'first' => 'Amelia',  'last' => 'Evans',     'gender' => 'female', 'dob' => '2017-11-05', 'g_first' => 'Emma',     'g_last' => 'Evans',     'phone' => '+44 7700 900104', 'rel' => 'Mother' ],
+				[ 'first' => 'Jack',    'last' => 'Thomas',    'gender' => 'male',   'dob' => '2017-07-19', 'g_first' => 'Arthur',   'g_last' => 'Thomas',    'phone' => '+44 7700 900105', 'rel' => 'Father' ],
+				[ 'first' => 'Isla',    'last' => 'Roberts',   'gender' => 'female', 'dob' => '2016-02-28', 'g_first' => 'Charlotte','g_last' => 'Roberts',   'phone' => '+44 7700 900106', 'rel' => 'Mother' ],
+				[ 'first' => 'Charlie', 'last' => 'Walker',    'gender' => 'male',   'dob' => '2016-09-12', 'g_first' => 'John',     'g_last' => 'Walker',    'phone' => '+44 7700 900107', 'rel' => 'Father' ],
+				[ 'first' => 'Mia',     'last' => 'Wright',    'gender' => 'female', 'dob' => '2016-12-01', 'g_first' => 'Victoria', 'g_last' => 'Wright',    'phone' => '+44 7700 900108', 'rel' => 'Mother' ],
+				[ 'first' => 'Freddie', 'last' => 'Robinson',  'gender' => 'male',   'dob' => '2015-04-18', 'g_first' => 'Albert',   'g_last' => 'Robinson',  'phone' => '+44 7700 900109', 'rel' => 'Father' ],
+				[ 'first' => 'Poppy',   'last' => 'Thompson',  'gender' => 'female', 'dob' => '2015-10-30', 'g_first' => 'Helen',    'g_last' => 'Thompson',  'phone' => '+44 7700 900110', 'rel' => 'Mother' ],
 			],
 			'US' => [
-				[ 'first' => 'Liam',     'last' => 'Smith',     'gender' => 'male',   'dob' => '2018-05-14', 'g_first' => 'Robert',   'g_last' => 'Smith' ],
-				[ 'first' => 'Emma',     'last' => 'Johnson',   'gender' => 'female', 'dob' => '2018-08-22', 'g_first' => 'David',    'g_last' => 'Johnson' ],
-				[ 'first' => 'Noah',     'last' => 'Williams',  'gender' => 'male',   'dob' => '2017-03-10', 'g_first' => 'Michael',  'g_last' => 'Williams' ],
-				[ 'first' => 'Olivia',   'last' => 'Brown',     'gender' => 'female', 'dob' => '2017-11-05', 'g_first' => 'James',    'g_last' => 'Brown' ],
-				[ 'first' => 'Oliver',   'last' => 'Jones',     'gender' => 'male',   'dob' => '2017-07-19', 'g_first' => 'William',  'g_last' => 'Jones' ],
-				[ 'first' => 'Ava',      'last' => 'Garcia',    'gender' => 'female', 'dob' => '2016-02-28', 'g_first' => 'Carlos',   'g_last' => 'Garcia' ],
-				[ 'first' => 'Elijah',   'last' => 'Miller',    'gender' => 'male',   'dob' => '2016-09-12', 'g_first' => 'Thomas',   'g_last' => 'Miller' ],
-				[ 'first' => 'Sophia',   'last' => 'Davis',     'gender' => 'female', 'dob' => '2016-12-01', 'g_first' => 'Charles',  'g_last' => 'Davis' ],
-				[ 'first' => 'Lucas',    'last' => 'Rodriguez', 'gender' => 'male',   'dob' => '2015-04-18', 'g_first' => 'Jose',     'g_last' => 'Rodriguez' ],
-				[ 'first' => 'Isabella', 'last' => 'Martinez',  'gender' => 'female', 'dob' => '2015-10-30', 'g_first' => 'Daniel',   'g_last' => 'Martinez' ],
+				[ 'first' => 'Liam',     'last' => 'Smith',     'gender' => 'male',   'dob' => '2018-05-14', 'g_first' => 'Robert',   'g_last' => 'Smith',     'phone' => '+1 555-019-2001', 'rel' => 'Father' ],
+				[ 'first' => 'Emma',     'last' => 'Johnson',   'gender' => 'female', 'dob' => '2018-08-22', 'g_first' => 'Jennifer', 'g_last' => 'Johnson',   'phone' => '+1 555-019-2002', 'rel' => 'Mother' ],
+				[ 'first' => 'Noah',     'last' => 'Williams',  'gender' => 'male',   'dob' => '2017-03-10', 'g_first' => 'Michael',  'g_last' => 'Williams',  'phone' => '+1 555-019-2003', 'rel' => 'Father' ],
+				[ 'first' => 'Olivia',   'last' => 'Brown',     'gender' => 'female', 'dob' => '2017-11-05', 'g_first' => 'Jessica',  'g_last' => 'Brown',     'phone' => '+1 555-019-2004', 'rel' => 'Mother' ],
+				[ 'first' => 'Oliver',   'last' => 'Jones',     'gender' => 'male',   'dob' => '2017-07-19', 'g_first' => 'William',  'g_last' => 'Jones',     'phone' => '+1 555-019-2005', 'rel' => 'Father' ],
+				[ 'first' => 'Ava',      'last' => 'Garcia',    'gender' => 'female', 'dob' => '2016-02-28', 'g_first' => 'Maria',    'g_last' => 'Garcia',    'phone' => '+1 555-019-2006', 'rel' => 'Mother' ],
+				[ 'first' => 'Elijah',   'last' => 'Miller',    'gender' => 'male',   'dob' => '2016-09-12', 'g_first' => 'Thomas',   'g_last' => 'Miller',    'phone' => '+1 555-019-2007', 'rel' => 'Father' ],
+				[ 'first' => 'Sophia',   'last' => 'Davis',     'gender' => 'female', 'dob' => '2016-12-01', 'g_first' => 'Patricia', 'g_last' => 'Davis',     'phone' => '+1 555-019-2008', 'rel' => 'Mother' ],
+				[ 'first' => 'Lucas',    'last' => 'Rodriguez', 'gender' => 'male',   'dob' => '2015-04-18', 'g_first' => 'Jose',     'g_last' => 'Rodriguez', 'phone' => '+1 555-019-2009', 'rel' => 'Father' ],
+				[ 'first' => 'Isabella', 'last' => 'Martinez',  'gender' => 'female', 'dob' => '2015-10-30', 'g_first' => 'Carmen',   'g_last' => 'Martinez',  'phone' => '+1 555-019-2010', 'rel' => 'Mother' ],
 			],
-			default => [
-				[ 'first' => 'Aarav',   'last' => 'Sharma',    'gender' => 'male',   'dob' => '2018-05-14', 'g_first' => 'Rajesh',   'g_last' => 'Sharma' ],
-				[ 'first' => 'Ananya',  'last' => 'Patel',     'gender' => 'female', 'dob' => '2018-08-22', 'g_first' => 'Suresh',   'g_last' => 'Patel' ],
-				[ 'first' => 'Vivaan',  'last' => 'Gupta',     'gender' => 'male',   'dob' => '2017-03-10', 'g_first' => 'Amit',     'g_last' => 'Gupta' ],
-				[ 'first' => 'Diya',    'last' => 'Reddy',     'gender' => 'female', 'dob' => '2017-11-05', 'g_first' => 'Vikram',   'g_last' => 'Reddy' ],
-				[ 'first' => 'Ishaan',  'last' => 'Kumar',     'gender' => 'male',   'dob' => '2017-07-19', 'g_first' => 'Manoj',    'g_last' => 'Kumar' ],
-				[ 'first' => 'Sanvi',   'last' => 'Verma',     'gender' => 'female', 'dob' => '2016-02-28', 'g_first' => 'Ramesh',   'g_last' => 'Verma' ],
-				[ 'first' => 'Reyansh', 'last' => 'Joshi',     'gender' => 'male',   'dob' => '2016-09-12', 'g_first' => 'Deepak',   'g_last' => 'Joshi' ],
-				[ 'first' => 'Myra',    'last' => 'Singh',     'gender' => 'female', 'dob' => '2016-12-01', 'g_first' => 'Harpreet', 'g_last' => 'Singh' ],
-				[ 'first' => 'Advait',  'last' => 'Nair',      'gender' => 'male',   'dob' => '2015-04-18', 'g_first' => 'Prakash',  'g_last' => 'Nair' ],
-				[ 'first' => 'Kiara',   'last' => 'Malhotra',  'gender' => 'female', 'dob' => '2015-10-30', 'g_first' => 'Sunil',    'g_last' => 'Malhotra' ],
+			default => [ // IN
+				[ 'first' => 'Aarav',   'last' => 'Sharma',    'gender' => 'male',   'dob' => '2018-05-14', 'g_first' => 'Rajesh',   'g_last' => 'Sharma',    'phone' => '+91 91234 56701', 'rel' => 'Father' ],
+				[ 'first' => 'Ananya',  'last' => 'Patel',     'gender' => 'female', 'dob' => '2018-08-22', 'g_first' => 'Geeta',    'g_last' => 'Patel',     'phone' => '+91 91234 56702', 'rel' => 'Mother' ],
+				[ 'first' => 'Vivaan',  'last' => 'Gupta',     'gender' => 'male',   'dob' => '2017-03-10', 'g_first' => 'Amit',     'g_last' => 'Gupta',     'phone' => '+91 91234 56703', 'rel' => 'Father' ],
+				[ 'first' => 'Diya',    'last' => 'Reddy',     'gender' => 'female', 'dob' => '2017-11-05', 'g_first' => 'Lakshmi',  'g_last' => 'Reddy',     'phone' => '+91 91234 56704', 'rel' => 'Mother' ],
+				[ 'first' => 'Ishaan',  'last' => 'Kumar',     'gender' => 'male',   'dob' => '2017-07-19', 'g_first' => 'Manoj',    'g_last' => 'Kumar',     'phone' => '+91 91234 56705', 'rel' => 'Father' ],
+				[ 'first' => 'Sanvi',   'last' => 'Verma',     'gender' => 'female', 'dob' => '2016-02-28', 'g_first' => 'Sunita',   'g_last' => 'Verma',     'phone' => '+91 91234 56706', 'rel' => 'Mother' ],
+				[ 'first' => 'Reyansh', 'last' => 'Joshi',     'gender' => 'male',   'dob' => '2016-09-12', 'g_first' => 'Deepak',   'g_last' => 'Joshi',     'phone' => '+91 91234 56707', 'rel' => 'Father' ],
+				[ 'first' => 'Myra',    'last' => 'Singh',     'gender' => 'female', 'dob' => '2016-12-01', 'g_first' => 'Jaspreet', 'g_last' => 'Singh',     'phone' => '+91 91234 56708', 'rel' => 'Mother' ],
+				[ 'first' => 'Advait',  'last' => 'Nair',      'gender' => 'male',   'dob' => '2015-04-18', 'g_first' => 'Prakash',  'g_last' => 'Nair',      'phone' => '+91 91234 56709', 'rel' => 'Father' ],
+				[ 'first' => 'Kiara',   'last' => 'Malhotra',  'gender' => 'female', 'dob' => '2015-10-30', 'g_first' => 'Pooja',    'g_last' => 'Malhotra',  'phone' => '+91 91234 56710', 'rel' => 'Mother' ],
 			],
 		};
 
 		$enrolled_students = [];
 
 		foreach ( $students_data as $i => $stu ) {
-			$seq          = sprintf( '%03d', $i + 1 );
-			$adm_number   = "DEMO-ADM-{$seq}";
-			$stu_number   = "DEMO-STU-{$seq}";
+			$seq            = sprintf( '%03d', $i + 1 );
+			$adm_number     = "DEMO-ADM-{$seq}";
+			$stu_number     = "DEMO-STU-{$seq}";
 			$guardian_email = strtolower( "{$stu['g_first']}.{$stu['g_last']}@example.com" );
 			$guardian_name  = "{$stu['g_first']} {$stu['g_last']}";
+			$photo_id       = $media_data['student_photo_ids'][ $i ] ?? null;
+
+			$address_payload = match ( $country_code ) {
+				'GB'    => [ 'street' => ( $i + 10 ) . ' Kingfisher Lane', 'city' => 'London', 'state' => 'Greater London', 'zip' => 'SW1A 2AA', 'country' => 'GB' ],
+				'US'    => [ 'street' => ( $i + 100 ) . ' Maplewood Drive', 'city' => 'Springfield', 'state' => 'OR', 'zip' => '97477', 'country' => 'US' ],
+				default => [ 'street' => 'Flat ' . ( $i + 101 ) . ', Gulmohar Enclave, Juhu', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'zip' => '400049', 'country' => 'IN' ],
+			};
 
 			// Create guardian
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->insert(
 				Schema::guardians(),
 				[
-					'first_name' => $stu['g_first'],
-					'last_name'  => $stu['g_last'],
-					'email'      => $guardian_email,
-					'phone'      => '+91 91234 56789',
-					'status'     => 'active',
-					'created_at' => $now,
-					'updated_at' => $now,
+					'first_name'   => $stu['g_first'],
+					'last_name'    => $stu['g_last'],
+					'email'        => $guardian_email,
+					'phone'        => $stu['phone'],
+					'address_json' => wp_json_encode( $address_payload ),
+					'status'       => 'active',
+					'created_at'   => $now,
+					'updated_at'   => $now,
 				]
 			);
-			$guardian_id = (int) $wpdb->insert_id;
+			$guardian_id                   = (int) $wpdb->insert_id;
 			$tracked_ids['guardian_ids'][] = $guardian_id;
 
 			// Create student
@@ -539,14 +1169,17 @@ final class DemoDataService {
 					'last_name'        => $stu['last'],
 					'date_of_birth'    => $stu['dob'],
 					'gender'           => $stu['gender'],
+					'photo_id'         => $photo_id,
 					'admission_date'   => gmdate( 'Y-m-d', strtotime( '-2 months' ) ),
 					'email'            => strtolower( "{$stu['first']}.{$stu['last']}@school.example.com" ),
+					'phone'            => $stu['phone'],
+					'address_json'     => wp_json_encode( $address_payload ),
 					'status'           => 'active',
 					'created_at'       => $now,
 					'updated_at'       => $now,
 				]
 			);
-			$student_id = (int) $wpdb->insert_id;
+			$student_id                   = (int) $wpdb->insert_id;
 			$tracked_ids['student_ids'][] = $student_id;
 
 			// Link guardian
@@ -556,7 +1189,7 @@ final class DemoDataService {
 				[
 					'student_id'           => $student_id,
 					'guardian_id'          => $guardian_id,
-					'relationship'         => 'parent',
+					'relationship'         => $stu['rel'],
 					'is_primary'           => 1,
 					'is_billing_contact'   => 1,
 					'is_emergency_contact' => 1,
@@ -566,7 +1199,7 @@ final class DemoDataService {
 			);
 			$tracked_ids['student_guardian_ids'][] = (int) $wpdb->insert_id;
 
-			// Enroll in one of the 3 units (distributed across classes)
+			// Enroll in one of the 3 units
 			$assigned_unit_id  = $unit_ids[ $i % count( $unit_ids ) ];
 			$assigned_groups   = $group_ids[ $assigned_unit_id ] ?? [];
 			$assigned_group_id = ! empty( $assigned_groups ) ? $assigned_groups[ $i % count( $assigned_groups ) ] : null;
@@ -608,10 +1241,188 @@ final class DemoDataService {
 				'group_id'       => $assigned_group_id,
 				'guardian_name'  => $guardian_name,
 				'guardian_email' => $guardian_email,
+				'photo_id'       => $photo_id,
 			];
 		}
 
-		// ── 6. Fee Types ───────────────────────────────────────────────────────
+		// ── 7. Student Attendance Records ──────────────────────────────────────
+		// 7a. Today's attendance (Exactly 8 Present, 2 Late to maintain test assertions)
+		foreach ( $enrolled_students as $idx => $student ) {
+			$status = $idx < 8 ? 'present' : 'late';
+			$note   = 'late' === $status ? 'Delayed by morning transit' : 'On time';
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::attendance(),
+				[
+					'student_id'          => $student['student_id'],
+					'academic_session_id' => $session_id,
+					'academic_unit_id'    => $student['unit_id'],
+					'academic_group_id'   => $student['group_id'],
+					'attendance_date'     => $today,
+					'status'              => $status,
+					'note'                => $note,
+					'created_at'          => $now,
+					'updated_at'          => $now,
+				]
+			);
+			$tracked_ids['attendance_ids'][] = (int) $wpdb->insert_id;
+		}
+
+		// 7b. Historical attendance over the past 10 school days for rich analytics
+		$history_days = [];
+		$hist_cursor  = time() - 86400; // Start from yesterday
+		while ( count( $history_days ) < 10 ) {
+			$dow = (int) gmdate( 'N', $hist_cursor );
+			if ( $dow <= 5 ) {
+				$history_days[] = gmdate( 'Y-m-d', $hist_cursor );
+			}
+			$hist_cursor -= 86400;
+		}
+
+		$status_pool = [ 'present', 'present', 'present', 'present', 'present', 'present', 'late', 'absent' ];
+		foreach ( $enrolled_students as $s_idx => $student ) {
+			foreach ( $history_days as $d_idx => $day_str ) {
+				$pick_idx = ( $s_idx * 3 + $d_idx * 2 ) % count( $status_pool );
+				$h_status = $status_pool[ $pick_idx ];
+				$h_note   = match ( $h_status ) {
+					'late'   => 'Traffic congestion on school bus route.',
+					'absent' => 'Doctor appointment - medical certificate submitted.',
+					default  => null,
+				};
+
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->insert(
+					Schema::attendance(),
+					[
+						'student_id'          => $student['student_id'],
+						'academic_session_id' => $session_id,
+						'academic_unit_id'    => $student['unit_id'],
+						'academic_group_id'   => $student['group_id'],
+						'attendance_date'     => $day_str,
+						'status'              => $h_status,
+						'note'                => $h_note,
+						'created_at'          => $now,
+						'updated_at'          => $now,
+					]
+				);
+				$tracked_ids['attendance_ids'][] = (int) $wpdb->insert_id;
+			}
+		}
+
+		// ── 8. Admissions Applications (6 Applications in Various Stages) ──────
+		$admissions_data = match ( $country_code ) {
+			'GB' => [
+				[ 'first' => 'Oliver',   'last' => 'Scott',     'gender' => 'male',   'dob' => '2019-03-12', 'g_name' => 'David Scott',    'email' => 'david.scott@example.com',    'status' => 'inquiry',       'photo_idx' => 0 ],
+				[ 'first' => 'Freya',    'last' => 'Miller',    'gender' => 'female', 'dob' => '2018-11-20', 'g_name' => 'Claire Miller',  'email' => 'claire.miller@example.com',  'status' => 'submitted',     'photo_idx' => 1 ],
+				[ 'first' => 'Leo',      'last' => 'Brown',     'gender' => 'male',   'dob' => '2018-07-04', 'g_name' => 'Simon Brown',    'email' => 'simon.brown@example.com',    'status' => 'under_review',  'photo_idx' => 2 ],
+				[ 'first' => 'Florence', 'last' => 'Clark',     'gender' => 'female', 'dob' => '2017-09-18', 'g_name' => 'Laura Clark',    'email' => 'laura.clark@example.com',    'status' => 'under_review',  'photo_idx' => 3 ],
+				[ 'first' => 'Arthur',   'last' => 'White',     'gender' => 'male',   'dob' => '2017-04-25', 'g_name' => 'Graham White',   'email' => 'graham.white@example.com',   'status' => 'approved',      'photo_idx' => 4 ],
+				[ 'first' => 'Ivy',      'last' => 'Taylor',    'gender' => 'female', 'dob' => '2016-10-11', 'g_name' => 'Martin Taylor',  'email' => 'martin.taylor@example.com',  'status' => 'admitted',      'photo_idx' => 5 ],
+			],
+			'US' => [
+				[ 'first' => 'Benjamin', 'last' => 'Wilson',    'gender' => 'male',   'dob' => '2019-03-12', 'g_name' => 'Brian Wilson',   'email' => 'brian.wilson@example.com',   'status' => 'inquiry',       'photo_idx' => 0 ],
+				[ 'first' => 'Charlotte','last' => 'Harris',    'gender' => 'female', 'dob' => '2018-11-20', 'g_name' => 'Sarah Harris',   'email' => 'sarah.harris@example.com',   'status' => 'submitted',     'photo_idx' => 1 ],
+				[ 'first' => 'Henry',    'last' => 'Clark',     'gender' => 'male',   'dob' => '2018-07-04', 'g_name' => 'Daniel Clark',   'email' => 'daniel.clark@example.com',   'status' => 'under_review',  'photo_idx' => 2 ],
+				[ 'first' => 'Harper',   'last' => 'Lewis',     'gender' => 'female', 'dob' => '2017-09-18', 'g_name' => 'Kelly Lewis',    'email' => 'kelly.lewis@example.com',    'status' => 'under_review',  'photo_idx' => 3 ],
+				[ 'first' => 'Alexander','last' => 'Walker',    'gender' => 'male',   'dob' => '2017-04-25', 'g_name' => 'Robert Walker',  'email' => 'robert.walker@example.com',  'status' => 'approved',      'photo_idx' => 4 ],
+				[ 'first' => 'Evelyn',   'last' => 'Hall',      'gender' => 'female', 'dob' => '2016-10-11', 'g_name' => 'Steven Hall',    'email' => 'steven.hall@example.com',    'status' => 'admitted',      'photo_idx' => 5 ],
+			],
+			default => [ // IN
+				[ 'first' => 'Vihaan',   'last' => 'Mehra',     'gender' => 'male',   'dob' => '2019-03-12', 'g_name' => 'Rohit Mehra',    'email' => 'rohit.mehra@example.com',    'status' => 'inquiry',       'photo_idx' => 0 ],
+				[ 'first' => 'Riya',     'last' => 'Sengupta',  'gender' => 'female', 'dob' => '2018-11-20', 'g_name' => 'Ananya Sengupta', 'email' => 'ananya.sengupta@example.com', 'status' => 'submitted',     'photo_idx' => 1 ],
+				[ 'first' => 'Neil',     'last' => 'Deshmukh',  'gender' => 'male',   'dob' => '2018-07-04', 'g_name' => 'Abhay Deshmukh',  'email' => 'abhay.deshmukh@example.com',  'status' => 'under_review',  'photo_idx' => 2 ],
+				[ 'first' => 'Zara',     'last' => 'Khan',      'gender' => 'female', 'dob' => '2017-09-18', 'g_name' => 'Farhan Khan',    'email' => 'farhan.khan@example.com',    'status' => 'under_review',  'photo_idx' => 3 ],
+				[ 'first' => 'Kabir',    'last' => 'Chawla',    'gender' => 'male',   'dob' => '2017-04-25', 'g_name' => 'Harish Chawla',  'email' => 'harish.chawla@example.com',  'status' => 'approved',      'photo_idx' => 4 ],
+				[ 'first' => 'Tara',     'last' => 'Bose',      'gender' => 'female', 'dob' => '2016-10-11', 'g_name' => 'Debashis Bose',  'email' => 'debashis.bose@example.com',  'status' => 'admitted',      'photo_idx' => 5 ],
+			],
+		};
+
+		foreach ( $admissions_data as $a_idx => $adm ) {
+			$seq          = sprintf( '%03d', $a_idx + 1 );
+			$ref_number   = "DEMO-APP-{$seq}";
+			$assigned_u   = $unit_ids[ $a_idx % count( $unit_ids ) ];
+			$app_photo_id = $media_data['student_photo_ids'][ $adm['photo_idx'] ] ?? null;
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::applications(),
+				[
+					'reference_number'      => $ref_number,
+					'status'                => $adm['status'],
+					'source'                => ( $a_idx % 2 === 0 ) ? 'online' : 'walk_in',
+					'academic_session_id'   => $session_id,
+					'academic_unit_id'      => $assigned_u,
+					'academic_group_id'     => $group_ids[ $assigned_u ][0] ?? null,
+					'student_first_name'    => $adm['first'],
+					'student_last_name'     => $adm['last'],
+					'student_date_of_birth' => $adm['dob'],
+					'student_gender'        => $adm['gender'],
+					'student_photo_id'      => $app_photo_id,
+					'guardian_name'         => $adm['g_name'],
+					'guardian_email'        => $adm['email'],
+					'guardian_phone'        => '+91 98200 ' . sprintf( '%05d', 1000 + $a_idx ),
+					'submitted_at'          => gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( 20 - $a_idx * 2 ) . ' days' ) ),
+					'reviewed_at'           => in_array( $adm['status'], [ 'under_review', 'approved', 'admitted' ], true ) ? gmdate( 'Y-m-d H:i:s', strtotime( '-10 days' ) ) : null,
+					'decision_at'           => in_array( $adm['status'], [ 'approved', 'admitted' ], true ) ? gmdate( 'Y-m-d H:i:s', strtotime( '-3 days' ) ) : null,
+					'converted_student_id'  => ( 'admitted' === $adm['status'] ) ? ( $enrolled_students[0]['student_id'] ?? null ) : null,
+					'created_at'            => $now,
+					'updated_at'            => $now,
+				]
+			);
+			$app_id                         = (int) $wpdb->insert_id;
+			$tracked_ids['application_ids'][] = $app_id;
+
+			// Application status events
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::app_events(),
+				[
+					'application_id' => $app_id,
+					'from_status'    => null,
+					'to_status'      => 'submitted',
+					'reason'         => 'Application Form Received',
+					'message'        => 'Application submitted with verified certificates.',
+					'changed_at'     => gmdate( 'Y-m-d H:i:s', strtotime( '-15 days' ) ),
+				]
+			);
+			$tracked_ids['app_event_ids'][] = (int) $wpdb->insert_id;
+
+			if ( in_array( $adm['status'], [ 'under_review', 'approved', 'admitted' ], true ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->insert(
+					Schema::app_events(),
+					[
+						'application_id' => $app_id,
+						'from_status'    => 'submitted',
+						'to_status'      => 'under_review',
+						'reason'         => 'Document Verification',
+						'message'        => 'Moving application to admissions review committee.',
+						'changed_at'     => gmdate( 'Y-m-d H:i:s', strtotime( '-10 days' ) ),
+					]
+				);
+				$tracked_ids['app_event_ids'][] = (int) $wpdb->insert_id;
+			}
+
+			if ( in_array( $adm['status'], [ 'approved', 'admitted' ], true ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->insert(
+					Schema::app_events(),
+					[
+						'application_id' => $app_id,
+						'from_status'    => 'under_review',
+						'to_status'      => $adm['status'],
+						'reason'         => 'Committee Approval',
+						'message'        => 'Offer of admission granted for academic session.',
+						'changed_at'     => gmdate( 'Y-m-d H:i:s', strtotime( '-3 days' ) ),
+					]
+				);
+				$tracked_ids['app_event_ids'][] = (int) $wpdb->insert_id;
+			}
+		}
+
+
+		// ── 10. Fee Types ──────────────────────────────────────────────────────
 		$fee_types = [
 			[ 'name' => 'Tuition Fee',           'code' => 'DEMO-TUI', 'amount' => 500000, 'freq' => 'term' ],
 			[ 'name' => 'Lab & Technology Fee',  'code' => 'DEMO-LAB', 'amount' => 150000, 'freq' => 'term' ],
@@ -636,12 +1447,12 @@ final class DemoDataService {
 					'updated_at'           => $now,
 				]
 			);
-			$ft_id = (int) $wpdb->insert_id;
-			$fee_type_ids[] = $ft_id;
+			$ft_id                       = (int) $wpdb->insert_id;
+			$fee_type_ids[]              = $ft_id;
 			$tracked_ids['fee_type_ids'][] = $ft_id;
 		}
 
-		// ── 7. Invoices & Payments (6 Invoices: 2 Paid, 2 Partial, 2 Overdue) ───
+		// ── 11. Invoices & Payments (6 Invoices: 2 Paid, 2 Partial, 2 Overdue) ──
 		$tuition_fee_id = $fee_type_ids[0];
 
 		// Invoice 1: Paid (Student 0)
@@ -746,45 +1557,43 @@ final class DemoDataService {
 			$tracked_ids
 		);
 
-		// ── 8. Student Attendance Records (Today: 8 Present, 2 Late) ───────────
-		foreach ( $enrolled_students as $idx => $student ) {
-			$status = $idx < 8 ? 'present' : 'late';
-			$note   = 'late' === $status ? 'Delayed by morning transit' : 'On time';
+		// ── 12. Noticeboard Announcements ─────────────────────────────────────
+		$announcements = [
+			[
+				'title'   => 'Welcome to CodeClove (Demo)',
+				'content' => 'Welcome all parents, faculty, and students to the new academic session. Orientation schedules and syllabus guidelines have been published on the school portal.',
+			],
+			[
+				'title'   => 'Annual Athletics & Sports Meet Schedule',
+				'content' => 'The Annual Sports Meet will be held on the central sports grounds next Friday. Students are requested to wear their respective house uniforms.',
+			],
+			[
+				'title'   => 'Term 1 Parent-Teacher Conferences',
+				'content' => 'Parent-Teacher Conferences for Term 1 are scheduled for this coming Saturday from 09:00 AM to 01:00 PM. Individual meeting slots are available via the portal.',
+			],
+			[
+				'title'   => 'Science & Innovation Exhibition Submissions Open',
+				'content' => 'All students from Classes 1 to 3 are invited to submit their science project proposals to the Science Department before the end of the month.',
+			],
+		];
 
+		foreach ( $announcements as $ann ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->insert(
-				Schema::attendance(),
+				Schema::notifications(),
 				[
-					'student_id'          => $student['student_id'],
-					'academic_session_id' => $session_id,
-					'academic_unit_id'    => $student['unit_id'],
-					'academic_group_id'   => $student['group_id'],
-					'attendance_date'     => $today,
-					'status'              => $status,
-					'note'                => $note,
-					'created_at'          => $now,
-					'updated_at'          => $now,
+					'user_id'    => 0,
+					'student_id' => null,
+					'audience'   => 'portal',
+					'title'      => $ann['title'],
+					'content'    => $ann['content'],
+					'event_type' => 'announcement',
+					'is_read'    => 0,
+					'created_at' => $now,
 				]
 			);
-			$tracked_ids['attendance_ids'][] = (int) $wpdb->insert_id;
+			$tracked_ids['notification_ids'][] = (int) $wpdb->insert_id;
 		}
-
-		// ── 9. Noticeboard Announcement ────────────────────────────────────────
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->insert(
-			Schema::notifications(),
-			[
-				'user_id'    => 0,
-				'student_id' => null,
-				'audience'   => 'portal',
-				'title'      => 'Welcome to CodeClove (Demo)',
-				'content'    => 'Welcome all parents, faculty, and students to the new academic session. Orientation schedules and syllabus guidelines have been published.',
-				'event_type' => 'announcement',
-				'is_read'    => 0,
-				'created_at' => $now,
-			]
-		);
-		$tracked_ids['notification_ids'][] = (int) $wpdb->insert_id;
 
 		// Persist the IDs map for clean teardown.
 		update_option( self::OPTION_RECORD_IDS, $tracked_ids, false );
@@ -855,7 +1664,7 @@ final class DemoDataService {
 				'updated_at'          => $now,
 			]
 		);
-		$invoice_id = (int) $wpdb->insert_id;
+		$invoice_id                   = (int) $wpdb->insert_id;
 		$tracked_ids['invoice_ids'][] = $invoice_id;
 
 		// Line item
@@ -863,17 +1672,17 @@ final class DemoDataService {
 		$wpdb->insert(
 			Schema::line_items(),
 			[
-				'invoice_id'         => $invoice_id,
-				'fee_type_id'        => $fee_type_id,
-				'description'        => 'Tuition Fee - Regular Term',
-				'quantity'           => '1.00',
-				'unit_amount_minor'  => $total_minor,
-				'discount_minor'     => 0,
-				'total_minor'        => $total_minor,
-				'tax_minor'          => 0,
-				'sort_order'         => 1,
-				'created_at'         => $now,
-				'updated_at'         => $now,
+				'invoice_id'        => $invoice_id,
+				'fee_type_id'       => $fee_type_id,
+				'description'       => 'Tuition Fee - Regular Term',
+				'quantity'          => '1.00',
+				'unit_amount_minor' => $total_minor,
+				'discount_minor'    => 0,
+				'total_minor'       => $total_minor,
+				'tax_minor'         => 0,
+				'sort_order'        => 1,
+				'created_at'        => $now,
+				'updated_at'        => $now,
 			]
 		);
 		$tracked_ids['line_item_ids'][] = (int) $wpdb->insert_id;
