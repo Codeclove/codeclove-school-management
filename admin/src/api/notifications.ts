@@ -68,12 +68,20 @@ export function useMarkAllNotificationsRead() {
 
 // ─── Announcement / Noticeboard CRUD Hooks ───────────────────────────────────
 
+export type AnnouncementStatus = 'active' | 'scheduled' | 'expired'
+
 export interface AnnouncementItem {
   id: number
   title: string
   content: string
   audience: string
   event_type: string
+  notice_date: string | null
+  expires_at: string | null
+  is_pinned: boolean
+  accent_color?: string | null
+  icon?: string | null
+  status: AnnouncementStatus
   url: string | null
   created_at: string
   is_read: boolean
@@ -89,6 +97,11 @@ export interface CreateAnnouncementInput {
   content: string
   audience?: 'portal' | 'staff' | 'all'
   event_type?: string
+  notice_date?: string | null
+  expires_at?: string | null
+  is_pinned?: boolean
+  accent_color?: string | null
+  icon?: string | null
   url?: string | null
 }
 
@@ -97,6 +110,11 @@ export interface UpdateAnnouncementInput {
   content?: string
   audience?: string
   event_type?: string
+  notice_date?: string | null
+  expires_at?: string | null
+  is_pinned?: boolean
+  accent_color?: string | null
+  icon?: string | null
   url?: string | null
 }
 
@@ -106,6 +124,7 @@ export interface AnnouncementFilters {
   search?: string
   audience?: string
   event_type?: string
+  status?: string
 }
 
 export function useAnnouncements(filters?: AnnouncementFilters) {
@@ -120,6 +139,18 @@ export function useAnnouncements(filters?: AnnouncementFilters) {
       const res = await api.get<AnnouncementListResponse>(`announcements${qs ? `?${qs}` : ''}`)
       return res.data
     },
+    staleTime: 15 * 1000,
+  })
+}
+
+export function useAnnouncement(id: number | null | undefined) {
+  return useQuery<AnnouncementItem>({
+    queryKey: queryKeys.announcements.detail(id ?? 0),
+    queryFn: async () => {
+      const res = await api.get<AnnouncementItem>(`announcements/${id}`)
+      return res.data
+    },
+    enabled: typeof id === 'number' && id > 0,
     staleTime: 15 * 1000,
   })
 }
@@ -146,8 +177,9 @@ export function useUpdateAnnouncement() {
       const res = await api.put<{ updated: boolean }>(`announcements/${id}`, data)
       return res.data
     },
-    onSuccess: () => {
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.announcements.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.announcements.detail(id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
     },
   })
@@ -160,8 +192,9 @@ export function useDeleteAnnouncement() {
       const res = await api.delete<{ deleted: boolean }>(`announcements/${id}`)
       return res.data
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.announcements.all })
+      queryClient.removeQueries({ queryKey: queryKeys.announcements.detail(id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
     },
   })

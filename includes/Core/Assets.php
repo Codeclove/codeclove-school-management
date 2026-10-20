@@ -58,6 +58,7 @@ final class Assets {
 
 		do_action( 'codeclove_admin_spa_access' );
 
+
 		// Students, guardians, and users without staff permissions must never access the admin SPA.
 		if ( ! current_user_can( 'manage_options' ) ) {
 			$has_perms = class_exists( Permissions::class ) ? ! empty( Permissions::get_user_permissions( $user_id ) ) : false;
@@ -224,8 +225,8 @@ final class Assets {
 		}
 
 		$is_dev_mode = ( defined( 'CODECLOVE_DEV_TOOLS' ) && CODECLOVE_DEV_TOOLS ) || ( defined( 'CODECLOVE_DEV' ) && CODECLOVE_DEV ) || ( defined( 'WP_RUNNING_TESTS' ) && WP_RUNNING_TESTS );
-		$is_pro      = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
-		$pro_url     = 'https://codeclove.com/plugins/codeclove-school-management-pro/?utm_source=wp_plugin&utm_medium=pro_page&utm_campaign=upgrade';
+ 		$is_pro      = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
+ 		$pro_url     = 'https://codeclove.com/plugins/codeclove-school-management-pro/?utm_source=wp_plugin&utm_medium=pro_page&utm_campaign=upgrade';
 		$settings    = get_option( 'codeclove_settings', [] );
 		$is_rtl      = is_rtl() || ! empty( $settings['localization']['rtl'] ?? false );
 		$plugin_url  = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
@@ -238,9 +239,12 @@ final class Assets {
 			'wpAdminUrl'  => admin_url(),
 			'logoutUrl'   => wp_logout_url( admin_url() ),
 			'pluginUrl'   => $plugin_url,
+			'portalUrl'   => function_exists( 'codeclove_get_portal_url' ) ? codeclove_get_portal_url() : home_url( '/student-portal/' ),
 			'version'     => $version,
 			'devMode'     => (bool) $is_dev_mode,
 			'isPro'       => (bool) $is_pro,
+			'isPaid'      => codeclove_is_paid(),
+			'isDemo'      => codeclove_is_demo(),
 			'license'     => \CodeClove\Modules\Settings\SystemReportService::get_sanitized_license_info(),
 			'proUrl'      => $pro_url,
 			'permissions' => $permissions,

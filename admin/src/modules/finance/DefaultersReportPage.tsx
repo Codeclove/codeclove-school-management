@@ -36,6 +36,7 @@ export default function DefaultersReportPage() {
   const debouncedSearch = useDebounce(search, 350)
   const [daysOverdueMin, setDaysOverdueMin] = useState('')
   const table = useTableState({ defaultPerPage: 10 })
+  const { resetPage } = table
 
   // Fetch Class Levels
   const { data: unitsData } = useUnits({
@@ -49,14 +50,13 @@ export default function DefaultersReportPage() {
     setUnitId('all')
     setSearch('')
     setDaysOverdueMin('')
-    table.resetPage()
-  }, [session?.id])
+    resetPage()
+  }, [session?.id, resetPage])
 
   // Reset page when debounced search changes
   useEffect(() => {
-    table.resetPage()
-  }, [debouncedSearch])
-
+    resetPage()
+  }, [debouncedSearch, resetPage])
   // Queries
   const { data: reportData, isLoading, isError, refetch } = useDefaultersReport(
     {

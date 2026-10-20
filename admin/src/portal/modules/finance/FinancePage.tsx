@@ -145,10 +145,10 @@ export const FinancePage: React.FC = () => {
       })
       cleanPaymentUrlParams()
     }
-  }, [])
+  }, [capturePaypalMutation, queryClient, verifyStripeMutation])
 
   const summary = financeData?.summary
-  const invoices = financeData?.invoices ?? []
+  const invoices = useMemo(() => financeData?.invoices ?? [], [financeData?.invoices])
   const currency = summary?.currency ?? localization?.currency ?? 'USD'
 
   const totalInvoiced = summary?.total_invoiced ?? 0

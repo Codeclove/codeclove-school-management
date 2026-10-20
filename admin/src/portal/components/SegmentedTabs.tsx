@@ -75,8 +75,8 @@ export function SegmentedTabs<T extends string | number = string>({
                 ? 'opacity-50 cursor-not-allowed pointer-events-none'
                 : 'cursor-pointer',
               isActive
-                ? 'bg-bg-surface text-brand font-bold shadow-xs'
-                : 'text-text-muted hover:text-text hover:bg-bg-surface/50',
+                ? 'bg-bg-surface text-brand font-bold shadow-xs border border-border/60 dark:bg-bg-overlay dark:text-text dark:border-white/10'
+                : 'text-text-muted hover:text-text hover:bg-bg-surface/50 border border-transparent',
               tab.className
             )}
           >
@@ -103,10 +103,10 @@ export function SegmentedTabs<T extends string | number = string>({
             {tab.count !== undefined && tab.count !== null && (
               <span
                 className={cn(
-                  'inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-3xs font-bold rounded-full transition-colors font-mono tabular-nums',
+                  'inline-flex items-center justify-center min-w-[20px] h-4.5 px-1.5 text-3xs font-bold rounded-full transition-colors font-mono tabular-nums',
                   isActive
-                    ? 'bg-brand-dim text-brand'
-                    : 'bg-border/60 text-text-subtle'
+                    ? 'bg-brand-dim text-brand dark:bg-brand/20'
+                    : 'bg-border/60 text-text-subtle dark:bg-white/10 dark:text-text-muted border border-transparent dark:border-white/5'
                 )}
               >
                 {tab.count}

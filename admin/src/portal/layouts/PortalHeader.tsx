@@ -22,6 +22,7 @@ import { __, sprintf } from '@/lib/i18n'
 import { usePortal } from '../lib/portal-context'
 import { StudentSwitcher } from '../components/StudentSwitcher'
 import { NotificationBell } from '../components/NotificationBell'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { getInitials } from '../lib/formatter'
 import { Badge } from '@/components/ui'
 
@@ -103,11 +104,13 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
           {/* Notifications (Pro only) */}
           {isPro && <NotificationBell />}
 
-          {/* Maximize / Minimize Toggle */}
+          {/* Theme Mode Toggle (beside maximize) */}
+          <ThemeToggle />
+
+          {/* Maximize / Minimize Toggle (hidden on mobile to prevent header squashing) */}
           <button
-            type="button"
             onClick={onToggleMaximize}
-            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-border hover:border-border-strong bg-bg-surface hover:bg-hover-bg text-text-muted hover:text-text transition-all shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="hidden sm:flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-border hover:border-border-strong bg-bg-surface hover:bg-hover-bg text-text-muted hover:text-text transition-all shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             title={isMaximized ? __( 'Minimize Portal (Esc)', 'codeclove-school-management' ) : __( 'Maximize Portal (Esc)', 'codeclove-school-management' )}
             aria-label={isMaximized ? __( 'Minimize Portal', 'codeclove-school-management' ) : __( 'Maximize Portal', 'codeclove-school-management' )}
           >
@@ -132,7 +135,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
               <span className="hidden md:inline text-xs font-semibold text-text leading-tight truncate max-w-28">
                 {user?.name ?? __( 'Account', 'codeclove-school-management' )}
               </span>
-              {userRole === 'admin' && (
+              {userRole === 'admin' && user?.name?.toLowerCase() !== 'admin' && (
                 <span className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded text-3xs font-bold uppercase tracking-wider bg-brand-dim text-brand border border-brand/20">
                   {__( 'Admin', 'codeclove-school-management' )}
                 </span>

@@ -139,10 +139,18 @@ final class DemoDataService {
 			$this->delete_by_ids( Schema::payments(), $ids['payment_ids'] ?? [] );
 			$this->delete_by_ids( Schema::line_items(), $ids['line_item_ids'] ?? [] );
 			$this->delete_by_ids( Schema::invoices(), $ids['invoice_ids'] ?? [] );
+			$this->delete_by_ids( Schema::fee_type_class_rates(), $ids['fee_type_class_rate_ids'] ?? [] );
 			$this->delete_by_ids( Schema::attendance(), $ids['attendance_ids'] ?? [] );
 			$this->delete_by_ids( Schema::staff_attendance(), $ids['staff_attendance_ids'] ?? [] );
+			$this->delete_by_ids( Schema::staff_app_notes(), $ids['staff_app_note_ids'] ?? [] );
+			$this->delete_by_ids( Schema::staff_app_docs(), $ids['staff_app_doc_ids'] ?? [] );
+			$this->delete_by_ids( Schema::staff_app_events(), $ids['staff_app_event_ids'] ?? [] );
+			$this->delete_by_ids( Schema::staff_apps(), $ids['staff_app_ids'] ?? [] );
+			$this->delete_by_ids( Schema::app_notes(), $ids['app_note_ids'] ?? [] );
+			$this->delete_by_ids( Schema::app_documents(), $ids['app_doc_ids'] ?? [] );
 			$this->delete_by_ids( Schema::app_events(), $ids['app_event_ids'] ?? [] );
 			$this->delete_by_ids( Schema::applications(), $ids['application_ids'] ?? [] );
+			$this->delete_by_ids( Schema::activity_logs(), $ids['audit_log_ids'] ?? [] );
 			$this->delete_by_ids( Schema::student_guardians(), $ids['student_guardian_ids'] ?? [] );
 			$this->delete_by_ids( Schema::student_subjects(), $ids['student_subject_ids'] ?? [] );
 			$this->delete_by_ids( Schema::enrollments(), $ids['enrollment_ids'] ?? [] );
@@ -156,7 +164,6 @@ final class DemoDataService {
 			$this->delete_by_ids( Schema::sessions(), $ids['session_ids'] ?? [] );
 			$this->delete_by_ids( Schema::fee_types(), $ids['fee_type_ids'] ?? [] );
 			$this->delete_by_ids( Schema::notifications(), $ids['notification_ids'] ?? [] );
-
 			// Clean demo media attachments.
 			$attachment_ids = array_filter( array_map( 'intval', $ids['attachment_ids'] ?? [] ) );
 			// Also find any lingering demo attachments via meta.
@@ -180,7 +187,7 @@ final class DemoDataService {
 				}
 			}
 
-			// Clean fallback prefix queries in case records were created outside tracked IDs.
+			// Clean fallback prefix queries in case records were created outside tracked IDs or via test suites.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE code LIKE %s', Schema::sessions(), 'DEMO-%' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -200,8 +207,11 @@ final class DemoDataService {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE reference_number LIKE %s', Schema::applications(), 'DEMO-%' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE reference_number LIKE %s', Schema::staff_apps(), 'DEMO-%' ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE title LIKE %s OR content LIKE %s', Schema::notifications(), '%CodeClove (Demo)%', '%(Demo)%' ) );
-
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE actor_label LIKE %s', Schema::activity_logs(), '%(Demo)%' ) );
 			// Restore previous settings if backed up.
 			$prev_settings = get_option( self::OPTION_PREV_SETTINGS, null );
 			if ( is_array( $prev_settings ) ) {
@@ -445,30 +455,37 @@ final class DemoDataService {
 		};
 
 		$tracked_ids = [
-			'session_ids'          => [],
-			'term_ids'             => [],
-			'unit_ids'             => [],
-			'group_ids'            => [],
-			'subject_ids'          => [],
-			'unit_subject_ids'     => [],
-			'staff_ids'            => [],
-			'student_ids'          => [],
-			'guardian_ids'         => [],
-			'student_guardian_ids' => [],
-			'enrollment_ids'       => [],
-			'student_subject_ids'  => [],
-			'fee_type_ids'         => [],
-			'invoice_ids'          => [],
-			'line_item_ids'        => [],
-			'payment_ids'          => [],
-			'attendance_ids'       => [],
-			'staff_attendance_ids' => [],
-			'application_ids'      => [],
-			'app_event_ids'        => [],
-			'notification_ids'     => [],
-			'attachment_ids'       => $media_data['attachment_ids'] ?? [],
+			'session_ids'              => [],
+			'term_ids'                 => [],
+			'unit_ids'                 => [],
+			'group_ids'                => [],
+			'subject_ids'              => [],
+			'unit_subject_ids'         => [],
+			'staff_ids'                => [],
+			'staff_app_ids'            => [],
+			'staff_app_event_ids'      => [],
+			'staff_app_doc_ids'        => [],
+			'staff_app_note_ids'       => [],
+			'student_ids'              => [],
+			'guardian_ids'             => [],
+			'student_guardian_ids'     => [],
+			'enrollment_ids'           => [],
+			'student_subject_ids'      => [],
+			'fee_type_ids'             => [],
+			'fee_type_class_rate_ids'  => [],
+			'invoice_ids'              => [],
+			'line_item_ids'            => [],
+			'payment_ids'              => [],
+			'attendance_ids'           => [],
+			'staff_attendance_ids'     => [],
+			'application_ids'          => [],
+			'app_event_ids'            => [],
+			'app_doc_ids'              => [],
+			'app_note_ids'             => [],
+			'audit_log_ids'            => [],
+			'notification_ids'         => [],
+			'attachment_ids'           => $media_data['attachment_ids'] ?? [],
 		];
-
 		// ── 0. School Settings & Logo Update ──────────────────────────────────
 		if ( ! get_option( self::OPTION_PREV_SETTINGS ) ) {
 			update_option( self::OPTION_PREV_SETTINGS, $settings, false );
@@ -522,8 +539,8 @@ final class DemoDataService {
 				'code'       => "DEMO-{$cur_year}-" . substr( (string) $next_year, -2 ),
 				'starts_on'  => gmdate( 'Y-01-01' ),
 				'ends_on'    => gmdate( 'Y-12-31', strtotime( '+1 year' ) ),
-				'is_current' => 1,
 				'status'     => 'active',
+				'is_current' => 1,
 				'created_at' => $now,
 				'updated_at' => $now,
 			]
@@ -1008,18 +1025,89 @@ final class DemoDataService {
 			],
 		};
 
+		$role_records  = $wpdb->get_results( 'SELECT id, slug FROM ' . Schema::roles(), ARRAY_A );
+		$role_slug_map = array_change_key_case( array_column( $role_records ?: [], 'id', 'slug' ), CASE_LOWER );
+
+		$staff_middle_pool = match ( $country_code ) {
+			'GB'    => [ 'Elizabeth', 'James', 'Anne', 'Arthur', 'Victoria', 'William', 'Grace', 'Edward' ],
+			'US'    => [ 'Marie', 'Lee', 'Lynn', 'Ray', 'Ann', 'Thomas', 'Grace', 'Allen' ],
+			default => [ 'Devi', 'Kumar', 'Prakash', 'Chandra', 'Kumari', 'Lal', 'Rani', 'Mohan' ],
+		};
+
 		$staff_ids = [];
 		foreach ( $staff_data as $s_idx => $stf ) {
 			$photo_id = $media_data['staff_photo_ids'][ $s_idx ] ?? null;
+			$gender   = in_array( $stf['title'], [ 'Mrs.', 'Ms.' ], true ) ? 'female' : 'male';
+			$r_slug   = match ( $stf['role'] ) {
+				'Teacher'    => 'teacher',
+				'Admin'      => 'administrator',
+				'Accountant' => 'accountant',
+				default      => 'readonly_staff',
+			};
+			$r_id     = $role_slug_map[ $r_slug ] ?? null;
+
+			$address_obj = array_merge(
+				[ 'address' => $stf['address']['street'] . ', ' . $stf['address']['city'] . ', ' . $stf['address']['state'] . ' ' . ( $stf['address']['zip'] ?? '' ) ],
+				$stf['address'],
+				[ 'postal_code' => $stf['address']['zip'] ?? '' ]
+			);
+
+			$metadata = match ( $country_code ) {
+				'IN' => wp_json_encode( [
+					'pan_card_number'    => 'ABCDE' . sprintf( '%04d', 2000 + $s_idx ) . 'F',
+					'aadhaar_last4'      => sprintf( '%04d', 3000 + $s_idx ),
+					'uan_number'         => '100' . sprintf( '%09d', 91000000 + $s_idx ),
+					'ctet_qualified'     => ( $s_idx % 2 === 0 ),
+					'b_ed_registration'  => 'BED/MH/2017/' . sprintf( '%03d', $s_idx + 1 ),
+					'employee_pf_number' => 'MH/MUM/0012345/000/' . sprintf( '%04d', $s_idx + 1 ),
+					'blood_group'        => [ 'O+', 'A+', 'B+', 'AB+', 'O-' ][ $s_idx % 5 ],
+				] ),
+				'GB' => wp_json_encode( [
+					'trn'                       => sprintf( '%07d', 7900000 + $s_idx ),
+					'qts_status'                => 'Qualified',
+					'dbs_certificate_number'    => '001' . sprintf( '%09d', 460000000 + $s_idx ),
+					'dbs_issue_date'            => gmdate( 'Y-m-d', strtotime( '-2 years' ) ),
+					'dbs_update_service'        => true,
+					'national_insurance_number' => 'QQ' . sprintf( '%06d', 230000 + $s_idx ) . 'C',
+					'post_scale'                => 'MPS ' . ( ( $s_idx % 6 ) + 1 ),
+				] ),
+				default => wp_json_encode( [
+					'state_educator_id' => 'ED-' . sprintf( '%06d', 990000 + $s_idx ),
+					'license_number'    => 'LIC-' . sprintf( '%05d', 49000 + $s_idx ),
+					'license_expiry'    => gmdate( 'Y-m-d', strtotime( '+3 years' ) ),
+					'fte'               => '1.0',
+					'contract_term'     => '10_month',
+					'ssn_last4'         => sprintf( '%04d', 5000 + $s_idx ),
+					'highly_qualified'  => true,
+				] ),
+			};
+
+			$documents = wp_json_encode( [
+				[
+					'label'         => 'Government ID Proof',
+					'attachment_id' => $photo_id ?: ( 500 + $s_idx ),
+					'url'           => 'https://example.com/docs/government-id.pdf',
+				],
+				[
+					'label'         => 'Certified Degree & License',
+					'attachment_id' => $photo_id ?: ( 600 + $s_idx ),
+					'url'           => 'https://example.com/docs/degree-certificate.pdf',
+				],
+			] );
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->insert(
 				Schema::staff_members(),
 				[
 					'staff_number'            => $stf['num'],
+					'role_id'                 => $r_id,
 					'title'                   => $stf['title'],
 					'first_name'              => $stf['first'],
+					'middle_name'             => $staff_middle_pool[ $s_idx % count( $staff_middle_pool ) ],
 					'last_name'               => $stf['last'],
+					'preferred_name'          => $stf['first'],
+					'date_of_birth'           => gmdate( 'Y-m-d', strtotime( '-32 years -' . ( $s_idx * 150 ) . ' days' ) ),
+					'gender'                  => $gender,
 					'email'                   => $stf['email'],
 					'phone'                   => $stf['phone'],
 					'department'              => $stf['dept'],
@@ -1028,13 +1116,16 @@ final class DemoDataService {
 					'employment_type'         => 'full_time',
 					'joined_on'               => gmdate( 'Y-m-d', strtotime( '-' . ( 6 + $s_idx * 2 ) . ' months' ) ),
 					'photo_id'                => $photo_id,
-					'address_json'            => wp_json_encode( $stf['address'] ),
+					'address_json'            => wp_json_encode( $address_obj ),
 					'qualifications_json'     => wp_json_encode( $stf['quals'] ),
 					'emergency_contact_json'  => wp_json_encode( [
 						'name'         => $stf['first'] . ' Emergency Contact',
 						'relationship' => 'Spouse',
 						'phone'        => $stf['phone'],
+						'alt_phone'    => $stf['phone'],
 					] ),
+					'metadata_json'           => $metadata,
+					'documents_json'          => $documents,
 					'status'                  => 'active',
 					'created_at'              => $now,
 					'updated_at'              => $now,
@@ -1082,6 +1173,178 @@ final class DemoDataService {
 				);
 				$tracked_ids['staff_attendance_ids'][] = (int) $wpdb->insert_id;
 			}
+		}
+		// ── 5b. Staff Applications (6 Demo Applications in Different Workflow Stages) ────
+		$staff_apps_data = match ( $country_code ) {
+			'GB' => [
+				[ 'first' => 'Charlotte', 'last' => 'Davies',   'gender' => 'female', 'dob' => '1992-04-18', 'email' => 'charlotte.davies@example.com',   'phone' => '+44 7911 200101', 'role' => 'Science Faculty Teacher',          'dept' => 'Academics',      'status' => 'submitted' ],
+				[ 'first' => 'Oliver',    'last' => 'Evans',    'gender' => 'male',   'dob' => '1989-11-25', 'email' => 'oliver.evans@example.com',      'phone' => '+44 7911 200102', 'role' => 'Assistant Head of Primary',        'dept' => 'Administration', 'status' => 'under_review' ],
+				[ 'first' => 'Amelia',    'last' => 'Wilson',   'gender' => 'female', 'dob' => '1994-08-12', 'email' => 'amelia.wilson@example.com',     'phone' => '+44 7911 200103', 'role' => 'Primary English Educator',         'dept' => 'Academics',      'status' => 'interview_scheduled' ],
+				[ 'first' => 'Thomas',    'last' => 'Taylor',   'gender' => 'male',   'dob' => '1991-03-30', 'email' => 'thomas.taylor@example.com',     'phone' => '+44 7911 200104', 'role' => 'School Bursar & Finance Officer',  'dept' => 'Finance',        'status' => 'offer_sent' ],
+				[ 'first' => 'Claire',    'last' => 'Higgins',  'gender' => 'female', 'dob' => '1988-06-22', 'email' => 'claire.higgins@example.com',    'phone' => '+44 7911 200105', 'role' => 'Senior Academic Teacher',          'dept' => 'Academics',      'status' => 'accepted', 'conv_id' => $staff_ids[0] ?? null ],
+				[ 'first' => 'George',    'last' => 'Roberts',  'gender' => 'male',   'dob' => '1995-12-05', 'email' => 'george.roberts@example.com',    'phone' => '+44 7911 200106', 'role' => 'Physical Education & Games Coach', 'dept' => 'Athletics',      'status' => 'rejected' ],
+			],
+			'US' => [
+				[ 'first' => 'Emily',     'last' => 'Davis',    'gender' => 'female', 'dob' => '1992-04-18', 'email' => 'emily.davis@example.com',       'phone' => '+1 555-014-2001', 'role' => 'Science Faculty Teacher',          'dept' => 'Academics',      'status' => 'submitted' ],
+				[ 'first' => 'Daniel',    'last' => 'Miller',   'gender' => 'male',   'dob' => '1989-11-25', 'email' => 'daniel.miller@example.com',     'phone' => '+1 555-014-2002', 'role' => 'Assistant Principal',              'dept' => 'Administration', 'status' => 'under_review' ],
+				[ 'first' => 'Olivia',    'last' => 'Wilson',   'gender' => 'female', 'dob' => '1994-08-12', 'email' => 'olivia.wilson@example.com',     'phone' => '+1 555-014-2003', 'role' => 'Elementary English Specialist',    'dept' => 'Academics',      'status' => 'interview_scheduled' ],
+				[ 'first' => 'James',     'last' => 'Anderson', 'gender' => 'male',   'dob' => '1991-03-30', 'email' => 'james.anderson@example.com',    'phone' => '+1 555-014-2004', 'role' => 'Campus Finance Coordinator',        'dept' => 'Finance',        'status' => 'offer_sent' ],
+				[ 'first' => 'Sarah',     'last' => 'Jenkins',  'gender' => 'female', 'dob' => '1988-06-22', 'email' => 'sarah.jenkins@example.com',     'phone' => '+1 555-014-2005', 'role' => 'Senior Academic Teacher',          'dept' => 'Academics',      'status' => 'accepted', 'conv_id' => $staff_ids[0] ?? null ],
+				[ 'first' => 'Brian',     'last' => 'Taylor',   'gender' => 'male',   'dob' => '1995-12-05', 'email' => 'brian.taylor@example.com',      'phone' => '+1 555-014-2006', 'role' => 'Athletics & PE Coach',            'dept' => 'Athletics',      'status' => 'rejected' ],
+			],
+			default => [ // IN
+				[ 'first' => 'Kavita',    'last' => 'Mehta',    'gender' => 'female', 'dob' => '1992-04-18', 'email' => 'kavita.mehta@example.com',      'phone' => '+91 98765 22001', 'role' => 'Senior Secondary Science Faculty', 'dept' => 'Academics',      'status' => 'submitted' ],
+				[ 'first' => 'Vikram',    'last' => 'Deshmukh', 'gender' => 'male',   'dob' => '1989-11-25', 'email' => 'vikram.deshmukh@example.com',  'phone' => '+91 98765 22002', 'role' => 'Vice Principal (Academics)',       'dept' => 'Administration', 'status' => 'under_review' ],
+				[ 'first' => 'Pooja',     'last' => 'Chopra',   'gender' => 'female', 'dob' => '1994-08-12', 'email' => 'pooja.chopra@example.com',      'phone' => '+91 98765 22003', 'role' => 'Primary English Faculty',           'dept' => 'Academics',      'status' => 'interview_scheduled' ],
+				[ 'first' => 'Siddharth', 'last' => 'Jain',     'gender' => 'male',   'dob' => '1991-03-30', 'email' => 'siddharth.jain@example.com',   'phone' => '+91 98765 22004', 'role' => 'Senior Bursar & Accounts Officer',  'dept' => 'Finance',        'status' => 'offer_sent' ],
+				[ 'first' => 'Sunita',    'last' => 'Rao',      'gender' => 'female', 'dob' => '1988-06-22', 'email' => 'sunita.rao@example.com',       'phone' => '+91 98765 22005', 'role' => 'Senior Academic Teacher',          'dept' => 'Academics',      'status' => 'accepted', 'conv_id' => $staff_ids[0] ?? null ],
+				[ 'first' => 'Manish',    'last' => 'Pandey',   'gender' => 'male',   'dob' => '1995-12-05', 'email' => 'manish.pandey@example.com',    'phone' => '+91 98765 22006', 'role' => 'Physical Education & Games Coach', 'dept' => 'Athletics',      'status' => 'rejected' ],
+			],
+		};
+
+		foreach ( $staff_apps_data as $sa_idx => $sa ) {
+			$sa_seq     = sprintf( '%03d', $sa_idx + 1 );
+			$sa_ref     = "DEMO-STF-APP-{$sa_seq}";
+			$sub_date   = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( 22 - $sa_idx * 3 ) . ' days' ) );
+			$rev_date   = in_array( $sa['status'], [ 'under_review', 'interview_scheduled', 'offer_sent', 'accepted', 'rejected' ], true ) ? gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( 12 - $sa_idx * 2 ) . ' days' ) ) : null;
+			$dec_date   = in_array( $sa['status'], [ 'accepted', 'rejected' ], true ) ? gmdate( 'Y-m-d H:i:s', strtotime( '-2 days' ) ) : null;
+
+			$sa_address = match ( $country_code ) {
+				'GB'    => [ 'address' => ( $sa_idx + 10 ) . ' Gloucester Road, London SW7 4RB', 'street' => ( $sa_idx + 10 ) . ' Gloucester Road', 'city' => 'London', 'state' => 'Greater London', 'postal_code' => 'SW7 4RB', 'country' => 'GB' ],
+				'US'    => [ 'address' => ( $sa_idx + 200 ) . ' Oregon Way, Springfield OR 97477', 'street' => ( $sa_idx + 200 ) . ' Oregon Way', 'city' => 'Springfield', 'state' => 'OR', 'postal_code' => '97477', 'country' => 'US' ],
+				default => [ 'address' => 'Flat ' . ( $sa_idx + 301 ) . ', Sea View Apts, Bandra West, Mumbai 400050', 'street' => 'Flat ' . ( $sa_idx + 301 ) . ', Sea View Apts', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'postal_code' => '400050', 'country' => 'IN' ],
+			};
+
+			$sa_exp = [
+				[
+					'title'        => 'Secondary Subject Faculty',
+					'organization' => ( 'IN' === $country_code ) ? 'National Public High School' : ( ( 'GB' === $country_code ) ? 'Westminster Foundation Academy' : 'Lincoln Secondary School' ),
+					'from_date'    => '2021-06-01',
+					'to_date'      => '2024-05-31',
+					'description'  => 'Designed curriculum lesson plans, organized STEM workshops, and led student extracurricular initiatives.',
+				],
+			];
+
+			$sa_custom = [
+				'notice_period'       => '30 days',
+				'expected_salary'     => ( 'IN' === $country_code ) ? 'INR 60,000 / month' : ( ( 'GB' === $country_code ) ? 'GBP 36,000 / annum' : 'USD 52,000 / year' ),
+				'teaching_philosophy' => 'Student-centered learning combining rigorous academic foundations with interactive technology.',
+				'willing_to_relocate' => 'Yes',
+				'certifications'      => 'Certified Subject Faculty, Digital Classroom Educator',
+			];
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::staff_apps(),
+				[
+					'reference_number'          => $sa_ref,
+					'status'                    => $sa['status'],
+					'source'                    => ( $sa_idx % 2 === 0 ) ? 'public_form' : 'referral',
+					'desired_role'              => $sa['role'],
+					'department'                => $sa['dept'],
+					'first_name'                => $sa['first'],
+					'middle_name'               => $staff_middle_pool[ ( $sa_idx + 3 ) % count( $staff_middle_pool ) ],
+					'last_name'                 => $sa['last'],
+					'preferred_name'            => $sa['first'],
+					'date_of_birth'             => $sa['dob'],
+					'email'                     => $sa['email'],
+					'phone'                     => $sa['phone'],
+					'address_json'              => wp_json_encode( $sa_address ),
+					'experience_json'           => wp_json_encode( $sa_exp ),
+					'custom_fields_json'        => wp_json_encode( $sa_custom ),
+					'submitted_at'              => $sub_date,
+					'reviewed_at'               => $rev_date,
+					'decision_at'               => $dec_date,
+					'converted_staff_member_id' => $sa['conv_id'] ?? null,
+					'created_at'                => $sub_date,
+					'updated_at'                => $now,
+				]
+			);
+			$sa_id                          = (int) $wpdb->insert_id;
+			$tracked_ids['staff_app_ids'][] = $sa_id;
+
+			// Staff app events
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::staff_app_events(),
+				[
+					'staff_application_id' => $sa_id,
+					'from_status'          => null,
+					'to_status'            => 'submitted',
+					'reason'               => 'Application Submitted',
+					'message'              => 'Candidate profile submitted for open faculty position.',
+					'changed_at'           => $sub_date,
+				]
+			);
+			$tracked_ids['staff_app_event_ids'][] = (int) $wpdb->insert_id;
+
+			if ( in_array( $sa['status'], [ 'under_review', 'interview_scheduled', 'offer_sent', 'accepted', 'rejected' ], true ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->insert(
+					Schema::staff_app_events(),
+					[
+						'staff_application_id' => $sa_id,
+						'from_status'          => 'submitted',
+						'to_status'            => 'under_review',
+						'reason'               => 'Document Verification',
+						'message'              => 'Credentials verified. Forwarded to academic search committee.',
+						'changed_at'           => $rev_date ?: $sub_date,
+					]
+				);
+				$tracked_ids['staff_app_event_ids'][] = (int) $wpdb->insert_id;
+			}
+
+			if ( in_array( $sa['status'], [ 'accepted', 'rejected' ], true ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->insert(
+					Schema::staff_app_events(),
+					[
+						'staff_application_id' => $sa_id,
+						'from_status'          => 'under_review',
+						'to_status'            => $sa['status'],
+						'reason'               => 'Committee Decision',
+						'message'              => ( 'accepted' === $sa['status'] ) ? 'Candidate accepted position offer.' : 'Candidate not shortlisted for this cycle.',
+						'changed_at'           => $dec_date ?: $now,
+					]
+				);
+				$tracked_ids['staff_app_event_ids'][] = (int) $wpdb->insert_id;
+			}
+
+			// Staff app documents
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::staff_app_docs(),
+				[
+					'staff_application_id' => $sa_id,
+					'document_type'        => 'resume',
+					'label'                => 'Curriculum Vitae / Resume',
+					'attachment_id'        => $media_data['staff_photo_ids'][ $sa_idx % count( $media_data['staff_photo_ids'] ?? [ 1 ] ) ] ?? 501,
+					'status'               => 'uploaded',
+					'required'             => 1,
+					'uploaded_by_email'    => $sa['email'],
+					'uploaded_at'          => $sub_date,
+					'created_at'           => $now,
+					'updated_at'           => $now,
+				]
+			);
+			$tracked_ids['staff_app_doc_ids'][] = (int) $wpdb->insert_id;
+
+			// Staff app notes
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::staff_app_notes(),
+				[
+					'staff_application_id' => $sa_id,
+					'note_type'            => 'interview',
+					'body'                 => 'Panel remarks: Candidate showed sound pedagogical knowledge and communicative clarity during interview.',
+					'visibility'           => 'internal',
+					'pinned'               => ( $sa_idx % 2 === 0 ) ? 1 : 0,
+					'created_by'           => 1,
+					'created_at'           => $sub_date,
+					'updated_at'           => $now,
+				]
+			);
+			$tracked_ids['staff_app_note_ids'][] = (int) $wpdb->insert_id;
 		}
 
 		// ── 6. Students & Guardians (10 Students matching 10 Profile Photos) ────
@@ -1135,9 +1398,30 @@ final class DemoDataService {
 			$photo_id       = $media_data['student_photo_ids'][ $i ] ?? null;
 
 			$address_payload = match ( $country_code ) {
-				'GB'    => [ 'street' => ( $i + 10 ) . ' Kingfisher Lane', 'city' => 'London', 'state' => 'Greater London', 'zip' => 'SW1A 2AA', 'country' => 'GB' ],
-				'US'    => [ 'street' => ( $i + 100 ) . ' Maplewood Drive', 'city' => 'Springfield', 'state' => 'OR', 'zip' => '97477', 'country' => 'US' ],
-				default => [ 'street' => 'Flat ' . ( $i + 101 ) . ', Gulmohar Enclave, Juhu', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'zip' => '400049', 'country' => 'IN' ],
+				'GB'    => [ 'address' => ( $i + 10 ) . ' Kingfisher Lane, London, Greater London SW1A 2AA', 'street' => ( $i + 10 ) . ' Kingfisher Lane', 'city' => 'London', 'state' => 'Greater London', 'zip' => 'SW1A 2AA', 'postal_code' => 'SW1A 2AA', 'country' => 'GB' ],
+				'US'    => [ 'address' => ( $i + 100 ) . ' Maplewood Drive, Springfield, OR 97477', 'street' => ( $i + 100 ) . ' Maplewood Drive', 'city' => 'Springfield', 'state' => 'OR', 'zip' => '97477', 'postal_code' => '97477', 'country' => 'US' ],
+				default => [ 'address' => 'Flat ' . ( $i + 101 ) . ', Gulmohar Enclave, Juhu, Mumbai, Maharashtra 400049', 'street' => 'Flat ' . ( $i + 101 ) . ', Gulmohar Enclave, Juhu', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'zip' => '400049', 'postal_code' => '400049', 'country' => 'IN' ],
+			};
+
+			$occupations_list = [
+				'Senior Software Architect',
+				'Pediatrician & Child Specialist',
+				'Chartered Accountant & Financial Consultant',
+				'Professor of Humanities',
+				'Structural Civil Engineer',
+				'Senior Corporate Marketing Director',
+				'Senior Research Scientist',
+				'Commercial Pilot',
+				'High School Academic Principal',
+				'Corporate Legal Counsel',
+			];
+
+			$stu_middle = $staff_middle_pool[ ( $i + 2 ) % count( $staff_middle_pool ) ];
+			$g_middle   = $staff_middle_pool[ ( $i + 4 ) % count( $staff_middle_pool ) ];
+			$g_alt_phone = match ( $country_code ) {
+				'GB'    => '+44 7700 9' . sprintf( '%05d', 5000 + $i ),
+				'US'    => '+1 555-019-' . sprintf( '%04d', 8000 + $i ),
+				default => '+91 91234 ' . sprintf( '%05d', 8000 + $i ),
 			};
 
 			// Create guardian
@@ -1145,14 +1429,17 @@ final class DemoDataService {
 			$wpdb->insert(
 				Schema::guardians(),
 				[
-					'first_name'   => $stu['g_first'],
-					'last_name'    => $stu['g_last'],
-					'email'        => $guardian_email,
-					'phone'        => $stu['phone'],
-					'address_json' => wp_json_encode( $address_payload ),
-					'status'       => 'active',
-					'created_at'   => $now,
-					'updated_at'   => $now,
+					'first_name'      => $stu['g_first'],
+					'middle_name'     => $g_middle,
+					'last_name'       => $stu['g_last'],
+					'email'           => $guardian_email,
+					'phone'           => $stu['phone'],
+					'alternate_phone' => $g_alt_phone,
+					'occupation'      => $occupations_list[ $i % count( $occupations_list ) ],
+					'address_json'    => wp_json_encode( $address_payload ),
+					'status'          => 'active',
+					'created_at'      => $now,
+					'updated_at'      => $now,
 				]
 			);
 			$guardian_id                   = (int) $wpdb->insert_id;
@@ -1166,11 +1453,14 @@ final class DemoDataService {
 					'student_number'   => $stu_number,
 					'admission_number' => $adm_number,
 					'first_name'       => $stu['first'],
+					'middle_name'      => $stu_middle,
 					'last_name'        => $stu['last'],
+					'preferred_name'   => $stu['first'],
 					'date_of_birth'    => $stu['dob'],
 					'gender'           => $stu['gender'],
 					'photo_id'         => $photo_id,
 					'admission_date'   => gmdate( 'Y-m-d', strtotime( '-2 months' ) ),
+					'graduation_year'  => ( $i >= 8 ? (int) gmdate( 'Y' ) : null ),
 					'email'            => strtolower( "{$stu['first']}.{$stu['last']}@school.example.com" ),
 					'phone'            => $stu['phone'],
 					'address_json'     => wp_json_encode( $address_payload ),
@@ -1182,7 +1472,7 @@ final class DemoDataService {
 			$student_id                   = (int) $wpdb->insert_id;
 			$tracked_ids['student_ids'][] = $student_id;
 
-			// Link guardian
+			// Link primary guardian
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->insert(
 				Schema::student_guardians(),
@@ -1193,6 +1483,48 @@ final class DemoDataService {
 					'is_primary'           => 1,
 					'is_billing_contact'   => 1,
 					'is_emergency_contact' => 1,
+					'sort_order'           => 1,
+					'created_at'           => $now,
+					'updated_at'           => $now,
+				]
+			);
+			$tracked_ids['student_guardian_ids'][] = (int) $wpdb->insert_id;
+
+			// Link secondary guardian
+			$sec_rel   = ( 'Father' === $stu['rel'] ) ? 'Mother' : 'Father';
+			$sec_first = ( 'Mother' === $sec_rel ) ? ( [ 'Pooja', 'Sarah', 'Jennifer', 'Emma', 'Lakshmi', 'Sunita', 'Geeta', 'Charlotte', 'Victoria', 'Helen' ][ $i % 10 ] ) : ( [ 'Rajesh', 'David', 'Robert', 'Michael', 'Amit', 'Manoj', 'Deepak', 'John', 'Arthur', 'Albert' ][ $i % 10 ] );
+			$sec_email = strtolower( "{$sec_first}.{$stu['g_last']}@example.com" );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::guardians(),
+				[
+					'first_name'      => $sec_first,
+					'middle_name'     => $g_middle,
+					'last_name'       => $stu['g_last'],
+					'email'           => $sec_email,
+					'phone'           => $g_alt_phone,
+					'alternate_phone' => $stu['phone'],
+					'occupation'      => $occupations_list[ ( $i + 3 ) % count( $occupations_list ) ],
+					'address_json'    => wp_json_encode( $address_payload ),
+					'status'          => 'active',
+					'created_at'      => $now,
+					'updated_at'      => $now,
+				]
+			);
+			$sec_g_id                      = (int) $wpdb->insert_id;
+			$tracked_ids['guardian_ids'][] = $sec_g_id;
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::student_guardians(),
+				[
+					'student_id'           => $student_id,
+					'guardian_id'          => $sec_g_id,
+					'relationship'         => $sec_rel,
+					'is_primary'           => 0,
+					'is_billing_contact'   => 0,
+					'is_emergency_contact' => 1,
+					'sort_order'           => 2,
 					'created_at'           => $now,
 					'updated_at'           => $now,
 				]
@@ -1344,30 +1676,61 @@ final class DemoDataService {
 			$assigned_u   = $unit_ids[ $a_idx % count( $unit_ids ) ];
 			$app_photo_id = $media_data['student_photo_ids'][ $adm['photo_idx'] ] ?? null;
 
+			$adm_phone = match ( $country_code ) {
+				'GB'    => '+44 7911 3' . sprintf( '%05d', 1000 + $a_idx ),
+				'US'    => '+1 555-018-' . sprintf( '%04d', 2000 + $a_idx ),
+				default => '+91 98200 ' . sprintf( '%05d', 1000 + $a_idx ),
+			};
+
+			$adm_address = match ( $country_code ) {
+				'GB'    => [ 'address' => ( $a_idx + 12 ) . ' Richmond Road, London, Greater London TW1 3EE', 'street' => ( $a_idx + 12 ) . ' Richmond Road', 'city' => 'London', 'state' => 'Greater London', 'postal_code' => 'TW1 3EE', 'country' => 'GB' ],
+				'US'    => [ 'address' => ( $a_idx + 140 ) . ' Elm Avenue, Springfield, OR 97477', 'street' => ( $a_idx + 140 ) . ' Elm Avenue', 'city' => 'Springfield', 'state' => 'OR', 'postal_code' => '97477', 'country' => 'US' ],
+				default => [ 'address' => 'Flat ' . ( $a_idx + 201 ) . ', Sea Green Apts, Worli, Mumbai, Maharashtra 400018', 'street' => 'Flat ' . ( $a_idx + 201 ) . ', Sea Green Apts', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'postal_code' => '400018', 'country' => 'IN' ],
+			};
+
+			$adm_custom = [
+				'previous_school'         => ( 'IN' === $country_code ) ? 'St. Xavier Primary School' : ( ( 'GB' === $country_code ) ? 'St. Peter Grammar School' : 'West Valley Elementary' ),
+				'previous_grade_marks'    => 'A (90%)',
+				'second_language'         => ( 'IN' === $country_code ) ? 'Hindi' : ( ( 'GB' === $country_code ) ? 'French' : 'Spanish' ),
+				'transport_required'      => ( $a_idx % 2 === 0 ) ? 'Yes - Route ' . ( $a_idx + 1 ) : 'No - Self Transport',
+				'medical_conditions'      => ( 1 === $a_idx ) ? 'Mild Asthma (Carries inhaler)' : 'None / Fully healthy',
+				'blood_group'             => [ 'O+', 'A+', 'B+', 'AB+', 'O-' ][ $a_idx % 5 ],
+				'emergency_contact_name'  => $adm['g_name'] . ' (Parent)',
+				'emergency_contact_phone' => $adm_phone,
+			];
+
+			$adm_is_walk_in   = ( $a_idx % 2 !== 0 );
+			$adm_submitted_at = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( 20 - $a_idx * 2 ) . ' days' ) );
+			$adm_reviewed_at  = in_array( $adm['status'], [ 'under_review', 'approved', 'admitted' ], true ) ? gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( 12 - $a_idx * 2 ) . ' days' ) ) : null;
+			$adm_decision_at  = in_array( $adm['status'], [ 'approved', 'admitted' ], true ) ? gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( 4 - $a_idx * 2 ) . ' days' ) ) : null;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->insert(
 				Schema::applications(),
 				[
-					'reference_number'      => $ref_number,
-					'status'                => $adm['status'],
-					'source'                => ( $a_idx % 2 === 0 ) ? 'online' : 'walk_in',
-					'academic_session_id'   => $session_id,
-					'academic_unit_id'      => $assigned_u,
-					'academic_group_id'     => $group_ids[ $assigned_u ][0] ?? null,
-					'student_first_name'    => $adm['first'],
-					'student_last_name'     => $adm['last'],
-					'student_date_of_birth' => $adm['dob'],
-					'student_gender'        => $adm['gender'],
-					'student_photo_id'      => $app_photo_id,
-					'guardian_name'         => $adm['g_name'],
-					'guardian_email'        => $adm['email'],
-					'guardian_phone'        => '+91 98200 ' . sprintf( '%05d', 1000 + $a_idx ),
-					'submitted_at'          => gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( 20 - $a_idx * 2 ) . ' days' ) ),
-					'reviewed_at'           => in_array( $adm['status'], [ 'under_review', 'approved', 'admitted' ], true ) ? gmdate( 'Y-m-d H:i:s', strtotime( '-10 days' ) ) : null,
-					'decision_at'           => in_array( $adm['status'], [ 'approved', 'admitted' ], true ) ? gmdate( 'Y-m-d H:i:s', strtotime( '-3 days' ) ) : null,
-					'converted_student_id'  => ( 'admitted' === $adm['status'] ) ? ( $enrolled_students[0]['student_id'] ?? null ) : null,
-					'created_at'            => $now,
-					'updated_at'            => $now,
+					'reference_number'       => $ref_number,
+					'status'                 => $adm['status'],
+					'source'                 => ( $a_idx % 2 === 0 ) ? 'online' : 'walk_in',
+					'academic_session_id'    => $session_id,
+					'academic_unit_id'       => $assigned_u,
+					'academic_group_id'      => $group_ids[ $assigned_u ][0] ?? null,
+					'student_first_name'     => $adm['first'],
+					'student_middle_name'    => $staff_middle_pool[ ( $a_idx + 2 ) % count( $staff_middle_pool ) ],
+					'student_last_name'      => $adm['last'],
+					'student_preferred_name' => $adm['first'],
+					'student_date_of_birth'  => $adm['dob'],
+					'student_gender'         => $adm['gender'],
+					'student_photo_id'       => $app_photo_id,
+					'guardian_name'          => $adm['g_name'],
+					'guardian_email'         => $adm['email'],
+					'guardian_phone'         => $adm_phone,
+					'address_json'           => wp_json_encode( $adm_address ),
+					'custom_fields_json'     => wp_json_encode( $adm_custom ),
+					'submitted_at'           => $adm_submitted_at,
+					'reviewed_at'            => $adm_reviewed_at,
+					'decision_at'            => $adm_decision_at,
+					'converted_student_id'   => ( 'admitted' === $adm['status'] ) ? ( $enrolled_students[0]['student_id'] ?? null ) : null,
+					'created_at'             => $now,
+					'updated_at'             => $now,
 				]
 			);
 			$app_id                         = (int) $wpdb->insert_id;
@@ -1381,14 +1744,15 @@ final class DemoDataService {
 					'application_id' => $app_id,
 					'from_status'    => null,
 					'to_status'      => 'submitted',
-					'reason'         => 'Application Form Received',
-					'message'        => 'Application submitted with verified certificates.',
-					'changed_at'     => gmdate( 'Y-m-d H:i:s', strtotime( '-15 days' ) ),
+					'reason'         => $adm_is_walk_in ? 'Application Registered' : 'Application Form Received',
+					'message'        => $adm_is_walk_in ? 'Walk-in application recorded at admissions desk.' : 'Application submitted with verified certificates.',
+					'changed_by'     => $adm_is_walk_in ? ( get_current_user_id() ?: 1 ) : null,
+					'changed_at'     => $adm_submitted_at,
 				]
 			);
 			$tracked_ids['app_event_ids'][] = (int) $wpdb->insert_id;
 
-			if ( in_array( $adm['status'], [ 'under_review', 'approved', 'admitted' ], true ) ) {
+			if ( in_array( $adm['status'], [ 'under_review', 'approved', 'admitted' ], true ) && $adm_reviewed_at ) {
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$wpdb->insert(
 					Schema::app_events(),
@@ -1398,13 +1762,14 @@ final class DemoDataService {
 						'to_status'      => 'under_review',
 						'reason'         => 'Document Verification',
 						'message'        => 'Moving application to admissions review committee.',
-						'changed_at'     => gmdate( 'Y-m-d H:i:s', strtotime( '-10 days' ) ),
+						'changed_by'     => get_current_user_id() ?: 1,
+						'changed_at'     => $adm_reviewed_at,
 					]
 				);
 				$tracked_ids['app_event_ids'][] = (int) $wpdb->insert_id;
 			}
 
-			if ( in_array( $adm['status'], [ 'approved', 'admitted' ], true ) ) {
+			if ( in_array( $adm['status'], [ 'approved', 'admitted' ], true ) && $adm_decision_at ) {
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$wpdb->insert(
 					Schema::app_events(),
@@ -1414,11 +1779,49 @@ final class DemoDataService {
 						'to_status'      => $adm['status'],
 						'reason'         => 'Committee Approval',
 						'message'        => 'Offer of admission granted for academic session.',
-						'changed_at'     => gmdate( 'Y-m-d H:i:s', strtotime( '-3 days' ) ),
+						'changed_by'     => get_current_user_id() ?: 1,
+						'changed_at'     => $adm_decision_at,
 					]
 				);
 				$tracked_ids['app_event_ids'][] = (int) $wpdb->insert_id;
 			}
+
+			// Admission documents
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::app_documents(),
+				[
+					'application_id'    => $app_id,
+					'document_type'     => 'birth_certificate',
+					'label'             => 'Official Birth Certificate',
+					'attachment_id'     => $app_photo_id ?: 502,
+					'status'            => 'verified',
+					'required'          => 1,
+					'review_note'       => 'Verified against municipal registrar records.',
+					'uploaded_by_email' => $adm['email'],
+					'uploaded_at'       => gmdate( 'Y-m-d H:i:s', strtotime( '-15 days' ) ),
+					'created_at'        => $now,
+					'updated_at'        => $now,
+				]
+			);
+			$tracked_ids['app_doc_ids'][] = (int) $wpdb->insert_id;
+
+			// Admission notes
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::app_notes(),
+				[
+					'application_id' => $app_id,
+					'note_type'      => 'interview',
+					'body'           => 'Interaction with applicant and parents went very well. High reading comprehension and numeracy demonstrated.',
+					'visibility'     => 'internal',
+					'pinned'         => ( $a_idx % 2 === 0 ) ? 1 : 0,
+					'created_by'     => 1,
+					'created_at'     => gmdate( 'Y-m-d H:i:s', strtotime( '-8 days' ) ),
+					'updated_at'     => $now,
+				]
+			);
+			$tracked_ids['app_note_ids'][] = (int) $wpdb->insert_id;
 		}
 
 
@@ -1452,6 +1855,25 @@ final class DemoDataService {
 			$tracked_ids['fee_type_ids'][] = $ft_id;
 		}
 
+		// 10b. Fee Type Class Rates
+		foreach ( $fee_type_ids as $ft_id ) {
+			foreach ( $unit_ids as $u_idx => $u_id ) {
+				$class_rate = (int) round( 500000 * ( 1 + $u_idx * 0.15 ) );
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->insert(
+					Schema::fee_type_class_rates(),
+					[
+						'fee_type_id'      => $ft_id,
+						'academic_unit_id' => $u_id,
+						'amount_minor'     => $class_rate,
+						'currency'         => $currency,
+						'created_at'       => $now,
+						'updated_at'       => $now,
+					]
+				);
+				$tracked_ids['fee_type_class_rate_ids'][] = (int) $wpdb->insert_id;
+			}
+		}
 		// ── 11. Invoices & Payments (6 Invoices: 2 Paid, 2 Partial, 2 Overdue) ──
 		$tuition_fee_id = $fee_type_ids[0];
 
@@ -1556,24 +1978,61 @@ final class DemoDataService {
 			0,
 			$tracked_ids
 		);
-
 		// ── 12. Noticeboard Announcements ─────────────────────────────────────
 		$announcements = [
 			[
-				'title'   => 'Welcome to CodeClove (Demo)',
-				'content' => 'Welcome all parents, faculty, and students to the new academic session. Orientation schedules and syllabus guidelines have been published on the school portal.',
+				'title'        => 'Welcome to CodeClove (Demo)',
+				'content'      => 'Welcome all parents, faculty, and students to the new academic session. Orientation schedules and syllabus guidelines have been published on the school portal.',
+				'event_type'   => 'announcement',
+				'accent_color' => 'purple',
+				'icon'         => 'megaphone',
+				'is_pinned'    => 1,
+				'url'          => null,
 			],
 			[
-				'title'   => 'Annual Athletics & Sports Meet Schedule',
-				'content' => 'The Annual Sports Meet will be held on the central sports grounds next Friday. Students are requested to wear their respective house uniforms.',
+				'title'        => 'Annual Athletics & Sports Meet Schedule',
+				'content'      => 'The Annual Sports Meet will be held on the central sports grounds next Friday. Students are requested to wear their respective house uniforms.',
+				'event_type'   => 'event',
+				'accent_color' => 'indigo',
+				'icon'         => 'calendar',
+				'is_pinned'    => 0,
+				'url'          => '/timetable',
 			],
 			[
-				'title'   => 'Term 1 Parent-Teacher Conferences',
-				'content' => 'Parent-Teacher Conferences for Term 1 are scheduled for this coming Saturday from 09:00 AM to 01:00 PM. Individual meeting slots are available via the portal.',
+				'title'        => 'School Library Digital Catalog & Circular',
+				'content'      => 'Over 200 new reference books, digital textbooks, and term syllabus guides have been uploaded to the school catalog for student download.',
+				'event_type'   => 'circular',
+				'accent_color' => 'teal',
+				'icon'         => 'book-open',
+				'is_pinned'    => 0,
+				'url'          => null,
 			],
 			[
-				'title'   => 'Science & Innovation Exhibition Submissions Open',
-				'content' => 'All students from Classes 1 to 3 are invited to submit their science project proposals to the Science Department before the end of the month.',
+				'title'        => 'Term 1 Parent-Teacher Conferences',
+				'content'      => 'Parent-Teacher Conferences for Term 1 are scheduled for this coming Saturday from 09:00 AM to 01:00 PM. Individual meeting slots are available via the portal.',
+				'event_type'   => 'notice',
+				'accent_color' => 'slate',
+				'icon'         => 'file-text',
+				'is_pinned'    => 0,
+				'url'          => null,
+			],
+			[
+				'title'        => 'Urgent: Weather Advisory & Outdoor Suspension',
+				'content'      => 'Due to forecasted severe weather conditions, all outdoor sports and extracurriculars after 03:00 PM are suspended. Please follow campus shuttle pickup guidelines.',
+				'event_type'   => 'urgent',
+				'accent_color' => 'rose',
+				'icon'         => 'alert-circle',
+				'is_pinned'    => 0,
+				'url'          => null,
+			],
+			[
+				'title'        => 'National Holiday School Closure Notice',
+				'content'      => 'All academic classes and administrative offices will remain closed this Monday in observance of the public holiday. Normal classes resume on Tuesday.',
+				'event_type'   => 'holiday',
+				'accent_color' => 'emerald',
+				'icon'         => 'calendar',
+				'is_pinned'    => 0,
+				'url'          => null,
 			],
 		];
 
@@ -1582,19 +2041,47 @@ final class DemoDataService {
 			$wpdb->insert(
 				Schema::notifications(),
 				[
-					'user_id'    => 0,
-					'student_id' => null,
-					'audience'   => 'portal',
-					'title'      => $ann['title'],
-					'content'    => $ann['content'],
-					'event_type' => 'announcement',
-					'is_read'    => 0,
-					'created_at' => $now,
+					'user_id'      => 0,
+					'student_id'   => null,
+					'audience'     => 'portal',
+					'title'        => $ann['title'],
+					'content'      => $ann['content'],
+					'notice_date'  => substr( $now, 0, 10 ),
+					'event_type'   => $ann['event_type'],
+					'accent_color' => $ann['accent_color'],
+					'icon'         => $ann['icon'],
+					'is_pinned'    => $ann['is_pinned'],
+					'url'          => $ann['url'],
+					'is_read'      => 0,
+					'created_at'   => $now,
 				]
 			);
 			$tracked_ids['notification_ids'][] = (int) $wpdb->insert_id;
 		}
-
+		// ── 13. Demo Activity Logs ────────────────────────────────────────────
+		$demo_audit_events = [
+			[ 'event_type' => 'student_enrolled',     'actor_type' => 'admin',  'meta' => [ 'module' => 'students',    'action' => 'enrolled',    'desc' => 'Demo student enrolled in active academic class.' ] ],
+			[ 'event_type' => 'payment_recorded',     'actor_type' => 'staff',  'meta' => [ 'module' => 'finance',     'action' => 'paid',        'desc' => 'Tuition fee collection receipt DEMO-PAY-001 issued.' ] ],
+			[ 'event_type' => 'application_received', 'actor_type' => 'public', 'meta' => [ 'module' => 'admissions',  'action' => 'submitted',   'desc' => 'Online application DEMO-APP-001 received.' ] ],
+			[ 'event_type' => 'settings_updated',     'actor_type' => 'admin',  'meta' => [ 'module' => 'settings',    'action' => 'configured',  'desc' => 'School management preset applied with country defaults.' ] ],
+		];
+		foreach ( $demo_audit_events as $da_idx => $da ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				Schema::activity_logs(),
+				[
+					'event_type'    => $da['event_type'],
+					'actor_type'    => $da['actor_type'],
+					'actor_id'      => 1,
+					'actor_label'   => 'CodeClove (Demo)',
+					'ip_address'    => '127.0.0.1',
+					'user_agent'    => 'Mozilla/5.0 (Demo Seeder)',
+					'metadata_json' => wp_json_encode( $da['meta'] ),
+					'created_at'    => gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( 8 - $da_idx * 2 ) . ' days' ) ),
+				]
+			);
+			$tracked_ids['audit_log_ids'][] = (int) $wpdb->insert_id;
+		}
 		// Persist the IDs map for clean teardown.
 		update_option( self::OPTION_RECORD_IDS, $tracked_ids, false );
 

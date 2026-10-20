@@ -65,7 +65,7 @@ import { ShortcodesTab }       from './tabs/ShortcodesTab'
 import { SystemTab }           from './tabs/SystemTab'
 import { NotificationsTab }    from './tabs/NotificationsTab'
 import { proSettingsTabs } from '@/pro'
-
+import { PRO_TAB_UPGRADE_MAP } from './constants'
 // ─── Tab Config ───────────────────────────────────────────────────────────────
 
 interface TabDefinition {
@@ -94,15 +94,6 @@ const TABS: TabDefinition[] = [
 ]
 
 type TabId = (typeof TABS)[number]['id']
-
-export const PRO_TAB_UPGRADE_MAP: Record<string, string> = {
-  gateways: 'payment_gateways',
-  sms_notifications: 'sms',
-  whatsapp_notifications: 'sms',
-  in_app_notifications: 'sms',
-  activity_log: 'audit_log',
-}
-
 // ─── Diff Types ───────────────────────────────────────────────────────────────
 
 interface DiffItem {

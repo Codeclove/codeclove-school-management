@@ -71,17 +71,32 @@ export const TimetablePage: React.FC = () => {
   })
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day')
 
-  const daysData = timetableData?.days ?? {}
   const enrollment = timetableData?.enrollment
 
   // Get slots for the selected day tab (support numeric key or string key)
   const currentSlots = useMemo<TimetableSlot[]>(() => {
+    const daysData = timetableData?.days ?? {}
     const slots = (daysData[selectedDay] ?? daysData[String(selectedDay)]) as
       | TimetableSlot[]
       | undefined
     return slots ?? []
-  }, [daysData, selectedDay])
+  }, [timetableData?.days, selectedDay])
 
+  const isSelectedDayToday = selectedDay === todayDayOfWeek
+  const resolvedSlots = useMemo(() => {
+    return currentSlots.map((slot, idx) => {
+      const slotStatus = isSelectedDayToday ? getSlotStatus(slot.start_time, slot.end_time) : null
+      const nextSlot = currentSlots[idx + 1]
+      return {
+        slot,
+        activeNow: slotStatus === 'current',
+        isPast: slotStatus === 'past',
+        teacher: slot.teacher_name || slot.staff_name,
+        roomClean: formatRoomName(slot.room),
+        gap: nextSlot ? getBreakBetweenSlots(slot.end_time, nextSlot.start_time) : null,
+      }
+    })
+  }, [currentSlots, isSelectedDayToday])
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -185,8 +200,74 @@ export const TimetablePage: React.FC = () => {
                 className="py-12"
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
+              <>
+                {/* Mobile / Small Screen Card View (No horizontal scrolling on phones) */}
+            <div className="md:hidden divide-y divide-border">
+              {resolvedSlots.map(({ slot, activeNow, isPast, teacher, roomClean, gap }, idx) => {
+                return (
+                  <React.Fragment key={`mobile-${slot.period_name}-${idx}`}>
+                    <div
+                      className={`p-4 transition-colors ${
+                        activeNow
+                          ? 'bg-brand-dim/35 border-l-4 border-l-brand'
+                          : isPast
+                          ? 'opacity-65 bg-bg-surface'
+                          : 'bg-bg-surface'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-xs font-bold text-text tabular-nums">
+                          {formatTime(slot.start_time)} – {formatTime(slot.end_time)}
+                        </span>
+                        {activeNow ? (
+                          <Badge variant="active" size="sm" className="gap-1 animate-pulse">
+                            <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                            {__( 'Live Now', 'codeclove-school-management' )}
+                          </Badge>
+                        ) : (
+                          <span className="text-3xs font-semibold uppercase text-text-subtle">
+                            {slot.period_name}
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-sm font-bold text-text">{slot.subject_name}</h4>
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-text-muted flex-wrap">
+                        {teacher && (
+                          <span className="inline-flex items-center gap-1">
+                            <User className="w-3.5 h-3.5 text-text-subtle shrink-0" />
+                            <span>{teacher}</span>
+                          </span>
+                        )}
+                        {roomClean && (
+                          <span className="inline-flex items-center gap-1">
+                            <DoorClosed className="w-3.5 h-3.5 text-text-subtle shrink-0" />
+                            <span>{roomClean}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {gap && (
+                      <div className="flex items-center justify-between px-4 py-2 bg-bg-base/60 text-text-muted text-xs border-y border-dashed border-border">
+                        <div className="flex items-center gap-2 font-medium">
+                          <Coffee className="w-3.5 h-3.5 text-brand shrink-0" />
+                          <span className="font-semibold text-text">{__( gap.label, 'codeclove-school-management' )}</span>
+                          <span className="text-text-subtle text-3xs tabular-nums">
+                            {formatTime(gap.startTime)} – {formatTime(gap.endTime)}
+                          </span>
+                        </div>
+                        <span className="text-3xs font-semibold text-text-muted px-2 py-0.5 rounded-full bg-bg-surface border border-border">
+                          {gap.durationMinutes}m
+                        </span>
+                      </div>
+                    )}
+                  </React.Fragment>
+                )
+              })}
+            </div>
+
+            {/* Desktop Structured Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-bg-surface border-b border-border text-xs font-semibold text-text-subtle uppercase tracking-wider">
                     <tr>
                       <th scope="col" className="py-3 px-4 w-24">{__( 'Period', 'codeclove-school-management' )}</th>
@@ -198,16 +279,7 @@ export const TimetablePage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {currentSlots.map((slot, idx) => {
-                      const isToday = selectedDay === todayDayOfWeek
-                      const slotStatus = isToday ? getSlotStatus(slot.start_time, slot.end_time) : null
-                      const activeNow = slotStatus === 'current'
-                      const isPast = slotStatus === 'past'
-                      const teacher = slot.teacher_name || slot.staff_name
-                      const roomClean = formatRoomName(slot.room)
-                      const nextSlot = currentSlots[idx + 1]
-                      const gap = nextSlot ? getBreakBetweenSlots(slot.end_time, nextSlot.start_time) : null
-
+                    {resolvedSlots.map(({ slot, activeNow, isPast, teacher, roomClean, gap }, idx) => {
                       return (
                         <React.Fragment key={`${slot.period_name}-${idx}`}>
                           <tr
@@ -258,7 +330,7 @@ export const TimetablePage: React.FC = () => {
                                 </Badge>
                               ) : (
                                 <Badge variant="default" size="sm" className={isPast ? 'text-text-subtle' : undefined}>
-                                  {isPast ? __( 'Completed', 'codeclove-school-management' ) : isToday ? __( 'Upcoming', 'codeclove-school-management' ) : __( 'Scheduled', 'codeclove-school-management' )}
+                                  {isPast ? __( 'Completed', 'codeclove-school-management' ) : isSelectedDayToday ? __( 'Upcoming', 'codeclove-school-management' ) : __( 'Scheduled', 'codeclove-school-management' )}
                                 </Badge>
                               )}
                             </td>
@@ -290,7 +362,8 @@ export const TimetablePage: React.FC = () => {
                     })}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

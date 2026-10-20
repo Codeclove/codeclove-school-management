@@ -83,7 +83,14 @@ export default function StudentImportPage() {
 
     const hasFather = Boolean(row.father_first_name || row.father_name)
     const hasMother = Boolean(row.mother_first_name || row.mother_name)
-    const hasGuardian = Boolean(row.guardian_first_name || row.guardian_name)
+    const guardianName = row.guardian_first_name ||
+                         row.guardian_name ||
+                         row.primary_guardian ||
+                         row.primary_parent_guardian ||
+                         row.parent_guardian ||
+                         row.guardian ||
+                         ''
+    const hasGuardian = Boolean(guardianName)
 
     if (!hasFather && !hasMother && !hasGuardian) {
       errors.push(__( 'At least one Father, Mother, or Guardian detail is required', 'codeclove-school-management' ))
@@ -92,8 +99,7 @@ export default function StudentImportPage() {
     const guardianParts: string[] = []
     if (hasFather) guardianParts.push(sprintf( __( 'Father: %s', 'codeclove-school-management' ), row.father_first_name || row.father_name ))
     if (hasMother) guardianParts.push(sprintf( __( 'Mother: %s', 'codeclove-school-management' ), row.mother_first_name || row.mother_name ))
-    if (hasGuardian) guardianParts.push(sprintf( __( 'Guardian: %s', 'codeclove-school-management' ), row.guardian_first_name || row.guardian_name ))
-
+    if (hasGuardian && !hasFather && !hasMother) guardianParts.push(sprintf( __( 'Guardian: %s', 'codeclove-school-management' ), guardianName ))
     return {
       rowIndex: index + 1,
       raw: row,

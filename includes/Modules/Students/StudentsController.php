@@ -169,6 +169,42 @@ final class StudentsController extends BaseController {
 				],
 			]
 		);
+
+		register_rest_route(
+			$this->namespace,
+			'/students/portal-users',
+			[
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'search_portal_users' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.edit', $request ); },
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/students/(?P<id>\d+)/portal-account/link',
+			[
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'link_portal_account' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.edit', $request ); },
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/students/(?P<id>\d+)/portal-account/reset-password',
+			[
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'reset_portal_password' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.edit', $request ); },
+				],
+			]
+		);
 	}
 
 	/**
@@ -439,20 +475,11 @@ final class StudentsController extends BaseController {
 		if ( is_wp_error( $params ) ) {
 			return $params;
 		}
-
-		$type = isset( $params['type'] ) ? sanitize_key( (string) $params['type'] ) : 'student';
-		if ( ! in_array( $type, [ 'student', 'guardian' ], true ) ) {
-			return new WP_Error( 'invalid_type', __( 'Entity type must be "student" or "guardian".', 'codeclove-school-management' ), 400 );
+		$entity = $this->resolve_portal_entity( $student_id, $params, 'creating' );
+		if ( is_wp_error( $entity ) ) {
+			return $entity;
 		}
-
-		if ( 'student' === $type ) {
-			$entity_id = $student_id;
-		} else {
-			$entity_id = ! empty( $params['guardian_id'] ) ? (int) $params['guardian_id'] : 0;
-			if ( $entity_id <= 0 ) {
-				return new WP_Error( 'missing_guardian_id', __( 'guardian_id is required when creating a guardian portal account.', 'codeclove-school-management' ), 400 );
-			}
-		}
+		[ $entity_id, $type ] = $entity;
 
 		$result = $this->service->create_portal_account( $entity_id, $type, $params );
 		if ( is_wp_error( $result ) ) {
@@ -525,5 +552,123 @@ final class StudentsController extends BaseController {
 		);
 
 		return $this->success( [ 'unlinked' => true ] );
+	}
+
+	/**
+	 * Links an existing WordPress user account to a student or guardian.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function link_portal_account( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$student_id = (int) $request->get_param( 'id' );
+		$params     = $this->json_body( $request );
+		if ( is_wp_error( $params ) ) {
+			return $params;
+		}
+
+		$entity = $this->resolve_portal_entity( $student_id, $params, 'linking' );
+		if ( is_wp_error( $entity ) ) {
+			return $entity;
+		}
+		[ $entity_id, $type ] = $entity;
+
+		$user_id = ! empty( $params['user_id'] ) ? (int) $params['user_id'] : 0;
+		if ( $user_id <= 0 ) {
+			return new WP_Error( 'missing_user_id', __( 'user_id is required to link a portal account.', 'codeclove-school-management' ), 400 );
+		}
+
+		$result = $this->service->link_portal_account( $entity_id, $type, $user_id );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		AuditLogger::log(
+			'students.portal_account_linked',
+			[
+				'student_id'  => $student_id,
+				'type'        => $type,
+				'entity_id'   => $entity_id,
+				'wp_user_id'  => $result['user_id'] ?? null,
+				'wp_username' => $result['username'] ?? null,
+			]
+		);
+
+		return $this->success( $result );
+	}
+
+	/**
+	 * Searches WordPress users for portal account linking.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response
+	 */
+	public function search_portal_users( WP_REST_Request $request ): WP_REST_Response {
+		$search = (string) ( $request->get_param( 'search' ) ?: '' );
+		$email  = (string) ( $request->get_param( 'email' ) ?: '' );
+
+		$results = $this->service->search_portal_users( $search, $email );
+		return $this->success( $results );
+	}
+
+	/**
+	 * Dispatches password reset instructions to a linked portal user.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function reset_portal_password( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$student_id = (int) $request->get_param( 'id' );
+		$params     = $this->json_body( $request );
+		if ( is_wp_error( $params ) ) {
+			return $params;
+		}
+
+		$entity = $this->resolve_portal_entity( $student_id, $params, 'resetting' );
+		if ( is_wp_error( $entity ) ) {
+			return $entity;
+		}
+		[ $entity_id, $type ] = $entity;
+
+		$result = $this->service->send_portal_password_reset( $entity_id, $type );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return $this->success( $result );
+	}
+
+	/**
+	 * Resolves student or guardian entity ID and validates type for portal endpoints.
+	 *
+	 * @param int    $student_id
+	 * @param array  $params
+	 * @param string $action_context
+	 * @return array{0: int, 1: string}|WP_Error
+	 */
+	private function resolve_portal_entity( int $student_id, array $params, string $action_context = 'managing' ): array|WP_Error {
+		$type = isset( $params['type'] ) ? sanitize_key( (string) $params['type'] ) : 'student';
+		if ( ! in_array( $type, [ 'student', 'guardian' ], true ) ) {
+			return new WP_Error( 'invalid_type', __( 'Entity type must be "student" or "guardian".', 'codeclove-school-management' ), 400 );
+		}
+
+		if ( 'student' === $type ) {
+			return [ $student_id, $type ];
+		}
+
+		$guardian_id = ! empty( $params['guardian_id'] ) ? (int) $params['guardian_id'] : 0;
+		if ( $guardian_id <= 0 ) {
+			return new WP_Error(
+				'missing_guardian_id',
+				sprintf(
+					/* translators: %s: action context */
+					__( 'guardian_id is required when %s a guardian portal account.', 'codeclove-school-management' ),
+					$action_context
+				),
+				400
+			);
+		}
+
+		return [ $guardian_id, $type ];
 	}
 }

@@ -10,9 +10,7 @@ import { Check, ChevronDown } from 'lucide-react'
 import { __ } from '@/lib/i18n'
 import { usePortal } from '../lib/portal-context'
 import { getInitials } from '../lib/formatter'
-
-// Only render switcher when user has multiple enrolled students to switch between
-export const shouldShowStudentSwitcher = (count: number): boolean => count > 1
+import { shouldShowStudentSwitcher } from './student-switcher-utils'
 
 export const StudentSwitcher: React.FC = () => {
   const { currentStudent, students, switchStudent } = usePortal()

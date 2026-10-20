@@ -58,6 +58,7 @@ describe('Portal CSS Isolation & Token Integrity', () => {
     it('must declare dark mode surface, border, and text tokens for #codeclove-portal-root.dark', () => {
       expect(portalCss).toMatch(/#codeclove-portal-root\.dark/i)
       expect(portalCss).toMatch(/--bg-base:\s*#09090b/i)
+      expect(portalCss).toMatch(/--bg-surface:\s*#111115/i)
       expect(portalCss).toMatch(/--bg-elevated:\s*#1c1c26/i)
       expect(portalCss).toMatch(/--border:\s*rgba\(255,\s*255,\s*255,\s*0\.16\)/i)
       expect(portalCss).toMatch(/--text:\s*#f8fafc/i)

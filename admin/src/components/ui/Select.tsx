@@ -13,12 +13,15 @@ import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn, getPortalContainer } from '@/lib/utils'
 import { __ } from '@/lib/i18n'
+import { Combobox } from './Combobox'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface SelectOption {
   value: string
   label: string
+  description?: string
   disabled?: boolean
+  prefix?: React.ReactNode
 }
 
 export interface SelectGroup {
@@ -26,13 +29,16 @@ export interface SelectGroup {
   options: SelectOption[]
 }
 
-interface SelectProps {
+export interface SelectProps {
   id?: string
   value?: string
   onValueChange?: (value: string) => void
   options?: SelectOption[]
   groups?: SelectGroup[]
   placeholder?: string
+  searchable?: boolean
+  searchPlaceholder?: string
+  emptyText?: string
   disabled?: boolean
   error?: boolean
   className?: string
@@ -45,22 +51,28 @@ interface SelectProps {
 
 // ─── Select ───────────────────────────────────────────────────────────────────
 
-export function Select({
-  id,
-  name,
-  value,
-  onValueChange,
-  options = [],
-  groups = [],
-  placeholder = __( 'Select...', 'codeclove-school-management' ),
-  disabled = false,
-  error = false,
-  className,
-  container,
-  'aria-invalid': ariaInvalid,
-  'aria-describedby': ariaDescribedBy,
-  'aria-label': ariaLabel,
-}: SelectProps) {
+export function Select(props: SelectProps) {
+  if (props.searchable) {
+    return <Combobox {...props} />
+  }
+
+  const {
+    id,
+    name,
+    value,
+    onValueChange,
+    options = [],
+    groups = [],
+    placeholder = __( 'Select...', 'codeclove-school-management' ),
+    disabled = false,
+    error = false,
+    className,
+    container,
+    'aria-invalid': ariaInvalid,
+    'aria-describedby': ariaDescribedBy,
+    'aria-label': ariaLabel,
+  } = props
+
   const portalContainer = getPortalContainer(container)
   const allGroups: SelectGroup[] =
     groups.length > 0 ? groups : [{ label: '', options }]
@@ -84,8 +96,8 @@ export function Select({
         aria-label={ariaLabel}
         title={selectedLabel}
         className={cn(
-          'flex h-8 w-full items-center justify-between gap-2 rounded px-3 text-sm min-w-0 [&>span]:truncate [&>span]:block [&>span]:text-start whitespace-nowrap',
-          'bg-bg-surface border transition-colors duration-100 text-text',
+          'flex h-8 w-full items-center justify-between gap-2 rounded px-3 text-sm min-w-0 [&>span]:truncate [&>span]:inline-flex [&>span]:items-center [&>span]:gap-2 [&>span]:text-start whitespace-nowrap',
+          'bg-bg-surface border transition-colors duration-100 text-text outline-none focus:outline-none',
           isError
             ? 'border-danger focus:ring-danger'
             : 'border-border hover:border-border-strong focus:border-brand focus:ring-1 focus:ring-brand-ring',
@@ -130,13 +142,22 @@ export function Select({
                     disabled={opt.disabled}
                     className={cn(
                       'relative flex items-center gap-2 px-3 py-1.5 rounded text-sm cursor-default select-none',
-                      'outline-none transition-colors duration-100',
+                      'outline-none focus-visible:ring-0 transition-colors duration-100',
                       'text-text-muted data-[highlighted]:bg-hover-bg data-[highlighted]:text-text',
                       'data-[state=checked]:text-text data-[state=checked]:font-semibold data-[state=checked]:bg-brand-dim',
                       'data-[disabled]:opacity-50 data-[disabled]:pointer-events-none'
                     )}
                   >
-                    <SelectPrimitive.ItemText className="truncate max-w-[280px]">{opt.label}</SelectPrimitive.ItemText>
+                    <SelectPrimitive.ItemText>
+                      {opt.prefix ? (
+                        <span className="inline-flex items-center gap-2 min-w-0">
+                          {opt.prefix}
+                          <span className="truncate max-w-[280px]">{opt.label}</span>
+                        </span>
+                      ) : (
+                        opt.label
+                      )}
+                    </SelectPrimitive.ItemText>
                     <SelectPrimitive.ItemIndicator className="ms-auto">
                       <Check size={12} className="text-brand" />
                     </SelectPrimitive.ItemIndicator>

@@ -69,7 +69,8 @@ final class Schema {
 	public static function line_items(): string            { return self::t( 'invoice_line_items' ); }
 	public static function payments(): string              { return self::t( 'payments' ); }
 	public static function activity_logs(): string         { return self::t( 'audit_logs' ); }
-	// ─── All Tables Accessor ──────────────────────────────────────────────────
+	public static function certificate_templates(): string { return self::t( 'certificate_templates' ); }
+	public static function issued_certificates(): string   { return self::t( 'issued_certificates' ); }
 
 	/**
 	 * Returns all fully-qualified CodeClove table names created by this build.

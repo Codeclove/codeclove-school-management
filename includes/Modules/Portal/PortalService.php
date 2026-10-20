@@ -58,16 +58,17 @@ final class PortalService {
 		$wp_user = get_userdata( $user_id );
 		$is_admin = user_can( $user_id, 'manage_options' );
 
-		// 1. Locate guardian record if any.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal guardian record lookup.
-		$guardian_row = $wpdb->get_row(
+		// 1. Locate guardian records if any.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal guardian records lookup.
+		$guardian_rows = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT * FROM %i WHERE user_id = %d AND deleted_at IS NULL LIMIT 1',
+				'SELECT * FROM %i WHERE user_id = %d AND deleted_at IS NULL',
 				Schema::guardians(),
 				$user_id
 			),
 			ARRAY_A
-		);
+		) ?: [];
+		$guardian_row = $guardian_rows[0] ?? null;
 
 		// 2. Locate student record if any.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student record lookup.
@@ -94,34 +95,30 @@ final class PortalService {
 
 		$students_rows = [];
 
-		if ( 'guardian' === $role && $guardian_row ) {
-			// Fetch all students linked to this guardian.
+		if ( 'guardian' === $role && ! empty( $guardian_rows ) ) {
+			// Fetch all students linked to any guardian record for this user.
 			$students_table  = Schema::students();
 			$links_table     = Schema::student_guardians();
 			$enroll_table    = Schema::enrollments();
 			$units_table     = Schema::units();
 			$groups_table    = Schema::groups();
+			$guardian_ids    = array_map( 'intval', wp_list_pluck( $guardian_rows, 'id' ) );
+			$placeholders    = implode( ',', array_fill( 0, count( $guardian_ids ), '%d' ) );
 
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal guardian linked students query.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$students_rows = $wpdb->get_results(
 				$wpdb->prepare(
-					'SELECT s.id, s.student_number, s.admission_number, s.first_name, s.middle_name, s.last_name,
+					"SELECT DISTINCT s.id, s.student_number, s.admission_number, s.first_name, s.middle_name, s.last_name,
 							s.gender, s.photo_id,
-							u.name as unit_name, g.name as group_name, e.roll_number
-					 FROM %i s
-					 INNER JOIN %i sg ON sg.student_id = s.id
-					 LEFT JOIN %i e ON e.student_id = s.id AND e.status = %s
-					 LEFT JOIN %i u ON u.id = e.academic_unit_id
-					 LEFT JOIN %i g ON g.id = e.academic_group_id
-					 WHERE sg.guardian_id = %d AND s.deleted_at IS NULL
-					 ORDER BY sg.is_primary DESC, s.first_name ASC',
-					Schema::students(),
-					Schema::student_guardians(),
-					Schema::enrollments(),
-					'active',
-					Schema::units(),
-					Schema::groups(),
-					(int) $guardian_row['id']
+							u.name as unit_name, g.name as group_name, e.roll_number, sg.is_primary
+					 FROM {$students_table} s
+					 INNER JOIN {$links_table} sg ON sg.student_id = s.id
+					 LEFT JOIN {$enroll_table} e ON e.student_id = s.id AND e.status = %s
+					 LEFT JOIN {$units_table} u ON u.id = e.academic_unit_id
+					 LEFT JOIN {$groups_table} g ON g.id = e.academic_group_id
+					 WHERE sg.guardian_id IN ({$placeholders}) AND s.deleted_at IS NULL
+					 ORDER BY sg.is_primary DESC, s.first_name ASC",
+					array_merge( [ 'active' ], $guardian_ids )
 				),
 				ARRAY_A
 			) ?: [];
@@ -283,30 +280,18 @@ final class PortalService {
 		}
 
 		// 2. Check if linked via guardian record.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal guardian record lookup.
-		$guardian_id = $wpdb->get_var(
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal guardian student link check.
+		return (bool) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT id FROM %i WHERE user_id = %d AND deleted_at IS NULL LIMIT 1',
+				'SELECT sg.id FROM %i sg
+				 INNER JOIN %i g ON g.id = sg.guardian_id
+				 WHERE sg.student_id = %d AND g.user_id = %d AND g.deleted_at IS NULL LIMIT 1',
+				Schema::student_guardians(),
 				Schema::guardians(),
+				$student_id,
 				$user_id
 			)
 		);
-		if ( $guardian_id ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal guardian student link check.
-			$is_linked = (bool) $wpdb->get_var(
-				$wpdb->prepare(
-					'SELECT id FROM %i WHERE student_id = %d AND guardian_id = %d LIMIT 1',
-					Schema::student_guardians(),
-					$student_id,
-					(int) $guardian_id
-				)
-			);
-			if ( $is_linked ) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	/**
@@ -461,10 +446,33 @@ final class PortalService {
 			ARRAY_A
 		);
 		// phpcs:enable
-
-		$today_timetable = apply_filters( 'codeclove_portal_today_timetable', [], $student_id, $enrollment );
-
-		// ─── 4. Recent Notifications ──────────────────────────────────────────
+ 		$full_timetable  = null;
+ 		$today_timetable = apply_filters( 'codeclove_portal_today_timetable', [], $student_id, $enrollment );
+ 		$day_of_week     = (int) wp_date( 'N' ); // 1 = Mon ... 7 = Sun
+ 		if ( empty( $today_timetable ) ) {
+ 			$full_timetable  = $this->get_timetable( $student_id );
+ 			$today_timetable = $full_timetable['days'][ $day_of_week ] ?? [];
+ 		}
+ 
+ 		// When today has no classes (e.g. weekend or break), look ahead to the next upcoming school day
+ 		$next_timetable = null;
+ 		if ( empty( $today_timetable ) ) {
+ 			for ( $offset = 1; $offset <= 6; $offset++ ) {
+ 				$check_day = ( ( $day_of_week - 1 + $offset ) % 7 ) + 1; // 1 to 7
+ 				if ( ! empty( $full_timetable['days'][ $check_day ] ) ) {
+ 					$next_ts = strtotime( "+{$offset} days", current_time( 'timestamp' ) );
+ 					$next_timetable = [
+ 						'day_of_week'    => $check_day,
+ 						'day_name'       => wp_date( 'l', $next_ts ),
+ 						'date'           => wp_date( 'Y-m-d', $next_ts ),
+ 						'date_formatted' => wp_date( 'l, M j', $next_ts ),
+ 						'periods'        => $full_timetable['days'][ $check_day ],
+ 					];
+ 					break;
+ 				}
+ 			}
+ 		}
+ 		// ─── 4. Recent Notifications ──────────────────────────────────────────
 		$recent_notifications = apply_filters( 'codeclove_portal_recent_notifications', [], $student_id );
 
 		// ─── 5. Calendar Events ──────────────────────────────────────────────
@@ -601,8 +609,9 @@ final class PortalService {
 				'next_due_amount' => $next_due_amount,
 				'currency'        => $currency,
 			],
-			'today_timetable'      => $today_timetable,
-			'recent_notifications' => $recent_notifications,
+ 			'today_timetable'      => $today_timetable,
+ 			'next_timetable'       => $next_timetable,
+ 			'recent_notifications' => $recent_notifications,
 			'calendar_events'      => $calendar_events,
 			'academic'             => $this->get_academics( $student_id ),
 		];
@@ -1006,6 +1015,23 @@ final class PortalService {
 		return [
 			'documents' => $formatted_docs,
 		];
+	}
+
+	/**
+	 * Gets issued certificates for a student.
+	 *
+	 * @param int $student_id Student ID.
+	 * @return array<string, mixed>
+	 */
+	public function get_certificates( int $student_id ): array {
+		return apply_filters(
+			'codeclove_portal_certificates',
+			[
+				'certificates' => [],
+				'total'        => 0,
+			],
+			$student_id
+		);
 	}
 
 	/**

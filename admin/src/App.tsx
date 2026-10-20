@@ -11,8 +11,12 @@ import SettingsPage    from './modules/settings/SettingsPage'
 import SessionsPage    from './modules/academics/SessionsPage'
 import UnitsPage       from './modules/academics/UnitsPage'
 import GroupsPage      from './modules/academics/GroupsPage'
-import SubjectsPage    from './modules/academics/SubjectsPage'
-import { proRoutes } from './pro'
+ import SubjectsPage    from './modules/academics/SubjectsPage'
+import CertificatesPage from './modules/academics/certificates/CertificatesPage'
+import CertificateDesignerPage from './modules/academics/certificates/CertificateDesignerPage'
+import IssueCertificatePage from './modules/academics/certificates/IssueCertificatePage'
+import PromotionPage from './modules/students/PromotionPage'
+ import { proRoutes } from './pro'
 import StudentDirectoryPage from './modules/students/StudentDirectoryPage'
 import StudentAdmitPage from './modules/students/StudentAdmitPage'
 import StudentImportPage from './modules/students/StudentImportPage'
@@ -47,6 +51,7 @@ import PaymentsPage        from './modules/finance/PaymentsPage'
 import DefaultersReportPage from './modules/finance/DefaultersReportPage'
 import MyProfilePage from './modules/account/MyProfilePage'
 import NoticeboardPage from './modules/announcements/NoticeboardPage'
+import NoticeComposerPage from './modules/announcements/NoticeComposerPage'
 import ProUpgradePage from './modules/upgrade/ProUpgradePage'
 import { ToastProvider } from './lib/toast'
 import { ConfirmProvider } from './lib/confirm'
@@ -146,6 +151,20 @@ export default function App() {
               {isPro && proRoutes.map((route) => (
                 <Route key={route.path} path={route.path} element={route.element} />
               ))}
+              {/* ── Certificates (Pro only) ─────────────────────────── */}
+              {isPro ? (
+                <>
+                  <Route path={ROUTES.CERTIFICATES} element={<CertificatesPage />} />
+                  <Route path={ROUTES.CERTIFICATE_TEMPLATES_NEW} element={<CertificateDesignerPage />} />
+                  <Route path={ROUTES.CERTIFICATE_TEMPLATE_EDIT} element={<CertificateDesignerPage />} />
+                  <Route path={ROUTES.CERTIFICATE_ISSUE} element={<IssueCertificatePage />} />
+                </>
+              ) : (
+                <>
+                  <Route path={ROUTES.CERTIFICATES} element={<Navigate to="/pro-upgrade?feature=certificates" replace />} />
+                  <Route path="/academics/certificates/*" element={<Navigate to="/pro-upgrade?feature=certificates" replace />} />
+                </>
+              )}
 
               {/* ── Students ──────────────────────────────────────────── */}
               <Route path={ROUTES.STUDENT_DIRECTORY} element={<StudentDirectoryPage />} />
@@ -161,7 +180,11 @@ export default function App() {
                 <Route index element={<StudentDailyAttendance />} />
                 <Route path="monthly" element={<StudentMonthlyAttendance />} />
               </Route>
-              {!isPro && <Route path={ROUTES.PROMOTION_ROLLOVER} element={<ComingSoon module={__( 'Promotion & Rollover', 'codeclove-school-management' )} icon={Users} color="text-brand" bg="bg-brand-dim" proOnly />} />}
+              {isPro ? (
+                <Route path={ROUTES.PROMOTION_ROLLOVER} element={<PromotionPage />} />
+              ) : (
+                <Route path={ROUTES.PROMOTION_ROLLOVER} element={<ComingSoon module={__( 'Promotion & Rollover', 'codeclove-school-management' )} icon={Users} color="text-brand" bg="bg-brand-dim" proOnly />} />
+              )}
               <Route path="/students/*"       element={<ComingSoon module="Students"             icon={Users}         color="text-brand"    bg="bg-brand-dim" />} />
 
               {/* ── Staff & HR ────────────────────────────────────────── */}
@@ -198,7 +221,13 @@ export default function App() {
 
               {/* ── Communication & Noticeboard ─────────────────────── */}
               {/* ── Communication & Noticeboard (Pro only) ───────────── */}
-              {isPro && <Route path={ROUTES.ANNOUNCEMENTS} element={<NoticeboardPage />} />}
+              {isPro && (
+                <>
+                  <Route path={ROUTES.ANNOUNCEMENTS} element={<NoticeboardPage />} />
+                  <Route path={ROUTES.ANNOUNCEMENT_NEW} element={<NoticeComposerPage />} />
+                  <Route path={ROUTES.ANNOUNCEMENT_EDIT} element={<NoticeComposerPage />} />
+                </>
+              )}
 
               {/* ── Settings ──────────────────────────────────────────── */}
               <Route path={ROUTES.SETTINGS}   element={<SettingsPage />} />
@@ -325,9 +354,13 @@ export class ErrorBoundary extends Component<
   }
 }
 
-function ReportCrashButton({ error }: { error?: Error }) {
-  const { openFeedback } = useFeedbackModal()
-  return (
+ function ReportCrashButton({ error }: { error?: Error }) {
+ 	const { openFeedback } = useFeedbackModal()
+	const isDemo = window.CodeCloveConfig?.isDemo ?? false
+	if (isDemo) {
+		return null
+	}
+ 	return (
     <button
       type="button"
       onClick={() =>

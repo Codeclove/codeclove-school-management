@@ -11,14 +11,14 @@
 }
 
 .codeclove-portal-login-wrap {
-	max-width: 440px;
-	width: 100%;
-	margin: 32px auto 48px;
-	padding: 36px 32px;
+	max-width: 400px !important;
+	width: 100% !important;
+	margin: 48px auto !important;
+	padding: 40px 32px 36px;
 	background: #ffffff;
 	border: 1px solid #e2e8f0;
-	border-radius: 16px;
-	box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+	border-radius: 20px;
+	box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 12px 32px -4px rgba(15, 23, 42, 0.08), 0 24px 48px -12px rgba(15, 23, 42, 0.04);
 	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 	color: #0f172a;
 	box-sizing: border-box;
@@ -34,41 +34,46 @@
 }
 
 .codeclove-portal-logo {
-	width: 52px;
-	height: 52px;
-	margin: 0 auto 12px;
+	width: 68px;
+	height: 68px;
+	margin: 0 auto 16px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: var(--codeclove-brand-light);
-	border-radius: 12px;
+	background: #ffffff;
+	border: 1px solid #e2e8f0;
+	border-radius: 16px;
 	padding: 8px;
+	box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.06);
 }
 
 .codeclove-portal-logo img {
 	width: 100%;
 	height: 100%;
 	object-fit: contain;
+	border-radius: 10px;
 }
 
 .codeclove-portal-title {
 	margin: 0 0 6px;
-	font-size: 1.35rem;
+	font-size: 1.25rem;
 	font-weight: 700;
 	color: #0f172a;
-	letter-spacing: -0.02em;
+	letter-spacing: -0.025em;
+	line-height: 1.35;
 }
 
 .codeclove-portal-subtitle {
 	margin: 0;
 	font-size: 0.875rem;
 	color: #64748b;
+	font-weight: 450;
 	line-height: 1.4;
 }
 
 .codeclove-portal-alert {
 	padding: 12px 14px;
-	border-radius: 8px;
+	border-radius: 10px;
 	font-size: 0.85rem;
 	margin-bottom: 20px;
 	background: #fef2f2;
@@ -77,10 +82,12 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	line-height: 1.4;
 }
 
 .codeclove-login-field {
-	margin-bottom: 18px;
+	margin-bottom: 20px;
+	text-align: left;
 }
 
 .codeclove-login-label {
@@ -88,19 +95,89 @@
 	font-size: 0.8125rem;
 	font-weight: 600;
 	color: #334155;
-	margin-bottom: 6px;
+	margin-bottom: 7px;
+}
+
+.codeclove-password-wrapper {
+	position: relative;
+	display: flex;
+	align-items: center;
+	width: 100%;
+}
+
+.codeclove-password-wrapper .codeclove-login-input {
+	padding-right: 44px;
+}
+
+.codeclove-password-toggle {
+	position: absolute;
+	right: 8px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent !important;
+	border: none !important;
+	outline: none !important;
+	box-shadow: none !important;
+	padding: 0;
+	margin: 0;
+	border-radius: 6px;
+	cursor: pointer;
+	color: #94a3b8;
+	transition: color 0.15s ease, background-color 0.15s ease;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+.codeclove-password-toggle:hover {
+	color: #334155;
+	background: #f1f5f9 !important;
+}
+
+.codeclove-password-toggle:focus-visible {
+	outline: 2px solid var(--codeclove-brand) !important;
+	outline-offset: 1px;
+}
+
+.codeclove-password-toggle .eye-open {
+	display: block;
+	width: 18px;
+	height: 18px;
+}
+
+.codeclove-password-toggle .eye-closed {
+	display: none;
+	width: 18px;
+	height: 18px;
+}
+
+.codeclove-password-toggle.visible .eye-open {
+	display: none;
+}
+
+.codeclove-password-toggle.visible .eye-closed {
+	display: block;
 }
 
 .codeclove-login-input {
 	width: 100%;
-	padding: 10px 14px;
+	height: 44px;
+	padding: 0 14px;
 	border: 1px solid #cbd5e1;
-	border-radius: 8px;
-	font-size: 0.925rem;
+	border-radius: 10px;
+	font-size: 0.9375rem;
 	outline: none;
-	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+	transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 	color: #0f172a;
 	background: #ffffff;
+}
+
+.codeclove-login-input::placeholder {
+	color: #94a3b8;
 }
 
 .codeclove-login-input:focus {
@@ -112,61 +189,75 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	margin-bottom: 22px;
+	margin-bottom: 24px;
 	font-size: 0.8125rem;
 }
 
 .codeclove-login-remember {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: 8px;
 	cursor: pointer;
 	color: #475569;
 	user-select: none;
+	font-weight: 450;
 }
 
 .codeclove-login-remember input[type="checkbox"] {
-	width: 15px;
-	height: 15px;
+	width: 16px;
+	height: 16px;
 	accent-color: var(--codeclove-brand);
 	margin: 0;
 	cursor: pointer;
+	border-radius: 4px;
 }
 
 .codeclove-login-forgot {
 	color: var(--codeclove-brand);
 	text-decoration: none;
 	font-weight: 500;
+	font-size: 0.8125rem;
+	transition: color 0.15s ease;
 }
 
 .codeclove-login-forgot:hover {
 	text-decoration: underline;
+	color: var(--codeclove-brand-hover);
 }
 
 .codeclove-portal-submit-btn {
 	width: 100%;
-	padding: 11px 18px;
+	height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	background: var(--codeclove-brand);
 	color: #ffffff;
 	font-weight: 600;
-	font-size: 0.925rem;
+	font-size: 0.9375rem;
+	letter-spacing: -0.01em;
 	border: none;
-	border-radius: 8px;
+	border-radius: 10px;
 	cursor: pointer;
-	transition: background-color 0.15s ease, transform 0.05s ease;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(79, 70, 229, 0.25);
+	transition: background-color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
 }
 
 .codeclove-portal-submit-btn:hover {
 	background: var(--codeclove-brand-hover);
+	box-shadow: 0 4px 12px -2px rgba(79, 70, 229, 0.35);
+	transform: translateY(-1px);
 }
 
 .codeclove-portal-submit-btn:active {
-	transform: scale(0.99);
+	transform: translateY(0);
+	scale: 0.99;
 }
 
 .codeclove-portal-footer {
-	margin-top: 24px;
+	margin-top: 26px;
 	text-align: center;
 	font-size: 0.775rem;
 	color: #94a3b8;
+	font-weight: 400;
 }

@@ -3,7 +3,7 @@
  *
  * Displays a list of academic subjects (e.g. Mathematics, Science).
  */
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { subjectSchema, type SubjectFormValues } from '@/schemas/academics'
@@ -36,6 +36,15 @@ import {
 } from '@/components/ui'
 import { __, sprintf } from '@/lib/i18n'
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const typeVariants: Record<string, 'brand' | 'info' | 'default'> = {
+  core: 'brand',
+  elective: 'info',
+  activity: 'default',
+  other: 'default',
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SubjectsPage() {
@@ -52,6 +61,7 @@ export default function SubjectsPage() {
   const session_id = session?.id ?? 0
 
   const table = useTableState()
+  const { resetPage, clearSelection } = table
   const [status, setStatus] = useState<string>('')
   const [search, setSearch] = useState<string>('')
   const debouncedSearch = useDebounce(search, 350)
@@ -66,26 +76,29 @@ export default function SubjectsPage() {
   })
   const deleteMutation = useDeleteSubject()
 
-  const handleDelete = async (subject: Subject) => {
-    const isConfirmed = await confirm({
-      title: sprintf( __( 'Delete %s', 'codeclove-school-management' ), subjectLabelSingular ),
-      message: sprintf(
-        __( 'Are you sure you want to delete %1$s? This action cannot be undone if it is mapped to %2$s.', 'codeclove-school-management' ),
-        subject.name,
-        unitLabelPlural.toLowerCase()
-      ),
-    })
-    if (!isConfirmed) return
+  const handleDelete = useCallback(
+    async (subject: Subject) => {
+      const isConfirmed = await confirm({
+        title: sprintf( __( 'Delete %s', 'codeclove-school-management' ), subjectLabelSingular ),
+        message: sprintf(
+          __( 'Are you sure you want to delete %1$s? This action cannot be undone if it is mapped to %2$s.', 'codeclove-school-management' ),
+          subject.name,
+          unitLabelPlural.toLowerCase()
+        ),
+      })
+      if (!isConfirmed) return
 
-    deleteMutation.mutate(subject.id, {
-      onSuccess: () => {
-        toast.success( sprintf( __( '%s deleted successfully!', 'codeclove-school-management' ), subjectLabelSingular ) )
-      },
-      onError: (err: Error) => {
-        toast.error(err.message || sprintf( __( 'Failed to delete %s.', 'codeclove-school-management' ), subjectLabelSingular.toLowerCase() ))
-      }
-    })
-  }
+      deleteMutation.mutate(subject.id, {
+        onSuccess: () => {
+          toast.success( sprintf( __( '%s deleted successfully!', 'codeclove-school-management' ), subjectLabelSingular ) )
+        },
+        onError: (err: Error) => {
+          toast.error(err.message || sprintf( __( 'Failed to delete %s.', 'codeclove-school-management' ), subjectLabelSingular.toLowerCase() ))
+        }
+      })
+    },
+    [confirm, deleteMutation, subjectLabelSingular, toast, unitLabelPlural]
+  )
 
   const subjects = data?.data ?? []
   const total    = data?.total ?? 0
@@ -100,12 +113,6 @@ export default function SubjectsPage() {
     []
   )
 
-  const typeVariants: Record<string, 'brand' | 'info' | 'default'> = {
-    core: 'brand',
-    elective: 'info',
-    activity: 'default',
-    other: 'default',
-  }
 
 
   const columns = useMemo<DataTableColumn<Subject>[]>(
@@ -188,22 +195,22 @@ export default function SubjectsPage() {
         ),
       },
     ],
-    [subjectLabelSingular, unitLabelPlural, typeLabels]
+    [handleDelete, subjectLabelSingular, typeLabels, unitLabelPlural]
   )
 
   // Reset page & filters when session changes
   useEffect(() => {
-    table.resetPage()
-    table.clearSelection()
+    resetPage()
+    clearSelection()
     setStatus('')
     setSearch('')
-  }, [session_id, table.resetPage, table.clearSelection])
+  }, [session_id, resetPage, clearSelection])
 
   // Reset to page 1 when filters change
   useEffect(() => {
-    table.resetPage()
-    table.clearSelection()
-  }, [status, debouncedSearch, table.resetPage, table.clearSelection])
+    resetPage()
+    clearSelection()
+  }, [status, debouncedSearch, resetPage, clearSelection])
 
   return (
     <div className="space-y-5 w-full">
@@ -267,8 +274,8 @@ export default function SubjectsPage() {
                 onClick={() => {
                   setSearch('')
                   setStatus('')
-                  table.resetPage()
-                  table.clearSelection()
+                  resetPage()
+                  clearSelection()
                 }}
               >
                 <X size={12} />

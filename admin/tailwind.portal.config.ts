@@ -15,6 +15,7 @@ const config: Config = {
   content: [
     './src/portal/**/*.{ts,tsx}',
     './src/components/**/*.{ts,tsx}',
+    './src/modules/**/*.{ts,tsx}',
   ],
 
   corePlugins: {

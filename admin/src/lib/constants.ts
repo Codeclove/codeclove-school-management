@@ -18,8 +18,11 @@ export const ROUTES = {
   UNITS:              '/academics/units',
   GROUPS:             '/academics/groups',
   SUBJECTS:           '/academics/subjects',
-  TIMETABLE:          '/academics/timetable',
-
+  TIMETABLE:                 '/academics/timetable',
+  CERTIFICATES:              '/academics/certificates',
+  CERTIFICATE_TEMPLATES_NEW: '/academics/certificates/templates/new',
+  CERTIFICATE_TEMPLATE_EDIT: '/academics/certificates/templates/:id',
+  CERTIFICATE_ISSUE:         '/academics/certificates/issue',
   // Students
   STUDENT_DIRECTORY:  '/students',
   STUDENT_NEW:        '/students/new',
@@ -44,7 +47,8 @@ export const ROUTES = {
 
   // Communication & Noticeboard
   ANNOUNCEMENTS:      '/announcements',
-
+  ANNOUNCEMENT_NEW:   '/announcements/new',
+  ANNOUNCEMENT_EDIT:  '/announcements/:id/edit',
   // Settings
   SETTINGS:           '/settings',
   ACTIVITY_LOG:       '/settings?tab=activity_log',

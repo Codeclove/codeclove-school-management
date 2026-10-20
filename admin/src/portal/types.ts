@@ -94,6 +94,7 @@ export interface PortalSettings {
   labels?: PortalLabels
   finance?: PortalFinanceSettings
 }
+
 export interface PortalMeResponse {
   role: UserRole
   user: PortalUser
@@ -228,10 +229,15 @@ export interface NotificationItem {
   title: string
   content?: string
   event_type?: string
+  notice_date?: string | null
+  expires_at?: string | null
+  is_pinned?: boolean
+  accent_color?: string | null
+  icon?: string | null
   is_read: boolean | number
   url?: string
-  created_at: string
   read_at?: string
+  created_at?: string
 }
 
 export interface NotificationsResponse {
@@ -239,7 +245,6 @@ export interface NotificationsResponse {
   unread_count: number
   total: number
 }
-
 
 export interface ProfileData {
   student: PortalStudent
@@ -260,10 +265,19 @@ export interface CalendarEvent {
   currency?: string
 }
 
+export interface NextTimetablePreview {
+  day_of_week: number
+  day_name: string
+  date: string
+  date_formatted: string
+  periods: TimetableSlot[]
+}
+
 export interface DashboardData {
   attendance: AttendanceSummary
   finance: FinanceSummary
   today_timetable: TimetableSlot[]
+  next_timetable?: NextTimetablePreview | null
   recent_notifications: NotificationItem[]
   academic?: AcademicData
   calendar_events?: CalendarEvent[]

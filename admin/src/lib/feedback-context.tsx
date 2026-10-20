@@ -38,7 +38,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
     </FeedbackContext.Provider>
   )
 }
-
+// eslint-disable-next-line react-refresh/only-export-components
 export function useFeedbackModal(): FeedbackContextType {
   const context = useContext(FeedbackContext)
   if (!context) {

@@ -1,4 +1,5 @@
-import { Avatar, type AvatarSize, AVATAR_COLORS } from './Avatar'
+import { Avatar, type AvatarSize } from './Avatar'
+import { AVATAR_COLORS } from './avatar-utils'
 
 export { AVATAR_COLORS }
 
@@ -31,7 +32,7 @@ export function PersonAvatar({
       />
       <div className="flex flex-col min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-text text-sm truncate leading-snug">
+          <span className="font-semibold text-text text-sm truncate leading-snug group-hover:text-brand transition-colors">
             {cleanName}
           </span>
           {idNumber && (

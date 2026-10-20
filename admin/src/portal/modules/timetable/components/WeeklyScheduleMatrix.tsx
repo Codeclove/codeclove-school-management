@@ -71,7 +71,7 @@ export const WeeklyScheduleMatrix: React.FC<WeeklyScheduleMatrixProps> = ({
     return baseDays
   }, [timetable?.days, localization?.week_start_day])
 
-  const daysData = timetable?.days || {}
+  const daysData = useMemo(() => timetable?.days || {}, [timetable?.days])
 
   // Extract all distinct periods/time intervals across all days, sorted chronologically
   const periodRows = useMemo<MatrixRow[]>(() => {

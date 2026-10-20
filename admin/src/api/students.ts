@@ -35,7 +35,7 @@ export interface AdmissionApplication {
   id: number
   reference_number: string
   status: 'inquiry' | 'submitted' | 'under_review' | 'more_info_needed' | 'interview_scheduled' | 'accepted' | 'waitlisted' | 'rejected' | 'admitted' | 'withdrawn'
-  source: 'public_form' | 'admin_entry' | 'import' | 'referral' | 'other'
+  source: 'public_form' | 'walk_in' | 'online' | 'admin_entry' | 'import' | 'referral' | 'inquiry_form' | 'other'
   academic_session_id: number
   academic_unit_id: number
   academic_group_id: number | null
@@ -497,6 +497,32 @@ export interface UnlinkPortalAccountPayload {
   guardian_id?: number
 }
 
+export interface PortalUserSearchResult {
+  id: number
+  username: string
+  email: string
+  display_name: string
+  roles: string[]
+  linked_students: Array<{
+    id: number
+    name: string
+    admission_number?: string
+    relationship?: string
+    type: 'student' | 'guardian'
+  }>
+}
+
+export interface LinkPortalAccountPayload {
+  type: 'student' | 'guardian'
+  guardian_id?: number
+  user_id: number
+}
+
+export interface ResetPortalPasswordPayload {
+  type: 'student' | 'guardian'
+  guardian_id?: number
+}
+
 export async function createPortalAccount(
   studentId: number,
   data: CreatePortalAccountPayload
@@ -540,6 +566,63 @@ export function useUnlinkPortalAccount() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.students.detail(variables.studentId) })
       queryClient.invalidateQueries({ queryKey: queryKeys.students.all })
+    },
+  })
+}
+
+export async function searchPortalUsers(
+  search: string = '',
+  email: string = ''
+): Promise<PortalUserSearchResult[]> {
+  const params = new URLSearchParams()
+  if (search) params.set('search', search)
+  if (email) params.set('email', email)
+  const res = await api.get<PortalUserSearchResult[]>(`students/portal-users?${params.toString()}`)
+  return res.data
+}
+
+export async function linkPortalAccount(
+  studentId: number,
+  data: LinkPortalAccountPayload
+): Promise<PortalAccount> {
+  const res = await api.post<PortalAccount>(`students/${studentId}/portal-account/link`, data)
+  return res.data
+}
+
+export async function resetPortalPassword(
+  studentId: number,
+  data: ResetPortalPasswordPayload
+): Promise<{ sent: boolean; message: string }> {
+  const res = await api.post<{ sent: boolean; message: string }>(`students/${studentId}/portal-account/reset-password`, data)
+  return res.data
+}
+
+export function useSearchPortalUsers(search: string, email: string = '', enabled: boolean = true) {
+  return useQuery({
+    queryKey: ['students', 'portal-users-search', search, email],
+    queryFn: () => searchPortalUsers(search, email),
+    enabled: enabled && (search.trim().length >= 1 || Boolean(email.trim())),
+    staleTime: 5_000,
+  })
+}
+
+export function useLinkPortalAccount() {
+  const queryClient = useQueryClient()
+  return useMutation<PortalAccount, Error, { studentId: number; data: LinkPortalAccountPayload }>({
+    mutationFn: async ({ studentId, data }) => {
+      return linkPortalAccount(studentId, data)
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.detail(variables.studentId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all })
+    },
+  })
+}
+
+export function useResetPortalPassword() {
+  return useMutation<{ sent: boolean; message: string }, Error, { studentId: number; data: ResetPortalPasswordPayload }>({
+    mutationFn: async ({ studentId, data }) => {
+      return resetPortalPassword(studentId, data)
     },
   })
 }

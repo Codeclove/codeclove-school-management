@@ -11,7 +11,7 @@ import {
   Mail,
   MapPin,
   History,
-  BookOpen,
+  RotateCcw,
 } from 'lucide-react'
 import {
   useAdmissionDetails,
@@ -71,6 +71,11 @@ const getStatusLabels = (): Record<AdmissionApplication['status'], string> => ({
   withdrawn:           __( 'Withdrawn', 'codeclove-school-management' ),
 })
 
+const getSourceLabels = (): Record<string, string> => ({
+  walk_in:     __( 'Walk-In (Admissions Desk)', 'codeclove-school-management' ),
+  public_form: __( 'Online Public Form', 'codeclove-school-management' ),
+  online:      __( 'Online Public Form', 'codeclove-school-management' ),
+})
 const TIMELINE_NODE_STYLES: Record<string, { bg: string; border: string; text: string }> = {
   inquiry:             { bg: 'bg-hover-bg',      border: 'border-border',  text: 'text-text-muted' },
   submitted:           { bg: 'bg-info-dim',      border: 'border-info',    text: 'text-info' },
@@ -93,29 +98,34 @@ interface TimelineEvent {
   completed: boolean
 }
 
-function getTimelineEvents(application: AdmissionApplication): TimelineEvent[] {
+
+export function getTimelineEvents(application: AdmissionApplication): TimelineEvent[] {
   const statusLabels = getStatusLabels()
+  const isWalkIn = application.source === 'walk_in'
+  const initialActor = isWalkIn
+    ? __( 'Admissions Staff (Walk-In)', 'codeclove-school-management' )
+    : __( 'Applicant (Online Form)', 'codeclove-school-management' )
+
   if (application.status_history && application.status_history.length > 0) {
     return application.status_history.map((evt) => {
       const statusLabel = statusLabels[evt.to_status as AdmissionApplication['status']] ?? evt.to_status
-      let title = evt.reason || sprintf( __( 'Status changed to %s', 'codeclove-school-management' ), statusLabel )
-      if (!evt.from_status && evt.to_status === 'submitted') {
-        title = __( 'Application Submitted', 'codeclove-school-management' )
-      }
-      const actor = evt.actor_name
-        ? evt.actor_name
-        : (!evt.from_status || !evt.changed_by
-            ? __( 'Applicant (Public Form)', 'codeclove-school-management' )
-            : __( 'School Administrator', 'codeclove-school-management' ))
+      const isInitial = !evt.from_status && evt.to_status === 'submitted'
+      const title = evt.reason || (
+        isInitial
+          ? (isWalkIn ? __( 'Application Registered (Walk-In)', 'codeclove-school-management' ) : __( 'Application Submitted Online', 'codeclove-school-management' ))
+          : sprintf( __( 'Status: %s', 'codeclove-school-management' ), statusLabel )
+      )
+      const actor = evt.actor_name || (isInitial ? initialActor : __( 'Admissions Staff', 'codeclove-school-management' ))
+      const description = evt.message || (evt.from_status ? sprintf(
+        __( 'Status transitioned from %1$s to %2$s.', 'codeclove-school-management' ),
+        statusLabels[evt.from_status as AdmissionApplication['status']] ?? evt.from_status,
+        statusLabel
+      ) : '')
 
       return {
         status: evt.to_status,
         title,
-        description: evt.message || sprintf(
-          __( 'Transitioned %1$sto %2$s.', 'codeclove-school-management' ),
-          evt.from_status ? sprintf( __( 'from %s ', 'codeclove-school-management' ), statusLabels[evt.from_status as AdmissionApplication['status']] ?? evt.from_status ) : '',
-          statusLabel
-        ),
+        description,
         timestamp: evt.changed_at,
         actor,
         completed: true,
@@ -124,14 +134,29 @@ function getTimelineEvents(application: AdmissionApplication): TimelineEvent[] {
   }
 
   const currentLabel = statusLabels[application.status] ?? application.status
-  return [{
-    status: application.status,
-    title: sprintf( __( 'Application %s', 'codeclove-school-management' ), currentLabel ),
-    description: sprintf( __( 'Current status is %s.', 'codeclove-school-management' ), currentLabel ),
+  const events: TimelineEvent[] = [{
+    status: 'submitted',
+    title: isWalkIn
+      ? __( 'Application Registered (Walk-In)', 'codeclove-school-management' )
+      : __( 'Application Submitted Online', 'codeclove-school-management' ),
+    description: '',
     timestamp: application.submitted_at || application.created_at,
-    actor: __( 'Applicant (Public Form)', 'codeclove-school-management' ),
+    actor: initialActor,
     completed: true,
   }]
+
+  if (application.status !== 'submitted') {
+    events.push({
+      status: application.status,
+      title: sprintf( __( 'Current Status: %s', 'codeclove-school-management' ), currentLabel ),
+      description: '',
+      timestamp: application.decision_at || application.reviewed_at || application.updated_at,
+      actor: __( 'Admissions Staff', 'codeclove-school-management' ),
+      completed: true,
+    })
+  }
+
+  return events
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -280,7 +305,7 @@ export default function AdmissionDetailPage() {
                 <span className="text-text-subtle/50">•</span>
                 <span>{matchedUnit?.name || __( 'Class Level Unassigned', 'codeclove-school-management' )}</span>
                 <span className="text-text-subtle/50">•</span>
-                <span>{matchedSession?.name.replace('Academic Year ', '') ?? '—'}</span>
+                <span>{matchedSession ? matchedSession.name.replace('Academic Year ', '') : __( 'Session Not Assigned', 'codeclove-school-management' )}</span>
               </div>
             </div>
           </div>
@@ -309,16 +334,7 @@ export default function AdmissionDetailPage() {
               {__( 'Edit Details', 'codeclove-school-management' )}
             </Button>
 
-            {application.status !== 'admitted' ? (
-              <Button
-                variant={application.status === 'accepted' ? 'default' : 'secondary'}
-                onClick={() => navigate(`/students/admissions/${application.id}/convert`)}
-                className="gap-1.5"
-              >
-                {__( 'Approve & Convert', 'codeclove-school-management' )}
-                <ArrowRight size={14} />
-              </Button>
-            ) : (
+            {application.status === 'admitted' ? (
               application.converted_student_id && (
                 <Button
                   variant="secondary"
@@ -329,7 +345,25 @@ export default function AdmissionDetailPage() {
                   {__( 'View Student Profile', 'codeclove-school-management' )}
                 </Button>
               )
-            )}
+            ) : application.status === 'rejected' ? (
+              <Button
+                variant="secondary"
+                onClick={() => handleStatusChange('under_review')}
+                className="gap-1.5"
+              >
+                <RotateCcw size={14} />
+                {__( 'Reopen Application', 'codeclove-school-management' )}
+              </Button>
+            ) : application.status !== 'withdrawn' ? (
+              <Button
+                variant={application.status === 'accepted' ? 'default' : 'secondary'}
+                onClick={() => navigate(`/students/admissions/${application.id}/convert`)}
+                className="gap-1.5"
+              >
+                {__( 'Approve & Convert', 'codeclove-school-management' )}
+                <ArrowRight size={14} />
+              </Button>
+            ) : null}
           </div>
         </div>
       </Card>
@@ -363,7 +397,11 @@ export default function AdmissionDetailPage() {
                   {__( 'Intended Session', 'codeclove-school-management' )}
                 </dt>
                 <dd className="font-medium text-text">
-                  {matchedSession?.name ?? '—'}
+                  {matchedSession ? (
+                    matchedSession.name.replace('Academic Year ', '')
+                  ) : (
+                    <span className="text-text-muted italic">{__( 'Not Assigned', 'codeclove-school-management' )}</span>
+                  )}
                 </dd>
               </div>
 
@@ -390,7 +428,7 @@ export default function AdmissionDetailPage() {
                   {__( 'Application Source', 'codeclove-school-management' )}
                 </dt>
                 <dd className="font-medium text-text capitalize">
-                  {application.source.replace('_', ' ')}
+                  {getSourceLabels()[application.source] || application.source.replace('_', ' ')}
                 </dd>
               </div>
 
@@ -613,36 +651,55 @@ export default function AdmissionDetailPage() {
               description={__( 'Chronological log of pipeline status transitions.', 'codeclove-school-management' )}
               icon={History}
             />
-            <div className="relative space-y-5 pl-1.5 pt-1">
-              {/* Vertical connecting line */}
-              <div className="absolute left-[7px] top-3 bottom-3 w-0.5 bg-border/60" />
-              
-              {getTimelineEvents(application).map((event, idx) => {
+            <div className="pt-2">
+              {getTimelineEvents(application).map((event, idx, arr) => {
+                const isLast = idx === arr.length - 1
                 const nodeStyle = event.completed
                   ? (TIMELINE_NODE_STYLES[event.status] || TIMELINE_NODE_STYLES.inquiry) as { bg: string; border: string; text: string }
                   : { bg: 'bg-bg-surface', border: 'border-border', text: 'text-text-muted/50' }
 
                 return (
-                  <div key={idx} className="flex gap-3.5 relative items-start group">
-                    {/* Node point */}
-                    <div className={`w-[13px] h-[13px] rounded-full border-2 ${nodeStyle.bg} ${nodeStyle.border} z-10 mt-1 flex-shrink-0`} />
-                    
+                  <div key={idx} className="flex gap-3 relative group">
+                    {/* Node point & vertical connecting line */}
+                    <div className="flex flex-col items-center">
+                      <div
+                        className={cn(
+                          'w-3.5 h-3.5 rounded-full border-2 mt-0.5 shrink-0 z-10 transition-colors',
+                          nodeStyle.bg,
+                          nodeStyle.border
+                        )}
+                      />
+                      {!isLast && (
+                        <div className="w-0.5 flex-1 bg-border/60 my-1 min-h-[32px]" />
+                      )}
+                    </div>
+
                     {/* Event details */}
-                    <div className="min-w-0 flex-1">
+                    <div className={cn('min-w-0 flex-1', !isLast ? 'pb-5' : 'pb-1')}>
                       <div className="flex flex-col gap-0.5">
-                        <p className={`text-xs font-bold leading-snug ${event.completed ? 'text-text' : 'text-text-muted/50'}`}>
-                          {event.title}
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <p className="text-xs font-semibold text-text leading-snug">
+                            {event.title}
+                          </p>
+                          <span className="text-2xs text-text-muted font-mono">
+                            {event.completed ? formatDateTime(event.timestamp) : '—'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-2xs text-text-muted font-medium mt-0.5">
+                          <User size={11} className="shrink-0 text-text-muted/70" />
+                          <span>{event.actor}</span>
+                        </div>
+                      </div>
+                      {event.description && (
+                        <p className={cn(
+                          'text-xs mt-1.5 leading-relaxed',
+                          event.status === 'rejected'
+                            ? 'text-danger bg-danger-dim/30 p-2 rounded border border-danger/20 font-medium'
+                            : 'text-text-muted'
+                        )}>
+                          {event.description}
                         </p>
-                        <span className="text-[11px] text-text-muted font-mono">
-                          {event.completed ? formatDateTime(event.timestamp) : '—'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-2xs text-text-muted mt-0.5 font-medium">
-                        <span>{sprintf( __( 'Actor: %s', 'codeclove-school-management' ), event.actor )}</span>
-                      </div>
-                      <p className={`text-xs mt-1 leading-relaxed ${event.completed ? 'text-text-muted' : 'text-text-muted/40'}`}>
-                        {event.description}
-                      </p>
+                      )}
                     </div>
                   </div>
                 )
@@ -681,35 +738,6 @@ export default function AdmissionDetailPage() {
               </div>
             </Card>
           )}
-
-          {/* Application Quick Summary Card */}
-          <Card className="p-5 space-y-3">
-            <FormGroupHeader
-              title={__( 'Application Summary', 'codeclove-school-management' )}
-              description={__( 'Overview of current registration.', 'codeclove-school-management' )}
-              icon={BookOpen}
-            />
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
-                <span className="text-text-muted">{__( 'Reference No.', 'codeclove-school-management' )}</span>
-                <span className="font-mono font-medium text-text">{application.reference_number}</span>
-              </div>
-              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
-                <span className="text-text-muted">{__( 'Intended Class', 'codeclove-school-management' )}</span>
-                <span className="font-medium text-text">{matchedUnit?.name || '—'}</span>
-              </div>
-              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
-                <span className="text-text-muted">{__( 'Academic Session', 'codeclove-school-management' )}</span>
-                <span className="font-medium text-text">{matchedSession?.name.replace('Academic Year ', '') || '—'}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-text-muted">{__( 'Current Status', 'codeclove-school-management' )}</span>
-                <Badge variant={statusVariant} size="sm">
-                  {statusLabel.toUpperCase()}
-                </Badge>
-              </div>
-            </div>
-          </Card>
         </div>
 
       </div>

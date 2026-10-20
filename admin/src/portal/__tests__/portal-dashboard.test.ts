@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { shouldShowStudentSwitcher } from '../components/StudentSwitcher'
+import { shouldShowStudentSwitcher } from '../components/student-switcher-utils'
 import {
   formatRoomName,
   getBreakBetweenSlots,

@@ -32,6 +32,7 @@ final class RestApi {
 	 * Called on `rest_api_init`.
 	 */
 	public function register_routes(): void {
+
 		foreach ( $this->get_controllers() as $controller ) {
 			if ( is_string( $controller ) && class_exists( $controller ) ) {
 				$controller = new $controller();
@@ -41,6 +42,8 @@ final class RestApi {
 			}
 		}
 	}
+
+
 
 	/**
 	 * Returns an ordered list of all module controllers.
@@ -63,7 +66,6 @@ final class RestApi {
 
 			// Academics
 			'\CodeClove\Modules\Academics\AcademicsController',
-
 			// Roles
 			'\CodeClove\Modules\Roles\RolesController',
 

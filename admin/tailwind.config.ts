@@ -1,5 +1,14 @@
 import type { Config } from 'tailwindcss'
 
+function withOpacity(variableName: string): any {
+  return ({ opacityValue }: { opacityValue?: string }) => {
+    if (opacityValue !== undefined) {
+      return `color-mix(in srgb, var(${variableName}) calc(${opacityValue} * 100%), transparent)`
+    }
+    return `var(${variableName})`
+  }
+}
+
 /**
  * All semantic color tokens point to CSS custom properties.
  * The actual values live in globals.css under :root (light) and .dark (dark).
@@ -15,22 +24,22 @@ const config: Config = {
 
       colors: {
         bg: {
-          base:     'var(--bg-base)',
-          surface:  'var(--bg-surface)',
-          elevated: 'var(--bg-elevated)',
-          overlay:  'var(--bg-overlay)',
+          base:     withOpacity('--bg-base'),
+          surface:  withOpacity('--bg-surface'),
+          elevated: withOpacity('--bg-elevated'),
+          overlay:  withOpacity('--bg-overlay'),
         },
         'hover-bg': 'var(--hover-bg)',
         border: {
-          DEFAULT: 'var(--border)',
-          subtle:  'var(--border-subtle)',
-          strong:  'var(--border-strong)',
+          DEFAULT: withOpacity('--border'),
+          subtle:  withOpacity('--border-subtle'),
+          strong:  withOpacity('--border-strong'),
         },
         text: {
-          DEFAULT:  'var(--text)',
-          muted:    'var(--text-muted)',
-          subtle:   'var(--text-subtle)',
-          inverted: 'var(--text-inverted)',
+          DEFAULT:  withOpacity('--text'),
+          muted:    withOpacity('--text-muted'),
+          subtle:   withOpacity('--text-subtle'),
+          inverted: withOpacity('--text-inverted'),
         },
         brand: {
           DEFAULT: 'var(--brand)',
@@ -105,7 +114,7 @@ const config: Config = {
 
       // ── Spacing ───────────────────────────────────────────────────────────
 
-      spacing: { sidebar: '240px', header: '52px', 18: '4.5rem' },
+      spacing: { sidebar: '240px', header: '52px', 18: '4.5rem', 4.5: '1.125rem', 7.5: '1.875rem', 22: '5.5rem' },
 
       // ── Borders ───────────────────────────────────────────────────────────
 

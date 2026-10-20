@@ -3,7 +3,7 @@
  *
  * Displays a list of academic groups (e.g. Section A, Section B) scoped to the active session/unit.
  */
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { groupSchema, type GroupFormValues } from '@/schemas/academics'
@@ -52,6 +52,7 @@ export default function GroupsPage() {
   const session_id = session?.id ?? 0
 
   const table = useTableState()
+  const { resetPage, clearSelection } = table
   const [selectedUnitFilter, setSelectedUnitFilter] = useState<number>(0)
   const [status, setStatus] = useState<string>('')
   const [search, setSearch] = useState<string>('')
@@ -61,7 +62,7 @@ export default function GroupsPage() {
 
   // Fetch units for dropdown filters and creation select
   const { data: unitsData } = useUnits({ session_id, per_page: 200 })
-  const units = unitsData?.data ?? []
+  const units = useMemo(() => unitsData?.data ?? [], [unitsData?.data])
 
   // Fetch groups — filter by unit_id server-side so pagination works correctly.
   const { data, isLoading, isError, refetch } = useGroups({
@@ -73,7 +74,7 @@ export default function GroupsPage() {
   })
   const deleteMutation = useDeleteGroup()
 
-  const handleDelete = async (group: AcademicGroup) => {
+  const handleDelete = useCallback(async (group: AcademicGroup) => {
     const isConfirmed = await confirm({
       title: sprintf( __( 'Delete %s', 'codeclove-school-management' ), groupLabelSingular ),
       message: sprintf(
@@ -91,7 +92,7 @@ export default function GroupsPage() {
         toast.error(err.message || sprintf( __( 'Failed to delete %s.', 'codeclove-school-management' ), groupLabelSingular.toLowerCase() ))
       }
     })
-  }
+  }, [confirm, deleteMutation, groupLabelSingular, toast])
 
   const groups = data?.data ?? []
   const total  = data?.total ?? 0
@@ -180,24 +181,23 @@ export default function GroupsPage() {
         ),
       },
     ],
-    [groupLabelSingular, unitLabelSingular, units]
+    [groupLabelSingular, unitLabelSingular, units, handleDelete]
   )
 
   // Reset page & filters when session changes
   useEffect(() => {
-    table.resetPage()
-    table.clearSelection()
+    resetPage()
+    clearSelection()
     setSelectedUnitFilter(0)
     setStatus('')
     setSearch('')
-  }, [session_id, table.resetPage, table.clearSelection])
+  }, [session_id, resetPage, clearSelection])
 
   // Reset to page 1 when filters change
   useEffect(() => {
-    table.resetPage()
-    table.clearSelection()
-  }, [selectedUnitFilter, status, debouncedSearch, table.resetPage, table.clearSelection])
-
+    resetPage()
+    clearSelection()
+  }, [selectedUnitFilter, status, debouncedSearch, resetPage, clearSelection])
   return (
     <div className="space-y-5 w-full">
       <PageHeader

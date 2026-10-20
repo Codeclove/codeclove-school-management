@@ -216,6 +216,8 @@ export const queryKeys = {
     all: ['codeclove', 'announcements'] as const,
     lists: () => [...queryKeys.announcements.all, 'list'] as const,
     list: (filters?: unknown) => [...queryKeys.announcements.lists(), filters] as const,
+    details: () => [...queryKeys.announcements.all, 'detail'] as const,
+    detail: (id: number) => [...queryKeys.announcements.details(), id] as const,
   },
 
   // ─── Me / Current User ─────────────────────────────────────────────────────
@@ -240,5 +242,15 @@ export const queryKeys = {
   demoData: {
     all: ['codeclove', 'demo-data'] as const,
     status: () => [...queryKeys.demoData.all, 'status'] as const,
+  },
+
+  // ─── Certificates ──────────────────────────────────────────────────────────
+  certificates: {
+    all: ['codeclove', 'certificates'] as const,
+    templates: () => [...queryKeys.certificates.all, 'templates'] as const,
+    template: (id: number) => [...queryKeys.certificates.templates(), id] as const,
+    issued: () => [...queryKeys.certificates.all, 'issued'] as const,
+    issuedSingle: (id: number) => [...queryKeys.certificates.issued(), id] as const,
+    feeSummary: (studentId: number) => [...queryKeys.certificates.all, 'fee-summary', studentId] as const,
   },
 } as const

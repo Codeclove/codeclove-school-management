@@ -159,7 +159,7 @@ export default function StaffDailyAttendance() {
   }
 
   // Raw list and options
-  const recordsList = registerRecords ?? []
+  const recordsList = useMemo(() => registerRecords ?? [], [registerRecords])
   const totalCount = recordsList.length
 
   // Extract unique departments & designations for dynamic filter options

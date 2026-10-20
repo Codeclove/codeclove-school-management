@@ -5,7 +5,7 @@
  * user role, and unread notification state.
  */
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useNotifications, usePortalMe } from '../api/portal'
 import type {
   PortalFinanceSettings,
@@ -18,7 +18,12 @@ import type {
   PortalUser,
   UserRole,
 } from '../types'
+
+export type ThemeMode = 'light' | 'dark' | 'system'
+export type ResolvedTheme = 'light' | 'dark'
+
 const STORAGE_KEY = 'codeclove_portal_active_student_id'
+export const THEME_STORAGE_KEY = 'codeclove:portal-theme'
 
 export interface PortalContextValue {
   currentStudent: PortalStudent | null
@@ -36,13 +41,15 @@ export interface PortalContextValue {
   localization?: PortalLocalization
   labels?: PortalLabels
   finance?: PortalFinanceSettings
+  theme: ThemeMode
+  resolvedTheme: ResolvedTheme
+  setTheme: (mode: ThemeMode) => void
 }
-const PortalContext = createContext<PortalContextValue | undefined>(undefined)
 
+const PortalContext = createContext<PortalContextValue | undefined>(undefined)
 export function PortalProvider({ children }: { children: React.ReactNode }) {
   const initialContext = (window.CodeClovePortalConfig?.context ?? undefined) as PortalMeResponse | undefined
   const { data: meData, isLoading: isMeLoading } = usePortalMe(initialContext)
-
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(() => {
     if (typeof window === 'undefined') return null
     try {
@@ -99,6 +106,62 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
   const logoUrl = school?.logo || window.CodeClovePortalConfig?.logoUrl
   const logoutUrl = window.CodeClovePortalConfig?.logoutUrl ?? '/wp-login.php?action=logout'
 
+  // Theme mode preference state
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
+    if (typeof window === 'undefined') return 'system'
+    try {
+      const stored = localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem('codeclove:theme')
+      if (stored === 'light' || stored === 'dark' || stored === 'system') {
+        return stored as ThemeMode
+      }
+    } catch {
+      // Storage access failure fallback
+    }
+    const defaultMode = (configSettings?.appearance?.theme_mode || configSettings?.appearance?.mode) as ThemeMode | undefined
+    return defaultMode === 'light' || defaultMode === 'dark' || defaultMode === 'system'
+      ? defaultMode
+      : 'system'
+  })
+
+  // System dark preference listener
+  const [systemDark, setSystemDark] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      return Boolean(window.matchMedia?.('(prefers-color-scheme: dark)')?.matches)
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const mql = window.matchMedia?.('(prefers-color-scheme: dark)')
+      if (!mql) return
+      const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches)
+      mql.addEventListener('change', handler)
+      return () => mql.removeEventListener('change', handler)
+    } catch {
+      // Media query unsupported
+    }
+  }, [])
+
+  const resolvedTheme: ResolvedTheme = useMemo(() => {
+    if (theme === 'dark') return 'dark'
+    if (theme === 'light') return 'light'
+    return systemDark ? 'dark' : 'light'
+  }, [theme, systemDark])
+
+  const setTheme = useCallback((mode: ThemeMode) => {
+    setThemeState(mode)
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, mode)
+      localStorage.setItem('codeclove:theme', mode)
+    } catch {
+      // Storage unavailable fallback
+    }
+  }, [])
+
   // Apply appearance theme color, UI display scale, and dark mode to portal root element
   useEffect(() => {
     const root = document.getElementById('codeclove-portal-root')
@@ -106,32 +169,15 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
 
     const themeColor = settings?.appearance?.theme_color || 'classic_indigo'
     const uiScale = settings?.appearance?.ui_scale || '100%'
-    const rawMode = settings?.appearance?.theme_mode || settings?.appearance?.mode
 
     root.setAttribute('data-theme-color', themeColor)
     root.style.setProperty('--codeclove-view-scale', uiScale)
-
-    const applyThemeMode = () => {
-      const isDark = rawMode === 'dark' || (rawMode !== 'light' && window.matchMedia?.('(prefers-color-scheme: dark)')?.matches)
-      root.classList.toggle('dark', Boolean(isDark))
-    }
-
-    applyThemeMode()
-
-    if (!rawMode || rawMode === 'system') {
-      const mql = window.matchMedia?.('(prefers-color-scheme: dark)')
-      if (mql) {
-        mql.addEventListener('change', applyThemeMode)
-        return () => mql.removeEventListener('change', applyThemeMode)
-      }
-    }
+    root.classList.toggle('dark', resolvedTheme === 'dark')
   }, [
     settings?.appearance?.theme_color,
     settings?.appearance?.ui_scale,
-    settings?.appearance?.theme_mode,
-    settings?.appearance?.mode,
+    resolvedTheme,
   ])
-
   const value: PortalContextValue = {
     currentStudent,
     students,
@@ -148,10 +194,14 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     localization,
     labels,
     finance,
+    theme,
+    resolvedTheme,
+    setTheme,
   }
   return <PortalContext.Provider value={value}>{children}</PortalContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePortal(): PortalContextValue {
   const context = useContext(PortalContext)
   if (!context) {

@@ -37,6 +37,18 @@ export default function ProUpgradePage() {
   }, [highlightedFeature])
   const features = useMemo(() => [
     {
+      id: 'certificates',
+      title: __( 'Custom Certificates & Anti-Forgery Verification', 'codeclove-school-management' ),
+      description: __( 'Design visual transfer, merit, and conduct certificates with custom branding. Online public verification confirms authentic credentials.', 'codeclove-school-management' ),
+      icon: Award,
+      badge: __( 'Certificates', 'codeclove-school-management' ),
+      perks: [
+        __( 'Visual drag-and-drop studio for Transfer, Merit, and Conduct certificates', 'codeclove-school-management' ),
+        __( 'Dynamic tokens for pupil details, grades, roll numbers, and dates', 'codeclove-school-management' ),
+        __( 'Anti-forgery QR verification codes and tamper-evident serial barcodes', 'codeclove-school-management' ),
+      ],
+    },
+    {
       id: 'payment_gateways',
       title: __( 'Online Payment Gateways', 'codeclove-school-management' ),
       description: __( 'Accept tuition fee payments online. Webhook callbacks automatically mark invoices paid and generate digital payment receipts.', 'codeclove-school-management' ),
@@ -365,6 +377,7 @@ export default function ProUpgradePage() {
                   [__( 'Student & Guardian Portal (Attendance, Fees & Academics)', 'codeclove-school-management' ), true, true],
                   [__( 'Portal Class Timetables & Schedules Viewer', 'codeclove-school-management' ), false, true],
                   [__( 'Weekly Timetable Matrix & Teacher Substitutions', 'codeclove-school-management' ), false, true, 'timetable'],
+                  [__( 'Custom Certificate Studio & QR Public Verification', 'codeclove-school-management' ), false, true, 'certificates'],
                   [__( 'Automated Overdue Recalculation Cron', 'codeclove-school-management' ), false, true],
                   [__( 'Multi-Gateway SMS Notifications (Twilio, Vonage, MSG91, Fast2SMS)', 'codeclove-school-management' ), false, true, 'sms'],
                   [__( 'Digital Noticeboard & Announcements Broadcast', 'codeclove-school-management' ), false, true],

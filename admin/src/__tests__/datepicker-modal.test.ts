@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 // @ts-expect-error node built-in without @types/node
 import fs from 'node:fs'
-import { parseFlexibleDate } from '../components/ui/DatePicker'
+import { parseFlexibleDate } from '../components/ui/date-picker-utils'
 import { format } from 'date-fns'
 
 describe('DatePicker & Modal Integration', () => {

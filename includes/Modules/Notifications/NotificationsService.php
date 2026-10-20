@@ -1326,11 +1326,15 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 		$table = Schema::notifications();
 
 		$page       = max( 1, (int) ( $params['page'] ?? 1 ) );
-		$per_page   = min( 100, max( 1, (int) ( $params['per_page'] ?? 20 ) ) );
+		$per_page   = min( 10000, max( 1, (int) ( $params['per_page'] ?? 20 ) ) );
 		$offset     = ( $page - 1 ) * $per_page;
 		$search     = isset( $params['search'] ) ? trim( sanitize_text_field( $params['search'] ) ) : '';
 		$audience   = isset( $params['audience'] ) ? sanitize_text_field( $params['audience'] ) : '';
 		$event_type = isset( $params['event_type'] ) ? sanitize_text_field( $params['event_type'] ) : '';
+		$status     = isset( $params['status'] ) ? sanitize_key( (string) $params['status'] ) : '';
+
+		$today = current_time( 'Y-m-d' );
+		$now   = current_time( 'mysql' );
 
 		$where = [];
 		$args  = [];
@@ -1350,6 +1354,22 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 			$args[]  = 'all';
 		}
 
+		if ( ! empty( $status ) && 'all' !== $status ) {
+			if ( 'scheduled' === $status ) {
+				$where[] = 'n.notice_date > %s AND (n.expires_at IS NULL OR n.expires_at >= %s)';
+				$args[]  = $today;
+				$args[]  = $now;
+			} elseif ( 'expired' === $status ) {
+				$where[] = 'n.expires_at IS NOT NULL AND n.expires_at < %s';
+				$args[]  = $now;
+			} elseif ( 'active' === $status ) {
+				$where[] = '(n.notice_date IS NULL OR n.notice_date <= %s)';
+				$args[]  = $today;
+				$where[] = '(n.expires_at IS NULL OR n.expires_at >= %s)';
+				$args[]  = $now;
+			}
+		}
+
 		if ( ! empty( $search ) ) {
 			$like    = '%' . $wpdb->esc_like( $search ) . '%';
 			$where[] = '(n.title LIKE %s OR n.content LIKE %s)';
@@ -1363,30 +1383,75 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
 		$total = (int) $wpdb->get_var( $wpdb->prepare( $count_sql, array_merge( [ $table ], $args ) ) );
 
-		$sql = 'SELECT n.id, n.user_id, n.audience, n.title, n.content, n.event_type, n.url, n.created_at, n.is_read
+		$sql = 'SELECT n.id, n.user_id, n.audience, n.title, n.content, n.event_type, n.notice_date, n.expires_at, n.is_pinned, n.accent_color, n.icon, n.url, n.created_at, n.is_read
 		        FROM %i n
 		        ' . $where_clause . '
-		        ORDER BY n.created_at DESC, n.id DESC
+		        ORDER BY n.is_pinned DESC, COALESCE(n.notice_date, DATE(n.created_at)) DESC, n.id DESC
 		        LIMIT %d OFFSET %d';
 
 		$query_args = array_merge( [ $table ], $args, [ $per_page, $offset ] );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $query_args ), ARRAY_A ) ?: [];
 
-		$items = array_map( static fn( array $r ): array => [
-			'id'         => (int) $r['id'],
-			'title'      => (string) $r['title'],
-			'content'    => (string) $r['content'],
-			'audience'   => (string) $r['audience'],
-			'event_type' => (string) $r['event_type'],
-			'url'        => $r['url'] ? (string) $r['url'] : null,
-			'created_at' => (string) $r['created_at'],
-			'is_read'    => (bool) $r['is_read'],
-		], $rows );
-
+		$items = array_map( fn( array $r ): array => $this->format_announcement_row( $r, $today, $now ), $rows );
 		return [
 			'items' => $items,
 			'total' => $total,
+		];
+	}
+
+	/**
+	 * Retrieves a single announcement by ID.
+	 *
+	 * @param int $id Notification ID.
+	 * @return array|null Announcement data or null.
+	 */
+	public function get_announcement( int $id ): ?array {
+		global $wpdb;
+		$table = Schema::notifications();
+		$sql = 'SELECT n.id, n.user_id, n.audience, n.title, n.content, n.event_type, n.notice_date, n.expires_at, n.is_pinned, n.accent_color, n.icon, n.url, n.created_at, n.is_read
+		        FROM %i n
+		        WHERE n.id = %d AND n.student_id IS NULL';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		$r = $wpdb->get_row( $wpdb->prepare( $sql, $table, $id ), ARRAY_A );
+		if ( ! $r ) {
+			return null;
+		}
+
+		return $this->format_announcement_row( $r, current_time( 'Y-m-d' ), current_time( 'mysql' ) );
+	}
+
+	/**
+	 * Formats a raw notification database row into standard announcement structure.
+	 */
+	private function format_announcement_row( array $r, string $today, string $now ): array {
+		$nd  = $r['notice_date'] ? (string) $r['notice_date'] : substr( (string) $r['created_at'], 0, 10 );
+		$exp = $r['expires_at'] ? (string) $r['expires_at'] : null;
+
+		if ( $exp && $exp < $now ) {
+			$item_status = 'expired';
+		} elseif ( $nd > $today ) {
+			$item_status = 'scheduled';
+		} else {
+			$item_status = 'active';
+		}
+
+		return [
+			'id'           => (int) $r['id'],
+			'title'        => (string) $r['title'],
+			'content'      => (string) $r['content'],
+			'audience'     => (string) $r['audience'],
+			'event_type'   => (string) $r['event_type'],
+			'notice_date'  => $r['notice_date'] ? (string) $r['notice_date'] : null,
+			'expires_at'   => $exp,
+			'is_pinned'    => ! empty( $r['is_pinned'] ),
+			'accent_color' => $r['accent_color'] ? (string) $r['accent_color'] : null,
+			'icon'         => $r['icon'] ? (string) $r['icon'] : null,
+			'status'       => $item_status,
+			'url'          => $r['url'] ? (string) $r['url'] : null,
+			'created_at'   => (string) $r['created_at'],
+			'is_read'      => (bool) $r['is_read'],
 		];
 	}
 
@@ -1411,21 +1476,47 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 		if ( empty( $content ) ) {
 			return new WP_Error( 'missing_content', __( 'Announcement content is required.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
+		if ( mb_strlen( $content ) > 5000 ) {
+			return new WP_Error( 'content_too_long', __( 'Announcement content must be 5,000 characters or less.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+		$audience     = isset( $data['audience'] ) ? sanitize_text_field( (string) $data['audience'] ) : 'portal';
+		if ( ! in_array( $audience, [ 'portal', 'staff', 'all' ], true ) ) {
+			$audience = 'portal';
+		}
+		$allowed_types = [ 'announcement', 'notice', 'circular', 'event', 'holiday', 'urgent' ];
+		$raw_type      = isset( $data['event_type'] ) ? sanitize_key( (string) $data['event_type'] ) : 'announcement';
+		$event_type    = in_array( $raw_type, $allowed_types, true ) ? $raw_type : 'announcement';
+		$url          = ! empty( $data['url'] ) ? esc_url_raw( (string) $data['url'] ) : null;
+		$is_pinned    = ! empty( $data['is_pinned'] ) ? 1 : 0;
+		$accent_color = ! empty( $data['accent_color'] ) ? sanitize_key( (string) $data['accent_color'] ) : null;
+		$icon         = ! empty( $data['icon'] ) ? sanitize_key( (string) $data['icon'] ) : null;
+		$expires_at  = null;
+		if ( ! empty( $data['expires_at'] ) ) {
+			$raw_exp    = sanitize_text_field( (string) $data['expires_at'] );
+			$expires_at = strlen( $raw_exp ) === 10 ? $raw_exp . ' 23:59:59' : $raw_exp;
+		}
+		$raw_notice_date = isset( $data['notice_date'] ) && '' !== $data['notice_date'] ? sanitize_text_field( (string) $data['notice_date'] ) : null;
+		$notice_date     = $raw_notice_date ?: ( $expires_at ? min( current_time( 'Y-m-d' ), substr( $expires_at, 0, 10 ) ) : current_time( 'Y-m-d' ) );
 
-		$audience   = isset( $data['audience'] ) ? sanitize_text_field( (string) $data['audience'] ) : 'portal';
-		$event_type = isset( $data['event_type'] ) ? sanitize_text_field( (string) $data['event_type'] ) : 'announcement';
-		$url        = ! empty( $data['url'] ) ? esc_url_raw( (string) $data['url'] ) : null;
+		if ( ! empty( $expires_at ) && ! empty( $raw_notice_date ) && substr( $expires_at, 0, 10 ) < $raw_notice_date ) {
+			return new WP_Error( 'invalid_expiry', __( 'Expiry date cannot be earlier than notice date.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
 
 		$inserted = $wpdb->insert( Schema::notifications(), [
-			'user_id'    => 0,
-			'student_id' => null,
-			'audience'   => $audience,
-			'title'      => $title,
-			'content'    => $content,
-			'event_type' => $event_type,
-			'is_read'    => 0,
-			'url'        => $url,
-			'created_at' => current_time( 'mysql' ),
+			'user_id'      => 0,
+			'student_id'   => null,
+			'audience'     => $audience,
+			'title'        => $title,
+			'content'      => $content,
+			'event_type'   => $event_type,
+			'notice_date'  => $notice_date,
+			'expires_at'   => $expires_at,
+			'is_pinned'    => $is_pinned,
+			'accent_color' => $accent_color,
+			'icon'         => $icon,
+			'is_read'      => 0,
+			'url'          => $url,
+			'created_at'   => current_time( 'mysql' ),
 		] );
 
 		return $inserted ? (int) $wpdb->insert_id : new WP_Error( 'db_error', __( 'Failed to save announcement.', 'codeclove-school-management' ), [ 'status' => 500 ] );
@@ -1442,11 +1533,19 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 		global $wpdb;
 		$table = Schema::notifications();
 
+		$existing = $this->get_announcement( $id );
+		if ( ! $existing ) {
+			return new WP_Error( 'not_found', __( 'Announcement not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
+		}
+
 		$update = [];
 		if ( isset( $data['title'] ) ) {
 			$title = sanitize_text_field( trim( (string) $data['title'] ) );
 			if ( empty( $title ) ) {
 				return new WP_Error( 'missing_title', __( 'Title cannot be empty.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+			}
+			if ( mb_strlen( $title ) > 160 ) {
+				return new WP_Error( 'title_too_long', __( 'Title must be 160 characters or less.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 			$update['title'] = $title;
 		}
@@ -1456,15 +1555,56 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 			if ( empty( $content ) ) {
 				return new WP_Error( 'missing_content', __( 'Content cannot be empty.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
+			if ( mb_strlen( $content ) > 5000 ) {
+				return new WP_Error( 'content_too_long', __( 'Announcement content must be 5,000 characters or less.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+			}
 			$update['content'] = $content;
 		}
 
 		if ( isset( $data['event_type'] ) ) {
-			$update['event_type'] = sanitize_text_field( (string) $data['event_type'] );
+			$allowed_types = [ 'announcement', 'notice', 'circular', 'event', 'holiday', 'urgent' ];
+			$raw_type      = sanitize_key( (string) $data['event_type'] );
+			if ( in_array( $raw_type, $allowed_types, true ) ) {
+				$update['event_type'] = $raw_type;
+			}
 		}
 
 		if ( isset( $data['audience'] ) ) {
-			$update['audience'] = sanitize_text_field( (string) $data['audience'] );
+			$aud = sanitize_text_field( (string) $data['audience'] );
+			if ( in_array( $aud, [ 'portal', 'staff', 'all' ], true ) ) {
+				$update['audience'] = $aud;
+			}
+		}
+
+		if ( array_key_exists( 'notice_date', $data ) ) {
+			$update['notice_date'] = ! empty( $data['notice_date'] ) ? sanitize_text_field( (string) $data['notice_date'] ) : null;
+		}
+
+		if ( array_key_exists( 'expires_at', $data ) ) {
+			if ( ! empty( $data['expires_at'] ) ) {
+				$raw_exp               = sanitize_text_field( (string) $data['expires_at'] );
+				$update['expires_at']  = strlen( $raw_exp ) === 10 ? $raw_exp . ' 23:59:59' : $raw_exp;
+			} else {
+				$update['expires_at'] = null;
+			}
+		}
+
+		$check_notice_date = $update['notice_date'] ?? $existing['notice_date'] ?? null;
+		$check_expires_at  = $update['expires_at'] ?? $existing['expires_at'] ?? null;
+		if ( ! empty( $check_expires_at ) && ! empty( $check_notice_date ) && substr( (string) $check_expires_at, 0, 10 ) < substr( (string) $check_notice_date, 0, 10 ) ) {
+			return new WP_Error( 'invalid_expiry', __( 'Expiry date cannot be earlier than notice date.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+
+		if ( array_key_exists( 'is_pinned', $data ) ) {
+			$update['is_pinned'] = ! empty( $data['is_pinned'] ) ? 1 : 0;
+		}
+
+		if ( array_key_exists( 'accent_color', $data ) ) {
+			$update['accent_color'] = ! empty( $data['accent_color'] ) ? sanitize_key( (string) $data['accent_color'] ) : null;
+		}
+
+		if ( array_key_exists( 'icon', $data ) ) {
+			$update['icon'] = ! empty( $data['icon'] ) ? sanitize_key( (string) $data['icon'] ) : null;
 		}
 
 		if ( array_key_exists( 'url', $data ) ) {
@@ -1475,6 +1615,7 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 			return true;
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$updated = $wpdb->update( $table, $update, [ 'id' => $id ] );
 		return false !== $updated;
 	}
@@ -1487,7 +1628,15 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 	 */
 	public function delete_announcement( int $id ): bool {
 		global $wpdb;
-		return (bool) $wpdb->delete( Schema::notifications(), [ 'id' => $id ], [ '%d' ] );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM %i WHERE id = %d AND student_id IS NULL',
+				Schema::notifications(),
+				$id
+			)
+		);
+		return (bool) $deleted;
 	}
 }
 

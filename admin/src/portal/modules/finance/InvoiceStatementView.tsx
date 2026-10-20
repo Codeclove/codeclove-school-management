@@ -10,19 +10,17 @@
 
 import React, { useRef, useMemo } from 'react'
 import {
-  AlertTriangle,
   ArrowLeft,
   Building2,
-  CheckCircle2,
-  Clock,
   CreditCard,
   FileText,
   GraduationCap,
   Printer,
   Receipt,
   Wallet,
-  XCircle,
 } from 'lucide-react'
+import { getInvoiceStatusMeta } from './invoice-status'
+export type { InvoiceStatusMeta } from './invoice-status'
 import type { Invoice, InvoicePayment, InvoiceLineItem } from '../../types'
 import type { Invoice as FinanceInvoice } from '@/api/finance'
 import { type SchoolSettings } from '@/components/ui/PrintLetterhead'
@@ -44,69 +42,6 @@ export interface InvoiceStatementViewProps {
   onViewReceipt?: (payment: InvoicePayment & { invoice_number?: string; invoice?: Invoice }) => void
   onPaymentSuccess?: (result: PortalPaymentSuccessResult) => void
   className?: string
-}
-
-/**
- * Returns human-readable label and styling badge for invoice status.
- */
-export function getInvoiceStatusMeta(status: string, isUS = false) {
-  const norm = status.toLowerCase()
-  switch (norm) {
-    case 'paid':
-      return {
-        label: __( 'Paid in Full', 'codeclove-school-management' ),
-        variant: 'success' as const,
-        icon: CheckCircle2,
-        desc: __( 'This statement has been paid in full. No balance remaining.', 'codeclove-school-management' ),
-        badgeClass: 'bg-success-dim text-success border-success/30',
-      }
-    case 'partially_paid':
-      return {
-        label: __( 'Partially Paid', 'codeclove-school-management' ),
-        variant: 'warning' as const,
-        icon: Clock,
-        desc: __( 'A partial payment has been applied. Remaining balance is due.', 'codeclove-school-management' ),
-        badgeClass: 'bg-warning-dim text-warning border-warning/30',
-      }
-    case 'overdue':
-      return {
-        label: isUS
-          ? __( 'Past Due', 'codeclove-school-management' )
-          : __( 'Overdue', 'codeclove-school-management' ),
-        variant: 'danger' as const,
-        icon: AlertTriangle,
-        desc: isUS
-          ? __( 'Payment for this fee statement is past due. Please settle immediately.', 'codeclove-school-management' )
-          : __( 'Payment for this fee statement is overdue. Please settle immediately.', 'codeclove-school-management' ),
-        badgeClass: 'bg-danger-dim text-danger border-danger/30',
-      }
-    case 'cancelled':
-      return {
-        label: __( 'Cancelled', 'codeclove-school-management' ),
-        variant: 'default' as const,
-        icon: XCircle,
-        desc: __( 'This invoice has been cancelled by school administration.', 'codeclove-school-management' ),
-        badgeClass: 'bg-bg-base text-text-muted border-border',
-      }
-    case 'void':
-      return {
-        label: __( 'Void', 'codeclove-school-management' ),
-        variant: 'default' as const,
-        icon: XCircle,
-        desc: __( 'This invoice has been voided by school administration.', 'codeclove-school-management' ),
-        badgeClass: 'bg-bg-base text-text-muted border-border',
-      }
-    case 'pending':
-    case 'issued':
-    default:
-      return {
-        label: __( 'Pending Payment', 'codeclove-school-management' ),
-        variant: 'brand' as const,
-        icon: Clock,
-        desc: __( 'Statement issued and awaiting settlement.', 'codeclove-school-management' ),
-        badgeClass: 'bg-brand-dim text-brand border-brand/30',
-      }
-  }
 }
 
 /**
@@ -288,7 +223,7 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2.5 self-end sm:self-auto">
+        <div className="flex items-center gap-2.5 self-end sm:self-auto flex-wrap">
           <Button
             variant="secondary"
             size="sm"
@@ -298,6 +233,20 @@ export const InvoiceStatementView: React.FC<InvoiceStatementViewProps> = ({
             <Printer className="w-3.5 h-3.5 text-text-subtle" />
             <span>{__( 'Print Statement', 'codeclove-school-management' )}</span>
           </Button>
+
+          {isOnlinePaymentAvailable && isPayable && invoice.balance > 0 && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                paymentDockRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+              className="h-8 px-3.5 text-xs font-semibold rounded-lg gap-1.5 shadow-xs cursor-pointer"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>{sprintf( __( 'Pay %s', 'codeclove-school-management' ), formatCurrency(invoice.balance, currency) )}</span>
+            </Button>
+          )}
         </div>
       </div>
 

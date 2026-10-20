@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search,
@@ -73,7 +73,7 @@ export default function PaymentsPage() {
     }
   }, [printingPayment, printingInvoice])
 
-  const handlePrintReceipt = async (payment: Payment) => {
+  const handlePrintReceipt = useCallback(async (payment: Payment) => {
     setIsPrintLoading(payment.id)
     try {
       const res = await api.get<Invoice>(`invoices/${payment.invoice_id}`)
@@ -85,7 +85,7 @@ export default function PaymentsPage() {
     } finally {
       setIsPrintLoading(null)
     }
-  }
+  }, [toast])
 
   const paymentLabelPlural = entity.plural
   const studentLabel = getLabel('student', false, __('Student', 'codeclove-school-management'))
@@ -98,6 +98,7 @@ export default function PaymentsPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const table = useTableState({ defaultPerPage: 10 })
+  const { resetPage } = table
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   // Reset filters on session change
@@ -106,15 +107,15 @@ export default function PaymentsPage() {
     setStatus('')
     setStartDate('')
     setEndDate('')
-    table.resetPage()
-  }, [session?.id, table.resetPage])
+    resetPage()
+  }, [session?.id, resetPage])
 
   // Show advanced if start or end date is set initially
   useEffect(() => {
     if (startDate || endDate) {
       setShowAdvanced(true)
     }
-  }, [])
+  }, [startDate, endDate])
 
   // Queries / Mutations
   const { data, isLoading, isError, refetch } = usePayments({
@@ -127,9 +128,9 @@ export default function PaymentsPage() {
     ...table.params,
   })
 
-  const deletePaymentMutation = useDeletePayment()
+  const { mutate: deletePayment } = useDeletePayment()
 
-  const list = data?.data || []
+  const list = useMemo(() => data?.data || [], [data?.data])
   const total = data?.pagination?.total || 0
 
   const metrics = useMemo(() => {
@@ -153,27 +154,30 @@ export default function PaymentsPage() {
     return { totalCollectedMinor, collectedTodayMinor, totalReversedMinor }
   }, [list])
 
-  const handleReversePayment = async (paymentId: number, invoiceId: number) => {
-    const isConfirmed = await confirm({
-      title: __('Reverse Payment Receipt', 'codeclove-school-management'),
-      message: __('Are you sure you want to cancel/reverse this payment receipt? This will restore the outstanding balance of the invoice.', 'codeclove-school-management'),
-      confirmText: __('Reverse', 'codeclove-school-management')
-    })
-    if (!isConfirmed) return
+  const handleReversePayment = useCallback(
+    async (paymentId: number, invoiceId: number) => {
+      const isConfirmed = await confirm({
+        title: __('Reverse Payment Receipt', 'codeclove-school-management'),
+        message: __('Are you sure you want to cancel/reverse this payment receipt? This will restore the outstanding balance of the invoice.', 'codeclove-school-management'),
+        confirmText: __('Reverse', 'codeclove-school-management')
+      })
+      if (!isConfirmed) return
 
-    deletePaymentMutation.mutate(
-      { id: paymentId, invoiceId },
-      {
-        onSuccess: () => {
-          toast.success(__('Payment receipt reversed successfully.', 'codeclove-school-management'))
-        },
-        onError: (err: unknown) => {
-          const message = err instanceof Error ? err.message : ''
-          toast.error(message || __('Failed to reverse payment', 'codeclove-school-management'))
-        },
-      }
-    )
-  }
+      deletePayment(
+        { id: paymentId, invoiceId },
+        {
+          onSuccess: () => {
+            toast.success(__('Payment receipt reversed successfully.', 'codeclove-school-management'))
+          },
+          onError: (err: unknown) => {
+            const message = err instanceof Error ? err.message : ''
+            toast.error(message || __('Failed to reverse payment', 'codeclove-school-management'))
+          },
+        }
+      )
+    },
+    [confirm, deletePayment, toast]
+  )
 
   const columns: DataTableColumn<Payment>[] = useMemo(
     () => [
@@ -331,7 +335,7 @@ export default function PaymentsPage() {
         ),
       },
     ],
-    [studentLabel, formatDate, formatCurrency, isPrintLoading, navigate]
+    [studentLabel, formatDate, formatCurrency, isPrintLoading, navigate, handlePrintReceipt, handleReversePayment]
   )
 
   return (

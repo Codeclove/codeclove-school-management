@@ -181,7 +181,7 @@ export default function StudentDailyAttendance() {
   }
 
   // Daily statistics computed in a single pass
-  const recordsList = registerRecords ?? []
+  const recordsList = useMemo(() => registerRecords ?? [], [registerRecords])
   const totalCount = recordsList.length
   const counts = useMemo(() => {
     let present = 0, late = 0, absent = 0, halfDay = 0, leave = 0

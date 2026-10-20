@@ -64,7 +64,7 @@ export const AttendancePage: React.FC = () => {
   const { data: attendanceData, isLoading } = useAttendance(currentStudent?.id, currentMonthStr)
 
   const summary = attendanceData?.summary
-  const records = attendanceData?.records ?? []
+  const records = useMemo(() => attendanceData?.records ?? [], [attendanceData?.records])
 
   // Handle previous/next month navigation
   const handleMonthChange = (offset: number) => {

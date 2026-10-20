@@ -170,6 +170,7 @@ final class PortalShortcode {
 				'</script>',
 				'<script type="module" src="http://localhost:5174/@vite/client"></script>',
 				'<script>',
+				"\t(function(){if(typeof document==='undefined'||!document.querySelector)return;var o=document.querySelector.bind(document);document.querySelector=function(s){try{return o(s);}catch(e){if(typeof s==='string'&&s.indexOf('#/')===0)return null;throw e;}};if(document.querySelectorAll){var a=document.querySelectorAll.bind(document);document.querySelectorAll=function(s){try{return a(s);}catch(e){if(typeof s==='string'&&s.indexOf('#/')===0)return document.createDocumentFragment().childNodes;throw e;}};}})();",
 				"\twindow.CodeClovePortalConfig = {$config_json};",
 				'</script>',
 				'<div id="codeclove-portal-root" class="codeclove-portal-app"></div>',
@@ -187,9 +188,10 @@ final class PortalShortcode {
 		}
 		if ( file_exists( $build_dir . 'index.js' ) ) {
 			wp_enqueue_script( 'codeclove-portal-js', $build_url . 'index.js', [], CODECLOVE_VERSION, true );
+			$guard_snippet = "(function(){if(typeof document==='undefined'||!document.querySelector)return;var o=document.querySelector.bind(document);document.querySelector=function(s){try{return o(s);}catch(e){if(typeof s==='string'&&s.indexOf('#/')===0)return null;throw e;}};if(document.querySelectorAll){var a=document.querySelectorAll.bind(document);document.querySelectorAll=function(s){try{return a(s);}catch(e){if(typeof s==='string'&&s.indexOf('#/')===0)return document.createDocumentFragment().childNodes;throw e;}};}})();\n";
 			wp_add_inline_script(
 				'codeclove-portal-js',
-				'window.CodeClovePortalConfig = ' . $config_json . ';',
+				$guard_snippet . 'window.CodeClovePortalConfig = ' . $config_json . ';',
 				'before'
 			);
 		}
@@ -271,7 +273,21 @@ final class PortalShortcode {
 
 				<div class="codeclove-login-field">
 					<label class="codeclove-login-label" for="codeclove_user_pass"><?php esc_html_e( 'Password', 'codeclove-school-management' ); ?></label>
-					<input type="password" name="pwd" id="codeclove_user_pass" class="codeclove-login-input" required autocomplete="current-password" placeholder="<?php esc_attr_e( '••••••••', 'codeclove-school-management' ); ?>" />
+					<div class="codeclove-password-wrapper">
+						<input type="password" name="pwd" id="codeclove_user_pass" class="codeclove-login-input" required autocomplete="current-password" placeholder="<?php esc_attr_e( '••••••••', 'codeclove-school-management' ); ?>" />
+						<button type="button" class="codeclove-password-toggle" aria-label="<?php esc_attr_e( 'Toggle password visibility', 'codeclove-school-management' ); ?>" onclick="var p=document.getElementById('codeclove_user_pass');p.type=p.type==='password'?'text':'password';this.classList.toggle('visible',p.type==='text');">
+							<svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/>
+								<circle cx="12" cy="12" r="3"/>
+							</svg>
+							<svg class="eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/>
+								<path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/>
+								<path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/>
+								<line x1="2" x1="2" y1="2" y2="22"/>
+							</svg>
+						</button>
+					</div>
 				</div>
 
 				<div class="codeclove-login-row">

@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '@/lib/session-context'
 import { __, sprintf } from '@/lib/i18n'
 import {
-  Search, Eye, Pencil, X, Download, Trash2
+  Search, Pencil, X, Download, Trash2
 } from 'lucide-react'
 import {
   useAdmissions,
@@ -57,7 +57,7 @@ export default function AdmissionsPage() {
   const debouncedSearch = useDebounce(search, 350)
 
   const table = useTableState()
-  const { selectedIds, clearSelection } = table
+  const { selectedIds, clearSelection, resetPage } = table
 
   const statusConfig: Record<
     AdmissionApplication['status'],
@@ -78,14 +78,14 @@ export default function AdmissionsPage() {
   // Reset class level filter if the globally active session changes
   useEffect(() => {
     setUnitId('')
-    table.clearSelection()
-  }, [sessionId, table.clearSelection])
+    clearSelection()
+  }, [sessionId, clearSelection])
 
   // Reset page and selection when filters change
   useEffect(() => {
-    table.resetPage()
-    table.clearSelection()
-  }, [unitId, status, datePreset, debouncedSearch, table.resetPage, table.clearSelection])
+    resetPage()
+    clearSelection()
+  }, [unitId, status, datePreset, debouncedSearch, resetPage, clearSelection])
 
   const getDateRange = (preset: string) => {
     if (!preset) return { date_from: undefined, date_to: undefined }
@@ -158,7 +158,7 @@ export default function AdmissionsPage() {
     if (convertModalOpen && !targetSessionId) {
       setTargetSessionId(sessionId)
     }
-  }, [convertModalOpen, sessionId])
+  }, [convertModalOpen, sessionId, targetSessionId])
 
   const handleBulkConvert = () => {
     if (!targetSessionId || !targetUnitId) {
@@ -231,30 +231,33 @@ export default function AdmissionsPage() {
     )
   }
 
-  const handleSingleDelete = async (id: number, name: string) => {
-    const isConfirmed = await confirm({
-      title: sprintf(__( 'Delete %s', 'codeclove-school-management' ), admissionLabelSingular),
-      message: sprintf(__( 'Are you sure you want to delete the admission application for %s?', 'codeclove-school-management' ), name),
-    })
-    if (!isConfirmed) return
+  const handleSingleDelete = useCallback(
+    async (id: number, name: string) => {
+      const isConfirmed = await confirm({
+        title: sprintf(__( 'Delete %s', 'codeclove-school-management' ), admissionLabelSingular),
+        message: sprintf(__( 'Are you sure you want to delete the admission application for %s?', 'codeclove-school-management' ), name),
+      })
+      if (!isConfirmed) return
 
-    bulkActionMutation.mutate(
-      { action: 'delete', ids: [id] },
-      {
-        onSuccess: (res) => {
-          toast.success(sprintf(__( 'Successfully deleted application for %s!', 'codeclove-school-management' ), name))
-          if (res.errors && res.errors.length > 0) {
-            toast.error(sprintf(__( 'Could not delete application: %s', 'codeclove-school-management' ), res.errors.join('; ')))
+      bulkActionMutation.mutate(
+        { action: 'delete', ids: [id] },
+        {
+          onSuccess: (res) => {
+            toast.success(sprintf(__( 'Successfully deleted application for %s!', 'codeclove-school-management' ), name))
+            if (res.errors && res.errors.length > 0) {
+              toast.error(sprintf(__( 'Could not delete application: %s', 'codeclove-school-management' ), res.errors.join('; ')))
+            }
+          },
+          onError: (err) => {
+            toast.error(err.message || __( 'Failed to delete application.', 'codeclove-school-management' ))
           }
-        },
-        onError: (err) => {
-          toast.error(err.message || __( 'Failed to delete application.', 'codeclove-school-management' ))
         }
-      }
-    )
-  }
+      )
+    },
+    [confirm, admissionLabelSingular, bulkActionMutation, toast]
+  )
 
-  const units = unitData?.data ?? []
+  const units = useMemo(() => unitData?.data ?? [], [unitData?.data])
   const applications = admissionsData?.data ?? []
   const total = admissionsData?.total ?? 0
 
@@ -353,16 +356,7 @@ export default function AdmissionsPage() {
         header: __( 'Actions', 'codeclove-school-management' ),
         type: 'actions',
         render: (app) => (
-          <div className="flex items-center justify-end gap-1.5">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(`/students/admissions/${app.id}`)}
-              className="h-8 w-8 text-text-subtle hover:text-brand"
-              title={__( 'View Details', 'codeclove-school-management' )}
-            >
-              <Eye size={14} />
-            </Button>
+          <div className="flex items-center justify-end gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -385,7 +379,7 @@ export default function AdmissionsPage() {
         ),
       },
     ],
-    [unitLabelSingular, guardianLabelSingular, units, statusConfig, formatDate, navigate]
+    [unitLabelSingular, guardianLabelSingular, units, statusConfig, formatDate, navigate, handleSingleDelete]
   )
   return (
     <div className="space-y-5 w-full">

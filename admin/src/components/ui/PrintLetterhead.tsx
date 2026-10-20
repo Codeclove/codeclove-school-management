@@ -85,7 +85,7 @@ export function PrintLetterhead({
             {(school?.phone || school?.email) && (
               <div className={`mt-0.5 flex items-center gap-2 ${compact ? 'text-2xs' : 'text-xs'} text-gray-500 leading-normal flex-wrap`}>
                 {school?.phone && <span>{school.phone}</span>}
-                {school?.phone && school?.email && <span className="text-gray-300" aria-hidden="true">•</span>}
+                {school?.phone && school?.email && <span className="text-gray-400 print:text-gray-600 font-bold" aria-hidden="true">•</span>}
                 {school?.email && <span>{school.email}</span>}
               </div>
             )}
@@ -97,11 +97,17 @@ export function PrintLetterhead({
           <p className="text-2xs font-bold uppercase tracking-wider text-gray-500 m-0">
             {documentType}
           </p>
-          {documentNumber && (
-            <p className={`${compact ? 'text-sm' : 'text-base'} font-bold text-gray-900 tracking-tight font-mono my-0.5`}>
-              #{documentNumber.replace(/^#/, '')}
-            </p>
-          )}
+          {documentNumber && (() => {
+            const isCodeToken = !documentNumber.includes(' ') && !/^[A-Za-z\s]+:/.test(documentNumber)
+            const formattedDocNumber = documentNumber.startsWith('#')
+              ? documentNumber
+              : (isCodeToken ? `#${documentNumber.replace(/^#/, '')}` : documentNumber)
+            return (
+              <p className={`${compact ? 'text-sm' : 'text-base'} font-bold text-gray-900 tracking-tight ${isCodeToken ? 'font-mono' : 'font-sans'} my-0.5`}>
+                {formattedDocNumber}
+              </p>
+            )
+          })()}
 
           {metaRows.length > 0 && (
             <div className="flex flex-col gap-0.5 text-2xs text-gray-500 mt-0.5">

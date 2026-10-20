@@ -169,3 +169,26 @@ if ( ! function_exists( 'codeclove_get_portal_url' ) ) {
 		return home_url( '/student-portal/' );
 	}
 }
+
+if ( ! function_exists( 'codeclove_is_demo' ) ) {
+	/**
+	 * Returns whether the current environment is running in official demo showcase mode.
+	 */
+	function codeclove_is_demo(): bool {
+		return ( defined( 'CLOVE_DEMO_VERSION' ) && 'demo.codeclove.com' === (string) wp_parse_url( home_url(), PHP_URL_HOST ) )
+			|| ( defined( 'CODECLOVE_IS_DEMO' ) && CODECLOVE_IS_DEMO );
+	}
+}
+
+if ( ! function_exists( 'codeclove_is_paid' ) ) {
+	/**
+	 * Returns whether the current installation is running with an active, verified commercial license.
+	 * Returns false for free editions and demo sandbox environments.
+	 */
+	function codeclove_is_paid(): bool {
+		if ( codeclove_is_demo() ) {
+			return false;
+		}
+		return false;
+	}
+}

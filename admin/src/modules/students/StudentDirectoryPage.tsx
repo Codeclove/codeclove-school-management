@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '@/lib/session-context'
 import { __, sprintf } from '@/lib/i18n'
 import {
-  Plus, Search, Eye, Pencil, X, Trash2, Printer, Upload
+  Plus, Search, Pencil, X, Trash2, Printer, Upload, Download, Award
 } from 'lucide-react'
 import {
   useStudents,
@@ -33,11 +33,13 @@ import {
 import { useTableState } from '@/lib/useTableState'
 import { useDebounce } from '@/lib/useDebounce'
 import { StudentIdCard } from './components/StudentIdCard'
+import { exportToCSV } from '@/lib/csv'
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function StudentDirectoryPage() {
   const navigate = useNavigate()
+  const isPro = window.CodeCloveConfig?.isPro ?? false
   const { session } = useSession()
   const sessionId = session ? String(session.id) : ''
   const { data: settings } = useSettings()
@@ -58,27 +60,25 @@ export default function StudentDirectoryPage() {
   const [unitId, setUnitId] = useState<string>('')
   const [groupId, setGroupId] = useState<string>('')
   const [status, setStatus] = useState<string>('')
-
-  // Search input debouncing
   const [search, setSearch] = useState<string>('')
   const debouncedSearch = useDebounce(search, 350)
 
   const table = useTableState()
-  const { selectedIds, setSelectedIds, clearSelection } = table
+  const { selectedIds, setSelectedIds, clearSelection, resetPage } = table
 
   // Reset class level and section filters if the globally active session changes
   useEffect(() => {
     setUnitId('')
     setGroupId('')
-    table.resetPage()
-    table.clearSelection()
-  }, [sessionId, table.resetPage, table.clearSelection])
+    resetPage()
+    clearSelection()
+  }, [sessionId, resetPage, clearSelection])
 
   // Reset page and selection when filters change
   useEffect(() => {
-    table.resetPage()
-    table.clearSelection()
-  }, [unitId, groupId, status, debouncedSearch, table.resetPage, table.clearSelection])
+    resetPage()
+    clearSelection()
+  }, [unitId, groupId, status, debouncedSearch, resetPage, clearSelection])
 
   const { data: unitData } = useUnits({ session_id: Number(sessionId) })
   const { data: groupData } = useGroups({
@@ -148,7 +148,7 @@ export default function StudentDirectoryPage() {
   // Reset selection on data change
   useEffect(() => {
     setSelectedIds([])
-  }, [studentData])
+  }, [studentData, setSelectedIds])
 
   useEffect(() => {
     if (printingStudents && printRef.current) {
@@ -162,7 +162,7 @@ export default function StudentDirectoryPage() {
     if (promoteModalOpen && !promoTargetSessionId) {
       setPromoTargetSessionId(sessionId)
     }
-  }, [promoteModalOpen, sessionId])
+  }, [promoteModalOpen, promoTargetSessionId, sessionId])
 
   const handleBulkPrintIdCards = () => {
     const selected = (studentData?.data || []).filter((s) => selectedIds.includes(s.id))
@@ -279,35 +279,101 @@ export default function StudentDirectoryPage() {
     )
   }
 
-  const handleSingleDelete = async (id: number, name: string) => {
-    const isConfirmed = await confirm({
-      title: sprintf(__( 'Delete %s', 'codeclove-school-management' ), studentLabelSingular),
-      message: sprintf(__( 'Are you sure you want to delete student %s?', 'codeclove-school-management' ), name),
-    })
-    if (!isConfirmed) return
+  const handleSingleDelete = useCallback(
+    async (id: number, name: string) => {
+      const isConfirmed = await confirm({
+        title: sprintf(__( 'Delete %s', 'codeclove-school-management' ), studentLabelSingular),
+        message: sprintf(__( 'Are you sure you want to delete student %s?', 'codeclove-school-management' ), name),
+      })
+      if (!isConfirmed) return
 
-    bulkActionMutation.mutate(
-      { action: 'delete', ids: [id] },
-      {
-        onSuccess: (res) => {
-          toast.success(sprintf(__( 'Successfully deleted student %s!', 'codeclove-school-management' ), name))
-          if (res.errors && res.errors.length > 0) {
-            toast.error(sprintf(__( 'Could not delete student: %s', 'codeclove-school-management' ), res.errors.join('; ')))
+      bulkActionMutation.mutate(
+        { action: 'delete', ids: [id] },
+        {
+          onSuccess: (res) => {
+            toast.success(sprintf(__( 'Successfully deleted student %s!', 'codeclove-school-management' ), name))
+            if (res.errors && res.errors.length > 0) {
+              toast.error(sprintf(__( 'Could not delete student: %s', 'codeclove-school-management' ), res.errors.join('; ')))
+            }
+          },
+          onError: (err) => {
+            toast.error(err.message || __( 'Failed to delete student.', 'codeclove-school-management' ))
           }
-        },
-        onError: (err) => {
-          toast.error(err.message || __( 'Failed to delete student.', 'codeclove-school-management' ))
         }
-      }
-    )
-  }
+      )
+    },
+    [confirm, studentLabelSingular, bulkActionMutation, toast]
+  )
 
   const units = unitData?.data ?? []
   const groups = groupData?.data ?? []
   const students = studentData?.data ?? []
   const total = studentData?.total ?? 0
+  const handleExportCSV = useCallback(() => {
+    const listToExport = selectedIds.length > 0
+      ? students.filter((s) => selectedIds.includes(s.id))
+      : students
 
+    if (!listToExport.length) {
+      toast.error(sprintf(__( 'No %s available to export.', 'codeclove-school-management' ), studentLabelPlural.toLowerCase()))
+      return
+    }
 
+    const headers = [
+      __( 'Student No.', 'codeclove-school-management' ),
+      __( 'Admission No.', 'codeclove-school-management' ),
+      __( 'Roll No.', 'codeclove-school-management' ),
+      __( 'First Name', 'codeclove-school-management' ),
+      __( 'Last Name', 'codeclove-school-management' ),
+      unitLabelSingular,
+      groupLabelSingular,
+      __( 'Guardian Name', 'codeclove-school-management' ),
+      __( 'Guardian Phone', 'codeclove-school-management' ),
+      __( 'Gender', 'codeclove-school-management' ),
+      __( 'Date of Birth', 'codeclove-school-management' ),
+      __( 'Status', 'codeclove-school-management' ),
+      __( 'Admission Date', 'codeclove-school-management' ),
+    ]
+
+    const rows = listToExport.map((s) => {
+      const g = s.primary_guardian || (s.guardians && s.guardians.length > 0 ? s.guardians[0] : null) || s.father || s.mother
+      const gName = g ? `${g.first_name || ''} ${g.last_name || ''}`.trim() : ''
+      const gPhone = g?.phone || ''
+      return [
+        s.student_number || '',
+        s.admission_number || '',
+        s.enrollment?.roll_number || '',
+        s.first_name || '',
+        s.last_name || '',
+        s.enrollment?.unit_name || '',
+        s.enrollment?.group_name || '',
+        gName,
+        gPhone,
+        s.gender || '',
+        s.date_of_birth || '',
+        s.status || '',
+        s.admission_date || '',
+      ]
+    })
+    exportToCSV(`students_export_${Date.now()}`, headers, rows)
+    toast.success(
+      sprintf(
+        __( 'Exported %d %s to CSV.', 'codeclove-school-management' ),
+        listToExport.length,
+        listToExport.length === 1 ? studentLabelSingular.toLowerCase() : studentLabelPlural.toLowerCase()
+      )
+    )
+  }, [
+    selectedIds,
+    students,
+    studentLabelSingular,
+    studentLabelPlural,
+    unitLabelSingular,
+    groupLabelSingular,
+    guardianLabelSingular,
+    formatDate,
+    toast,
+  ])
   const columns: DataTableColumn<Student>[] = useMemo(
     () => [
       {
@@ -365,15 +431,15 @@ export default function StudentDirectoryPage() {
         header: __( 'Actions', 'codeclove-school-management' ),
         type: 'actions',
         render: (student) => (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-end gap-1">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(`/students/${student.id}`)}
+              onClick={() => navigate(isPro ? `/academics/certificates/issue?student_id=${student.id}` : '/pro-upgrade?feature=certificates')}
               className="h-8 w-8 text-text-subtle hover:text-brand"
-              title={__( 'View Profile', 'codeclove-school-management' )}
+              title={isPro ? __( 'Issue Certificate', 'codeclove-school-management' ) : __( 'Issue Certificate (PRO)', 'codeclove-school-management' )}
             >
-              <Eye size={14} />
+              <Award size={14} />
             </Button>
             <Button
               variant="ghost"
@@ -403,6 +469,7 @@ export default function StudentDirectoryPage() {
       groupLabelSingular,
       guardianLabelSingular,
       navigate,
+      handleSingleDelete,
     ]
   )
 
@@ -419,6 +486,16 @@ export default function StudentDirectoryPage() {
         )}
         actions={
           <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleExportCSV}
+              disabled={!students.length}
+              className="gap-1.5"
+              title={__( 'Export CSV', 'codeclove-school-management' )}
+            >
+              <Download size={14} />
+              {__( 'Export CSV', 'codeclove-school-management' )}
+            </Button>
             <Button variant="secondary" onClick={() => navigate('/students/import')} className="gap-1.5">
               <Upload size={14} />
               {__( 'Bulk Import', 'codeclove-school-management' )}
@@ -535,11 +612,21 @@ export default function StudentDirectoryPage() {
             >
               <Printer size={12} /> {__( 'Print ID Cards', 'codeclove-school-management' )}
             </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleExportCSV}
+              className="h-7 text-xs flex items-center gap-1"
+            >
+              <Download size={12} /> {__( 'Export CSV', 'codeclove-school-management' )}
+            </Button>
             <Select
               value=""
               onValueChange={(val) => {
                 if (val === 'delete') {
                   handleBulkDelete()
+                } else if (val === 'export') {
+                  handleExportCSV()
                 } else if (val === 'promote') {
                   setPromoteModalOpen(true)
                 } else if (val === 'assign_section') {
@@ -551,6 +638,7 @@ export default function StudentDirectoryPage() {
               placeholder={__( 'Bulk Actions', 'codeclove-school-management' )}
               options={[
                 { value: '', label: __( 'Bulk Actions', 'codeclove-school-management' ) },
+                { value: 'export', label: __( 'Export Selected to CSV', 'codeclove-school-management' ) },
                 { value: 'status:active', label: __( 'Mark Active', 'codeclove-school-management' ) },
                 { value: 'status:inactive', label: __( 'Mark Inactive', 'codeclove-school-management' ) },
                 { value: 'status:graduated', label: __( 'Mark Graduated', 'codeclove-school-management' ) },

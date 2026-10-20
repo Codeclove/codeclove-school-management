@@ -7,16 +7,19 @@
 
 // ── Atoms ─────────────────────────────────────────────────────────────────────
 export { Button, type ButtonProps }     from './Button'
-export { Badge, type BadgeProps, type BadgeVariant, resolveBadgeVariant } from './Badge'
+export { Badge, type BadgeProps } from './Badge'
+export { type BadgeVariant, type BadgeVariantKey, resolveBadgeVariant } from './badge-utils'
 export {
   Avatar,
   type AvatarProps,
   type AvatarSize,
   type AvatarShape,
+} from './Avatar'
+export {
   getAvatarInitials,
   getAvatarColor,
   AVATAR_COLORS,
-} from './Avatar'
+} from './avatar-utils'
 export { Input, type InputProps }       from './Input'
 export { Textarea, type TextareaProps } from './Textarea'
 export { Skeleton }                     from './Skeleton'
@@ -32,6 +35,7 @@ export { FilterBar, type FilterBarProps } from './FilterBar'
 
 // ── Forms ─────────────────────────────────────────────────────────────────────
 export { Select, type SelectOption, type SelectGroup } from './Select'
+export { Combobox, type ComboboxProps, type ComboboxOption, type ComboboxGroup } from './Combobox'
 export { FormField }                    from './FormField'
 export { DatePicker, type DatePickerProps } from './DatePicker'
 export {
@@ -102,3 +106,7 @@ export {
   Barcode,
   type BarcodeProps,
 } from './Barcode'
+export {
+  QRCode,
+  type QRCodeProps,
+} from './QRCode'

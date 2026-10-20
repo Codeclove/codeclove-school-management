@@ -6,7 +6,7 @@ import {
   QUICK_CREATE_ACTIONS,
   getSearchShortcut,
   getNotificationButtonAriaLabel,
-} from '../layouts/Header'
+} from '../layouts/header-utils'
 
 describe('Header & Layout Architectural Requirements', () => {
   describe('Relative Time Formatting Helper', () => {

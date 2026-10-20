@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderToString } from 'react-dom/server'
-import { InvoiceStatementView, getInvoiceStatusMeta } from '../modules/finance/InvoiceStatementView'
+import { InvoiceStatementView } from '../modules/finance/InvoiceStatementView'
+import { getInvoiceStatusMeta } from '../modules/finance/invoice-status'
 import type { Invoice } from '../types'
 // Mock portal context
 const { mockPortalLocalization, mockPortalSchool } = vi.hoisted(() => ({

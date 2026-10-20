@@ -14,6 +14,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   User,
+  Award,
   X,
 } from 'lucide-react'
 import { __ } from '@/lib/i18n'
@@ -48,6 +49,7 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
     { to: '/finance', label: __( 'Finance', 'codeclove-school-management' ), icon: CreditCard },
     { to: '/timetable', label: __( 'Timetable', 'codeclove-school-management' ), icon: Clock, pro: true },
     { to: '/academics', label: __( 'Academics', 'codeclove-school-management' ), icon: GraduationCap },
+    { to: '/certificates', label: __( 'Certificates', 'codeclove-school-management' ), icon: Award, pro: true },
     { to: '/notifications', label: __( 'Notifications', 'codeclove-school-management' ), icon: Bell, showUnread: true, pro: true },
     { to: '/profile', label: __( 'Profile', 'codeclove-school-management' ), icon: User },
   ].filter((item) => !item.pro || isPro)
@@ -82,10 +84,10 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
               end={item.to === '/'}
               onClick={onCloseMobile}
               className={({ isActive }) =>
-                `group flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                `group flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm transition-all ${
                   isActive
-                    ? 'bg-brand text-text-inverted shadow-xs'
-                    : 'text-text-muted hover:bg-hover-bg hover:text-text'
+                    ? 'bg-brand-dim text-brand font-semibold shadow-2xs'
+                    : 'text-text-muted hover:bg-hover-bg hover:text-text font-medium'
                 }`
               }
             >
@@ -94,7 +96,7 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
                   <div className="flex items-center gap-3">
                     <Icon
                       className={`w-4 h-4 transition-colors ${
-                        isActive ? 'text-text-inverted' : 'text-text-subtle group-hover:text-text'
+                        isActive ? 'text-brand' : 'text-text-subtle group-hover:text-text'
                       }`}
                     />
                     <span>{item.label}</span>
@@ -104,7 +106,7 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
                     <span
                       className={`text-3xs font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider ml-auto shrink-0 ${
                         isActive
-                          ? 'bg-black/15 text-text-inverted'
+                          ? 'bg-brand/15 text-brand'
                           : 'border border-border bg-bg-surface text-text-subtle'
                       }`}
                     >
@@ -112,17 +114,17 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
                     </span>
                   )}
 
-                  {item.showUnread && unreadCount > 0 && (
-                    <span
-                      className={`text-3xs font-bold px-1.5 py-0.5 rounded-full min-w-5 text-center ${
-                        isActive
-                          ? 'bg-text-inverted text-brand'
-                          : 'bg-danger text-white'
-                      }`}
-                    >
-                      {unreadCount}
-                    </span>
-                  )}
+                   {item.showUnread && unreadCount > 0 && (
+                     <span
+                       className={`text-3xs font-bold px-1.5 py-0.5 rounded-full min-w-5 text-center ${
+                         isActive
+                           ? 'bg-brand text-text-inverted'
+                           : 'bg-brand-dim text-brand border border-brand/20'
+                       }`}
+                     >
+                       {unreadCount}
+                     </span>
+                   )}
                 </>
               )}
             </NavLink>

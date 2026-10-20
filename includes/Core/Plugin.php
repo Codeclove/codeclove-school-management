@@ -87,6 +87,7 @@ final class Plugin {
 		if ( ! wp_next_scheduled( 'codeclove_update_overdue_invoices' ) ) {
 			wp_schedule_event( time(), 'daily', 'codeclove_update_overdue_invoices' );
 		}
+
 		ReviewPromptService::ensure_installed_at();
 
 		do_action( 'codeclove_activate' );
@@ -136,6 +137,11 @@ final class Plugin {
 			\CodeClove\Modules\Portal\PortalShortcode::register();
 		}
 
+		// Customize staff and administration login branding.
+		if ( class_exists( '\CodeClove\Core\LoginCustomizer' ) ) {
+			\CodeClove\Core\LoginCustomizer::register();
+		}
+
 		// Redirect on login based on user roles.
 		add_filter( 'login_redirect', [ $this, 'handle_login_redirect' ], 10, 3 );
 
@@ -175,17 +181,18 @@ final class Plugin {
 			30
 		);
 
-		// In Free version only: register submenu items highlighting the Pro upgrade.
-		if ( ! $is_pro ) {
-			add_submenu_page(
-				$menu_slug,
-				__( 'School Management Dashboard', 'codeclove-school-management' ),
-				__( 'Dashboard', 'codeclove-school-management' ),
-				'read',
-				$menu_slug,
-				static fn() => null
-			);
+		// Explicitly register the primary dashboard submenu item so it displays as "Dashboard" instead of repeating "School Management".
+		add_submenu_page(
+			$menu_slug,
+			__( 'School Management Dashboard', 'codeclove-school-management' ),
+			__( 'Dashboard', 'codeclove-school-management' ),
+			'read',
+			$menu_slug,
+			static fn() => null
+		);
 
+		// In Free version only: register submenu item highlighting the Pro upgrade.
+		if ( ! $is_pro ) {
 			add_submenu_page(
 				$menu_slug,
 				__( 'Upgrade to Pro', 'codeclove-school-management' ),

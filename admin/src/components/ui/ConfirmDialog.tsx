@@ -117,6 +117,7 @@ export function ConfirmDialog({
     <Modal
       open={open}
       onOpenChange={handleOpenChange}
+      isLoading={isPending}
       title={
         <span className="flex items-center gap-2.5">
           <span
@@ -148,6 +149,7 @@ export function ConfirmDialog({
           <Button
             type="button"
             variant="secondary"
+            data-dialog-cancel
             onClick={() => handleOpenChange(false)}
             disabled={isPending}
           >
@@ -156,6 +158,7 @@ export function ConfirmDialog({
           <Button
             type="button"
             variant={config.buttonVariant}
+            data-dialog-confirm
             onClick={handleConfirm}
             disabled={isPending}
             className="gap-1.5"

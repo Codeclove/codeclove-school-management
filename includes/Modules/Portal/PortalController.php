@@ -451,7 +451,19 @@ final class PortalController extends BaseController {
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
+		return $this->success( $result );
+	}
 
+	/**
+	 * GET /portal/certificates
+	 */
+	public function get_certificates( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$student_id = $this->resolve_student_id( $request );
+		if ( is_wp_error( $student_id ) ) {
+			return $student_id;
+		}
+
+		$result = $this->service->get_certificates( $student_id );
 		return $this->success( $result );
 	}
 }

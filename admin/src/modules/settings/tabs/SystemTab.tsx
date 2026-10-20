@@ -22,7 +22,9 @@ interface SystemTabProps {
 export function SystemTab({ settings, control, register }: SystemTabProps) {
   const confirm = useConfirm()
   const { openFeedback } = useFeedbackModal()
-  const isPro = window.CodeCloveConfig?.isPro ?? false
+   const isPro = window.CodeCloveConfig?.isPro ?? false
+  const isPaid = window.CodeCloveConfig?.isPaid ?? false
+  const isDemo = window.CodeCloveConfig?.isDemo ?? false
   const queryClient = useQueryClient()
   const toast = useToast()
   const { data: demoStatus } = useDemoDataStatus()
@@ -157,16 +159,17 @@ export function SystemTab({ settings, control, register }: SystemTabProps) {
             {clearing ? __( 'Clearing…', 'codeclove-school-management' ) : __( 'Purge Options Transients', 'codeclove-school-management' )}
           </Button>
 
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => openFeedback({ area: 'Settings' })}
-            className="gap-1.5"
-          >
-            <LifeBuoy size={13} />
-            {isPro ? __( 'System Diagnostics & Feedback', 'codeclove-school-management' ) : __( 'Get Help & Support', 'codeclove-school-management' )}
-          </Button>
-
+          {!isDemo && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => openFeedback({ area: 'Settings' })}
+              className="gap-1.5"
+            >
+              <LifeBuoy size={13} />
+              {isPaid ? __( 'System Diagnostics & Feedback', 'codeclove-school-management' ) : __( 'Get Help & Support', 'codeclove-school-management' )}
+            </Button>
+          )}
           {msg && (
             <span className="text-xs font-semibold text-brand">{msg}</span>
           )}

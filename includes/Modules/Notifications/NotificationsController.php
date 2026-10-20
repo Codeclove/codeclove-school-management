@@ -146,7 +146,12 @@ final class NotificationsController extends BaseController {
 			'/announcements/(?P<id>\d+)',
 			[
 				[
-					'methods'             => 'PUT',
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_announcement' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'notifications.manage', $request ); },
+				],
+				[
+					'methods'             => [ 'PUT', 'PATCH' ],
 					'callback'            => [ $this, 'update_announcement' ],
 					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'notifications.manage', $request ); },
 				],
@@ -325,8 +330,8 @@ final class NotificationsController extends BaseController {
 			'search'     => sanitize_text_field( (string) ( $request->get_param( 'search' ) ?: '' ) ),
 			'audience'   => sanitize_key( (string) ( $request->get_param( 'audience' ) ?: '' ) ),
 			'event_type' => sanitize_key( (string) ( $request->get_param( 'event_type' ) ?: '' ) ),
+			'status'     => sanitize_key( (string) ( $request->get_param( 'status' ) ?: '' ) ),
 		];
-
 		return $this->success( $this->service->get_announcements( $params ) );
 	}
 
@@ -354,6 +359,18 @@ final class NotificationsController extends BaseController {
 		);
 
 		return $this->success( [ 'id' => $created_id, 'created' => true ], 201 );
+	}
+	/**
+	 * Retrieves a single announcement by ID.
+	 */
+	public function get_announcement( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$id           = (int) $request->get_param( 'id' );
+		$announcement = $this->service->get_announcement( $id );
+		if ( ! $announcement ) {
+			return $this->error( 'not_found', __( 'Announcement not found.', 'codeclove-school-management' ), 404 );
+		}
+
+		return $this->success( $announcement );
 	}
 
 	/**

@@ -29,6 +29,6 @@ if ( ( defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO ) || in_array( 'codeclo
 
 define( 'CODECLOVE_IS_PRO', false );
 define( 'CODECLOVE_VERSION', '1.0.9' );
-define( 'CODECLOVE_DB_VERSION', '1.0.23' );
+define( 'CODECLOVE_DB_VERSION', '1.0.25' );
 define( 'CODECLOVE_FILE', __FILE__ );
 require_once __DIR__ . '/includes/bootstrap.php';

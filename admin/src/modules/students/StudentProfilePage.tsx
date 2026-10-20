@@ -3,13 +3,14 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   User, RefreshCw, Coins, BookOpen, Pencil, AlertTriangle, MapPin, Users,
   Eye, Printer, ArrowLeftRight, IdCard, KeyRound, UserX, CheckCircle2,
-  UserPlus, Copy, History, Receipt, Plus, Filter
+  Copy, History, Receipt, Plus, Filter, MoreHorizontal,
+  Link2, Send
 } from 'lucide-react'
 import {
   useStudentDetails,
   useTransferStudent,
-  useCreatePortalAccount,
   useUnlinkPortalAccount,
+  useResetPortalPassword,
   type Guardian,
 } from '@/api/students'
 import {
@@ -22,7 +23,8 @@ import { useStudentAttendanceHistory } from '@/api/attendance'
 import {
   Button, Badge, Card, PageHeader, Spinner, EmptyState, FormGroupHeader,
   Modal, ModalFooter, ConfirmDialog, FormField, Input, Select, Skeleton,
-  TableRoot, Thead, Tbody, Tr, Th, Td, TableEmpty, Avatar
+  TableRoot, Thead, Tbody, Tr, Th, Td, TableEmpty, Avatar,
+  Dropdown, DropdownItem, DropdownSeparator
 } from '@/components/ui'
 import { TablePagination } from '@/components/ui/TablePagination'
 import { cn } from '@/lib/utils'
@@ -39,6 +41,7 @@ import { __, sprintf } from '@/lib/i18n'
 import PrintInvoiceSheet from '../finance/PrintInvoiceSheet'
 import PrintPaymentReceipt from '../finance/PrintPaymentReceipt'
 import { StudentIdCardSection } from '@/components/print'
+import PortalAccessModal, { type PortalMemberTarget } from './components/PortalAccessModal'
 
 const STATUS_CONFIG: Record<
   string,
@@ -83,24 +86,14 @@ export default function StudentProfilePage() {
   const subjectLabelPlural = getLabel('subject', true, __( 'Subjects', 'codeclove-school-management' ))
 
   const [activeSubTab, setActiveSubTab] = useState<'overview' | 'portal' | 'idcard' | 'enrollment' | 'finance' | 'academics'>('overview')
-
   // Portal account management state & mutations
-  const createPortalAccountMutation = useCreatePortalAccount()
   const unlinkPortalAccountMutation = useUnlinkPortalAccount()
+  const resetPortalPasswordMutation = useResetPortalPassword()
 
-  const [enablingId, setEnablingId] = useState<string | null>(null)
   const [createdCreds, setCreatedCreds] = useState<{ name: string; username: string; password?: string } | null>(null)
-  const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [createTarget, setCreateTarget] = useState<{
-    type: 'student' | 'guardian'
-    entityId: number
-    guardianId?: number
-    name: string
-  } | null>(null)
-  const [formUsername, setFormUsername] = useState('')
-  const [formEmail, setFormEmail] = useState('')
-  const [formPassword, setFormPassword] = useState('')
-  const [formSendEmail, setFormSendEmail] = useState(true)
+  const [portalModalOpen, setPortalModalOpen] = useState(false)
+  const [portalModalTarget, setPortalModalTarget] = useState<PortalMemberTarget | null>(null)
+  const [portalModalInitialTab, setPortalModalInitialTab] = useState<'create' | 'link'>('create')
 
   const [revokeModalOpen, setRevokeModalOpen] = useState(false)
   const [revokeTarget, setRevokeTarget] = useState<{
@@ -228,8 +221,8 @@ export default function StudentProfilePage() {
     per_page: 100,
   })
 
-  const invoices = invoicesData?.data ?? []
-  const payments = paymentsData?.data ?? []
+  const invoices = useMemo(() => invoicesData?.data ?? [], [invoicesData?.data])
+  const payments = useMemo(() => paymentsData?.data ?? [], [paymentsData?.data])
 
   const activeInvoices = useMemo(() => {
     return invoices.filter((inv) => inv.status !== 'cancelled' && inv.status !== 'void')
@@ -405,98 +398,32 @@ export default function StudentProfilePage() {
           ...(student.guardian ? [{ ...student.guardian, relationship: student.relationship || guardianLabelSingular }] : []),
         ]
 
-  const openCreatePortalModal = (
-    type: 'student' | 'guardian',
-    entityId: number,
-    name: string,
-    defaultUsername: string,
-    defaultEmail: string,
-    guardianId?: number
-  ) => {
-    const cleanUsername = defaultUsername.toLowerCase().replace(/[^a-z0-9_.-]/g, '')
-    setCreateTarget({ type, entityId, guardianId, name })
-    setFormUsername(cleanUsername || (type === 'student' ? `student_${entityId}` : `guardian_${entityId}`))
-    setFormEmail(defaultEmail || '')
-    setFormPassword('')
-    setFormSendEmail(true)
-    setCreateModalOpen(true)
+  const openPortalAccessModal = (member: PortalMemberTarget, initialTab: 'create' | 'link' = 'create') => {
+    setPortalModalTarget(member)
+    setPortalModalInitialTab(initialTab)
+    setPortalModalOpen(true)
   }
 
-  const handleConfirmCreatePortal = async () => {
-    if (!createTarget) return
-    if (!formUsername.trim()) {
-      toast.error(__( 'Username is required.', 'codeclove-school-management' ))
-      return
-    }
-
+  const handleSendPasswordReset = async (member: PortalMemberTarget) => {
     try {
-      const res = await createPortalAccountMutation.mutateAsync({
-        studentId,
-        data: {
-          type: createTarget.type,
-          guardian_id: createTarget.guardianId,
-          username: formUsername.trim(),
-          email: formEmail.trim() || undefined,
-          password: formPassword.trim() || undefined,
-          send_email: formSendEmail && Boolean(formEmail.trim()),
-        },
-      })
-      setCreateModalOpen(false)
-      if (res.password && !formEmail.trim()) {
-        setCreatedCreds({
-          name: createTarget.name,
-          username: res.username,
-          password: res.password,
-        })
-      } else {
-        toast.success(sprintf( __( 'Portal account created for %1$s (@%2$s).', 'codeclove-school-management' ), createTarget.name, res.username ))
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : __( 'Failed to create portal account.', 'codeclove-school-management' )
-      toast.error(message)
-    }
-  }
-
-  const handleQuickEnable = async (member: {
-    id: string
-    name: string
-    type: 'student' | 'guardian'
-    entityId: number
-    guardianId?: number
-    defaultUsername: string
-    email?: string
-  }) => {
-    setEnablingId(member.id)
-    try {
-      const res = await createPortalAccountMutation.mutateAsync({
+      const res = await resetPortalPasswordMutation.mutateAsync({
         studentId,
         data: {
           type: member.type,
           guardian_id: member.guardianId,
-          username: member.defaultUsername,
-          email: member.email,
-          send_email: Boolean(member.email),
         },
       })
-      if (res.password && !member.email) {
-        setCreatedCreds({
-          name: member.name,
-          username: res.username,
-          password: res.password,
-        })
-      } else {
-        toast.success(
-          member.email
-            ? sprintf( __( 'Portal access enabled for %1$s (@%2$s). Login details sent.', 'codeclove-school-management' ), member.name, res.username )
-            : sprintf( __( 'Portal access enabled for %1$s (@%2$s).', 'codeclove-school-management' ), member.name, res.username )
-        )
-      }
+      toast.success(res.message || sprintf( __( 'Password reset instructions sent for %s.', 'codeclove-school-management' ), member.name ))
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : __( 'Failed to create portal account.', 'codeclove-school-management' )
-      toast.error(message)
-    } finally {
-      setEnablingId(null)
+      const msg = err instanceof Error ? err.message : __( 'Failed to send password reset email.', 'codeclove-school-management' )
+      toast.error(msg)
     }
+  }
+
+  const handleCopyPortalUrl = () => {
+    const portalUrl = window.CodeCloveConfig?.portalUrl || `${window.location.origin}/student-portal/`
+    navigator.clipboard?.writeText(portalUrl)
+    toast.success(__( 'Portal login URL copied to clipboard.', 'codeclove-school-management' ))
   }
 
   const openRevokePortalModal = (
@@ -520,24 +447,22 @@ export default function StudentProfilePage() {
           guardian_id: revokeTarget.guardianId,
         },
       })
-      toast.success(sprintf( __( 'Portal access unlinked for %s.', 'codeclove-school-management' ), revokeTarget.name ))
+      toast.success(sprintf( __( 'Disconnected portal account for %s.', 'codeclove-school-management' ), revokeTarget.name ))
       setRevokeModalOpen(false)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : __( 'Failed to unlink portal account.', 'codeclove-school-management' )
+      const message = err instanceof Error ? err.message : __( 'Failed to disconnect portal account.', 'codeclove-school-management' )
       toast.error(message)
     }
   }
 
-  const portalMembers = [
+  const portalMembers: PortalMemberTarget[] = [
     {
       id: `student_${student.id}`,
       name: `${student.first_name} ${student.last_name}`.trim(),
       role: studentLabelSingular,
       isStudent: true,
       avatarText: 'ST',
-      identifier: student.admission_number
-        ? sprintf( __( 'Admission: %s', 'codeclove-school-management' ), student.admission_number )
-        : (student.student_number ? sprintf( __( 'ID: %s', 'codeclove-school-management' ), student.student_number ) : __( 'Student Profile', 'codeclove-school-management' )),
+      identifier: student.email || (student.admission_number ? sprintf( __( 'Admission: %s', 'codeclove-school-management' ), student.admission_number ) : (student.student_number ? sprintf( __( 'ID: %s', 'codeclove-school-management' ), student.student_number ) : '')),
       email: student.email || undefined,
       defaultUsername: (student.admission_number || `${student.first_name}.${student.last_name}`).toLowerCase().replace(/[^a-z0-9_.-]/g, ''),
       type: 'student' as const,
@@ -554,7 +479,7 @@ export default function StudentProfilePage() {
         role: rel,
         isStudent: false,
         avatarText: rel.substring(0, 2).toUpperCase() || 'GD',
-        identifier: g.email ? sprintf( __( 'Email: %s', 'codeclove-school-management' ), g.email ) : (g.phone ? sprintf( __( 'Phone: %s', 'codeclove-school-management' ), g.phone ) : __( 'No contact on file', 'codeclove-school-management' )),
+        identifier: g.email || g.phone || __( 'No contact on file', 'codeclove-school-management' ),
         email: g.email || undefined,
         defaultUsername: defaultUser || `guardian_${g.id}`,
         type: 'guardian' as const,
@@ -582,12 +507,10 @@ export default function StudentProfilePage() {
       <div className="divide-y divide-border">
         {portalMembers.map((member) => {
           const isLinked = Boolean(member.portalAccount)
-          const isPending = enablingId === member.id
-
           return (
             <div
               key={member.id}
-              className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-hover-bg transition-colors"
+              className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-hover-bg transition-colors"
             >
               {/* Left: Avatar + Identity */}
               <div className="flex items-center gap-3.5 min-w-0">
@@ -605,86 +528,87 @@ export default function StudentProfilePage() {
                       {member.role}
                     </span>
                   </div>
-                  <p className="text-xs text-text-muted truncate mt-0.5">
-                    {member.identifier}
-                  </p>
+                  {isLinked && member.portalAccount ? (
+                    <div className="flex items-center gap-1.5 text-xs text-text-muted mt-0.5 truncate">
+                      <span className="font-mono font-medium text-text">@{member.portalAccount.username}</span>
+                      {member.portalAccount.email && (
+                        <>
+                          <span className="text-text-subtle/50">•</span>
+                          <span className="truncate">{member.portalAccount.email}</span>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-text-muted truncate mt-0.5">
+                      {member.identifier}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Right: Status badge + Actions */}
-              <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+              {/* Right: Actions */}
+              <div className="flex items-center gap-3 shrink-0">
                 {isLinked && member.portalAccount ? (
                   <>
-                    <div className="text-right hidden md:block">
-                      <span className="font-mono text-xs font-semibold text-text block">
-                        @{member.portalAccount.username}
-                      </span>
-                      {member.portalAccount.email && (
-                        <span
-                          className="text-3xs text-text-muted block truncate max-w-[160px]"
-                          title={member.portalAccount.email}
-                        >
-                          {member.portalAccount.email}
-                        </span>
-                      )}
-                    </div>
                     <Badge variant="active" className="gap-1 px-2.5 py-1">
                       <CheckCircle2 size={12} />
                       {__( 'Active', 'codeclove-school-management' )}
                     </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        openRevokePortalModal(
-                          member.type,
-                          member.entityId,
-                          member.name,
-                          member.portalAccount!.username,
-                          member.guardianId
-                        )
+
+                    <Dropdown
+                      align="end"
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-text-muted hover:text-text rounded-lg hover:bg-bg-subtle"
+                          title={__( 'Account options', 'codeclove-school-management' )}
+                        >
+                          <MoreHorizontal size={15} />
+                        </Button>
                       }
-                      className="text-text-danger hover:text-text-danger hover:bg-danger/10 text-xs h-8 px-2.5"
                     >
-                      <UserX size={13} className="mr-1" />
-                      {__( 'Revoke', 'codeclove-school-management' )}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Badge variant="default" className="px-2.5 py-1 text-text-muted">
-                      {__( 'No Access', 'codeclove-school-management' )}
-                    </Badge>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        size="sm"
-                        onClick={() => handleQuickEnable(member)}
-                        disabled={isPending}
-                        className="gap-1.5 text-xs h-8"
-                      >
-                        {isPending ? <Spinner size="xs" /> : <UserPlus size={13} />}
-                        {__( 'Enable Access', 'codeclove-school-management' )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <DropdownItem
+                        icon={Copy}
+                        label={__( 'Copy Portal Login Link', 'codeclove-school-management' )}
+                        onClick={handleCopyPortalUrl}
+                      />
+                      <DropdownItem
+                        icon={Send}
+                        label={__( 'Send Password Reset Email', 'codeclove-school-management' )}
+                        onClick={() => handleSendPasswordReset(member)}
+                      />
+                      <DropdownItem
+                        icon={Link2}
+                        label={__( 'Change Connected Account', 'codeclove-school-management' )}
+                        onClick={() => openPortalAccessModal(member, 'link')}
+                      />
+                      <DropdownSeparator />
+                      <DropdownItem
+                        icon={UserX}
+                        label={__( 'Disconnect Account', 'codeclove-school-management' )}
                         onClick={() =>
-                          openCreatePortalModal(
+                          openRevokePortalModal(
                             member.type,
                             member.entityId,
                             member.name,
-                            member.defaultUsername,
-                            member.email || '',
+                            member.portalAccount!.username,
                             member.guardianId
                           )
                         }
-                        title={__( 'Customize account details before creating', 'codeclove-school-management' )}
-                        className="text-text-muted hover:text-text text-xs h-8 px-2"
-                      >
-                        {__( 'Customize', 'codeclove-school-management' )}
-                      </Button>
-                    </div>
+                        danger
+                      />
+                    </Dropdown>
                   </>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => openPortalAccessModal(member, 'create')}
+                    className="gap-1.5 text-xs h-8 font-medium"
+                  >
+                    <KeyRound size={13} />
+                    {__( 'Set Up Access', 'codeclove-school-management' )}
+                  </Button>
                 )}
               </div>
             </div>
@@ -801,6 +725,7 @@ export default function StudentProfilePage() {
                 {__( 'Transfer Class', 'codeclove-school-management' )}
               </Button>
             )}
+
           </Card>
         </div>
 
@@ -1757,69 +1682,20 @@ export default function StudentProfilePage() {
         )
       })()}
 
-      {/* Create Portal Account Modal */}
-      {createModalOpen && createTarget && (
-        <Modal
-          open={createModalOpen}
-          onOpenChange={setCreateModalOpen}
-          title={sprintf( __( 'Configure %s Portal Account', 'codeclove-school-management' ), createTarget.type === 'student' ? studentLabelSingular : guardianLabelSingular )}
-          description={sprintf( __( 'Set up login credentials for %s.', 'codeclove-school-management' ), createTarget.name )}
-        >
-          <div className="space-y-4 p-1">
-            <FormField label={__( 'Username', 'codeclove-school-management' )} required>
-              <Input
-                value={formUsername}
-                onChange={(e) => setFormUsername(e.target.value)}
-                placeholder="e.g. john.doe"
-              />
-            </FormField>
-
-            <FormField label={__( 'Email Address (optional)', 'codeclove-school-management' )}>
-              <Input
-                type="email"
-                value={formEmail}
-                onChange={(e) => setFormEmail(e.target.value)}
-                placeholder="e.g. parent@example.com"
-              />
-            </FormField>
-
-            <FormField label={__( 'Password (optional)', 'codeclove-school-management' )}>
-              <Input
-                type="text"
-                value={formPassword}
-                onChange={(e) => setFormPassword(e.target.value)}
-                placeholder={__( 'Leave blank to auto-generate a secure password', 'codeclove-school-management' )}
-              />
-            </FormField>
-
-            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-bg-surface border border-border cursor-pointer text-xs">
-              <input
-                type="checkbox"
-                checked={formSendEmail}
-                onChange={(e) => setFormSendEmail(e.target.checked)}
-                className="mt-0.5 rounded border-border text-brand focus:ring-brand"
-              />
-              <div>
-                <span className="font-semibold text-text block">{__( 'Send welcome notification email', 'codeclove-school-management' )}</span>
-                <span className="text-text-muted text-xs block mt-0.5">
-                  {__( 'Sends an email with password setup instructions so the user can log in immediately.', 'codeclove-school-management' )}
-                </span>
-              </div>
-            </label>
-          </div>
-
-          <ModalFooter>
-            <Button variant="secondary" onClick={() => setCreateModalOpen(false)}>
-              {__( 'Cancel', 'codeclove-school-management' )}
-            </Button>
-            <Button
-              onClick={handleConfirmCreatePortal}
-              disabled={createPortalAccountMutation.isPending || !formUsername.trim()}
-            >
-              {createPortalAccountMutation.isPending ? __( 'Creating Account…', 'codeclove-school-management' ) : __( 'Create Portal Account', 'codeclove-school-management' )}
-            </Button>
-          </ModalFooter>
-        </Modal>
+      {/* Set Up Portal Access Modal */}
+      {portalModalOpen && portalModalTarget && (
+        <PortalAccessModal
+          open={portalModalOpen}
+          onOpenChange={setPortalModalOpen}
+          studentId={studentId}
+          member={portalModalTarget}
+          initialTab={portalModalInitialTab}
+          onSuccess={(creds) => {
+            if (creds?.password && !portalModalTarget.email) {
+              setCreatedCreds(creds)
+            }
+          }}
+        />
       )}
 
       {/* Credentials Created Modal */}
@@ -1870,26 +1746,30 @@ export default function StudentProfilePage() {
         </Modal>
       )}
 
-      {/* Revoke Portal Access Modal */}
+      {/* Disconnect Portal Access Modal */}
       {revokeModalOpen && revokeTarget && (
         <ConfirmDialog
           open={revokeModalOpen}
           onOpenChange={setRevokeModalOpen}
           onConfirm={handleConfirmRevokePortal}
-          title={__( 'Revoke Portal Access', 'codeclove-school-management' )}
-          description={sprintf( __( 'Are you sure you want to revoke portal access for %1$s (@%2$s)?', 'codeclove-school-management' ), revokeTarget.name, revokeTarget.username )}
+          title={__( 'Disconnect Portal Account', 'codeclove-school-management' )}
+          description={sprintf(
+            __( 'Are you sure you want to disconnect @%1$s from %2$s?', 'codeclove-school-management' ),
+            revokeTarget.username,
+            revokeTarget.name
+          )}
           variant="danger"
-          confirmText={__( 'Confirm Revoke Access', 'codeclove-school-management' )}
+          confirmText={__( 'Disconnect Account', 'codeclove-school-management' )}
           isLoading={unlinkPortalAccountMutation.isPending}
         >
           <div className="p-3 rounded-lg bg-danger/5 border border-danger/20 text-xs text-text space-y-2">
             <p className="font-semibold text-danger flex items-center gap-1.5">
               <AlertTriangle size={15} />
-              {__( 'Account will be unlinked', 'codeclove-school-management' )}
+              {__( 'Account will be disconnected', 'codeclove-school-management' )}
             </p>
             <p className="text-text-muted">
               {sprintf(
-                __( 'This will disconnect the WordPress login account from this %s profile. The user will no longer be able to access portal features for this record.', 'codeclove-school-management' ),
+                __( 'This will disconnect the WordPress login account from this %s record. Their WordPress user account will remain safe and will not be deleted.', 'codeclove-school-management' ),
                 revokeTarget.type === 'student' ? studentLabelSingular.toLowerCase() : guardianLabelSingular.toLowerCase()
               )}
             </p>

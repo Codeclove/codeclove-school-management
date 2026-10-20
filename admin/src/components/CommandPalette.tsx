@@ -27,7 +27,6 @@ import {
   CreditCard,
   Settings,
   ArrowLeft,
-  ArrowRight,
   Sun,
   Moon,
   UserCheck,
@@ -69,7 +68,6 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
-
   const activeRef = useRef<HTMLButtonElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -159,7 +157,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
       {
         id: 'units',
         title: classLabel,
-        subtitle: `Manage grades, classrooms, and ${classLabel.toLowerCase()}`,
+        subtitle: sprintf(__('Manage grade levels, classrooms, and %s', 'codeclove-school-management'), classLabel.toLowerCase()),
         category: 'Navigation',
         to: ROUTES.UNITS,
         icon: BookOpen,
@@ -168,7 +166,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
       {
         id: 'groups',
         title: sectionLabel,
-        subtitle: `Organize student batches, sections, and ${sectionLabel.toLowerCase()}`,
+        subtitle: sprintf(__('Organize student batches, divisions, and %s', 'codeclove-school-management'), sectionLabel.toLowerCase()),
         category: 'Navigation',
         to: ROUTES.GROUPS,
         icon: Layers,
@@ -177,7 +175,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
       {
         id: 'subjects',
         title: subjectLabel,
-        subtitle: `Manage course curriculum, syllabi, and ${subjectLabel.toLowerCase()}`,
+        subtitle: sprintf(__('Manage course curriculum, syllabi, and %s', 'codeclove-school-management'), subjectLabel.toLowerCase()),
         category: 'Navigation',
         to: ROUTES.SUBJECTS,
         icon: BookMarked,
@@ -218,7 +216,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
       {
         id: 'admissions',
         title: admissionLabel,
-        subtitle: `Review student admission applications and ${admissionLabel.toLowerCase()}`,
+        subtitle: sprintf(__('Review student applications, inquiries, and %s status', 'codeclove-school-management'), admissionLabel.toLowerCase()),
         category: 'Navigation',
         to: ROUTES.ADMISSIONS,
         icon: ClipboardList,
@@ -443,6 +441,17 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
         keywords: `quick action admissions application create admit ${studentLabelSingular.toLowerCase()} register entry application`,
       },
       {
+        id: 'action-new-announcement',
+        title: __('Quick Action: Post New Announcement', 'codeclove-school-management'),
+        subtitle: __('Directly compose and broadcast a new notice or circular', 'codeclove-school-management'),
+        category: 'Actions',
+        to: ROUTES.ANNOUNCEMENT_NEW,
+        icon: Megaphone,
+        permission: PERMISSIONS.NOTIFICATIONS_MANAGE,
+        pro: true,
+        keywords: 'quick action announcement notice circular broadcast create new post publish noticeboard',
+      },
+      {
         id: 'action-hire',
         title: `Quick Action: Onboard ${staffLabelSingular}`,
         subtitle: `Directly open the ${staffLabelSingular.toLowerCase()} onboarding form`,
@@ -573,23 +582,23 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
             'codeclove-command-palette-content',
             'fixed z-[100001] left-1/2 top-[12vh] -translate-x-1/2',
             'w-[calc(100vw-2rem)] max-w-xl flex flex-col',
-            'bg-bg-overlay/95 backdrop-blur-xl border border-border dark:border-white/15 rounded-xl shadow-modal overflow-hidden outline-none',
+            'bg-bg-overlay border border-border dark:border-border-strong rounded-xl shadow-modal overflow-hidden outline-none',
             'data-[state=open]:animate-command-palette-in data-[state=closed]:animate-command-palette-out',
             'shadow-[0_24px_50px_-12px_rgba(0,0,0,0.3)] dark:shadow-[#000000]/80'
           )}
         >
           {/* Header search bar */}
-          <div className="flex items-center gap-3.5 px-5 py-4 bg-black/[0.02] dark:bg-white/[0.02] border-b border-black/5 dark:border-white/5">
-            <Search className="w-5 h-5 text-brand" />
+          <div className="flex items-center gap-3.5 px-5 py-3.5 bg-bg-overlay border-b border-border">
+            <Search className="w-5 h-5 text-brand shrink-0" />
             <input
               ref={inputRef}
               type="text"
               placeholder={__('Search pages, actions, settings...', 'codeclove-school-management')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent !border-none !outline-none !shadow-none !ring-0 text-base text-text placeholder-text-text-subtle p-0 !m-0 !h-auto tracking-wide font-normal"
+              className="flex-1 bg-transparent !border-none !outline-none !shadow-none !ring-0 text-base text-text placeholder:text-text-subtle p-0 !m-0 !h-auto tracking-wide font-normal"
             />
-            <kbd className="text-2xs font-mono font-semibold text-text-muted bg-black/[0.04] dark:bg-white/[0.04] border border-black/10 dark:border-white/10 px-2 py-0.5 rounded-md shadow-3xs uppercase tracking-wider select-none">
+            <kbd className="text-2xs font-mono font-medium text-text-muted bg-bg-elevated border border-border px-2 py-0.5 rounded-md shadow-3xs uppercase tracking-wider select-none shrink-0">
               esc
             </kbd>
           </div>
@@ -610,7 +619,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
                 return (
                   <div key={category} className="space-y-1 mb-3 last:mb-1">
                     {/* Category Title */}
-                    <div className="text-2xs tracking-wider uppercase font-semibold text-text-subtle px-3 py-1.5 select-none">
+                    <div className="text-[11px] tracking-wider uppercase font-bold text-text-subtle px-3 pt-2.5 pb-1 select-none">
                       {CATEGORY_LABELS[category] ?? category}
                     </div>
 
@@ -628,7 +637,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
                           className={cn(
                             'w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-start transition-colors duration-100',
                             isSelected
-                              ? 'bg-brand-dim text-brand dark:bg-brand/10 dark:text-brand shadow-2xs font-medium'
+                              ? 'bg-brand/10 dark:bg-brand/20 text-text shadow-2xs font-medium'
                               : 'text-text hover:bg-hover-bg'
                           )}
                         >
@@ -636,7 +645,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
                             <div
                               className={cn(
                                 'p-1.5 rounded-md flex-shrink-0 transition-colors',
-                                isSelected ? 'bg-brand/10 text-brand' : 'bg-bg-surface border border-border text-text-subtle'
+                                isSelected ? 'bg-brand text-text-inverted shadow-xs' : 'bg-bg-elevated border border-border text-text-subtle'
                               )}
                             >
                               <Icon size={14} />
@@ -652,14 +661,16 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
                           </div>
                           <div
                             className={cn(
-                              'flex items-center gap-1.5 text-xs text-brand font-medium transition-all duration-150 me-1',
+                              'flex items-center gap-1.5 transition-all duration-150 me-0.5 select-none shrink-0',
                               isSelected
                                 ? 'opacity-100 translate-x-0'
                                 : 'opacity-0 translate-x-2 rtl:-translate-x-2 pointer-events-none'
                             )}
                           >
-                            <span className="text-2xs font-mono opacity-80">↵</span>
-                            <ArrowRight size={12} className="rtl:rotate-180" />
+                            <kbd className="text-2xs font-mono font-semibold px-2 py-0.5 rounded-md bg-brand/15 text-brand dark:bg-brand/25 dark:text-brand border border-brand/20 flex items-center gap-1 shadow-3xs">
+                              <span className="text-3xs uppercase font-sans tracking-wider opacity-85">{__('Open', 'codeclove-school-management')}</span>
+                              <span className="text-2xs font-mono">↵</span>
+                            </kbd>
                           </div>
                         </button>
                       )
@@ -671,20 +682,20 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
           </div>
 
           {/* Footer help commands */}
-          <div className="flex items-center justify-between px-4 py-2 bg-bg-surface border-t border-border text-2xs text-text-muted font-medium select-none">
+          <div className="flex items-center justify-between px-4 py-2.5 bg-bg-overlay border-t border-border text-2xs text-text-muted font-medium select-none">
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
-                <kbd className="bg-bg-elevated px-1 py-0.5 rounded border border-border shadow-3xs">↑</kbd>
-                <kbd className="bg-bg-elevated px-1 py-0.5 rounded border border-border shadow-3xs">↓</kbd>
+                <kbd className="bg-bg-elevated px-1.5 py-0.5 rounded border border-border shadow-3xs text-text font-mono font-medium">↑</kbd>
+                <kbd className="bg-bg-elevated px-1.5 py-0.5 rounded border border-border shadow-3xs text-text font-mono font-medium">↓</kbd>
                 {__('to navigate', 'codeclove-school-management')}
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="bg-bg-elevated px-1 py-0.5 rounded border border-border shadow-3xs">↵</kbd>
+                <kbd className="bg-bg-elevated px-1.5 py-0.5 rounded border border-border shadow-3xs text-text font-mono font-medium">↵</kbd>
                 {__('to select', 'codeclove-school-management')}
               </span>
             </div>
             <span className="flex items-center gap-1 text-text-subtle">
-              <kbd className="bg-bg-elevated px-1 py-0.5 rounded border border-border shadow-3xs">ESC</kbd>
+              <kbd className="bg-bg-elevated px-1.5 py-0.5 rounded border border-border shadow-3xs text-text font-mono font-medium">ESC</kbd>
               {__('to close', 'codeclove-school-management')}
             </span>
           </div>

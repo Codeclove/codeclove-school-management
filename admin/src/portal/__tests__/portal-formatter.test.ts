@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCurrency, formatDate, formatNumber, formatTime, getInitials } from '../lib/formatter'
+import { formatCurrency, formatDate, formatNumber, formatRelativeTime, formatTime, getInitials } from '../lib/formatter'
 
 describe('Portal Formatter Utilities', () => {
   describe('formatDate', () => {
@@ -24,6 +24,40 @@ describe('Portal Formatter Utilities', () => {
       expect(formatDate('2026-09-07', 'd/m/Y')).toBe('07/09/2026')
       expect(formatDate('2026-09-07', 'Y-m-d')).toBe('2026-09-07')
       expect(formatDate('2026-09-07', 'm/d/Y')).toBe('09/07/2026')
+    })
+  })
+
+  describe('formatRelativeTime', () => {
+    it('returns "Just now" for dates within 60 seconds', () => {
+      const now = new Date()
+      expect(formatRelativeTime(now)).toBe('Just now')
+      expect(formatRelativeTime(new Date(now.getTime() - 30_000))).toBe('Just now')
+    })
+
+    it('returns minutes ago for dates under an hour', () => {
+      const tenMinsAgo = new Date(Date.now() - 10 * 60_000)
+      expect(formatRelativeTime(tenMinsAgo)).toBe('10m ago')
+    })
+
+    it('returns hours ago for dates under 24 hours', () => {
+      const threeHoursAgo = new Date(Date.now() - 3 * 3600_000)
+      expect(formatRelativeTime(threeHoursAgo)).toBe('3h ago')
+    })
+
+    it('returns "Yesterday" for dates 1 day ago', () => {
+      const yesterday = new Date(Date.now() - 26 * 3600_000)
+      expect(formatRelativeTime(yesterday)).toBe('Yesterday')
+    })
+
+    it('returns days ago for dates under 7 days', () => {
+      const threeDaysAgo = new Date(Date.now() - 3 * 86400_000)
+      expect(formatRelativeTime(threeDaysAgo)).toBe('3d ago')
+    })
+
+    it('handles null, undefined, and invalid dates safely', () => {
+      expect(formatRelativeTime(null)).toBe('—')
+      expect(formatRelativeTime(undefined)).toBe('—')
+      expect(formatRelativeTime('not-a-date')).toBe('—')
     })
   })
 

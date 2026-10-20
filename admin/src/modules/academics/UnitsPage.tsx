@@ -3,7 +3,7 @@
  *
  * Displays a list of academic units (e.g. Grades/Forms) scoped to the active session.
  */
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { unitSchema, type UnitFormValues } from '@/schemas/academics'
@@ -72,6 +72,7 @@ export default function UnitsPage() {
   const session_id = session?.id ?? 0
 
   const table = useTableState()
+  const { resetPage, clearSelection } = table
   const [status, setStatus] = useState<string>('')
   const [search, setSearch] = useState<string>('')
   const debouncedSearch = useDebounce(search, 350)
@@ -87,26 +88,29 @@ export default function UnitsPage() {
   })
   const deleteMutation = useDeleteUnit()
 
-  const handleDelete = async (unit: AcademicUnit) => {
-    const isConfirmed = await confirm({
-      title: sprintf( __( 'Delete %s', 'codeclove-school-management' ), unitLabelSingular ),
-      message: sprintf(
-        __( 'Are you sure you want to delete %1$s? All %2$s inside this level must be deleted first.', 'codeclove-school-management' ),
-        unit.name,
-        groupLabelPlural.toLowerCase()
-      ),
-    })
-    if (!isConfirmed) return
+  const handleDelete = useCallback(
+    async (unit: AcademicUnit) => {
+      const isConfirmed = await confirm({
+        title: sprintf( __( 'Delete %s', 'codeclove-school-management' ), unitLabelSingular ),
+        message: sprintf(
+          __( 'Are you sure you want to delete %1$s? All %2$s inside this level must be deleted first.', 'codeclove-school-management' ),
+          unit.name,
+          groupLabelPlural.toLowerCase()
+        ),
+      })
+      if (!isConfirmed) return
 
-    deleteMutation.mutate(unit.id, {
-      onSuccess: () => {
-        toast.success( sprintf( __( '%s deleted successfully!', 'codeclove-school-management' ), unitLabelSingular ) )
-      },
-      onError: (err) => {
-        toast.error(err.message || sprintf( __( 'Failed to delete %s.', 'codeclove-school-management' ), unitLabelSingular.toLowerCase() ))
-      }
-    })
-  }
+      deleteMutation.mutate(unit.id, {
+        onSuccess: () => {
+          toast.success( sprintf( __( '%s deleted successfully!', 'codeclove-school-management' ), unitLabelSingular ) )
+        },
+        onError: (err) => {
+          toast.error(err.message || sprintf( __( 'Failed to delete %s.', 'codeclove-school-management' ), unitLabelSingular.toLowerCase() ))
+        }
+      })
+    },
+    [confirm, deleteMutation, groupLabelPlural, toast, unitLabelSingular]
+  )
 
   const units = data?.data ?? []
   const total = data?.total ?? 0
@@ -218,14 +222,14 @@ export default function UnitsPage() {
         ),
       },
     ],
-    [statusConfig, groupLabelPlural, subjectLabelPlural, unitLabelSingular]
+    [statusConfig, groupLabelPlural, subjectLabelPlural, unitLabelSingular, handleDelete]
   )
 
   // Reset page and selection when session, status, or search changes
   useEffect(() => {
-    table.resetPage()
-    table.clearSelection()
-  }, [session_id, status, debouncedSearch, table.resetPage, table.clearSelection])
+    resetPage()
+    clearSelection()
+  }, [session_id, status, debouncedSearch, resetPage, clearSelection])
 
   return (
     <div className="space-y-5 w-full">

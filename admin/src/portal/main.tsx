@@ -22,6 +22,20 @@ function mount() {
   const isRtl = Boolean(config?.rtl)
   rootElement.dir = isRtl ? 'rtl' : 'ltr'
 
+  // Pre-apply theme class before React renders to prevent flash of wrong theme
+  try {
+    const stored = localStorage.getItem('codeclove:portal-theme') || localStorage.getItem('codeclove:theme')
+    const configMode = config?.settings?.appearance?.theme_mode || config?.settings?.appearance?.mode
+    const effectiveMode = (stored === 'light' || stored === 'dark' || stored === 'system') ? stored : (configMode || 'system')
+    const isDark = effectiveMode === 'dark' || (effectiveMode === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)')?.matches)
+    if (isDark) {
+      rootElement.classList.add('dark')
+    } else {
+      rootElement.classList.remove('dark')
+    }
+  } catch {
+    // Storage access fallback
+  }
   createRoot(rootElement).render(
     <React.StrictMode>
       <App />

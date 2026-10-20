@@ -67,7 +67,6 @@ final class Migrations {
 		do_action( 'codeclove_run_migrations_db', $charset_collate );
 
 
-
 		// Store the new schema version.
 		$settings                   = get_option( 'codeclove_settings', [] );
 		$settings['schema_version'] = CODECLOVE_DB_VERSION;

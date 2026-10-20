@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   GraduationCap,
   CalendarDays,
+  Award,
   BookOpen,
   BookMarked,
   Layers,
@@ -50,7 +51,7 @@ import { usePermissions, type PermissionKey } from '@/lib/permissions'
 import { Tooltip, Dropdown, DropdownItem, DropdownLabel, DropdownSeparator } from '@/components/ui'
 import { __ } from '@/lib/i18n'
 import { isRtl } from '@/lib/rtl'
-import { IS_MAC } from './Header'
+import { IS_MAC } from './header-utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -120,8 +121,10 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
 
   const { can } = usePermissions()
 
-  const isPro = window.CodeCloveConfig?.isPro ?? false
-  const helpLabel = isPro ? __( 'Help & Feedback', 'codeclove-school-management' ) : __( 'Help & Support', 'codeclove-school-management' )
+   const isPro = window.CodeCloveConfig?.isPro ?? false
+  const isPaid = window.CodeCloveConfig?.isPaid ?? false
+  const isDemo = window.CodeCloveConfig?.isDemo ?? false
+  const helpLabel = isPaid ? __( 'Help & Feedback', 'codeclove-school-management' ) : __( 'Help & Support', 'codeclove-school-management' )
 
   // Navigation groups and items matching docs/NAVIGATION.md
   const rawNavGroups: NavGroup[] = [
@@ -137,6 +140,13 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
           to: isPro ? ROUTES.TIMETABLE : '/pro-upgrade?feature=timetable',
           icon: Clock,
           permission: isPro ? PERMISSIONS.TIMETABLE_VIEW : undefined,
+          proBadge: !isPro,
+        },
+        {
+          label: __( 'Certificates', 'codeclove-school-management' ),
+          to: isPro ? ROUTES.CERTIFICATES : '/pro-upgrade?feature=certificates',
+          icon: Award,
+          permission: isPro ? PERMISSIONS.SESSIONS_VIEW : undefined,
           proBadge: !isPro,
         },
       ],
@@ -289,31 +299,33 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
               </NavLink>
             )
           )}
-          {/* Help & Feedback Button */}
-          {sidebarCollapsed ? (
-            <Tooltip content={helpLabel} side={isRtl() ? 'left' : 'right'}>
-              <div className="w-full flex justify-center py-0.5">
-                <button
-                  type="button"
-                  onClick={() => openFeedback()}
-                  className="w-9 h-9 mx-auto flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-hover-bg transition-colors duration-150 cursor-pointer"
-                  aria-label={helpLabel}
-                >
-                  <LifeBuoy size={16} className="text-text-subtle hover:text-text" />
-                </button>
-              </div>
-            </Tooltip>
-          ) : (
-            <button
-              type="button"
-              onClick={() => openFeedback()}
-              className="w-full flex items-center rounded-md px-2.5 py-1.5 gap-2.5 text-sm text-text-muted hover:text-text hover:bg-hover-bg transition-colors duration-150 group cursor-pointer"
-            >
-              <LifeBuoy size={16} className="flex-shrink-0 text-text-subtle group-hover:text-text transition-colors" />
-              <span className="text-sm leading-snug sidebar-link-text truncate min-w-0">
-                {helpLabel}
-              </span>
-            </button>
+          {/* Help & Feedback Button (Disabled and hidden on demo showcase) */}
+          {!isDemo && (
+            sidebarCollapsed ? (
+              <Tooltip content={helpLabel} side={isRtl() ? 'left' : 'right'}>
+                <div className="w-full flex justify-center py-0.5">
+                  <button
+                    type="button"
+                    onClick={() => openFeedback()}
+                    className="w-9 h-9 mx-auto flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-hover-bg transition-colors duration-150 cursor-pointer"
+                    aria-label={helpLabel}
+                  >
+                    <LifeBuoy size={16} className="text-text-subtle hover:text-text" />
+                  </button>
+                </div>
+              </Tooltip>
+            ) : (
+              <button
+                type="button"
+                onClick={() => openFeedback()}
+                className="w-full flex items-center rounded-md px-2.5 py-1.5 gap-2.5 text-sm text-text-muted hover:text-text hover:bg-hover-bg transition-colors duration-150 group cursor-pointer"
+              >
+                <LifeBuoy size={16} className="flex-shrink-0 text-text-subtle group-hover:text-text transition-colors" />
+                <span className="text-sm leading-snug sidebar-link-text truncate min-w-0">
+                  {helpLabel}
+                </span>
+              </button>
+            )
           )}
 
           {can(PERMISSIONS.SETTINGS_MANAGE) && (

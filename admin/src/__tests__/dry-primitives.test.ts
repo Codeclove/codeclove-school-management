@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server'
 import { QUERY_KEYS } from '../lib/constants'
 import { resolveBadgeVariant, StatCard } from '../components/ui'
 import { getStatusVariant } from '../modules/finance/finance-utils'
-import { calculateTermSplits } from '../modules/academics/SessionsPage'
+import { calculateTermSplits } from '../modules/academics/academic-utils'
 describe('Code Consistency & DRY Primitives', () => {
   describe('Finance Query Keys Consistency', () => {
     it('QUERY_KEYS.invoices is a string array matching TanStack Query prefix expectations', () => {

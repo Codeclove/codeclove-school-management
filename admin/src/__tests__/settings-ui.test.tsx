@@ -55,6 +55,40 @@ describe('Settings & Letterhead UI Components', () => {
       expect(html).toContain('Oakridge International Academy')
       expect(html).not.toContain('text-3xs font-mono font-semibold')
     })
+
+    it('formats documentNumber cleanly without prepending hash to labeled titles', () => {
+      const htmlLabeled = renderToString(
+        <PrintLetterhead
+          documentType="Weekly Timetable"
+          documentNumber="Class: Class 1 - Section A"
+        />
+      )
+      expect(htmlLabeled).toContain('Class: Class 1 - Section A')
+      expect(htmlLabeled).not.toContain('#Class:')
+
+      const htmlCode = renderToString(
+        <PrintLetterhead
+          documentType="Fee Invoice"
+          documentNumber="INV-2026-001"
+        />
+      )
+      expect(htmlCode).toContain('#INV-2026-001')
+    })
+
+    it('renders phone and email bullet separator with visible print contrast', () => {
+      const html = renderToString(
+        <PrintLetterhead
+          school={{
+            name: 'Oakridge',
+            phone: '+1 555 1234',
+            email: 'admin@oakridge.edu',
+          }}
+          documentType="Receipt"
+        />
+      )
+      expect(html).toContain('print:text-gray-600')
+      expect(html).toContain('•')
+    })
   })
 
   describe('EducationTab Form Elements', () => {

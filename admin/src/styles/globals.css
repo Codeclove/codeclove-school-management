@@ -53,9 +53,9 @@
   --warning:        #b45309;
   --warning-dim:    rgba(180, 83, 9, 0.08);
   --warning-border: rgba(180, 83, 9, 0.22);
-  --danger:         #b91c1c;
-  --danger-dim:     rgba(185, 28, 28, 0.08);
-  --danger-border:  rgba(185, 28, 28, 0.22);
+  --danger:         #e11d48;
+  --danger-dim:     rgba(225, 29, 72, 0.08);
+  --danger-border:  rgba(225, 29, 72, 0.22);
   --info:           #0369a1;
   --info-dim:       rgba(3, 105, 161, 0.08);
   --info-border:    rgba(3, 105, 161, 0.22);
@@ -137,9 +137,9 @@
   --warning:        #f59e0b;
   --warning-dim:    rgba(245, 158, 11, 0.12);
   --warning-border: rgba(245, 158, 11, 0.28);
-  --danger:         #f87171;
-  --danger-dim:     rgba(248, 113, 113, 0.12);
-  --danger-border:  rgba(248, 113, 113, 0.28);
+  --danger:         #fb7185;
+  --danger-dim:     rgba(251, 113, 133, 0.12);
+  --danger-border:  rgba(251, 113, 133, 0.28);
   --info:           #38bdf8;
   --info-dim:       rgba(56, 189, 248, 0.12);
   --info-border:    rgba(56, 189, 248, 0.28);
@@ -230,8 +230,21 @@
   }
 
   :focus { outline: none; }
-  :focus-visible:not([role="menuitem"]):not([role="option"]) {
+
+  /* Accessible focus ring for interactive non-text elements (buttons, links, checkboxes, radios, focusable triggers).
+   * Uses :where() so selector has (0, 0, 0) specificity, allowing Tailwind utility classes (e.g. focus:ring-0) to override.
+   * Form text inputs, textareas, and selects manage their own component focus states (border-brand / ring-1). */
+  :where(:focus-visible:not([role="menuitem"]):not([role="option"]):not(input:not([type="checkbox"]):not([type="radio"])):not(textarea):not(select)) {
     @apply ring-2 ring-brand-ring ring-offset-1 ring-offset-bg-base rounded;
+  }
+
+  /* Prevent inner input ring/shadow leakage in composite input containers (e.g. hex chips, coordinate badges, URL copiers) */
+  [class*="focus-within:ring"] input:not([type="checkbox"]):not([type="radio"]),
+  [class*="focus-within:border"] input:not([type="checkbox"]):not([type="radio"]) {
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+    box-shadow: none !important;
+    outline: none !important;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -335,6 +348,17 @@
 
 
   .ellipsis { @apply overflow-hidden text-ellipsis whitespace-nowrap; }
+
+  /* Clean numeric badge inputs without native browser stepper arrows */
+  .no-spinner::-webkit-inner-spin-button,
+  .no-spinner::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .no-spinner {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */

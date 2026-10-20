@@ -26,13 +26,19 @@ export interface CodeCloveConfigType {
   logoutUrl: string
   /** Plugin assets URL */
   pluginUrl: string
+  /** Public Student & Parent Portal frontend URL */
+  portalUrl?: string
   /** Plugin version string */
   version: string
   /** Whether CODECLOVE_DEV_TOOLS or CODECLOVE_DEV is active */
   devMode?: boolean
   /** Whether running as full Pro plugin */
-  isPro?: boolean
-  /** Active license state and summary */
+   isPro?: boolean
+  /** Whether running with an authentic, verified commercial paid license */
+  isPaid?: boolean
+  /** Whether running on demo showcase site (demo.codeclove.com) */
+  isDemo?: boolean
+   /** Active license state and summary */
   license?: {
     status: string
     label: string

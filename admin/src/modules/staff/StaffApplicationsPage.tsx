@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Search, Eye, Pencil, X, Download, Trash2, Briefcase
+  Search, Pencil, X, Download, Trash2, Briefcase
 } from 'lucide-react'
 import { __, sprintf } from '@/lib/i18n'
 import {
@@ -37,8 +37,7 @@ export default function StaffApplicationsPage() {
   const debouncedSearch = useDebounce(search, 350)
 
   const table = useTableState()
-  const { selectedIds, clearSelection } = table
-
+  const { selectedIds, clearSelection, resetPage } = table
   const statusConfig: Record<string, { label: string; variant: BadgeProps['variant'] }> = useMemo(() => ({
     submitted:           { label: __( 'Submitted', 'codeclove-school-management' ),           variant: 'submitted' },
     under_review:        { label: __( 'Under Review', 'codeclove-school-management' ),        variant: 'under_review' },
@@ -53,10 +52,9 @@ export default function StaffApplicationsPage() {
 
   // Reset page and selection when filters change
   useEffect(() => {
-    table.resetPage()
-    table.clearSelection()
-  }, [status, datePreset, debouncedSearch, table.resetPage, table.clearSelection])
-
+    resetPage()
+    clearSelection()
+  }, [status, datePreset, debouncedSearch, resetPage, clearSelection])
   const getDateRange = (preset: string) => {
     if (!preset) return { date_from: undefined, date_to: undefined }
     const now = new Date()
@@ -95,7 +93,7 @@ export default function StaffApplicationsPage() {
   const total = applicationsData?.total ?? 0
 
   // Single delete
-  const handleDeleteSingle = async (app: StaffApplication) => {
+  const handleDeleteSingle = useCallback(async (app: StaffApplication) => {
     const isConfirmed = await confirm({
       title: __( 'Delete Staff Application', 'codeclove-school-management' ),
       message: sprintf(
@@ -117,8 +115,7 @@ export default function StaffApplicationsPage() {
         },
       }
     )
-  }
-
+  }, [bulkActionMutation, confirm, toast])
   // Bulk actions
   const handleBulkDelete = async () => {
     const isConfirmed = await confirm({
@@ -268,20 +265,7 @@ export default function StaffApplicationsPage() {
         header: __( 'Actions', 'codeclove-school-management' ),
         type: 'actions',
         render: (app) => (
-          <div className="flex items-center justify-end gap-1.5">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation()
-                navigate(`/staff/applications/${app.id}`)
-              }}
-              className="h-8 w-8 text-text-subtle hover:text-brand"
-              title={__( 'View Details', 'codeclove-school-management' )}
-              aria-label={__( 'View Details', 'codeclove-school-management' )}
-            >
-              <Eye size={14} />
-            </Button>
+          <div className="flex items-center justify-end gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -312,7 +296,7 @@ export default function StaffApplicationsPage() {
         ),
       },
     ],
-    [statusConfig, formatDate, navigate]
+    [statusConfig, formatDate, navigate, handleDeleteSingle]
   )
 
   return (

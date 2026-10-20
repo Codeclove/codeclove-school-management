@@ -16,6 +16,7 @@ function getActiveLocalization(): PortalLocalization | undefined {
 }
 
 export function getCleanLocale(): string | undefined {
+  if (typeof window === 'undefined') return undefined
   const raw = window.CodeClovePortalConfig?.locale || window.CodeCloveConfig?.locale
   if (!raw) return undefined
   return raw.replace(/_/g, '-')
@@ -49,6 +50,46 @@ export function formatDate(
   }).format(d)
 }
 
+/**
+ * Formats a date relative to now (e.g. "Just now", "15m ago", "2h ago", "Yesterday", "3d ago").
+ * Falls back to formatted date if older than 7 days.
+ */
+export function formatRelativeTime(dateInput: string | Date | null | undefined): string {
+  if (!dateInput) return '—'
+  const d = typeof dateInput === 'string'
+    ? (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)
+        ? new Date(`${dateInput}T00:00:00`)
+        : new Date(dateInput.replace(' ', 'T')))
+    : dateInput
+
+  if (isNaN(d.getTime())) return '—'
+
+  const diffMs = Date.now() - d.getTime()
+  if (diffMs < -60_000) {
+    return formatDate(d)
+  }
+  if (diffMs < 60_000 && diffMs >= -60_000) {
+    return 'Just now'
+  }
+  const diffSec = Math.floor(diffMs / 1000)
+  const diffMin = Math.floor(diffSec / 60)
+  const diffHour = Math.floor(diffMin / 60)
+  const diffDay = Math.floor(diffHour / 24)
+
+  if (diffMin < 60) {
+    return `${Math.max(1, diffMin)}m ago`
+  }
+  if (diffHour < 24) {
+    return `${diffHour}h ago`
+  }
+  if (diffDay === 1) {
+    return 'Yesterday'
+  }
+  if (diffDay < 7) {
+    return `${diffDay}d ago`
+  }
+  return formatDate(d)
+}
 export function formatTime(
   timeStr: string | Date | null | undefined,
   customFormat?: string

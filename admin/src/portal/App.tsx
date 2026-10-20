@@ -15,7 +15,7 @@ import { TimetablePage } from './modules/timetable/TimetablePage'
 import { AcademicsPage } from './modules/academics/AcademicsPage'
 import { NotificationsPage } from './modules/notifications/NotificationsPage'
 import { ProfilePage } from './modules/profile/ProfilePage'
-
+import { PortalCertificatesPage } from './modules/certificates/PortalCertificatesPage'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -42,6 +42,7 @@ export default function App() {
               <Route path="/academics" element={<AcademicsPage />} />
               {isPro && <Route path="/notifications" element={<NotificationsPage />} />}
               <Route path="/profile" element={<ProfilePage />} />
+              {isPro && <Route path="/certificates" element={<PortalCertificatesPage />} />}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

@@ -218,6 +218,44 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
       expect(html).toContain('/academics/timetable')
       expect(html).not.toMatch(/Timetable[\s\S]*?bg-amber-500\/15 text-amber-500 border border-amber-500\/25[\s\S]*?PRO/)
     })
+
+    it('renders Certificates in sidebar for Free users with PRO badge redirecting to upgrade page', () => {
+      // @ts-expect-error test mock override
+      window.CodeCloveConfig.isPro = false
+
+      const html = renderToString(
+        <MemoryRouter>
+          <FeedbackProvider>
+            <TooltipProvider>
+              <Sidebar />
+            </TooltipProvider>
+          </FeedbackProvider>
+        </MemoryRouter>
+      )
+
+      expect(html).toContain('Certificates')
+      expect(html).toContain('/pro-upgrade?feature=certificates')
+      expect(html).toMatch(/Certificates[\s\S]*?bg-amber-500\/15 text-amber-500 border border-amber-500\/25[\s\S]*?PRO/)
+    })
+
+    it('renders Certificates in sidebar for Pro users navigating to /academics/certificates without PRO badge', () => {
+      // @ts-expect-error test mock override
+      window.CodeCloveConfig.isPro = true
+
+      const html = renderToString(
+        <MemoryRouter>
+          <FeedbackProvider>
+            <TooltipProvider>
+              <Sidebar />
+            </TooltipProvider>
+          </FeedbackProvider>
+        </MemoryRouter>
+      )
+
+      expect(html).toContain('Certificates')
+      expect(html).toContain('/academics/certificates')
+      expect(html).not.toMatch(/Certificates[\s\S]*?bg-amber-500\/15 text-amber-500 border border-amber-500\/25[\s\S]*?PRO/)
+    })
   })
 
   describe('2. DefaultersReportPage Contextual Pro Lock', () => {

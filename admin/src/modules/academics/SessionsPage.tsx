@@ -5,7 +5,7 @@
  * date ranges, and term counts. Admins can create, edit, delete, or
  * manage terms within a session.
  */
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { sessionSchema, type SessionFormValues } from '@/schemas/academics'
@@ -45,6 +45,7 @@ import { AcademicsNav } from './components/AcademicsNav'
 import { useTableState } from '@/lib/useTableState'
 import { useDebounce } from '@/lib/useDebounce'
 import { __, sprintf } from '@/lib/i18n'
+import { calculateTermSplits } from './academic-utils'
 
 // ─── Status config helper ───────────────────────────────────────────────────
 
@@ -71,6 +72,7 @@ export default function SessionsPage() {
   const termLabelPlural = getLabel('academic_term', true, __( 'Academic Terms', 'codeclove-school-management' ))
 
   const table = useTableState()
+  const { resetPage, clearSelection } = table
   const [showModal, setShowModal] = useState(false)
   const [editTarget, setEditTarget] = useState<AcademicSession | null>(null)
   const [termsTarget, setTermsTarget] = useState<AcademicSession | null>(null)
@@ -81,6 +83,30 @@ export default function SessionsPage() {
 
   const { formatDate } = useFormatter()
   const statusConfig = useMemo(() => getStatusConfig(), [])
+  const deleteMutation = useDeleteSession()
+
+  const handleDelete = useCallback(
+    async (sessionItem: AcademicSession) => {
+      const isConfirmed = await confirm({
+        title: sprintf( __( 'Delete %s', 'codeclove-school-management' ), sessionLabelSingular ),
+        message: sprintf(
+          __( 'Are you sure you want to delete %s? This action uses soft delete and can be recovered from the database.', 'codeclove-school-management' ),
+          sessionItem.name
+        ),
+      })
+      if (!isConfirmed) return
+
+      deleteMutation.mutate(sessionItem.id, {
+        onSuccess: () => {
+          toast.success( sprintf( __( '%s deleted successfully!', 'codeclove-school-management' ), sessionLabelSingular ) )
+        },
+        onError: (err) => {
+          toast.error(err.message || sprintf( __( 'Failed to delete %s.', 'codeclove-school-management' ), sessionLabelSingular.toLowerCase() ))
+        }
+      })
+    },
+    [confirm, deleteMutation, sessionLabelSingular, toast]
+  )
 
   const columns = useMemo<DataTableColumn<AcademicSession>[]>(
     () => [
@@ -170,41 +196,20 @@ export default function SessionsPage() {
         ),
       },
     ],
-    [formatDate, statusConfig, termLabelPlural, sessionLabelSingular]
+    [formatDate, statusConfig, termLabelPlural, sessionLabelSingular, handleDelete]
   )
 
   // Reset page and selection when filters change
   useEffect(() => {
-    table.resetPage()
-    table.clearSelection()
-  }, [debouncedSearch, statusFilter, table.resetPage, table.clearSelection])
+    resetPage()
+    clearSelection()
+  }, [debouncedSearch, statusFilter, resetPage, clearSelection])
 
   const { data, isLoading, isError, refetch } = useSessions({
     search: debouncedSearch || undefined,
     status: statusFilter || undefined,
     ...table.params,
   })
-  const deleteMutation = useDeleteSession()
-
-  const handleDelete = async (sessionItem: AcademicSession) => {
-    const isConfirmed = await confirm({
-      title: sprintf( __( 'Delete %s', 'codeclove-school-management' ), sessionLabelSingular ),
-      message: sprintf(
-        __( 'Are you sure you want to delete %s? This action uses soft delete and can be recovered from the database.', 'codeclove-school-management' ),
-        sessionItem.name
-      ),
-    })
-    if (!isConfirmed) return
-
-    deleteMutation.mutate(sessionItem.id, {
-      onSuccess: () => {
-        toast.success( sprintf( __( '%s deleted successfully!', 'codeclove-school-management' ), sessionLabelSingular ) )
-      },
-      onError: (err) => {
-        toast.error(err.message || sprintf( __( 'Failed to delete %s.', 'codeclove-school-management' ), sessionLabelSingular.toLowerCase() ))
-      }
-    })
-  }
 
   const sessions = data?.data ?? []
   const total    = data?.total ?? 0
@@ -519,33 +524,6 @@ function SessionModal({
 
 // ─── Manage Terms Modal ──────────────────────────────────────────────────────
 
-export function calculateTermSplits(startStr: string, endStr: string, count: number, label: string) {
-  const start = new Date(startStr + 'T00:00:00')
-  const end = new Date(endStr + 'T00:00:00')
-  const totalDays = Math.round((end.getTime() - start.getTime()) / 864e5) + 1
-  const daysPerTerm = Math.floor(totalDays / count)
-  const prefix = count === 2 ? 'Semester' : count === 4 ? 'Quarter' : label
-  const code = count === 2 ? 'S' : count === 4 ? 'Q' : 'T'
-
-  // ponytail: en-CA locale formats natively as YYYY-MM-DD
-  const toYMD = (d: Date) => d.toLocaleDateString('en-CA')
-
-  return Array.from({ length: count }, (_, i) => {
-    const s = new Date(start)
-    s.setDate(s.getDate() + i * daysPerTerm)
-    const e = i === count - 1 ? end : new Date(start)
-    if (i !== count - 1) {
-      e.setDate(e.getDate() + (i + 1) * daysPerTerm - 1)
-    }
-    const finalEnd = e > end ? end : e
-    return {
-      name: `${prefix} ${i + 1}`,
-      code: `${code}${i + 1}`,
-      start_date: toYMD(s),
-      end_date: toYMD(finalEnd),
-    }
-  })
-}
 
 function ManageTermsModal({
   session,

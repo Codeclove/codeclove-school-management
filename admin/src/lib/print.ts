@@ -23,15 +23,21 @@ export function printElement(element: HTMLElement) {
     doc.write(node.outerHTML)
   })
 
-  const hasCustomPage = Boolean(element.outerHTML?.includes('@page'))
-  const defaultPageStyle = hasCustomPage
-    ? ''
-    : `
-      @page {
-        size: A4 portrait;
-        margin: 14mm;
-      }
-    `
+  const htmlContent = (element.outerHTML || '') + (element.innerHTML || '')
+  const isLandscape = Boolean(
+    htmlContent.includes('A4 landscape') ||
+    htmlContent.includes('size: A4 landscape') ||
+    htmlContent.includes('size: landscape') ||
+    (htmlContent.includes('landscape') && htmlContent.includes('@page')) ||
+    htmlContent.includes('data-orientation="landscape"') ||
+    element.getAttribute?.('data-orientation') === 'landscape'
+  )
+  const defaultPageStyle = `
+    @page {
+      size: ${isLandscape ? 'A4 landscape' : 'A4 portrait'};
+      margin: ${isLandscape ? '8mm 10mm' : '14mm'};
+    }
+  `
 
   doc.write(`
     <style>
@@ -60,6 +66,17 @@ export function printElement(element: HTMLElement) {
         margin: 0 !important;
         padding: 0 !important;
       }
+      [data-certificate-document] {
+        box-sizing: border-box !important;
+        width: ${isLandscape ? '297mm' : '210mm'} !important;
+        height: ${isLandscape ? '209.5mm' : '296.5mm'} !important;
+        max-height: ${isLandscape ? '209.5mm' : '296.5mm'} !important;
+        overflow: hidden !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
       .print-page-break {
         page-break-after: always !important;
         break-after: page !important;
@@ -80,8 +97,11 @@ export function printElement(element: HTMLElement) {
   const wrapperOpen = isPortal ? '<div id="codeclove-portal-root">' : ''
   const wrapperClose = isPortal ? '</div>' : ''
 
+  const printBody = element.getAttribute?.('data-certificate-document')
+    ? element.outerHTML
+    : element.innerHTML
   doc.write(`</head><body>${wrapperOpen}`)
-  doc.write(element.innerHTML)
+  doc.write(printBody)
   doc.write(`${wrapperClose}</body></html>`)
   doc.close()
 

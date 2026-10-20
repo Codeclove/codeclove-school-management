@@ -3,10 +3,10 @@
  *
  * Displays a searchable, paginated grid of faculty and administrative staff.
  */
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Plus, Trash2, Pencil, Eye, Mail, Phone, Upload, Printer
+  Plus, Trash2, Pencil, Mail, Phone, Upload, Printer, Download
 } from 'lucide-react'
 import {
   useStaff,
@@ -25,6 +25,7 @@ import { useFormatter } from '@/lib/formatter'
 import { printElement } from '@/lib/print'
 import { __, sprintf } from '@/lib/i18n'
 import { StaffIdCard } from './components/StaffIdCard'
+import { exportToCSV } from '@/lib/csv'
 import {
   Button, Badge,
   Select,
@@ -43,7 +44,7 @@ export default function StaffDirectoryPage() {
   const staffLabelSingular = entity.singular
   const staffLabelPlural = entity.plural
   const table = useTableState({ defaultOrderBy: 'id', defaultOrder: 'desc' })
-  const { selectedIds, setSelectedIds, clearSelection } = table
+  const { selectedIds, setSelectedIds, clearSelection, resetPage } = table
   const { session } = useSession()
   const { data: settings } = useSettings()
   const { formatDate } = useFormatter()
@@ -82,10 +83,62 @@ export default function StaffDirectoryPage() {
   const staffList = data?.data ?? []
   const total = data?.total ?? 0
 
+  const handleExportCSV = useCallback(() => {
+    const listToExport = selectedIds.length > 0
+      ? staffList.filter((s) => selectedIds.includes(s.id))
+      : staffList
+
+    if (!listToExport.length) {
+      toast.error(sprintf(__('No %s available to export.', 'codeclove-school-management'), staffLabelPlural.toLowerCase()))
+      return
+    }
+
+    const headers = [
+      __('Staff ID', 'codeclove-school-management'),
+      __('First Name', 'codeclove-school-management'),
+      __('Last Name', 'codeclove-school-management'),
+      __('Email', 'codeclove-school-management'),
+      __('Phone', 'codeclove-school-management'),
+      __('Designation', 'codeclove-school-management'),
+      __('Department', 'codeclove-school-management'),
+      __('System Role', 'codeclove-school-management'),
+      __('Joined On', 'codeclove-school-management'),
+      __('Status', 'codeclove-school-management'),
+    ]
+
+    const rows = listToExport.map((s) => [
+      s.staff_number || '',
+      s.first_name || '',
+      s.last_name || '',
+      s.email || '',
+      s.phone || '',
+      s.designation || '',
+      s.department || '',
+      s.role_name || '',
+      s.joined_on || '',
+      s.status || '',
+    ])
+
+    exportToCSV(`staff_export_${Date.now()}`, headers, rows)
+    toast.success(
+      sprintf(
+        __('Exported %d %s to CSV.', 'codeclove-school-management'),
+        listToExport.length,
+        listToExport.length === 1 ? staffLabelSingular.toLowerCase() : staffLabelPlural.toLowerCase()
+      )
+    )
+  }, [
+    selectedIds,
+    staffList,
+    staffLabelSingular,
+    staffLabelPlural,
+    formatDate,
+    toast,
+  ])
   // Reset selection on data change
   useEffect(() => {
     setSelectedIds([])
-  }, [data])
+  }, [data, setSelectedIds])
 
   const handleBulkStatus = (newStatus: string) => {
     bulkActionMutation.mutate(
@@ -143,41 +196,44 @@ export default function StaffDirectoryPage() {
 
   // Reset to page 1 and clear selection on filter changes
   useEffect(() => {
-    table.resetPage()
-    table.clearSelection()
-  }, [status, roleId, debouncedSearch, table.resetPage, table.clearSelection])
+    resetPage()
+    clearSelection()
+  }, [status, roleId, debouncedSearch, resetPage, clearSelection])
 
   // Handle delete
-  const handleDelete = async (staff: Staff) => {
-    const isConfirmed = await confirm({
-      title: sprintf(__('Delete %s Record', 'codeclove-school-management'), staffLabelSingular),
-      message: sprintf(
-        __('Are you absolutely sure you want to remove %1$s %2$s (%3$s)? This will hide them from active view.', 'codeclove-school-management'),
-        staff.first_name,
-        staff.last_name,
-        staff.staff_number
-      ),
-    })
-    if (!isConfirmed) return
+  const handleDelete = useCallback(
+    async (staff: Staff) => {
+      const isConfirmed = await confirm({
+        title: sprintf(__('Delete %s Record', 'codeclove-school-management'), staffLabelSingular),
+        message: sprintf(
+          __('Are you absolutely sure you want to remove %1$s %2$s (%3$s)? This will hide them from active view.', 'codeclove-school-management'),
+          staff.first_name,
+          staff.last_name,
+          staff.staff_number
+        ),
+      })
+      if (!isConfirmed) return
 
-    deleteMutation.mutate(staff.id, {
-      onSuccess: () => {
-        toast.success(
-          sprintf(
-            __('Successfully removed %1$s %2$s from records.', 'codeclove-school-management'),
-            staff.first_name,
-            staff.last_name
+      deleteMutation.mutate(staff.id, {
+        onSuccess: () => {
+          toast.success(
+            sprintf(
+              __('Successfully removed %1$s %2$s from records.', 'codeclove-school-management'),
+              staff.first_name,
+              staff.last_name
+            )
           )
-        )
-      },
-      onError: (err) => {
-        toast.error(
-          err.message ||
-            sprintf(__('Failed to delete %s.', 'codeclove-school-management'), staffLabelSingular.toLowerCase())
-        )
-      },
-    })
-  }
+        },
+        onError: (err) => {
+          toast.error(
+            err.message ||
+              sprintf(__('Failed to delete %s.', 'codeclove-school-management'), staffLabelSingular.toLowerCase())
+          )
+        },
+      })
+    },
+    [confirm, deleteMutation, staffLabelSingular, toast]
+  )
 
   const columns: DataTableColumn<StaffMember>[] = useMemo(
     () => [
@@ -257,16 +313,7 @@ export default function StaffDirectoryPage() {
         header: __('Actions', 'codeclove-school-management'),
         type: 'actions',
         render: (staff) => (
-          <div className="flex items-center justify-end gap-1.5">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(`/staff/${staff.id}`)}
-              className="h-8 w-8 text-text-subtle hover:text-brand"
-              title={__('View Profile', 'codeclove-school-management')}
-            >
-              <Eye size={14} />
-            </Button>
+          <div className="flex items-center justify-end gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -289,7 +336,7 @@ export default function StaffDirectoryPage() {
         ),
       },
     ],
-    [staffLabelSingular, navigate]
+    [staffLabelSingular, navigate, handleDelete]
   )
   return (
     <div className="space-y-6">
@@ -299,6 +346,16 @@ export default function StaffDirectoryPage() {
         description={__('Manage faculty details, departments, and roles in one dashboard.', 'codeclove-school-management')}
         actions={
           <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleExportCSV}
+              disabled={!staffList.length}
+              className="gap-1.5"
+              title={__('Export CSV', 'codeclove-school-management')}
+            >
+              <Download size={14} />
+              {__('Export CSV', 'codeclove-school-management')}
+            </Button>
             <Button variant="secondary" onClick={() => navigate('/staff/import')} className="gap-1.5">
               <Upload size={14} />
               {__('Bulk Import', 'codeclove-school-management')}
@@ -376,11 +433,22 @@ export default function StaffDirectoryPage() {
               <Printer size={12} />
               {__('Print ID Badges', 'codeclove-school-management')}
             </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleExportCSV}
+              className="gap-1.5 h-7 text-xs bg-bg-surface"
+            >
+              <Download size={12} />
+              {__('Export CSV', 'codeclove-school-management')}
+            </Button>
             <Select
               value=""
               onValueChange={(val) => {
                 if (val === 'delete') {
                   handleBulkDelete()
+                } else if (val === 'export') {
+                  handleExportCSV()
                 } else if (val.startsWith('status:')) {
                   handleBulkStatus(val.replace('status:', ''))
                 }
@@ -388,6 +456,7 @@ export default function StaffDirectoryPage() {
               placeholder={__('Bulk Actions', 'codeclove-school-management')}
               options={[
                 { value: '', label: __('Bulk Actions', 'codeclove-school-management') },
+                { value: 'export', label: __('Export Selected to CSV', 'codeclove-school-management') },
                 { value: 'status:active', label: __('Mark Active', 'codeclove-school-management') },
                 { value: 'status:inactive', label: __('Mark Inactive', 'codeclove-school-management') },
                 { value: 'status:suspended', label: __('Mark Suspended', 'codeclove-school-management') },

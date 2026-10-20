@@ -89,13 +89,15 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-end gap-3 pt-1">
             <button
               type="button"
+              data-dialog-cancel
               onClick={() => handleClose(false)}
-              className="text-sm font-semibold text-text-muted hover:text-text bg-transparent hover:bg-transparent transition-colors px-3 py-2"
+              className="text-sm font-semibold text-text-muted hover:text-text bg-transparent hover:bg-transparent transition-colors px-3 py-2 rounded-lg focus-visible:ring-2 focus-visible:ring-brand-ring"
             >
               {options?.cancelText || __( 'Cancel', 'codeclove-school-management' )}
             </button>
             <Button
               variant={options?.variant === 'danger' || options?.variant === 'warning' ? 'danger' : 'default'}
+              data-dialog-confirm
               onClick={() => handleClose(true)}
               className="h-10 px-4 text-sm font-semibold rounded-lg"
             >

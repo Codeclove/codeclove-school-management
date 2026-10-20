@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Pencil, Trash2, Coins } from 'lucide-react'
 import { __, _n, sprintf } from '@/lib/i18n'
@@ -43,11 +43,12 @@ export default function FeeTypesPage() {
   const [scope, setScope] = useState('all')
   const [hasOverrides, setHasOverrides] = useState<'all' | 'yes' | 'no'>('all')
   const table = useTableState({ defaultPerPage: 10 })
+  const { resetPage } = table
 
   // Reset page when debounced search changes
   useEffect(() => {
-    table.resetPage()
-  }, [debouncedSearch])
+    resetPage()
+  }, [debouncedSearch, resetPage])
 
   // Queries / Mutations
   const { data, isLoading, isError, refetch } = useFeeTypes({
@@ -63,25 +64,28 @@ export default function FeeTypesPage() {
   const feeTypes = data?.data || []
   const total = data?.pagination?.total || 0
 
-  const handleDelete = async (id: number) => {
-    const isConfirmed = await confirm({
-      title: sprintf(__('Archive %s', 'codeclove-school-management'), feeTypeLabel),
-      message: sprintf(__('Are you sure you want to archive this %s?', 'codeclove-school-management'), feeTypeLabel.toLowerCase()),
-      variant: 'warning',
-      confirmText: __('Archive', 'codeclove-school-management')
-    })
-    if (!isConfirmed) return
+  const handleDelete = useCallback(
+    async (id: number) => {
+      const isConfirmed = await confirm({
+        title: sprintf(__('Archive %s', 'codeclove-school-management'), feeTypeLabel),
+        message: sprintf(__('Are you sure you want to archive this %s?', 'codeclove-school-management'), feeTypeLabel.toLowerCase()),
+        variant: 'warning',
+        confirmText: __('Archive', 'codeclove-school-management'),
+      })
+      if (!isConfirmed) return
 
-    deleteMutation.mutate(id, {
-      onSuccess: () => {
-        toast.success(sprintf(__('%s archived successfully.', 'codeclove-school-management'), feeTypeLabel))
-      },
-      onError: (err: unknown) => {
-        const message = err instanceof Error ? err.message : ''
-        toast.error(message || sprintf(__('Failed to delete %s', 'codeclove-school-management'), feeTypeLabel.toLowerCase()))
-      },
-    })
-  }
+      deleteMutation.mutate(id, {
+        onSuccess: () => {
+          toast.success(sprintf(__('%s archived successfully.', 'codeclove-school-management'), feeTypeLabel))
+        },
+        onError: (err: unknown) => {
+          const message = err instanceof Error ? err.message : ''
+          toast.error(message || sprintf(__('Failed to delete %s', 'codeclove-school-management'), feeTypeLabel.toLowerCase()))
+        },
+      })
+    },
+    [confirm, deleteMutation, feeTypeLabel, toast]
+  )
 
   const getFrequencyBadge = (freq: string) => {
     const labels: Record<string, string> = {
@@ -177,7 +181,7 @@ export default function FeeTypesPage() {
         ),
       },
     ],
-    [formatCurrency, navigate]
+    [formatCurrency, handleDelete, navigate]
   )
 
   return (

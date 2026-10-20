@@ -28,6 +28,9 @@ interface ModalProps {
   hideHeader?: boolean
   noHeaderBorder?: boolean
   container?: HTMLElement | null
+  initialFocusRef?: React.RefObject<HTMLElement | null>
+  isLoading?: boolean
+  disableShortcuts?: boolean
 }
 
 const SIZE_CLASSES: Record<NonNullable<ModalProps['size']>, string> = {
@@ -48,6 +51,9 @@ export function Modal({
   hideHeader = false,
   noHeaderBorder = false,
   container,
+  initialFocusRef,
+  isLoading = false,
+  disableShortcuts = false,
 }: ModalProps) {
   const contentRef = useRef<HTMLDivElement>(null)
   const portalContainer = getPortalContainer(container)
@@ -66,7 +72,87 @@ export function Modal({
         {/* Panel */}
         <DialogPrimitive.Content
           ref={contentRef}
+          onEscapeKeyDown={(e) => {
+            if (isLoading) {
+              e.preventDefault()
+            }
+          }}
+          onOpenAutoFocus={(e) => {
+            if (initialFocusRef?.current) {
+              e.preventDefault()
+              initialFocusRef.current.focus()
+              return
+            }
+
+            const content = contentRef.current
+            if (!content) return
+
+            // 1. Explicit [data-autofocus] or [autofocus]
+            const explicit = content.querySelector<HTMLElement>('[data-autofocus], [autofocus]')
+            if (explicit) {
+              e.preventDefault()
+              explicit.focus()
+              return
+            }
+
+            // 2. Destructive / Confirm: prioritize Cancel button as safest default
+            const cancelBtn = content.querySelector<HTMLElement>('[data-dialog-cancel], [data-action="cancel"]')
+            if (cancelBtn) {
+              e.preventDefault()
+              cancelBtn.focus()
+              return
+            }
+
+            // 3. Form modals: focus first visible enabled input/select/textarea
+            const firstInput = content.querySelector<HTMLElement>(
+              'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
+            )
+            if (firstInput) {
+              e.preventDefault()
+              firstInput.focus()
+              return
+            }
+
+            // 4. Fallback: focus first action button inside modal body or footer (never the header X button)
+            const bodyAction = content.querySelector<HTMLElement>(
+              '[data-modal-body] button:not([disabled]), [data-modal-footer] button:not([disabled])'
+            )
+            if (bodyAction) {
+              e.preventDefault()
+              bodyAction.focus()
+              return
+            }
+
+            // Prevent default to prevent focus jumping to the header X close button
+            e.preventDefault()
+          }}
+          onKeyDown={(e) => {
+            if (disableShortcuts || isLoading) return
+
+            // Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux) triggers the confirm / primary button
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+              const target = e.target as HTMLElement | null
+
+              // If inside a multiline textarea, allow Cmd+Enter only if in a form or explicitly permitted
+              if (target instanceof HTMLTextAreaElement && !target.dataset.allowCmdEnter) {
+                const form = target.closest('form')
+                if (!form) return
+              }
+
+              const confirmBtn = contentRef.current?.querySelector<HTMLButtonElement>(
+                'button[data-dialog-confirm]:not([disabled]), button[type="submit"]:not([disabled])'
+              )
+              if (confirmBtn) {
+                e.preventDefault()
+                confirmBtn.click()
+              }
+            }
+          }}
           onPointerDownOutside={(e) => {
+            if (isLoading) {
+              e.preventDefault()
+              return
+            }
             const ev = e.detail.originalEvent
             if (!contentRef.current || !ev) return
             const rect = contentRef.current.getBoundingClientRect()
@@ -123,7 +209,10 @@ export function Modal({
           )}
 
           {/* Scrollable body */}
-          <div className={cn("flex-1 overflow-y-auto", hideHeader ? "p-0" : "px-6 py-5")}>
+          <div
+            data-modal-body
+            className={cn("flex-1 overflow-y-auto", hideHeader ? "p-0" : "px-6 py-5")}
+          >
             {children}
           </div>
         </DialogPrimitive.Content>
@@ -143,6 +232,7 @@ export function ModalFooter({
 }) {
   return (
     <div
+      data-modal-footer
       className={cn(
         'flex items-center justify-end gap-2 pt-4 border-t border-border mt-4',
         className

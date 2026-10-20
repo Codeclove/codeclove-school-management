@@ -97,7 +97,7 @@ export default function PromotionPage() {
   const allActiveStudents = studentsListResult?.data ?? []
   // ─── Queries & Mutations ──────────────────────────────────────────────────────
   const { data: sessionsData } = useSessions({ per_page: 100 })
-  const sessions = sessionsData?.data ?? []
+  const sessions = useMemo(() => sessionsData?.data ?? [], [sessionsData])
 
   // Default source session to active session
   useEffect(() => {
@@ -119,17 +119,17 @@ export default function PromotionPage() {
     academic_session_id: sourceSessionId ? parseInt(sourceSessionId) : undefined,
     per_page: 200,
   })
-  const sourceUnits = sourceUnitsData?.data ?? []
+  const sourceUnits = useMemo(() => sourceUnitsData?.data ?? [], [sourceUnitsData])
 
   const { data: targetUnitsData } = useUnits({
     academic_session_id: targetSessionId ? parseInt(targetSessionId) : undefined,
     per_page: 200,
   })
-  const targetUnits = targetUnitsData?.data ?? []
+  const targetUnits = useMemo(() => targetUnitsData?.data ?? [], [targetUnitsData])
 
   // Load all sections/groups
   const { data: groupsData } = useGroups({ per_page: 500 })
-  const allGroups = groupsData?.data ?? []
+  const allGroups = useMemo(() => groupsData?.data ?? [], [groupsData])
 
   // Map groups by unit ID
   const groupsByUnit = useMemo(() => {

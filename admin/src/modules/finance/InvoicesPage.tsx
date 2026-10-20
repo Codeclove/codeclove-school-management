@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Trash2, X, Printer, SlidersHorizontal, Wallet, CheckCircle2, AlertCircle } from 'lucide-react'
 import { __, sprintf } from '@/lib/i18n'
@@ -63,7 +63,7 @@ export default function InvoicesPage() {
     }
   }, [printingInvoice])
 
-  const handlePrintInvoice = async (invoiceId: number, e: React.MouseEvent) => {
+  const handlePrintInvoice = useCallback(async (invoiceId: number, e: React.MouseEvent) => {
     e.stopPropagation()
     setIsPrintLoading(invoiceId)
     try {
@@ -75,14 +75,14 @@ export default function InvoicesPage() {
     } finally {
       setIsPrintLoading(null)
     }
-  }
+  }, [toast])
 
   const table = useTableState({
     defaultPerPage: 10,
     defaultOrderBy: 'created_at',
     defaultOrder: 'desc',
   })
-  const { selectedIds, clearSelection } = table
+  const { selectedIds, clearSelection, resetPage } = table
   const [discountModalOpen, setDiscountModalOpen] = useState(false)
   const [discountAmount, setDiscountAmount] = useState('')
   const [discountNote, setDiscountNote] = useState('')
@@ -98,7 +98,7 @@ export default function InvoicesPage() {
     }
   }, [printingInvoices])
 
-  const handleBulkPrintInvoices = async () => {
+  const handleBulkPrintInvoices = useCallback(async () => {
     setIsBulkPrintLoading(true)
     try {
       const results = await Promise.all(
@@ -114,9 +114,9 @@ export default function InvoicesPage() {
     } finally {
       setIsBulkPrintLoading(false)
     }
-  }
+  }, [selectedIds, toast])
 
-  const handleBulkSendReminders = () => {
+  const handleBulkSendReminders = useCallback(() => {
     bulkActionMutation.mutate(
       { action: 'send_reminders', ids: selectedIds },
       {
@@ -133,9 +133,9 @@ export default function InvoicesPage() {
         }
       }
     )
-  }
+  }, [bulkActionMutation, clearSelection, invoiceLabelPlural, selectedIds, toast])
 
-  const handleBulkCancel = async () => {
+  const handleBulkCancel = useCallback(async () => {
     const isConfirmed = await confirm({
       title: sprintf(__('Bulk Cancel %s', 'codeclove-school-management'), invoiceLabelPlural),
       message: sprintf(__('Are you sure you want to cancel the %1$d selected %2$s?', 'codeclove-school-management'), selectedIds.length, invoiceLabelPlural.toLowerCase()),
@@ -160,9 +160,9 @@ export default function InvoicesPage() {
         }
       }
     )
-  }
+  }, [bulkActionMutation, clearSelection, confirm, invoiceLabelPlural, selectedIds, toast])
 
-  const handleBulkVoid = async () => {
+  const handleBulkVoid = useCallback(async () => {
     const isConfirmed = await confirm({
       title: sprintf(__('Bulk Void %s', 'codeclove-school-management'), invoiceLabelPlural),
       message: sprintf(__('Are you sure you want to void the %1$d selected %2$s?', 'codeclove-school-management'), selectedIds.length, invoiceLabelPlural.toLowerCase()),
@@ -186,7 +186,7 @@ export default function InvoicesPage() {
         }
       }
     )
-  }
+  }, [bulkActionMutation, clearSelection, confirm, invoiceLabelPlural, selectedIds, toast])
 
   const handleBulkDiscountSubmit = () => {
     const minorAmount = Math.round(parseFloat(discountAmount) * 100)
@@ -251,9 +251,9 @@ export default function InvoicesPage() {
     setStartDate('')
     setEndDate('')
     setDateType('issue_date')
-    table.resetPage()
+    resetPage()
     clearSelection()
-  }, [session?.id, table.resetPage, clearSelection])
+  }, [session?.id, resetPage, clearSelection])
 
   // Clear selection when debounced search changes
   useEffect(() => {
@@ -265,7 +265,7 @@ export default function InvoicesPage() {
     if (startDate || endDate) {
       setShowAdvanced(true)
     }
-  }, [])
+  }, [startDate, endDate])
 
   // Queries
   const { data: invoicesData, isLoading, isError, refetch } = useInvoices({
@@ -280,7 +280,7 @@ export default function InvoicesPage() {
     ...table.params,
   })
   const deleteInvoiceMutation = useDeleteInvoice()
-  const list = invoicesData?.data || []
+  const list = useMemo(() => invoicesData?.data || [], [invoicesData?.data])
   const total = invoicesData?.pagination?.total || 0
 
   // Reset selection on data change
@@ -309,7 +309,7 @@ export default function InvoicesPage() {
 
   const handleOpenAdd = () => navigate('/finance/invoices/new')
 
-  const handleDelete = async (id: number, e: React.MouseEvent) => {
+  const handleDelete = useCallback(async (id: number, e: React.MouseEvent) => {
     e.stopPropagation()
     const isConfirmed = await confirm({
       title: sprintf(__('Void/Cancel %s', 'codeclove-school-management'), invoiceLabel),
@@ -327,7 +327,7 @@ export default function InvoicesPage() {
         toast.error(message || sprintf(__('Failed to void %s', 'codeclove-school-management'), invoiceLabel.toLowerCase()))
       }
     })
-  }
+  }, [confirm, deleteInvoiceMutation, invoiceLabel, toast])
   // Clear selection when filters change
   useEffect(() => {
     clearSelection()
@@ -423,7 +423,7 @@ export default function InvoicesPage() {
         ),
       },
     ],
-    [studentLabel, formatDate, formatCurrency, isPrintLoading, deleteInvoiceMutation.isPending]
+    [studentLabel, formatDate, formatCurrency, handlePrintInvoice, isPrintLoading, handleDelete, deleteInvoiceMutation.isPending]
   )
 
   const bulkActions = useMemo(
@@ -465,7 +465,7 @@ export default function InvoicesPage() {
         />
       </>
     ),
-    [isBulkPrintLoading, selectedIds]
+    [handleBulkPrintInvoices, isBulkPrintLoading, handleBulkCancel, handleBulkVoid, handleBulkSendReminders]
   )
   return (
     <div className="space-y-6">

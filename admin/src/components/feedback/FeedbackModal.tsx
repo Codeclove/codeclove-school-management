@@ -57,7 +57,7 @@ async function copyToClipboard(text: string): Promise<boolean> {
 
 // ─── Options & Types ──────────────────────────────────────────────────────────
 
-export const AREA_OPTIONS = [
+const AREA_OPTIONS = [
   { value: 'General', label: 'General / Platform' },
   { value: 'Academics', label: 'Academics & Classes' },
   { value: 'Admissions', label: 'Admissions' },
@@ -69,7 +69,7 @@ export const AREA_OPTIONS = [
   { value: 'Settings', label: 'Settings & Localization' },
 ]
 
-export const VECTOR_OPTIONS = [
+const VECTOR_OPTIONS = [
   { value: 'ux', label: 'UX Friction (Confusing, slow, or too many clicks)' },
   { value: 'capability', label: 'Capability Gap (Missing feature for your school)' },
   { value: 'compliance', label: 'Regional Compliance (Board or legal requirement)' },
@@ -77,9 +77,9 @@ export const VECTOR_OPTIONS = [
   { value: 'general', label: 'General Refinement' },
 ]
 
-export type Priority = 'p0' | 'p1' | 'p2' | 'p3'
+type Priority = 'p0' | 'p1' | 'p2' | 'p3'
 
-export const PRIORITY_OPTIONS = [
+const PRIORITY_OPTIONS = [
   { value: 'p2', label: 'Normal — Feature issue (workaround exists)' },
   { value: 'p1', label: 'High — Core workflow broken' },
   { value: 'p0', label: 'Blocker — System crash or data loss' },
@@ -134,8 +134,9 @@ function formatRelativeTime(timestampSeconds: number): string {
 
 export function FeedbackModal() {
   const { isOpen, options, closeFeedback } = useFeedbackModal()
-  const isPro = window.CodeCloveConfig?.isPro ?? false
-  const proUrl = window.CodeCloveConfig?.proUrl || 'https://codeclove.com/?utm_source=wp_plugin&utm_medium=feedback_modal&utm_campaign=upgrade'
+   const isPro = window.CodeCloveConfig?.isPro ?? false
+  const isPaid = window.CodeCloveConfig?.isPaid ?? false
+   const proUrl = window.CodeCloveConfig?.proUrl || 'https://codeclove.com/?utm_source=wp_plugin&utm_medium=feedback_modal&utm_campaign=upgrade'
   const toast = useToast()
 
   const [activeTab, setActiveTab] = useState<'bug' | 'feedback'>(options.type || 'bug')
@@ -418,7 +419,7 @@ export function FeedbackModal() {
         }
       }}
       title={
-        isPro ? (
+        isPaid ? (
           <div className="flex items-center gap-2.5 flex-wrap">
             <span>{__( 'Feedback & Bug Report', 'codeclove-school-management' )}</span>
             {licenseInfo.status === 'active' ? (
@@ -455,14 +456,13 @@ export function FeedbackModal() {
         )
       }
       description={
-        isPro
+        isPaid
           ? __( 'Direct triage with CodeClove core engineering. Submissions create tracked issues.', 'codeclove-school-management' )
           : __( 'Get assistance through community forums and documentation, or upgrade for direct engineering support.', 'codeclove-school-management' )
       }
       size="lg"
     >
-      {!isPro ? (
-        /* ─── Free User View ────────────────────────────────────────── */
+      {!isPaid ? (
         <div className="space-y-4 py-1">
           {/* Support Resources Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

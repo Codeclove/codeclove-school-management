@@ -69,7 +69,7 @@ export const ProfilePage: React.FC = () => {
   const { data: profileData, isLoading } = useProfile(currentStudent?.id)
   const updateProfileMutation = useUpdateProfile()
   const student = profileData?.student ?? currentStudent
-  const guardians = profileData?.guardians ?? []
+  const guardians = useMemo(() => profileData?.guardians ?? [], [profileData?.guardians])
 
   // Contact edit mode state
   const [isEditingContact, setIsEditingContact] = useState(false)

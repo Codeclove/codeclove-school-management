@@ -17,12 +17,19 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, Plus, LogOut, User, Bell,
   Sun, Moon, Monitor, CalendarDays, Menu, ChevronDown, Check,
-  Settings, UserPlus, Receipt, Briefcase, Megaphone,
+  Settings,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ROUTES, PERMISSIONS } from '@/lib/constants'
-import { usePermissions, type PermissionKey } from '@/lib/permissions'
+import { usePermissions } from '@/lib/permissions'
+import {
+  IS_MAC,
+  getNotificationButtonAriaLabel,
+  formatRelativeTime,
+  QUICK_CREATE_ACTIONS,
+  getSignOutUrl,
+} from './header-utils'
 import { useTheme, type ThemeMode } from '@/lib/theme'
 import { useSettings, useUpdateSettings } from '@/api/settings'
 import { useSession } from '@/lib/session-context'
@@ -214,13 +221,6 @@ function SessionSelector() {
 
 // ─── Search Button ────────────────────────────────────────────────────────────
 
-export function getSearchShortcut(platformStr: string): string {
-  return /mac|iphone|ipad|ipod/i.test(platformStr) ? '⌘K' : 'Ctrl+K'
-}
-
-export const IS_MAC = typeof navigator !== 'undefined' && /mac|iphone|ipad|ipod/i.test(
-  (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform || navigator.platform || navigator.userAgent || ''
-)
 
 function SearchButton({ onClick }: { onClick?: () => void }) {
   return (
@@ -245,23 +245,6 @@ function SearchButton({ onClick }: { onClick?: () => void }) {
 
 // ─── Relative Time Helper ─────────────────────────────────────────────────────
 
-export function formatRelativeTime(dateString: string, now: Date = new Date()): string {
-  const date = new Date(dateString)
-  const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000)
-  if (Number.isNaN(diffSec) || diffSec < 60) return 'just now'
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`
-  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
-  })
-}
-
-export function getNotificationButtonAriaLabel(unreadCount: number): string {
-  return unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'
-}
 
 function NotificationsButton() {
   const navigate = useNavigate()
@@ -372,17 +355,6 @@ function NotificationsButton() {
 
 // ─── Quick Create ─────────────────────────────────────────────────────────────
 
-export const QUICK_CREATE_ACTIONS: Array<{
-  label: string
-  to: string
-  icon: LucideIcon
-  permission: PermissionKey | PermissionKey[]
-}> = [
-  { label: __( 'Create Invoice', 'codeclove-school-management' ),   to: ROUTES.INVOICE_NEW,       icon: Receipt,       permission: PERMISSIONS.INVOICES_ADD },
-  { label: __( 'Admit Student', 'codeclove-school-management' ),    to: ROUTES.STUDENT_NEW,       icon: UserPlus,      permission: [PERMISSIONS.STUDENTS_ADD, PERMISSIONS.ADMISSIONS_ADD] },
-  { label: __( 'New Staff Record', 'codeclove-school-management' ), to: ROUTES.STAFF_NEW,         icon: Briefcase,     permission: PERMISSIONS.STAFF_ADD },
-  { label: __( 'New Announcement', 'codeclove-school-management' ), to: `${ROUTES.ANNOUNCEMENTS}?create=true`, icon: Megaphone, permission: PERMISSIONS.NOTIFICATIONS_MANAGE },
-]
 
 function QuickCreateButton() {
   const navigate = useNavigate()
@@ -478,11 +450,6 @@ function ThemeToggle() {
 
 // ─── User Menu ────────────────────────────────────────────────────────────────
 
-export function getSignOutUrl(config?: { adminUrl?: string; logoutUrl?: string }): string {
-  return config?.logoutUrl || (config?.adminUrl
-    ? `${config.adminUrl.replace(/wp-admin\/.*$/, '')}wp-login.php?action=logout`
-    : '/wp-login.php?action=logout')
-}
 
 function UserMenu() {
   const navigate = useNavigate()

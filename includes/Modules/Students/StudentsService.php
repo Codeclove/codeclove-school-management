@@ -310,8 +310,21 @@ final class StudentsService {
 			if ( ! validate_username( $username ) ) {
 				return new WP_Error( 'invalid_username', __( 'The provided username contains invalid characters.', 'codeclove-school-management' ), 400 );
 			}
-			if ( username_exists( $username ) ) {
-				return new WP_Error( 'username_exists', __( 'This username is already registered in WordPress.', 'codeclove-school-management' ), 400 );
+			if ( ( $existing_u_id = username_exists( $username ) ) ) {
+				$existing_user = get_userdata( (int) $existing_u_id );
+				return new WP_Error(
+					'username_exists',
+					__( 'This username is already registered in WordPress.', 'codeclove-school-management' ),
+					[
+						'status'        => 400,
+						'existing_user' => $existing_user ? [
+							'id'           => (int) $existing_user->ID,
+							'username'     => $existing_user->user_login,
+							'email'        => $existing_user->user_email,
+							'display_name' => $existing_user->display_name ?: $existing_user->user_login,
+						] : null,
+					]
+				);
 			}
 		} else {
 			$clean_base = strtolower( preg_replace( '/[^a-zA-Z0-9_.-]/', '', (string) $default_base ) );
@@ -341,7 +354,20 @@ final class StudentsService {
 
 		$existing_email_user_id = email_exists( $email );
 		if ( $existing_email_user_id ) {
-			return new WP_Error( 'email_exists', __( 'This email address is already in use by another WordPress user.', 'codeclove-school-management' ), 400 );
+			$existing_user = get_userdata( (int) $existing_email_user_id );
+			return new WP_Error(
+				'email_exists',
+				__( 'This email address is already in use by another WordPress user.', 'codeclove-school-management' ),
+				[
+					'status'        => 400,
+					'existing_user' => $existing_user ? [
+						'id'           => (int) $existing_user->ID,
+						'username'     => $existing_user->user_login,
+						'email'        => $existing_user->user_email,
+						'display_name' => $existing_user->display_name ?: $existing_user->user_login,
+					] : null,
+				]
+			);
 		}
 
 		// 3. Password
@@ -457,6 +483,290 @@ final class StudentsService {
 		);
 
 		return true;
+	}
+
+	/**
+	 * Links an existing WordPress user account to a student or guardian.
+	 *
+	 * @param int    $entity_id   Student or Guardian ID.
+	 * @param string $entity_type 'student' or 'guardian'.
+	 * @param int    $user_id     WordPress user ID.
+	 * @return array{user_id: int, username: string, email: string, display_name: string}|WP_Error
+	 */
+	public function link_portal_account( int $entity_id, string $entity_type, int $user_id ): array|WP_Error {
+		global $wpdb;
+
+		if ( ! in_array( $entity_type, [ 'student', 'guardian' ], true ) ) {
+			return new WP_Error( 'invalid_type', __( 'Invalid entity type. Must be student or guardian.', 'codeclove-school-management' ), 400 );
+		}
+
+		if ( $user_id <= 0 ) {
+			return new WP_Error( 'invalid_user_id', __( 'Please provide a valid WordPress user.', 'codeclove-school-management' ), 400 );
+		}
+
+		$wp_user = get_userdata( $user_id );
+		if ( ! $wp_user ) {
+			return new WP_Error( 'user_not_found', __( 'The specified WordPress user does not exist.', 'codeclove-school-management' ), 404 );
+		}
+
+		if ( 'student' === $entity_type ) {
+			$entity = $this->db_get_student( $entity_id );
+			if ( ! $entity ) {
+				return new WP_Error( 'not_found', __( 'Student not found.', 'codeclove-school-management' ), 404 );
+			}
+			$table = Schema::students();
+			$role  = 'codeclove_student';
+
+			// Prevent linking the same WP user to multiple different student records
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Check existing student user link.
+			$already_linked_student = $wpdb->get_row(
+				$wpdb->prepare(
+					'SELECT id, first_name, last_name FROM %i WHERE user_id = %d AND id != %d AND deleted_at IS NULL LIMIT 1',
+					Schema::students(),
+					$user_id,
+					$entity_id
+				),
+				ARRAY_A
+			);
+			if ( $already_linked_student ) {
+				return new WP_Error(
+					'user_already_linked',
+					sprintf(
+						/* translators: 1: WP user login, 2: student name */
+						__( 'WordPress user @%1$s is already linked to student %2$s.', 'codeclove-school-management' ),
+						$wp_user->user_login,
+						trim( ( $already_linked_student['first_name'] ?? '' ) . ' ' . ( $already_linked_student['last_name'] ?? '' ) )
+					),
+					400
+				);
+			}
+		} else {
+			$entity = $this->db_get_guardian_by_id( $entity_id );
+			if ( ! $entity ) {
+				return new WP_Error( 'not_found', __( 'Guardian not found.', 'codeclove-school-management' ), 404 );
+			}
+			$table = Schema::guardians();
+			$role  = 'codeclove_guardian';
+		}
+
+		// Update user_id in database
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal account linking update.
+		$wpdb->update(
+			$table,
+			[
+				'user_id'    => $user_id,
+				'updated_at' => current_time( 'mysql', true ),
+			],
+			[ 'id' => $entity_id ],
+			[ '%d', '%s' ],
+			[ '%d' ]
+		);
+
+		// Synchronize role: Ensure the user has the required portal role without removing existing roles
+		if ( ! in_array( $role, (array) $wp_user->roles, true ) ) {
+			$wp_user->add_role( $role );
+		}
+
+		Logger::info(
+			sprintf( 'Linked existing user #%d (%s) to %s #%d', $user_id, $wp_user->user_login, $entity_type, $entity_id ),
+			[ 'user_id' => $user_id, 'entity_type' => $entity_type, 'entity_id' => $entity_id ]
+		);
+
+		return [
+			'user_id'      => (int) $wp_user->ID,
+			'username'     => $wp_user->user_login,
+			'email'        => $wp_user->user_email,
+			'display_name' => $wp_user->display_name ?: $wp_user->user_login,
+		];
+	}
+
+	/**
+	 * Searches WordPress users for portal account linking.
+	 *
+	 * @param string $search Search query (username, name, email).
+	 * @param string $email  Exact email match (e.g. from member profile).
+	 * @return array
+	 */
+	public function search_portal_users( string $search = '', string $email = '' ): array {
+		global $wpdb;
+
+		$users     = [];
+		$found_ids = [];
+
+		// 1. Exact email match if provided
+		if ( ! empty( $email ) && is_email( $email ) ) {
+			$email_user = get_user_by( 'email', $email );
+			if ( $email_user ) {
+				$users[]     = $email_user;
+				$found_ids[] = (int) $email_user->ID;
+			}
+		}
+
+		// 2. Query search
+		$search = trim( $search );
+		if ( ! empty( $search ) ) {
+			$query_args = [
+				'search'         => '*' . $search . '*',
+				'search_columns' => [ 'user_login', 'user_email', 'user_nicename', 'display_name' ],
+				'number'         => 20,
+				'orderby'        => 'display_name',
+				'order'          => 'ASC',
+			];
+			if ( ! empty( $found_ids ) ) {
+				$query_args['exclude'] = $found_ids;
+			}
+
+			$user_query = new \WP_User_Query( $query_args );
+			$results    = $user_query->get_results();
+			if ( ! empty( $results ) ) {
+				array_push( $users, ...$results );
+				$found_ids = wp_list_pluck( $users, 'ID' );
+			}
+		} elseif ( empty( $email ) ) {
+			// If neither search nor email, return recent 10 users
+			$user_query = new \WP_User_Query( [
+				'number'  => 10,
+				'orderby' => 'registered',
+				'order'   => 'DESC',
+			] );
+			$results    = $user_query->get_results();
+			if ( ! empty( $results ) ) {
+				$users     = $results;
+				$found_ids = wp_list_pluck( $results, 'ID' );
+			}
+		}
+
+		if ( empty( $users ) ) {
+			return [];
+		}
+
+		// Enrich users with linked student / guardian information
+		$ids_in = implode( ',', array_map( 'intval', $found_ids ) );
+
+		// Check student links
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$student_links = $wpdb->get_results(
+			"SELECT s.id, s.first_name, s.last_name, s.admission_number, s.user_id
+			 FROM " . Schema::students() . " s
+			 WHERE s.user_id IN ({$ids_in}) AND s.deleted_at IS NULL",
+			ARRAY_A
+		) ?: [];
+
+		$students_by_user = [];
+		foreach ( $student_links as $sl ) {
+			$students_by_user[ (int) $sl['user_id'] ][] = [
+				'id'               => (int) $sl['id'],
+				'name'             => trim( $sl['first_name'] . ' ' . $sl['last_name'] ),
+				'admission_number' => $sl['admission_number'],
+				'type'             => 'student',
+			];
+		}
+
+		// Check guardian links
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$guardian_links = $wpdb->get_results(
+			"SELECT g.user_id, s.id as student_id, s.first_name, s.last_name, s.admission_number, sg.relationship
+			 FROM " . Schema::guardians() . " g
+			 INNER JOIN " . Schema::student_guardians() . " sg ON sg.guardian_id = g.id
+			 INNER JOIN " . Schema::students() . " s ON s.id = sg.student_id
+			 WHERE g.user_id IN ({$ids_in}) AND g.deleted_at IS NULL AND s.deleted_at IS NULL",
+			ARRAY_A
+		) ?: [];
+
+		foreach ( $guardian_links as $gl ) {
+			$students_by_user[ (int) $gl['user_id'] ][] = [
+				'id'               => (int) $gl['student_id'],
+				'name'             => trim( $gl['first_name'] . ' ' . $gl['last_name'] ),
+				'admission_number' => $gl['admission_number'],
+				'relationship'     => $gl['relationship'],
+				'type'             => 'guardian',
+			];
+		}
+
+		$output = [];
+		foreach ( $users as $u ) {
+			$uid   = (int) $u->ID;
+			$wp_role_names = wp_roles()->role_names;
+			$human_roles   = array_map( static function( $r ) use ( $wp_role_names ) {
+				if ( isset( $wp_role_names[ $r ] ) ) {
+					return translate_user_role( $wp_role_names[ $r ] );
+				}
+				if ( 'codeclove_student' === $r ) {
+					return __( 'Student', 'codeclove-school-management' );
+				}
+				if ( 'codeclove_guardian' === $r ) {
+					return __( 'Parent / Guardian', 'codeclove-school-management' );
+				}
+				return ucfirst( str_replace( [ 'codeclove_', '_' ], [ '', ' ' ], $r ) );
+			}, (array) $u->roles );
+			$output[] = [
+				'id'              => $uid,
+				'username'        => $u->user_login,
+				'email'           => $u->user_email,
+				'display_name'    => $u->display_name ?: $u->user_login,
+				'roles'           => $human_roles,
+				'linked_students' => $students_by_user[ $uid ] ?? [],
+			];
+		}
+
+		return $output;
+	}
+
+	/**
+	 * Sends a WordPress password reset email to a linked portal user.
+	 *
+	 * @param int    $entity_id   Student or Guardian ID.
+	 * @param string $entity_type 'student' or 'guardian'.
+	 * @return array{sent: bool, message: string}|WP_Error
+	 */
+	public function send_portal_password_reset( int $entity_id, string $entity_type ): array|WP_Error {
+		if ( ! in_array( $entity_type, [ 'student', 'guardian' ], true ) ) {
+			return new WP_Error( 'invalid_type', __( 'Invalid entity type. Must be student or guardian.', 'codeclove-school-management' ), 400 );
+		}
+
+		if ( 'student' === $entity_type ) {
+			$entity = $this->db_get_student( $entity_id );
+		} else {
+			$entity = $this->db_get_guardian_by_id( $entity_id );
+		}
+
+		if ( ! $entity ) {
+			return new WP_Error( 'not_found', ucfirst( $entity_type ) . ' not found.', 404 );
+		}
+
+		$user_id = ! empty( $entity['user_id'] ) ? (int) $entity['user_id'] : 0;
+		if ( ! $user_id ) {
+			return new WP_Error( 'no_account', __( 'No portal account is linked to this record.', 'codeclove-school-management' ), 400 );
+		}
+
+		$wp_user = get_userdata( $user_id );
+		if ( ! $wp_user ) {
+			return new WP_Error( 'user_not_found', __( 'The linked WordPress user was not found.', 'codeclove-school-management' ), 404 );
+		}
+
+		if ( empty( $wp_user->user_email ) || ! is_email( $wp_user->user_email ) ) {
+			return new WP_Error( 'missing_email', __( 'This user does not have a valid email address on file to send a password reset.', 'codeclove-school-management' ), 400 );
+		}
+
+		// Trigger WordPress native password retrieval
+		$reset_res = retrieve_password( $wp_user->user_login );
+		if ( is_wp_error( $reset_res ) ) {
+			return $reset_res;
+		}
+
+		Logger::info(
+			sprintf( 'Sent password reset email for portal user #%d (%s) on %s #%d', $user_id, $wp_user->user_login, $entity_type, $entity_id ),
+			[ 'user_id' => $user_id, 'entity_type' => $entity_type, 'entity_id' => $entity_id ]
+		);
+
+		return [
+			'sent'    => true,
+			'message' => sprintf(
+				/* translators: %s: user email */
+				__( 'Password reset instructions have been emailed to %s.', 'codeclove-school-management' ),
+				$wp_user->user_email
+			),
+		];
 	}
 
 	/**
@@ -1790,8 +2100,11 @@ final class StudentsService {
 	private function normalize_import_row( array $row, int $session_id, int $unit_id, ?int $group_id ): array {
 		$map = [];
 		foreach ( $row as $k => $v ) {
-			$key         = strtolower( trim( (string) $k ) );
-			$map[ $key ] = is_string( $v ) ? trim( $v ) : $v;
+			$raw_key          = strtolower( trim( (string) $k ) );
+			$norm_key         = trim( (string) preg_replace( '/[\s.-]+/', '_', $raw_key ), '_' );
+			$val              = is_string( $v ) ? trim( $v ) : $v;
+			$map[ $raw_key ]  = $val;
+			$map[ $norm_key ] = $val;
 		}
 
 		$clean = [
@@ -1811,7 +2124,7 @@ final class StudentsService {
 			$clean['last_name']   = $map['last_name'] ?? $map['surname'] ?? $map['family_name'] ?? '';
 		}
 
-		$clean['date_of_birth']    = $map['date_of_birth'] ?? $map['dob'] ?? '';
+		$clean['date_of_birth']    = $this->normalize_date( (string) ( $map['date_of_birth'] ?? $map['dob'] ?? '' ) );
 		$raw_gender             = preg_replace( '/[-\s]+/', '_', strtolower( trim( (string) ( $map['gender'] ?? $map['sex'] ?? 'male' ) ) ) );
 		$gender_aliases         = [
 			'm' => 'male', 'male' => 'male',
@@ -1821,8 +2134,8 @@ final class StudentsService {
 			'o' => 'other', 'other' => 'other',
 		];
 		$clean['gender']        = $gender_aliases[ $raw_gender ] ?? $raw_gender;
-		$clean['admission_number'] = $map['admission_number'] ?? $map['adm_no'] ?? '';
-		$clean['admission_date']   = $map['admission_date'] ?? '';
+		$clean['admission_number'] = $map['admission_number'] ?? $map['admission_no'] ?? $map['adm_no'] ?? '';
+		$clean['admission_date']   = $this->normalize_date( (string) ( $map['admission_date'] ?? '' ) );
 
 		// Student direct contact info
 		$clean['email'] = $map['student_email'] ?? $map['email'] ?? '';
@@ -1853,10 +2166,17 @@ final class StudentsService {
 		$clean['mother_phone'] = $map['mother_phone'] ?? $map['mother_mobile'] ?? '';
 
 		// Guardian / Other
-		$clean['guardian_first_name'] = $map['guardian_first_name'] ?? $map['guardian_name'] ?? '';
-		$clean['guardian_last_name']  = ! empty( $map['guardian_last_name'] ) ? $map['guardian_last_name'] : ( ! empty( $clean['guardian_first_name'] ) ? $clean['last_name'] : '' );
+		$guardian_name = $map['guardian_first_name'] ?? $map['guardian_name'] ?? $map['primary_guardian'] ?? $map['guardian'] ?? '';
+		if ( empty( $map['guardian_first_name'] ) && ! empty( $guardian_name ) ) {
+			$g_parts                      = explode( ' ', (string) $guardian_name, 2 );
+			$clean['guardian_first_name'] = $g_parts[0] ?? '';
+			$clean['guardian_last_name']  = $g_parts[1] ?? ( ! empty( $clean['guardian_first_name'] ) ? $clean['last_name'] : '' );
+		} else {
+			$clean['guardian_first_name'] = $map['guardian_first_name'] ?? '';
+			$clean['guardian_last_name']  = ! empty( $map['guardian_last_name'] ) ? $map['guardian_last_name'] : ( ! empty( $clean['guardian_first_name'] ) ? $clean['last_name'] : '' );
+		}
 		$clean['guardian_email']      = $map['guardian_email'] ?? '';
-		$clean['guardian_phone']      = $map['guardian_phone'] ?? '';
+		$clean['guardian_phone']      = $map['guardian_phone'] ?? $map['phone'] ?? '';
 		$clean['relationship']        = $map['relationship'] ?? 'guardian';
 
 		// Address mapping (US zip, UK postcode, IN pincode)
@@ -1875,5 +2195,25 @@ final class StudentsService {
 		] );
 
 		return $clean;
+	}
+	/**
+	 * Normalizes incoming date string to MySQL YYYY-MM-DD format.
+	 */
+	private function normalize_date( string $date ): string {
+		$date = trim( $date );
+		if ( empty( $date ) ) {
+			return '';
+		}
+		if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+			return $date;
+		}
+		if ( preg_match( '/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})$/', $date, $m ) ) {
+			$part1 = (int) $m[1];
+			$part2 = (int) $m[2];
+			$year  = (int) $m[3];
+			return sprintf( '%04d-%02d-%02d', $year, $part2, $part1 );
+		}
+		$ts = strtotime( $date );
+		return $ts ? gmdate( 'Y-m-d', $ts ) : $date;
 	}
 }

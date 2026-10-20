@@ -806,8 +806,11 @@ final class StaffService {
 	private function normalize_staff_import_row( array $row, ?int $role_id ): array {
 		$map = [];
 		foreach ( $row as $k => $v ) {
-			$key         = strtolower( trim( (string) $k ) );
-			$map[ $key ] = is_string( $v ) ? trim( $v ) : $v;
+			$raw_key          = strtolower( trim( (string) $k ) );
+			$norm_key         = trim( (string) preg_replace( '/[\s.-]+/', '_', $raw_key ), '_' );
+			$val              = is_string( $v ) ? trim( $v ) : $v;
+			$map[ $raw_key ]  = $val;
+			$map[ $norm_key ] = $val;
 		}
 
 		$clean = [
@@ -824,12 +827,12 @@ final class StaffService {
 			$clean['last_name']   = $map['last_name'] ?? $map['surname'] ?? '';
 		}
 
-		$clean['email']       = $map['email'] ?? '';
-		$clean['phone']       = $map['phone'] ?? $map['mobile'] ?? '';
-		$clean['department']  = $map['department'] ?? $map['dept'] ?? '';
-		$clean['designation'] = $map['designation'] ?? $map['title'] ?? '';
-		$clean['joined_on']   = $map['joined_on'] ?? $map['joining_date'] ?? '';
-
+		$clean['staff_number'] = $map['staff_number'] ?? $map['staff_id'] ?? '';
+		$clean['email']        = $map['email'] ?? '';
+		$clean['phone']        = $map['phone'] ?? $map['mobile'] ?? '';
+		$clean['department']   = $map['department'] ?? $map['dept'] ?? '';
+		$clean['designation']  = $map['designation'] ?? $map['title'] ?? '';
+		$clean['joined_on']    = $map['joined_on'] ?? $map['joining_date'] ?? '';
 		// Address mapping
 		$postal = $map['postal_code'] ?? $map['zip_code'] ?? $map['zip'] ?? $map['postcode'] ?? $map['pincode'] ?? '';
 		$clean['address']     = $map['address'] ?? $map['street'] ?? '';
