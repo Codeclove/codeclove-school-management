@@ -4,7 +4,7 @@ Tags: school management, student management, attendance, school, education
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.9
+Stable tag: 1.0.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Business Model: freemium
@@ -180,6 +180,9 @@ All bundled libraries are open-source and GPL-compatible.
 
 == Upgrade Notice ==
 
+= 1.0.10 =
+WordPress login customizer, student portal user account linking, portal dark mode toggle, noticeboard scheduling, and UI refinements. Recommended for all users.
+
 = 1.0.9 =
 Public admissions shortcode session association fix, staff recruitment applications portal, and general stability improvements. Recommended for all users.
 
@@ -212,6 +215,14 @@ The voluntary deactivation survey (shown only when an administrator deactivates 
 For full details see: https://codeclove.com/privacy-policy/
 
 == Changelog ==
+
+= 1.0.10 =
+* Feature: WordPress login screen branding with school logo and custom styling.
+* Feature: Link WordPress user accounts to students with portal access and password reset.
+* Feature: Student & parent portal theme toggle (light/dark mode) and notification bell.
+* Feature: Noticeboard announcement scheduling, pinning, and portal feed display.
+* Fix: Admission application timeline event tracking and walk-in source attribution.
+* Tweak: Streamlined table row actions, command palette elevation, and print layout polish.
 
 = 1.0.9 =
 * Fix: Public admissions submitted via shortcode now properly associate with the active academic session and display in the admin applications list.
