@@ -10,6 +10,7 @@ import {
   Spinner,
   EmptyState,
   FormField,
+  Checkbox,
 } from '@/components/ui'
 import { useFeedbackModal } from '@/lib/feedback-context'
 import { api } from '@/lib/api-client'
@@ -25,7 +26,6 @@ import {
   LifeBuoy,
   ChevronDown,
   ChevronUp,
-  ShieldCheck,
   Sparkles,
   Send,
   Mail,
@@ -70,28 +70,25 @@ const AREA_OPTIONS = [
 ]
 
 const VECTOR_OPTIONS = [
-  { value: 'ux', label: 'UX Friction (Confusing, slow, or too many clicks)' },
-  { value: 'capability', label: 'Capability Gap (Missing feature for your school)' },
-  { value: 'compliance', label: 'Regional Compliance (Board or legal requirement)' },
-  { value: 'integration', label: 'Integration (Payment, SMS, LMS, or API)' },
-  { value: 'general', label: 'General Refinement' },
+  { value: 'capability', label: 'Feature or capability request' },
+  { value: 'ux', label: 'UX / Workflow friction' },
+  { value: 'compliance', label: 'Regional or board compliance' },
+  { value: 'integration', label: 'Integration (Payment, SMS, API)' },
+  { value: 'general', label: 'General refinement' },
 ]
 
 type Priority = 'p0' | 'p1' | 'p2' | 'p3'
 
-const PRIORITY_OPTIONS = [
-  { value: 'p2', label: 'Normal — Feature issue (workaround exists)' },
-  { value: 'p1', label: 'High — Core workflow broken' },
-  { value: 'p0', label: 'Blocker — System crash or data loss' },
-  { value: 'p3', label: 'Minor — Cosmetic glitch or typo' },
+const PRIORITY_OPTIONS: Array<{ value: Priority; label: string }> = [
+  { value: 'p2', label: 'Normal' },
+  { value: 'p1', label: 'High' },
+  { value: 'p0', label: 'Urgent / Blocker' },
+  { value: 'p3', label: 'Minor' },
 ]
 
-const PRIORITY_LABELS: Record<string, string> = {
-  p0: 'Blocker',
-  p1: 'High',
-  p2: 'Normal',
-  p3: 'Minor',
-}
+const PRIORITY_LABELS: Record<string, string> = Object.fromEntries(
+  PRIORITY_OPTIONS.map((o) => [o.value, o.label])
+)
 
 interface TicketItem {
   ticket_id: number
@@ -168,6 +165,14 @@ export function FeedbackModal() {
     type: isPro ? __( 'Pro', 'codeclove-school-management' ) : __( 'Free', 'codeclove-school-management' ),
     is_valid: isPro,
   }
+
+  const licenseBadge = licenseInfo.status === 'active'
+    ? { label: licenseInfo.type || __( 'Pro', 'codeclove-school-management' ), className: 'text-text-muted bg-hover-bg border-border' }
+    : licenseInfo.status === 'expired'
+    ? { label: __( 'License Expired', 'codeclove-school-management' ), className: 'text-danger bg-danger-dim border-danger-border' }
+    : licenseInfo.status === 'invalid' || licenseInfo.status === 'disabled'
+    ? { label: __( 'Invalid License', 'codeclove-school-management' ), className: 'text-danger bg-danger-dim border-danger-border' }
+    : { label: __( 'License Inactive', 'codeclove-school-management' ), className: 'text-warning bg-warning-dim border-warning-border' }
 
   function loadTickets() {
     setIsLoadingTickets(true)
@@ -391,21 +396,18 @@ export function FeedbackModal() {
       label: __('Report a Bug', 'codeclove-school-management'),
       shortLabel: __('Bug', 'codeclove-school-management'),
       icon: Bug,
-      activeColor: 'text-rose-500',
     },
     {
       id: 'feedback' as const,
       label: __('Feature / Idea', 'codeclove-school-management'),
       shortLabel: __('Idea', 'codeclove-school-management'),
       icon: Lightbulb,
-      activeColor: 'text-amber-500',
     },
     {
       id: 'tickets' as const,
       label: __('Submitted Tickets', 'codeclove-school-management'),
       shortLabel: __('Tickets', 'codeclove-school-management'),
       icon: History,
-      activeColor: 'text-primary',
       badge: tickets.length,
     },
   ]
@@ -420,27 +422,11 @@ export function FeedbackModal() {
       }}
       title={
         isPaid ? (
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2.5">
             <span>{__( 'Feedback & Bug Report', 'codeclove-school-management' )}</span>
-            {licenseInfo.status === 'active' ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-success/10 text-success border border-success/20 tracking-tight">
-                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                {licenseInfo.type ? `${licenseInfo.type} • Active` : __( 'Active License', 'codeclove-school-management' )}
-              </span>
-            ) : licenseInfo.status === 'expired' ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-danger/10 text-danger border border-danger/20 tracking-tight">
-                <span className="w-1.5 h-1.5 rounded-full bg-danger" />
-                {__( 'License Expired', 'codeclove-school-management' )}
-              </span>
-            ) : licenseInfo.status === 'invalid' || licenseInfo.status === 'disabled' ? (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-danger/10 text-danger border border-danger/20 tracking-tight">
-                {__( 'Invalid License', 'codeclove-school-management' )}
-              </span>
-            ) : (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning border border-warning/20 tracking-tight">
-                {__( 'License Inactive', 'codeclove-school-management' )}
-              </span>
-            )}
+            <span className={cn('inline-flex items-center px-2 py-0.5 rounded text-[11px] font-normal border', licenseBadge.className)}>
+              {licenseBadge.label}
+            </span>
           </div>
         ) : (
           <div className="flex items-center gap-2.5">
@@ -457,7 +443,7 @@ export function FeedbackModal() {
       }
       description={
         isPaid
-          ? __( 'Direct triage with CodeClove core engineering. Submissions create tracked issues.', 'codeclove-school-management' )
+          ? __( 'Share what happened or what we can improve. Our team reviews every report.', 'codeclove-school-management' )
           : __( 'Get assistance through community forums and documentation, or upgrade for direct engineering support.', 'codeclove-school-management' )
       }
       size="lg"
@@ -624,9 +610,9 @@ export function FeedbackModal() {
       ) : (
         /* ─── Pro User View (Professional Segmented Navigation) ─────── */
         <div className="space-y-3.5" ref={scrollRef}>
-          {/* Prominent High-Contrast 3-Tab Segmented Control */}
+          {/* Refined Segmented Control */}
           <div
-            className="grid grid-cols-3 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-xs font-medium gap-1"
+            className="grid grid-cols-3 p-1 rounded-lg bg-slate-100 dark:bg-bg-surface border border-slate-200/80 dark:border-border text-xs gap-1"
             role="tablist"
           >
             {tabsConfig.map((tab) => {
@@ -648,22 +634,22 @@ export function FeedbackModal() {
                     }
                   }}
                   className={cn(
-                    'flex items-center justify-center gap-1.5 sm:gap-2 py-2 px-2 sm:px-3 rounded-lg transition-all cursor-pointer select-none text-xs font-medium min-w-0',
+                    'flex items-center justify-center gap-2 py-2 px-3 rounded-md transition-all cursor-pointer select-none text-xs font-medium min-w-0',
                     isActive
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold shadow-xs border border-slate-200/80 dark:border-slate-700'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/40 dark:hover:bg-slate-800/60'
+                      ? 'bg-white dark:bg-bg-elevated text-brand font-medium shadow-xs border border-slate-200/90 dark:border-white/10'
+                      : 'text-text-muted hover:text-text hover:bg-white/50 dark:hover:bg-hover-bg/60 border border-transparent'
                   )}
                 >
-                  <Icon className={cn('w-3.5 h-3.5 shrink-0', isActive ? tab.activeColor : 'text-slate-400 dark:text-slate-500')} />
+                  <Icon className={cn('w-3.5 h-3.5 shrink-0', isActive ? 'text-brand' : 'text-text-subtle')} />
                   <span className="hidden sm:inline truncate">{tab.label}</span>
                   <span className="sm:hidden truncate">{tab.shortLabel}</span>
                   {typeof tab.badge === 'number' && tab.badge > 0 && (
                     <span
                       className={cn(
-                        'px-1.5 py-0.2 rounded-full text-[10px] font-bold shrink-0',
+                        'px-1.5 py-0.2 rounded-full text-[10px] font-medium shrink-0',
                         isActive
-                          ? 'bg-primary/10 text-primary'
-                          : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                          ? 'bg-brand-dim text-brand border border-brand-border'
+                          : 'bg-slate-200/80 dark:bg-hover-bg text-text-muted'
                       )}
                     >
                       {tab.badge}
@@ -856,42 +842,38 @@ export function FeedbackModal() {
                 }
               }}
             >
-              {/* Professional Submission Alert Banner */}
+              {/* Submission Alert Banner */}
               {submitError && (
-                <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/25 border border-amber-200/90 dark:border-amber-800/50 text-xs animate-in fade-in slide-in-from-top-1 duration-150 shadow-2xs">
-                  <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                    <AlertTriangle className="w-4 h-4" />
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-warning-dim border border-warning-border text-xs animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="w-6 h-6 rounded bg-warning/10 text-warning flex items-center justify-center shrink-0 mt-0.5">
+                    <AlertTriangle className="w-3.5 h-3.5" />
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h5 className="font-semibold text-xs text-slate-900 dark:text-slate-100">
-                        {submitError.toLowerCase().includes('duplicate') || submitError.toLowerCase().includes('recently')
-                          ? __( 'Duplicate Report Detected', 'codeclove-school-management' )
-                          : submitError.toLowerCase().includes('too many') || submitError.toLowerCase().includes('rate limit')
-                            ? __( 'Submission Limit Reached', 'codeclove-school-management' )
-                            : __( 'Unable to Submit Report', 'codeclove-school-management' )}
+                      <h5 className="font-medium text-xs text-text">
+                        {__( 'Unable to Submit Report', 'codeclove-school-management' )}
                       </h5>
                       <button
                         type="button"
                         onClick={() => setSubmitError(null)}
-                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5 rounded cursor-pointer"
+                        className="text-text-muted hover:text-text transition-colors p-0.5 rounded cursor-pointer"
                         aria-label={__( 'Dismiss notice', 'codeclove-school-management' )}
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed mt-0.5">
+                    <p className="text-text-muted leading-relaxed mt-0.5 text-xs">
                       {submitError}
                     </p>
 
-                    <div className="flex items-center justify-between gap-2 pt-2 mt-2 border-t border-amber-200/60 dark:border-amber-800/40 text-[11px] text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center justify-between gap-2 pt-2 mt-2 border-t border-warning-border/50 text-[11px] text-text-subtle">
                       <span>{__( 'Your draft is saved below and will not be lost.', 'codeclove-school-management' )}</span>
                       <button
                         type="button"
                         onClick={handleCopyFullReport}
-                        className="text-primary hover:underline font-medium inline-flex items-center gap-1 cursor-pointer shrink-0"
+                        className="text-brand hover:underline font-medium inline-flex items-center gap-1 cursor-pointer shrink-0"
                       >
                         <Copy className="w-3 h-3" />
                         <span>{__( 'Copy Report', 'codeclove-school-management' )}</span>
@@ -903,26 +885,18 @@ export function FeedbackModal() {
 
               {/* Row 1: Dropdown Selects */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField label={__( 'Module / Area', 'codeclove-school-management' )} labelClassName="text-xs font-medium text-text">
+                  <Select value={area} onValueChange={setArea} options={AREA_OPTIONS} className="h-9 text-xs" />
+                </FormField>
+
                 {activeTab === 'bug' ? (
-                  <>
-                    <FormField label={__( 'Module / Area', 'codeclove-school-management' )} labelClassName="text-xs font-semibold">
-                      <Select value={area} onValueChange={setArea} options={AREA_OPTIONS} className="h-9 text-xs" />
-                    </FormField>
-
-                    <FormField label={__( 'Severity / Urgency', 'codeclove-school-management' )} labelClassName="text-xs font-semibold">
-                      <Select value={priority} onValueChange={(val) => setPriority(val as Priority)} options={PRIORITY_OPTIONS} className="h-9 text-xs" />
-                    </FormField>
-                  </>
+                  <FormField label={__( 'Severity / Urgency', 'codeclove-school-management' )} labelClassName="text-xs font-medium text-text">
+                    <Select value={priority} onValueChange={(val) => setPriority(val as Priority)} options={PRIORITY_OPTIONS} className="h-9 text-xs" />
+                  </FormField>
                 ) : (
-                  <>
-                    <FormField label={__( 'Refinement Category', 'codeclove-school-management' )} labelClassName="text-xs font-semibold">
-                      <Select value={vector} onValueChange={setVector} options={VECTOR_OPTIONS} className="h-9 text-xs" />
-                    </FormField>
-
-                    <FormField label={__( 'Module / Area', 'codeclove-school-management' )} labelClassName="text-xs font-semibold">
-                      <Select value={area} onValueChange={setArea} options={AREA_OPTIONS} className="h-9 text-xs" />
-                    </FormField>
-                  </>
+                  <FormField label={__( 'Refinement Category', 'codeclove-school-management' )} labelClassName="text-xs font-medium text-text">
+                    <Select value={vector} onValueChange={setVector} options={VECTOR_OPTIONS} className="h-9 text-xs" />
+                  </FormField>
                 )}
               </div>
 
@@ -930,7 +904,7 @@ export function FeedbackModal() {
               <FormField
                 label={activeTab === 'bug' ? __( 'Issue Title', 'codeclove-school-management' ) : __( 'Suggestion Title', 'codeclove-school-management' )}
                 required
-                labelClassName="text-xs font-semibold"
+                labelClassName="text-xs font-medium text-text"
               >
                 <Input
                   value={title}
@@ -955,13 +929,13 @@ export function FeedbackModal() {
                     : __( 'Description & School Use-Case', 'codeclove-school-management' )
                 }
                 required
-                labelClassName="text-xs font-semibold"
+                labelClassName="text-xs font-medium text-text"
                 action={
                   activeTab === 'bug' && !showExpected && !expected ? (
                     <button
                       type="button"
                       onClick={() => setShowExpected(true)}
-                      className="text-[11px] text-primary hover:underline font-medium inline-flex items-center gap-0.5 cursor-pointer shrink-0"
+                      className="text-[11px] text-text-subtle hover:text-text font-normal inline-flex items-center gap-1 cursor-pointer transition-colors shrink-0"
                     >
                       <Plus className="w-3 h-3" />
                       <span>{__( 'Add expected outcome', 'codeclove-school-management' )}</span>
@@ -978,11 +952,11 @@ export function FeedbackModal() {
                   placeholder={
                     activeTab === 'bug'
                       ? __(
-                          '1. What were you doing?\n2. What happened instead? (Include error messages if any)\n3. Does it happen every time or intermittently?',
+                          'What happened, and what did you expect instead? Include any error notices if visible.',
                           'codeclove-school-management'
                         )
                       : __(
-                          'Describe your administrative workflow and how this improvement will save time, eliminate friction, or assist board compliance...',
+                          'Describe what you would like to see improved and how it helps your school workflow...',
                           'codeclove-school-management'
                         )
                   }
@@ -995,7 +969,7 @@ export function FeedbackModal() {
               {activeTab === 'bug' && (showExpected || expected) && (
                 <FormField
                   label={__( 'What did you expect to happen? (Optional)', 'codeclove-school-management' )}
-                  labelClassName="text-xs font-semibold"
+                  labelClassName="text-xs font-medium text-text"
                   action={
                     <button
                       type="button"
@@ -1003,7 +977,7 @@ export function FeedbackModal() {
                         setExpected('')
                         setShowExpected(false)
                       }}
-                      className="text-[11px] text-text-muted hover:text-text cursor-pointer inline-flex items-center gap-1"
+                      className="text-[11px] text-text-subtle hover:text-text cursor-pointer inline-flex items-center gap-1 transition-colors"
                     >
                       <Minus className="w-3 h-3" />
                       <span>{__( 'Remove', 'codeclove-school-management' )}</span>
@@ -1020,135 +994,74 @@ export function FeedbackModal() {
               )}
 
               {/* Telemetry Context Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/80 text-xs">
-                <label className="flex items-center gap-2 cursor-pointer select-none font-medium text-text">
-                  <input
-                    type="checkbox"
-                    checked={includeDiagnostics}
-                    onChange={(e) => setIncludeDiagnostics(e.target.checked)}
-                    className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                  />
-                  <span>{__( 'Include anonymous system diagnostics', 'codeclove-school-management' )}</span>
-                </label>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3 py-2 rounded-lg bg-slate-50/80 dark:bg-bg-surface/60 border border-border/80 text-xs">
+                <Checkbox
+                  checked={includeDiagnostics}
+                  onChange={(e) => setIncludeDiagnostics(e.target.checked)}
+                  label={__( 'Include anonymous system diagnostics', 'codeclove-school-management' )}
+                  labelClassName="text-xs text-text-secondary font-normal"
+                />
 
-                <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
-                  {includeDiagnostics && (
-                    <>
-                      <div className="flex items-center gap-1.5 font-mono text-[10px] text-text-subtle">
-                        <span className="px-1.5 py-0.5 rounded bg-bg-surface border border-border/70">
-                          v{diagnosticsData?.report?.codeclove?.version || window.CodeCloveConfig?.version || '1.0.14'}
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded bg-bg-surface border border-border/70">
-                          {diagnosticsData?.report?.codeclove?.preset || 'IN'}
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded bg-bg-surface border border-border/70">
-                          PHP {diagnosticsData?.report?.environment?.php_version || '8.4.25'}
-                        </span>
-                        <span
-                          className={cn(
-                            'px-1.5 py-0.5 rounded border text-[10px] font-semibold tracking-tight',
-                            licenseInfo.status === 'active'
-                              ? 'bg-success/10 text-success border-success/25'
-                              : licenseInfo.status === 'expired'
-                              ? 'bg-danger/10 text-danger border-danger/25'
-                              : 'bg-bg-surface border-border/70 text-text-muted'
-                          )}
-                        >
-                          {licenseInfo.status === 'active'
-                            ? `${licenseInfo.type || 'Pro'} • Active`
-                            : licenseInfo.label || 'Free'}
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setShowPreview(!showPreview)}
-                        className="text-[11px] text-text-muted hover:text-text cursor-pointer underline decoration-dotted font-medium inline-flex items-center gap-0.5 transition-colors"
-                      >
-                        <span>{showPreview ? __( 'Hide', 'codeclove-school-management' ) : __( 'Inspect', 'codeclove-school-management' )}</span>
-                        {showPreview ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                      </button>
-                    </>
-                  )}
-
-                  <span
-                    className="inline-flex items-center text-text-muted cursor-help"
-                    title={__( 'Student records, passwords, and sensitive keys are never collected.', 'codeclove-school-management' )}
-                  >
-                    <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                  </span>
-                </div>
+                {includeDiagnostics && (
+                  <div className="flex items-center gap-2 shrink-0 text-text-subtle text-[11px] font-mono">
+                    <span>
+                      v{diagnosticsData?.report?.codeclove?.version || window.CodeCloveConfig?.version || '1.0.14'} · PHP {diagnosticsData?.report?.environment?.php_version || '8.x'} · {diagnosticsData?.report?.codeclove?.preset || 'IN'}
+                    </span>
+                    <span className="text-border">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(!showPreview)}
+                      className="text-text-subtle hover:text-text cursor-pointer font-sans inline-flex items-center gap-0.5 transition-colors"
+                    >
+                      <span>{showPreview ? __( 'Hide', 'codeclove-school-management' ) : __( 'Inspect', 'codeclove-school-management' )}</span>
+                      {showPreview ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Collapsible Monospace Breakdown */}
               {includeDiagnostics && showPreview && (
-                <div className="p-2.5 rounded-lg bg-bg-base border border-border text-[11px] text-text-secondary space-y-1 font-mono max-h-28 overflow-y-auto">
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">CodeClove:</span>
-                    <span>v{diagnosticsData?.report?.codeclove?.version || window.CodeCloveConfig?.version || '1.0.0'} ({diagnosticsData?.report?.codeclove?.edition || 'pro'})</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">License:</span>
-                    <span className="font-semibold text-text">
-                      {licenseInfo.status === 'active'
-                        ? `${licenseInfo.type || 'Pro'} (Active)`
-                        : `${licenseInfo.label || licenseInfo.status}`}
-                    </span>
-                  </div>
-                  {licenseInfo.expires && (
-                    <div className="flex justify-between">
-                      <span className="text-text-muted">License Expiry:</span>
-                      <span>
-                        {licenseInfo.expires === 'lifetime'
-                          ? __( 'Lifetime', 'codeclove-school-management' )
-                          : licenseInfo.expires}
-                      </span>
-                    </div>
-                  )}
-                  {licenseInfo.masked_key && (
-                    <div className="flex justify-between">
-                      <span className="text-text-muted">License Key:</span>
-                      <span className="font-mono text-xs">{licenseInfo.masked_key}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Preset:</span>
-                    <span>{diagnosticsData?.report?.codeclove?.preset || 'IN'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">PHP / WordPress:</span>
-                    <span>PHP {diagnosticsData?.report?.environment?.php_version || '8.x'} / WP {diagnosticsData?.report?.environment?.wp_version || '6.x'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Client Browser:</span>
-                    <span>{getClientInfo().browser}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Active Route:</span>
-                    <span className="truncate max-w-[240px]">{window.location.hash || window.location.pathname}</span>
-                  </div>
+                <div className="p-3 rounded-lg bg-bg-surface border border-border text-[11px] text-text-muted space-y-1.5 font-mono max-h-36 overflow-y-auto">
+                  {[
+                    [__( 'CodeClove:', 'codeclove-school-management' ), `v${diagnosticsData?.report?.codeclove?.version || window.CodeCloveConfig?.version || '1.0.0'} (${diagnosticsData?.report?.codeclove?.edition || 'pro'})`],
+                    [__( 'License:', 'codeclove-school-management' ), licenseInfo.status === 'active' ? `${licenseInfo.type || 'Pro'} (${__( 'Active', 'codeclove-school-management' )})` : `${licenseInfo.label || licenseInfo.status}`],
+                    licenseInfo.expires ? [__( 'License Expiry:', 'codeclove-school-management' ), licenseInfo.expires === 'lifetime' ? __( 'Lifetime', 'codeclove-school-management' ) : licenseInfo.expires] : null,
+                    licenseInfo.masked_key ? [__( 'License Key:', 'codeclove-school-management' ), licenseInfo.masked_key] : null,
+                    [__( 'Preset:', 'codeclove-school-management' ), diagnosticsData?.report?.codeclove?.preset || 'IN'],
+                    [__( 'Environment:', 'codeclove-school-management' ), `PHP ${diagnosticsData?.report?.environment?.php_version || '8.x'} / WP ${diagnosticsData?.report?.environment?.wp_version || '6.x'}`],
+                    [__( 'Client Browser:', 'codeclove-school-management' ), getClientInfo().browser],
+                    [__( 'Active Route:', 'codeclove-school-management' ), window.location.hash || window.location.pathname],
+                  ]
+                    .filter((row): row is [string, string] => Boolean(row))
+                    .map(([label, value]) => (
+                      <div key={label} className="flex justify-between">
+                        <span className="text-text-subtle">{label}</span>
+                        <span className="truncate max-w-[240px] text-text">{value}</span>
+                      </div>
+                    ))}
                 </div>
               )}
 
-              {/* Modal Actions Footer: Clean, Harmonized, Pixel-Aligned */}
-              <ModalFooter className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3.5 mt-4 border-t border-border">
+              {/* Modal Actions Footer: Calm, Harmonized, Pixel-Aligned */}
+              <ModalFooter className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 mt-4 border-t border-border">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={handleCopyFullReport}
                   disabled={isCopying || isSubmitting}
-                  className="h-9 px-3 text-xs text-text-muted hover:text-text gap-1.5 rounded-lg justify-center sm:justify-start"
+                  className="h-8 px-2.5 text-xs text-text-subtle hover:text-text gap-1.5 font-normal justify-center sm:justify-start"
                   title={__( 'Copy markdown report to clipboard', 'codeclove-school-management' )}
                 >
                   {copiedSuccess ? (
                     <>
-                      <Check size={14} className="text-success" />
+                      <Check size={13} className="text-success" />
                       <span>{__( 'Report Copied!', 'codeclove-school-management' )}</span>
                     </>
                   ) : (
                     <>
-                      <Copy size={14} />
+                      <Copy size={13} />
                       <span>{__( 'Copy Report', 'codeclove-school-management' )}</span>
                     </>
                   )}
@@ -1161,7 +1074,7 @@ export function FeedbackModal() {
                     size="sm"
                     onClick={closeFeedback}
                     disabled={isSubmitting}
-                    className="flex-1 sm:flex-none h-9 px-4 text-xs font-medium rounded-lg"
+                    className="flex-1 sm:flex-none h-8 px-3.5 text-xs font-medium"
                   >
                     {__( 'Cancel', 'codeclove-school-management' )}
                   </Button>
@@ -1172,7 +1085,7 @@ export function FeedbackModal() {
                     size="sm"
                     onClick={handleSubmitReport}
                     disabled={isSubmitting || cooldownRemaining > 0}
-                    className="flex-1 sm:flex-none h-9 px-5 text-xs font-semibold rounded-lg gap-2 border border-transparent shadow-xs"
+                    className="flex-1 sm:flex-none h-8 px-4 text-xs font-medium gap-1.5 shadow-xs"
                   >
                     {isSubmitting ? (
                       <>
@@ -1188,7 +1101,7 @@ export function FeedbackModal() {
                       </>
                     ) : (
                       <>
-                        <Send size={13} className="-rotate-12 -translate-y-px" />
+                        <Send size={13} className="shrink-0" />
                         <span>{__( 'Submit Report', 'codeclove-school-management' )}</span>
                       </>
                     )}

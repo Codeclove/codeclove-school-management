@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import {
   useStudents,
+  fetchStudents,
   useBulkStudentsAction,
   type FullStudent,
   type FullStudent as Student,
@@ -309,11 +310,9 @@ export default function StudentDirectoryPage() {
   const groups = groupData?.data ?? []
   const students = studentData?.data ?? []
   const total = studentData?.total ?? 0
-  const handleExportCSV = useCallback(() => {
-    const listToExport = selectedIds.length > 0
-      ? students.filter((s) => selectedIds.includes(s.id))
-      : students
+  const [isExportingAll, setIsExportingAll] = useState(false)
 
+  const exportStudentsToCSV = useCallback((listToExport: Student[]) => {
     if (!listToExport.length) {
       toast.error(sprintf(__( 'No %s available to export.', 'codeclove-school-management' ), studentLabelPlural.toLowerCase()))
       return
@@ -364,16 +363,47 @@ export default function StudentDirectoryPage() {
       )
     )
   }, [
-    selectedIds,
-    students,
     studentLabelSingular,
     studentLabelPlural,
     unitLabelSingular,
     groupLabelSingular,
-    guardianLabelSingular,
-    formatDate,
     toast,
   ])
+
+  // Exports the entire filtered directory across all pages
+  const handleExportDirectoryCSV = useCallback(async () => {
+    try {
+      setIsExportingAll(true)
+      const res = await fetchStudents({
+        academic_session_id: sessionId ? Number(sessionId) : undefined,
+        academic_unit_id: unitId ? Number(unitId) : undefined,
+        academic_group_id: groupId ? Number(groupId) : undefined,
+        status: status || undefined,
+        search: debouncedSearch || undefined,
+        per_page: -1,
+      })
+      exportStudentsToCSV(res.data)
+    } catch {
+      toast.error(__( 'Failed to export students.', 'codeclove-school-management' ))
+    } finally {
+      setIsExportingAll(false)
+    }
+  }, [
+    sessionId,
+    unitId,
+    groupId,
+    status,
+    debouncedSearch,
+    exportStudentsToCSV,
+    toast,
+  ])
+
+  // Exports only the selected rows
+  const handleExportSelectedCSV = useCallback(() => {
+    const listToExport = students.filter((s) => selectedIds.includes(s.id))
+    exportStudentsToCSV(listToExport)
+  }, [students, selectedIds, exportStudentsToCSV])
+
   const columns: DataTableColumn<Student>[] = useMemo(
     () => [
       {
@@ -488,13 +518,16 @@ export default function StudentDirectoryPage() {
           <div className="flex items-center gap-2">
             <Button
               variant="secondary"
-              onClick={handleExportCSV}
-              disabled={!students.length}
+              onClick={handleExportDirectoryCSV}
+              disabled={isExportingAll || total === 0}
               className="gap-1.5"
-              title={__( 'Export CSV', 'codeclove-school-management' )}
+              title={total > 0
+                ? sprintf(__( 'Export all %d %s to CSV', 'codeclove-school-management' ), total, studentLabelPlural.toLowerCase())
+                : __( 'Export CSV', 'codeclove-school-management' )
+              }
             >
-              <Download size={14} />
-              {__( 'Export CSV', 'codeclove-school-management' )}
+              <Download size={14} className={isExportingAll ? 'animate-bounce' : ''} />
+              {isExportingAll ? __( 'Exporting...', 'codeclove-school-management' ) : __( 'Export CSV', 'codeclove-school-management' )}
             </Button>
             <Button variant="secondary" onClick={() => navigate('/students/import')} className="gap-1.5">
               <Upload size={14} />
@@ -612,21 +645,13 @@ export default function StudentDirectoryPage() {
             >
               <Printer size={12} /> {__( 'Print ID Cards', 'codeclove-school-management' )}
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleExportCSV}
-              className="h-7 text-xs flex items-center gap-1"
-            >
-              <Download size={12} /> {__( 'Export CSV', 'codeclove-school-management' )}
-            </Button>
             <Select
               value=""
               onValueChange={(val) => {
                 if (val === 'delete') {
                   handleBulkDelete()
                 } else if (val === 'export') {
-                  handleExportCSV()
+                  handleExportSelectedCSV()
                 } else if (val === 'promote') {
                   setPromoteModalOpen(true)
                 } else if (val === 'assign_section') {
@@ -638,7 +663,7 @@ export default function StudentDirectoryPage() {
               placeholder={__( 'Bulk Actions', 'codeclove-school-management' )}
               options={[
                 { value: '', label: __( 'Bulk Actions', 'codeclove-school-management' ) },
-                { value: 'export', label: __( 'Export Selected to CSV', 'codeclove-school-management' ) },
+                { value: 'export', label: sprintf( __( 'Export Selected to CSV (%d)', 'codeclove-school-management' ), selectedIds.length ) },
                 { value: 'status:active', label: __( 'Mark Active', 'codeclove-school-management' ) },
                 { value: 'status:inactive', label: __( 'Mark Inactive', 'codeclove-school-management' ) },
                 { value: 'status:graduated', label: __( 'Mark Graduated', 'codeclove-school-management' ) },

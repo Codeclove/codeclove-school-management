@@ -7,6 +7,7 @@ import {
   Phone,
   Award,
   AlertTriangle,
+  Shield,
 } from 'lucide-react'
 import {
   useStaffApplicationDetails,
@@ -28,6 +29,7 @@ import {
   DatePicker,
   Skeleton,
   Badge,
+  FormActionFooter,
 } from '@/components/ui'
 import { __, sprintf } from '@/lib/i18n'
 import { onFormError } from '@/lib/form-errors'
@@ -175,7 +177,7 @@ export default function StaffApplicationEditPage() {
 
   if (isAppLoading) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="space-y-6">
         <Skeleton className="h-10 w-48 rounded-lg" />
         <Skeleton className="h-64 w-full rounded-xl" />
         <Skeleton className="h-64 w-full rounded-xl" />
@@ -201,7 +203,7 @@ export default function StaffApplicationEditPage() {
   const fullName = [application.first_name, application.middle_name, application.last_name].filter(Boolean).join(' ')
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6">
       <PageHeader
         title={__( 'Edit Staff Application', 'codeclove-school-management' )}
         description={sprintf(
@@ -215,6 +217,34 @@ export default function StaffApplicationEditPage() {
           { label: sprintf( __( '%s Details', 'codeclove-school-management' ), fullName ), href: `/staff/applications/${applicationId}` },
           { label: __( 'Edit', 'codeclove-school-management' ) },
         ]}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => navigate(`/staff/applications/${applicationId}`)}
+              disabled={updateMutation.isPending}
+              className="h-9 px-4 text-sm font-medium"
+            >
+              {__( 'Cancel', 'codeclove-school-management' )}
+            </Button>
+            <Button
+              type="submit"
+              form="staff-app-form"
+              disabled={updateMutation.isPending}
+              className="h-9 px-5 text-sm font-semibold shadow-xs"
+            >
+              {updateMutation.isPending ? (
+                <>
+                  <Spinner size="sm" className="text-current me-1.5" />
+                  {__( 'Saving...', 'codeclove-school-management' )}
+                </>
+              ) : (
+                __( 'Save Changes', 'codeclove-school-management' )
+              )}
+            </Button>
+          </div>
+        }
       />
 
       {/* Reference & Status Bar */}
@@ -231,7 +261,7 @@ export default function StaffApplicationEditPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-6">
+      <form id="staff-app-form" onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-6">
         {/* Card 1: Personal Details */}
         <FormGroup
           title={__( '1. Candidate Personal Details', 'codeclove-school-management' )}
@@ -373,15 +403,15 @@ export default function StaffApplicationEditPage() {
           </FormField>
         </FormGroup>
 
-        <div className="flex justify-end gap-3 pt-3">
-          <Button type="button" variant="ghost" onClick={() => navigate(`/staff/applications/${applicationId}`)} disabled={updateMutation.isPending}>
-            {__( 'Cancel', 'codeclove-school-management' )}
-          </Button>
-          <Button type="submit" disabled={updateMutation.isPending} className="gap-1.5">
-            {updateMutation.isPending && <Spinner size="xs" />}
-            {__( 'Save Changes', 'codeclove-school-management' )}
-          </Button>
-        </div>
+        <FormActionFooter
+          icon={Shield}
+          title={__( 'Save Application Updates', 'codeclove-school-management' )}
+          description={__( 'Changes will immediately update the candidate application details.', 'codeclove-school-management' )}
+          submitText={__( 'Save Changes', 'codeclove-school-management' )}
+          submittingText={__( 'Saving...', 'codeclove-school-management' )}
+          onCancel={() => navigate(`/staff/applications/${applicationId}`)}
+          isPending={updateMutation.isPending}
+        />
       </form>
     </div>
   )

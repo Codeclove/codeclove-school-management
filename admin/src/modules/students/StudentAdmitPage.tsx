@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useCreateStudent } from '@/api/students'
 import { useToast } from '@/lib/toast'
 import { useLabels } from '@/lib/labels'
-import { PageHeader } from '@/components/ui'
+import { Button, PageHeader, Spinner } from '@/components/ui'
 import { __, sprintf } from '@/lib/i18n'
 import StudentForm from './components/StudentForm'
 
@@ -47,7 +47,7 @@ export default function StudentAdmitPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6">
       <PageHeader
         title={sprintf( __( 'Admit New %s', 'codeclove-school-management' ), studentLabelSingular )}
         description={sprintf( __( 'Manually register and place a new %s record.', 'codeclove-school-management' ), studentLabelSingular.toLowerCase() )}
@@ -57,6 +57,34 @@ export default function StudentAdmitPage() {
           { label: __( 'Directory', 'codeclove-school-management' ), href: '/students' },
           { label: sprintf( __( 'Admit %s', 'codeclove-school-management' ), studentLabelSingular ) }
         ]}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => navigate('/students')}
+              disabled={createMutation.isPending}
+              className="h-9 px-4 text-sm font-medium"
+            >
+              {__( 'Cancel', 'codeclove-school-management' )}
+            </Button>
+            <Button
+              type="submit"
+              form="student-form"
+              disabled={createMutation.isPending}
+              className="h-9 px-5 text-sm font-semibold shadow-xs"
+            >
+              {createMutation.isPending ? (
+                <>
+                  <Spinner size="sm" className="text-current me-1.5" />
+                  {__( 'Admitting...', 'codeclove-school-management' )}
+                </>
+              ) : (
+                __( 'Confirm Admission', 'codeclove-school-management' )
+              )}
+            </Button>
+          </div>
+        }
       />
 
       <StudentForm

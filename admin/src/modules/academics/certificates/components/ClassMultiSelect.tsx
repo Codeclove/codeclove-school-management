@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
 import { ChevronDown, Search, X } from 'lucide-react'
 import { cn, getPortalContainer } from '@/lib/utils'
-import { Badge } from '@/components/ui'
+import { Badge, Checkbox } from '@/components/ui'
 import { __, sprintf } from '@/lib/i18n'
 import type { AcademicUnit } from '@/api/academics'
 import { useLabels } from '@/lib/labels'
@@ -191,11 +191,9 @@ export const ClassMultiSelect: React.FC<ClassMultiSelectProps> = ({
                     )}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={isSelected}
-                        onChange={() => {}} // Handled by row onClick
-                        className="w-3.5 h-3.5 rounded text-brand focus:ring-brand cursor-pointer shrink-0"
+                        readOnly
                       />
                       <span className="truncate">{u.name}</span>
                     </div>

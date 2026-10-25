@@ -1,5 +1,16 @@
 import { z } from 'zod'
 
+export const studentDocumentSchema = z.object({
+  id:            z.string(),
+  name:          z.string(),
+  title:         z.string(),
+  attachment_id: z.number(),
+  url:           z.string(),
+  file_size:     z.number().nullable().optional(),
+  mime_type:     z.string().optional(),
+  uploaded_at:   z.string().optional(),
+})
+
 export const studentSchema = z.object({
   first_name:          z.string().min(2, 'First name must be at least 2 characters'),
   middle_name:         z.string().optional(),
@@ -25,8 +36,10 @@ export const studentSchema = z.object({
   state:               z.string().optional(),
   postal_code:         z.string().optional(),
   country:             z.string().optional(),
-
+  // Primary Contact designation
+  primary_contact:     z.enum(['father', 'mother', 'guardian']).default('father'),
   // Father details
+  father_guardian_id:  z.string().optional(),
   father_first_name:   z.string().optional(),
   father_last_name:    z.string().optional(),
   father_email:        z.string().optional(),
@@ -34,6 +47,7 @@ export const studentSchema = z.object({
   father_occupation:   z.string().optional(),
 
   // Mother details
+  mother_guardian_id:  z.string().optional(),
   mother_first_name:   z.string().optional(),
   mother_last_name:    z.string().optional(),
   mother_email:        z.string().optional(),
@@ -51,6 +65,7 @@ export const studentSchema = z.object({
 
   photo_id:            z.number().nullable().optional(),
   status:              z.enum(['active', 'inactive', 'graduated', 'withdrawn']).default('active'),
+  documents:           z.array(studentDocumentSchema).optional(),
 }).superRefine((data, ctx) => {
   const hasFather = !!data.father_first_name
   const hasMother = !!data.mother_first_name

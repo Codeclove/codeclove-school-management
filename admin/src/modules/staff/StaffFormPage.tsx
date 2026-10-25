@@ -7,7 +7,7 @@ import {
 } from '@/api/staff'
 import { useToast } from '@/lib/toast'
 import { useLabels } from '@/lib/labels'
-import { PageHeader, EmptyState, Button, Skeleton } from '@/components/ui'
+import { PageHeader, EmptyState, Button, Skeleton, Spinner } from '@/components/ui'
 import { __, sprintf } from '@/lib/i18n'
 import StaffForm from './components/StaffForm'
 import { type StaffFormValues } from '@/schemas/staff'
@@ -72,7 +72,7 @@ export default function StaffFormPage() {
 
   if (isEditMode && isStaffLoading) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="space-y-6">
         <Skeleton className="h-10 w-48 rounded-lg" />
         <Skeleton className="h-96 w-full rounded-xl" />
       </div>
@@ -91,7 +91,7 @@ export default function StaffFormPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6">
       <PageHeader
         title={isEditMode ? sprintf( __( 'Edit %s Profile', 'codeclove-school-management' ), staffLabelSingular ) : sprintf( __( 'Add New %s', 'codeclove-school-management' ), staffLabelSingular )}
         description={
@@ -106,6 +106,36 @@ export default function StaffFormPage() {
           isEditMode ? { label: staff ? `${staff.first_name} ${staff.last_name}` : __( 'Profile', 'codeclove-school-management' ), href: `/staff/${staffId}` } : null,
           { label: isEditMode ? __( 'Edit', 'codeclove-school-management' ) : __( 'Add New', 'codeclove-school-management' ) }
         ].filter(Boolean) as { label: string; href?: string }[]}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onCancel}
+              disabled={isPending}
+              className="h-9 px-4 text-sm font-medium"
+            >
+              {__( 'Cancel', 'codeclove-school-management' )}
+            </Button>
+            <Button
+              type="submit"
+              form="staff-form"
+              disabled={isPending}
+              className="h-9 px-5 text-sm font-semibold shadow-xs"
+            >
+              {isPending ? (
+                <>
+                  <Spinner size="sm" className="text-current me-1.5" />
+                  {__( 'Saving...', 'codeclove-school-management' )}
+                </>
+              ) : isEditMode ? (
+                __( 'Save Changes', 'codeclove-school-management' )
+              ) : (
+                sprintf( __( 'Save %s', 'codeclove-school-management' ), staffLabelSingular )
+              )}
+            </Button>
+          </div>
+        }
       />
 
       <StaffForm

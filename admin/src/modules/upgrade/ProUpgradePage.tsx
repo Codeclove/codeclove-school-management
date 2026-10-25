@@ -138,17 +138,12 @@ export default function ProUpgradePage() {
         }}
       >
         <div className="relative z-10 space-y-7">
-          {/* Row 1: Balanced Pills Header (Left Badge + Right Frosted Price Pill) */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Row 1: Header Badge */}
+          <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/15 text-white border border-white/20 backdrop-blur-md">
               <Sparkles size={14} className="text-amber-300" />
               <span>{__( 'School Management Pro Edition', 'codeclove-school-management' )}</span>
             </span>
-
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-medium bg-white/10 text-white/90 border border-white/15 backdrop-blur-md shadow-sm">
-              <span className="text-white font-extrabold text-sm">$59</span>
-              <span className="text-white/80">/ {__( 'year · cancel anytime', 'codeclove-school-management' )}</span>
-            </div>
           </div>
 
           {/* Row 2: Wider Headline (Balances the visual width, eliminating the void) */}

@@ -89,13 +89,15 @@ function toQueryString(params?: StaffFilters): string {
 /**
  * Hook to retrieve staff members with pagination, search, and status filters.
  */
+export async function fetchStaff(filters: StaffFilters = {}): Promise<{ data: Staff[]; total: number }> {
+  const res = await api.list<Staff[]>(`staff${toQueryString(filters)}`)
+  return { data: res.data, total: res.pagination.total }
+}
+
 export function useStaff(filters: StaffFilters = {}) {
   return useQuery<{ data: Staff[]; total: number }>({
     queryKey: queryKeys.staff.list(filters),
-    queryFn: async () => {
-      const res = await api.list<Staff[]>(`staff${toQueryString(filters)}`)
-      return { data: res.data, total: res.pagination.total }
-    },
+    queryFn: () => fetchStaff(filters),
   })
 }
 
@@ -266,7 +268,7 @@ export interface StaffApplicationFilters {
   order?: 'asc' | 'desc' | ''
 }
 
-export function useStaffApplications(filters: StaffApplicationFilters = {}) {
+export async function fetchStaffApplications(filters: StaffApplicationFilters = {}): Promise<PaginatedResponse<StaffApplication>> {
   const params: Record<string, any> = {
     page: filters.page ?? 1,
     per_page: filters.per_page ?? 10,
@@ -279,19 +281,20 @@ export function useStaffApplications(filters: StaffApplicationFilters = {}) {
     orderby: filters.orderby || undefined,
     order: filters.order || undefined,
   }
+  const res = await api.list<StaffApplication[]>(`staff-applications${toQueryString(params)}`)
+  return {
+    data: res.data,
+    total: res.pagination.total,
+    page: res.pagination.current_page,
+    per_page: res.pagination.per_page,
+    total_pages: res.pagination.total_pages,
+  }
+}
 
+export function useStaffApplications(filters: StaffApplicationFilters = {}) {
   return useQuery<PaginatedResponse<StaffApplication>>({
     queryKey: queryKeys.staff.applications.list(filters),
-    queryFn: async () => {
-      const res = await api.list<StaffApplication[]>(`staff-applications${toQueryString(params)}`)
-      return {
-        data: res.data,
-        total: res.pagination.total,
-        page: res.pagination.current_page,
-        per_page: res.pagination.per_page,
-        total_pages: res.pagination.total_pages,
-      }
-    },
+    queryFn: () => fetchStaffApplications(filters),
   })
 }
 

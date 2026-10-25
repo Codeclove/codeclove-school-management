@@ -7,9 +7,9 @@
 
 import type { PortalLocalization } from '../types'
 import { initials } from '@/lib/utils'
-import { formatPHPDateTime } from '@/lib/formatter'
+import { formatPHPDateTime, formatGender, calculateAge, formatCountry } from '@/lib/formatter'
 
-export { formatPHPDateTime }
+export { formatPHPDateTime, formatGender, calculateAge, formatCountry }
 
 function getActiveLocalization(): PortalLocalization | undefined {
   return typeof window !== 'undefined' ? window.CodeClovePortalConfig?.settings?.localization : undefined
@@ -49,7 +49,6 @@ export function formatDate(
     year: 'numeric',
   }).format(d)
 }
-
 /**
  * Formats a date relative to now (e.g. "Just now", "15m ago", "2h ago", "Yesterday", "3d ago").
  * Falls back to formatted date if older than 7 days.
@@ -179,22 +178,21 @@ export function getInitials(name: string | null | undefined): string {
   return initials(name?.trim() || '') || '?'
 }
 
+
 export function formatAddress(address: unknown): string {
-  if (!address) return 'No residential address on file'
-  if (typeof address === 'string') return address
-  if (typeof address === 'object' && address !== null) {
-    const record = address as Record<string, unknown>
+  if (typeof address === 'string') return address.trim() || 'No residential address on file'
+  if (address && typeof address === 'object') {
+    const r = address as Record<string, unknown>
     const parts = [
-      record.address_line1,
-      record.address_line2,
-      record.city,
-      record.state,
-      record.postal_code,
-      record.country,
+      r.address_line1 || r.street || r.address,
+      r.address_line2,
+      r.city,
+      r.state,
+      r.postal_code || r.zip,
+      formatCountry(r.country),
     ].filter((p): p is string => typeof p === 'string' && p.trim().length > 0)
-    return parts.length > 0 ? parts.join(', ') : 'No residential address on file'
+    if (parts.length > 0) return parts.join(', ')
   }
   return 'No residential address on file'
 }
 
-export { formatGender } from '@/lib/formatter'

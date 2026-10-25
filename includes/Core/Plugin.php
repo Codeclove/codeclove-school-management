@@ -79,10 +79,13 @@ final class Plugin {
 		}
 
 		// Register custom WordPress roles for school user classes.
-		add_role( 'codeclove_staff', __( 'School Staff', 'codeclove-school-management' ), [ 'read' => true ] );
+		add_role( 'codeclove_staff', __( 'School Staff', 'codeclove-school-management' ), [ 'read' => true, 'upload_files' => true ] );
+		$staff_role = get_role( 'codeclove_staff' );
+		if ( $staff_role && ! $staff_role->has_cap( 'upload_files' ) ) {
+			$staff_role->add_cap( 'upload_files' );
+		}
 		add_role( 'codeclove_guardian', __( 'School Guardian', 'codeclove-school-management' ), [] );
 		add_role( 'codeclove_student', __( 'School Student', 'codeclove-school-management' ), [] );
-
 		// Schedule daily cron event to update overdue invoices.
 		if ( ! wp_next_scheduled( 'codeclove_update_overdue_invoices' ) ) {
 			wp_schedule_event( time(), 'daily', 'codeclove_update_overdue_invoices' );
@@ -137,6 +140,10 @@ final class Plugin {
 			\CodeClove\Modules\Portal\PortalShortcode::register();
 		}
 
+		// Initialize Media & Document access protection and direct request interception.
+		if ( class_exists( '\CodeClove\Modules\Media\MediaController' ) ) {
+			\CodeClove\Modules\Media\MediaController::init();
+		}
 		// Customize staff and administration login branding.
 		if ( class_exists( '\CodeClove\Core\LoginCustomizer' ) ) {
 			\CodeClove\Core\LoginCustomizer::register();
@@ -245,6 +252,7 @@ final class Plugin {
 			false,
 			dirname( plugin_basename( defined( 'CODECLOVE_FILE' ) ? CODECLOVE_FILE : __FILE__ ) ) . '/languages'
 		);
+
 		do_action( 'codeclove_init' );
 	}
 

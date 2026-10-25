@@ -17,6 +17,44 @@ export function formatPHPDateTime(d: Date, phpFormat: string): string {
   return phpFormat.includes('a') && !phpFormat.includes('A') ? formatted.toLowerCase() : formatted
 }
 
+const regionNames = typeof Intl !== 'undefined' && Intl.DisplayNames ? new Intl.DisplayNames(['en'], { type: 'region' }) : null
+
+export function formatCountry(codeOrName: unknown): string | undefined {
+  if (typeof codeOrName !== 'string' || !codeOrName.trim()) return undefined
+  const c = codeOrName.trim()
+  if (c.length === 2 && regionNames) {
+    try {
+      return regionNames.of(c.toUpperCase()) || c
+    } catch {
+      return c
+    }
+  }
+  return c
+}
+
+export function calculateAge(
+  dateOfBirth: string | Date | null | undefined,
+  ref: Date = new Date()
+): number | null {
+  if (!dateOfBirth) return null
+  const dob = typeof dateOfBirth === 'string'
+    ? new Date(dateOfBirth.length === 10 ? `${dateOfBirth}T00:00:00` : dateOfBirth)
+    : dateOfBirth
+  if (isNaN(dob.getTime())) return null
+
+  const m = ref.getMonth() - dob.getMonth()
+  const age = ref.getFullYear() - dob.getFullYear() - (m < 0 || (m === 0 && ref.getDate() < dob.getDate()) ? 1 : 0)
+  return age >= 0 ? age : null
+}
+export function formatBytes(bytes?: number | null): string {
+  if (!bytes || bytes <= 0) return ''
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
+}
+
+
 export function useFormatter() {
   const { data: settings } = useSettings()
   const localization = settings?.localization
@@ -117,6 +155,7 @@ export function useFormatter() {
     formatTime,
     formatNumber,
     formatCurrency,
+    formatBytes,
     localization,
   }
 }

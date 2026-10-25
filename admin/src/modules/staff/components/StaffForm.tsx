@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { staffSchema, type StaffFormValues } from '@/schemas/staff'
-import { FileText, X, Globe, GraduationCap, PhoneCall } from 'lucide-react'
+import { Globe, GraduationCap, PhoneCall, Shield } from 'lucide-react'
 import { useRoles } from '@/api/roles'
 import type { Staff } from '@/api/staff'
 import { useSettings } from '@/api/settings'
@@ -10,17 +10,17 @@ import { useToast } from '@/lib/toast'
 import { useLabels } from '@/lib/labels'
 import { GENDER_OPTIONS } from '@/lib/constants'
 import {
-  Button, Card, FormField, Input, Select, Spinner, DatePicker
+  Card, FormField, Input, Select, DatePicker, FormActionFooter
 } from '@/components/ui'
-import { api } from '@/lib/api-client'
 import { __, sprintf } from '@/lib/i18n'
-import { AvatarUpload, AddressFields } from '@/components/ui/form'
+import { AvatarUpload, AddressFields, DocumentManager, uploadPendingDocuments, type ManagedDocument } from '@/components/ui/form'
 import { onFormError } from '@/lib/form-errors'
 
 interface StaffDoc {
   label: string
   attachment_id: number
   url: string
+  file?: File
 }
 
 interface StaffFormProps {
@@ -185,8 +185,7 @@ export default function StaffForm({
 
   // Local state for photo and documents list
   const [photoUrl, setPhotoUrl] = useState<string>('')
-  const [documents, setDocuments] = useState<StaffDoc[]>([])
-  const [docLabel, setDocLabel] = useState<string>('')
+  const [documents, setDocuments] = useState<ManagedDocument[]>([])
   const [isUploadingDoc, setIsUploadingDoc] = useState<boolean>(false)
 
   // Form setup
@@ -283,31 +282,32 @@ export default function StaffForm({
         setPhotoUrl('')
       }
       if (initialData.documents) {
-        setDocuments(initialData.documents)
+        setDocuments(
+          initialData.documents.map((d, index) => ({
+            id: 'doc_' + (d.attachment_id ? `${d.attachment_id}_${index}` : `${index}_${Date.now()}`),
+            name: d.label,
+            title: d.label,
+            attachment_id: d.attachment_id,
+            url: d.url,
+          }))
+        )
       }
     }
   }, [initialData, reset, roles.length])
 
-
-  // Document upload handler
-  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const onFormSubmit = async (values: StaffFormValues) => {
     setIsUploadingDoc(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await api.post<{ id: number; url: string }>('media/upload', formData)
-      if (res.success) {
-        const newDoc: StaffDoc = {
-          label: docLabel.trim() || file.name || __( 'Document', 'codeclove-school-management' ),
-          attachment_id: res.data.id,
-          url: res.data.url,
-        }
-        setDocuments((prev) => [...prev, newDoc])
-        setDocLabel('')
-        toast.success(__( 'Document uploaded successfully!', 'codeclove-school-management' ))
-      }
+      const resolvedDocs = await uploadPendingDocuments(documents, 'document')
+      setDocuments(resolvedDocs)
+      onSubmit({
+        ...values,
+        documents: resolvedDocs.map((d) => ({
+          label: d.name || d.title || 'Document',
+          attachment_id: d.attachment_id || 0,
+          url: d.url || '',
+        })),
+      })
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : __( 'Failed to upload document', 'codeclove-school-management' ))
     } finally {
@@ -315,16 +315,8 @@ export default function StaffForm({
     }
   }
 
-  const onFormSubmit = (values: StaffFormValues) => {
-    onSubmit({
-      ...values,
-      documents,
-    })
-  }
-
-
   return (
-    <form onSubmit={handleSubmit(onFormSubmit, onFormError)} className="space-y-6">
+    <form id="staff-form" onSubmit={handleSubmit(onFormSubmit, onFormError)} className="space-y-6">
       {/* ─── CARD 1: Identity & Demographics ──────────────────────────────── */}
       <Card className="overflow-hidden border border-border bg-bg-elevated shadow-xs rounded-xl p-5 space-y-4">
         <div className="flex items-center gap-2.5 pb-2.5 border-b border-border">
@@ -721,126 +713,44 @@ export default function StaffForm({
         </div>
       </Card>
 
-      {/* ─── CARD 6: Documents & Certifications ────────────────────────────── */}
-      <Card className="overflow-hidden border border-border bg-bg-elevated shadow-xs rounded-xl p-5 space-y-4">
-        <div className="flex items-center gap-2.5 pb-2.5 border-b border-border">
-          <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0">6</span>
-          <h3 className="text-sm font-bold text-text tracking-tight uppercase">{__( 'Documents & Verification', 'codeclove-school-management' )}</h3>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3 items-end bg-bg-surface border border-border p-3 rounded-lg">
-            <FormField label={__( 'Document Name', 'codeclove-school-management' )} className="flex-1 w-full">
-              <Input
-                placeholder="e.g. Academic Resume, Certifications, Contract"
-                value={docLabel}
-                onChange={(e) => setDocLabel(e.target.value)}
-                disabled={isUploadingDoc || isPending}
-                className="h-9"
-              />
-            </FormField>
-            <div className="w-full sm:w-auto">
-              <input
-                type="file"
-                id="staff-doc-input"
-                className="hidden"
-                onChange={handleDocUpload}
-                disabled={isUploadingDoc || isPending}
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                className="w-full h-9 px-3 text-xs"
-                onClick={() => {
-                  if (!docLabel.trim()) {
-                    toast.error(__( 'Please enter a document name first.', 'codeclove-school-management' ))
-                    return
-                  }
-                  document.getElementById('staff-doc-input')?.click()
-                }}
-                disabled={isUploadingDoc || isPending}
-              >
-                {isUploadingDoc ? (
-                  <>
-                    <Spinner size="sm" className="text-current mr-1.5" />
-                    {__( 'Uploading...', 'codeclove-school-management' )}
-                  </>
-                ) : (
-                  __( 'Upload', 'codeclove-school-management' )
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {documents.length > 0 ? (
-            <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
-              {documents.map((doc, idx) => (
-                <div key={idx} className="flex items-center justify-between px-3 py-2.5 text-xs bg-bg-surface hover:bg-hover-bg transition-colors">
-                  <div className="flex items-center gap-2.5 truncate pr-2">
-                    <FileText className="w-4 h-4 text-brand shrink-0" />
-                    <span className="font-medium text-text truncate">{doc.label}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {doc.url && (
-                      <a
-                        href={doc.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-brand hover:underline font-medium"
-                      >
-                        {__( 'View', 'codeclove-school-management' )}
-                      </a>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setDocuments((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-text-muted hover:text-danger p-1"
-                      title={__( 'Delete document', 'codeclove-school-management' )}
-                      disabled={isPending}
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 border border-dashed border-border rounded-lg bg-bg-surface">
-              <FileText className="w-8 h-8 text-text-subtle/50 mx-auto mb-1.5" />
-              <p className="text-xs text-text-muted">{__( 'No documents uploaded yet.', 'codeclove-school-management' )}</p>
-            </div>
-          )}
-        </div>
+      {/* ─── CARD 6: Documents & Verification ────────────────────────────── */}
+      <Card className="overflow-hidden border border-border bg-bg-elevated shadow-xs rounded-xl p-5">
+        <DocumentManager
+          title={__( 'Documents & Verification', 'codeclove-school-management' )}
+          description={__( 'Attach official staff certificates, resume, and contracts. Select or drop multiple PDF, JPG, or PNG files at once.', 'codeclove-school-management' )}
+          documents={documents}
+          onChange={setDocuments}
+          disabled={isPending || isUploadingDoc}
+          isUploading={isUploadingDoc}
+        />
       </Card>
 
-      {/* ─── Action Buttons ────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-end gap-3 pt-2">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onCancel}
-          disabled={isPending}
-        >
-          {__( 'Cancel', 'codeclove-school-management' )}
-        </Button>
-        <Button
-          type="submit"
-          variant="default"
-          disabled={isPending}
-          className="min-w-[120px]"
-        >
-          {isPending ? (
-            <>
-              <Spinner size="sm" className="mr-2" />
-              {__( 'Saving...', 'codeclove-school-management' )}
-            </>
-          ) : mode === 'add' ? (
-            __( 'Save Staff Member', 'codeclove-school-management' )
-          ) : (
-            __( 'Update Profile', 'codeclove-school-management' )
-          )}
-        </Button>
-      </div>
+      {/* ─── Form Action Footer ────────────────────────────────────────── */}
+      <FormActionFooter
+        icon={Shield}
+        title={
+          mode === 'add'
+            ? sprintf( __( 'Confirm %s Registration', 'codeclove-school-management' ), staffLabelSingular )
+            : sprintf( __( 'Save %s Profile Updates', 'codeclove-school-management' ), staffLabelSingular )
+        }
+        description={
+          mode === 'add'
+            ? sprintf( __( 'Review employment details before creating the %s record.', 'codeclove-school-management' ), staffLabelSingular.toLowerCase() )
+            : sprintf( __( 'Changes will immediately update the %s profile and HR records.', 'codeclove-school-management' ), staffLabelSingular.toLowerCase() )
+        }
+        submitText={
+          mode === 'add'
+            ? sprintf( __( 'Save %s', 'codeclove-school-management' ), staffLabelSingular )
+            : __( 'Save Changes', 'codeclove-school-management' )
+        }
+        submittingText={
+          mode === 'add'
+            ? __( 'Saving...', 'codeclove-school-management' )
+            : __( 'Saving...', 'codeclove-school-management' )
+        }
+        onCancel={onCancel}
+        isPending={isPending}
+      />
     </form>
   )
 }

@@ -37,6 +37,7 @@ export interface SelectProps {
   groups?: SelectGroup[]
   placeholder?: string
   searchable?: boolean
+  autoSearchThreshold?: number
   searchPlaceholder?: string
   emptyText?: string
   disabled?: boolean
@@ -49,10 +50,18 @@ export interface SelectProps {
   'aria-label'?: string
 }
 
+export const AUTO_SEARCH_THRESHOLD = 8
+
 // ─── Select ───────────────────────────────────────────────────────────────────
 
 export function Select(props: SelectProps) {
-  if (props.searchable) {
+  const allGroups: SelectGroup[] = props.groups?.length
+    ? props.groups
+    : [{ label: '', options: props.options ?? [] }]
+  const totalOptions = allGroups.reduce((acc, g) => acc + g.options.length, 0)
+  const isSearchable = props.searchable ?? totalOptions >= (props.autoSearchThreshold ?? AUTO_SEARCH_THRESHOLD)
+
+  if (isSearchable) {
     return <Combobox {...props} />
   }
 
@@ -62,7 +71,6 @@ export function Select(props: SelectProps) {
     value,
     onValueChange,
     options = [],
-    groups = [],
     placeholder = __( 'Select...', 'codeclove-school-management' ),
     disabled = false,
     error = false,
@@ -74,8 +82,6 @@ export function Select(props: SelectProps) {
   } = props
 
   const portalContainer = getPortalContainer(container)
-  const allGroups: SelectGroup[] =
-    groups.length > 0 ? groups : [{ label: '', options }]
   const selectedLabel = allGroups
     .flatMap((g) => g.options)
     .find((opt) => opt.value === value)?.label
@@ -97,10 +103,10 @@ export function Select(props: SelectProps) {
         title={selectedLabel}
         className={cn(
           'flex h-8 w-full items-center justify-between gap-2 rounded px-3 text-sm min-w-0 [&>span]:truncate [&>span]:inline-flex [&>span]:items-center [&>span]:gap-2 [&>span]:text-start whitespace-nowrap',
-          'bg-bg-surface border transition-colors duration-100 text-text outline-none focus:outline-none',
+          'bg-bg-surface border transition-colors duration-100 text-text outline-none focus:outline-none focus:ring-offset-0 focus-visible:ring-offset-0',
           isError
             ? 'border-danger focus:ring-danger'
-            : 'border-border hover:border-border-strong focus:border-brand focus:ring-1 focus:ring-brand-ring',
+            : 'border-border hover:border-border-strong focus:border-brand focus:ring-2 focus:ring-brand-dim',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           'data-[placeholder]:text-text-subtle',
           className

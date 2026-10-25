@@ -162,7 +162,7 @@ export default function StaffImportPage() {
   }
 
   return (
-    <div className="space-y-5 w-full max-w-5xl mx-auto">
+    <div className="space-y-5 w-full">
       <PageHeader
         title={sprintf( __( 'Bulk Import %s', 'codeclove-school-management' ), staffLabelPlural )}
         description={__( 'Batch import faculty and administrative personnel directory records via CSV upload with pre-import verification.', 'codeclove-school-management' )}

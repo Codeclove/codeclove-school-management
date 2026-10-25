@@ -17,3 +17,9 @@ export {
   type AddressFieldsProps,
   type AddressFieldNames,
 } from './AddressFields'
+export {
+  DocumentManager,
+  uploadPendingDocuments,
+  type DocumentManagerProps,
+  type ManagedDocument,
+} from './DocumentManager'

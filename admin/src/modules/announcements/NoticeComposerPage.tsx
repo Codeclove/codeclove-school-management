@@ -40,6 +40,7 @@ import {
   Select,
   type SelectOption,
   Spinner,
+  Checkbox,
 } from '@/components/ui'
 import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
@@ -579,20 +580,18 @@ export default function NoticeComposerPage() {
 
             {/* Pinned Notice (No divider line) */}
             <div className="pt-1">
-              <label
-                htmlFor="composerIsPinned"
-                className="flex items-center gap-2 text-xs font-medium text-text cursor-pointer select-none"
-              >
-                <input
-                  type="checkbox"
-                  id="composerIsPinned"
-                  checked={form.isPinned}
-                  onChange={( e ) => setForm( ( f ) => ( { ...f, isPinned: e.target.checked } ) )}
-                  className="h-4 w-4 rounded border-border text-brand focus:ring-brand/30 cursor-pointer"
-                />
-                <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" />
-                <span>{__( 'Pin to top of noticeboard', 'codeclove-school-management' )}</span>
-              </label>
+              <Checkbox
+                id="composerIsPinned"
+                checked={form.isPinned}
+                onChange={( e ) => setForm( ( f ) => ( { ...f, isPinned: e.target.checked } ) )}
+                label={
+                  <span className="inline-flex items-center gap-1.5">
+                    <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" />
+                    <span>{__( 'Pin to top of noticeboard', 'codeclove-school-management' )}</span>
+                  </span>
+                }
+                labelClassName="text-xs font-medium text-text"
+              />
             </div>
           </Card>
         </div>

@@ -24,6 +24,7 @@ use CodeClove\Modules\Settings\SettingsRepository;
 use CodeClove\Shared\AuditLogger;
 use CodeClove\Shared\IdentifierService;
 use WP_Error;
+use CodeClove\Modules\Media\DocumentService;
 
 /**
  * Class StaffService
@@ -225,21 +226,9 @@ final class StaffService {
 			$data['address_json'] = null;
 		}
 
-		if ( isset( $body['documents'] ) && is_array( $body['documents'] ) ) {
-			$sanitized_docs = [];
-			foreach ( $body['documents'] as $doc ) {
-				if ( is_array( $doc ) && isset( $doc['attachment_id'] ) ) {
-					$sanitized_docs[] = [
-						'label'         => sanitize_text_field( $doc['label'] ?? 'Document' ),
-						'attachment_id' => (int) $doc['attachment_id'],
-						'url'           => esc_url_raw( $doc['url'] ?? '' ),
-					];
-				}
-			}
-			$data['documents_json'] = wp_json_encode( $sanitized_docs );
-		} else {
-			$data['documents_json'] = '[]';
-		}
+		$data['documents_json'] = ( isset( $body['documents'] ) && is_array( $body['documents'] ) )
+			? $this->sanitize_documents_payload( $body['documents'] )
+			: '[]';
 
 		// Role hierarchy check: only an Owner or WP Administrator can assign the Owner role.
 		if ( ! empty( $data['role_id'] ) && $this->is_owner_role( (int) $data['role_id'] ) ) {
@@ -415,18 +404,24 @@ final class StaffService {
 			$data['address_json'] = wp_json_encode( $address_data );
 		}
 
+		$removed_doc_att_ids = [];
 		if ( isset( $body['documents'] ) && is_array( $body['documents'] ) ) {
-			$sanitized_docs = [];
-			foreach ( $body['documents'] as $doc ) {
-				if ( is_array( $doc ) && isset( $doc['attachment_id'] ) ) {
-					$sanitized_docs[] = [
-						'label'         => sanitize_text_field( $doc['label'] ?? 'Document' ),
-						'attachment_id' => (int) $doc['attachment_id'],
-						'url'           => esc_url_raw( $doc['url'] ?? '' ),
-					];
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$prev_docs_json = $wpdb->get_var(
+				$wpdb->prepare( 'SELECT documents_json FROM %i WHERE id = %d', Schema::staff_members(), $id )
+			);
+			if ( $prev_docs_json ) {
+				$prev_docs = json_decode( (string) $prev_docs_json, true ) ?: [];
+				$new_docs  = json_decode( $this->sanitize_documents_payload( $body['documents'] ), true ) ?: [];
+				$new_ids   = array_filter( array_column( $new_docs, 'attachment_id' ) );
+				foreach ( $prev_docs as $pdoc ) {
+					$prev_att_id = (int) ( $pdoc['attachment_id'] ?? 0 );
+					if ( $prev_att_id > 0 && ! in_array( $prev_att_id, $new_ids, true ) ) {
+						$removed_doc_att_ids[] = $prev_att_id;
+					}
 				}
 			}
-			$data['documents_json'] = wp_json_encode( $sanitized_docs );
+			$data['documents_json'] = $this->sanitize_documents_payload( $body['documents'] );
 		}
 
 		if ( ! empty( $data['email'] ) ) {
@@ -456,6 +451,9 @@ final class StaffService {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Update staff member record.
 			$wpdb->update( Schema::staff_members(), $data, [ 'id' => $id ] );
 
+			foreach ( $removed_doc_att_ids as $removed_id ) {
+				DocumentService::delete_attachment_if_unreferenced( $removed_id );
+			}
 			// Sync WP user details if user is linked
 			if ( ! empty( $exists_row['user_id'] ) ) {
 				$wp_user_id = (int) $exists_row['user_id'];
@@ -1636,6 +1634,15 @@ Best regards,
 		}
 
 		return new WP_Error( 'invalid_action', __( 'Unsupported bulk action.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+	}
+	/**
+	 * Sanitizes staff documents payload.
+	 *
+	 * @param array $documents
+	 * @return string JSON encoded array
+	 */
+	private function sanitize_documents_payload( array $documents ): string {
+		return DocumentService::sanitize_documents_payload( $documents, 'staff' );
 	}
 
 }

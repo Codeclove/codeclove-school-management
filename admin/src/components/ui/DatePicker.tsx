@@ -7,17 +7,16 @@
  */
 import * as React from 'react'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
-import { DayPicker } from 'react-day-picker'
+import { DayPicker, DayButton, type Matcher } from 'react-day-picker'
 import { format, parse, isValid } from 'date-fns'
-import { Calendar as CalendarIcon, X } from 'lucide-react'
+import { Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { cn, getPortalContainer } from '@/lib/utils'
 import { useSettings } from '@/api/settings'
 import { Input } from './Input'
 import { __ } from '@/lib/i18n'
 import { isRtl } from '@/lib/rtl'
-// Styles for react-day-picker (v10 format defaults fallback)
-import 'react-day-picker/style.css'
 import { parseFlexibleDate } from './date-picker-utils'
+
 export interface DatePickerProps {
   value?: string // YYYY-MM-DD format
   onChange?: (value: string) => void
@@ -36,6 +35,29 @@ export interface DatePickerProps {
   'aria-describedby'?: string
   'aria-label'?: string
 }
+
+function CalendarDayButton({ day, modifiers, className, ...props }: React.ComponentProps<typeof DayButton>) {
+  const isSelected = Boolean(modifiers.selected)
+  const isToday = Boolean(modifiers.today) && !isSelected
+
+  return (
+    <button
+      type="button"
+      className={cn(
+        'h-8 w-8 mx-auto p-0 flex items-center justify-center rounded-md text-sm font-medium transition-colors select-none outline-none text-text hover:bg-hover-bg cursor-pointer focus-visible:ring-2 focus-visible:ring-brand',
+        modifiers.outside && 'text-text-muted/40 font-normal hover:bg-transparent',
+        isToday && 'bg-brand-dim text-brand font-bold border border-brand-border hover:bg-brand-dim',
+        isSelected && 'bg-brand text-text-inverted font-semibold hover:bg-brand-strong shadow-xs',
+        modifiers.disabled && 'text-text-muted/20 cursor-not-allowed hover:bg-transparent pointer-events-none',
+        className
+      )}
+      {...props}
+    >
+      {day.date.getDate()}
+    </button>
+  )
+}
+
 export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
   (
     {
@@ -191,8 +213,8 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
     )
 
     const handleClear = React.useCallback(
-      (e: React.MouseEvent) => {
-        e.stopPropagation()
+      (e?: React.MouseEvent) => {
+        e?.stopPropagation()
         setInputValue('')
         if (onChange) {
           onChange('')
@@ -201,9 +223,17 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
       [onChange]
     )
 
+    // Keep calendar viewing month synchronized with value
+    const [month, setMonth] = React.useState<Date>(() => selectedDate || new Date())
+    React.useEffect(() => {
+      if (selectedDate) {
+        setMonth(selectedDate)
+      }
+    }, [selectedDate])
+
     // Build disabled matcher array dynamically for react-day-picker v10
     const disabledMatchers = React.useMemo(() => {
-      const matchers: any[] = []
+      const matchers: Matcher[] = []
       if (minDate) matchers.push({ before: minDate })
       if (maxDate) matchers.push({ after: maxDate })
       return matchers.length > 0 ? matchers : undefined
@@ -211,6 +241,14 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
 
     const defaultStartMonth = React.useMemo(() => new Date(new Date().getFullYear() - 100, 0), [])
     const defaultEndMonth = React.useMemo(() => new Date(new Date().getFullYear() + 10, 11), [])
+
+    const isTodayDisabled = React.useMemo(() => {
+      const today = new Date().setHours(0, 0, 0, 0)
+      return Boolean(
+        (minDate && today < new Date(minDate).setHours(0, 0, 0, 0)) ||
+        (maxDate && today > new Date(maxDate).setHours(0, 0, 0, 0))
+      )
+    }, [minDate, maxDate])
 
     return (
       <PopoverPrimitive.Root modal={modal} open={open} onOpenChange={setOpen}>
@@ -263,7 +301,7 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
           <PopoverPrimitive.Content
             align="start"
             sideOffset={4}
-            className="z-[100050] p-3 rounded-lg border border-border bg-bg-overlay shadow-modal outline-none"
+            className="z-[100050] p-3 rounded-xl border border-border bg-bg-overlay shadow-modal outline-none w-auto select-none"
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
             <DayPicker
@@ -271,39 +309,83 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
               mode="single"
               selected={selectedDate}
               onSelect={handleSelect}
+              month={month}
+              onMonthChange={setMonth}
               disabled={disabledMatchers}
               captionLayout="dropdown"
+              showOutsideDays={true}
               startMonth={minDate || defaultStartMonth}
               endMonth={maxDate || defaultEndMonth}
+              components={{
+                Chevron: ({ orientation, className, ...chevronProps }) => {
+                  if (orientation === 'left' || orientation === 'right') {
+                    const Icon = (orientation === 'left') !== isRtl() ? ChevronLeft : ChevronRight
+                    return <Icon className={cn('h-4 w-4 text-text', className)} {...chevronProps} />
+                  }
+                  return <ChevronDown className={cn('h-3.5 w-3.5 text-text-muted', className)} {...chevronProps} />
+                },
+                DayButton: CalendarDayButton,
+              }}
               classNames={{
-                months: 'flex flex-col space-y-4',
-                month: 'space-y-4',
-                month_caption: 'flex justify-between items-center px-1 pb-2 gap-4',
-                caption_label: 'text-sm font-semibold text-text hidden',
-                dropdowns: 'flex gap-1.5 items-center',
-                dropdown: 'bg-bg-surface text-text text-xs font-semibold border border-border rounded px-1.5 py-0.5 outline-none cursor-pointer hover:border-border-strong transition-colors',
-                nav: 'flex items-center gap-1',
-                button_previous: cn(
-                  'h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center rounded border border-border hover:bg-hover-bg text-text cursor-pointer'
-                ),
-                button_next: cn(
-                  'h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center rounded border border-border hover:bg-hover-bg text-text cursor-pointer'
-                ),
-                month_grid: 'w-full border-collapse space-y-1',
-                weekdays: 'flex',
-                weekday: 'text-text-muted rounded-md w-8 font-normal text-[0.75rem] text-center uppercase tracking-wider',
-                week: 'flex w-full mt-1.5',
-                day: cn(
-                  'h-8 w-8 p-0 font-normal aria-selected:opacity-100 flex items-center justify-center rounded hover:bg-hover-bg transition-colors cursor-pointer text-text text-sm'
-                ),
-                day_button: 'w-full h-full flex items-center justify-center bg-transparent border-none outline-none cursor-pointer text-inherit',
-                selected: 'bg-brand text-text-inverted hover:bg-brand-strong hover:text-text-inverted focus:bg-brand focus:text-text-inverted',
-                today: 'border border-brand text-brand font-semibold',
-                outside: 'text-text-muted opacity-40 aria-selected:opacity-30',
-                disabled: 'text-text-muted opacity-20 cursor-not-allowed hover:bg-transparent',
+                root: 'w-[256px] select-none',
+                months: 'relative flex flex-col',
+                month: 'space-y-3',
+                nav: 'absolute inset-x-0 top-0 flex w-full items-center justify-between pointer-events-none z-10',
+                button_previous:
+                  'pointer-events-auto h-8 w-8 bg-bg-surface p-0 flex items-center justify-center rounded-md border border-border hover:bg-hover-bg text-text transition-colors shadow-xs cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-brand',
+                button_next:
+                  'pointer-events-auto h-8 w-8 bg-bg-surface p-0 flex items-center justify-center rounded-md border border-border hover:bg-hover-bg text-text transition-colors shadow-xs cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-brand',
+                month_caption: 'flex h-8 w-full items-center justify-center px-9',
+                dropdowns: 'flex h-8 items-center justify-center gap-1.5',
+                dropdown_root:
+                  'relative inline-flex h-8 items-center rounded-md border border-border bg-bg-surface px-2.5 text-xs font-semibold text-text shadow-xs hover:bg-hover-bg hover:border-border-strong transition-colors cursor-pointer',
+                dropdown: 'absolute inset-0 w-full h-full opacity-0 cursor-pointer',
+                caption_label:
+                  'flex h-8 items-center gap-1 text-xs font-semibold text-text select-none',
+                month_grid: 'w-full border-collapse',
+                weekdays: 'flex w-full mb-1',
+                weekday:
+                  'flex-1 h-8 text-center text-text-subtle font-semibold text-[0.72rem] uppercase tracking-wider select-none flex items-center justify-center',
+                week: 'flex w-full mt-1',
+                day: 'flex-1 h-8 text-center p-0 select-none flex items-center justify-center',
                 hidden: 'invisible',
               }}
             />
+
+            <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-border text-xs">
+              {clearable ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleClear()
+                    setOpen(false)
+                  }}
+                  disabled={!value}
+                  className={cn(
+                    'font-medium px-2.5 py-1 rounded-md transition-colors text-text-muted hover:text-text hover:bg-hover-bg cursor-pointer',
+                    !value && 'opacity-40 cursor-not-allowed hover:bg-transparent hover:text-text-muted'
+                  )}
+                >
+                  {__( 'Clear', 'codeclove-school-management' )}
+                </button>
+              ) : (
+                <div />
+              )}
+              <button
+                type="button"
+                disabled={isTodayDisabled}
+                onClick={() => {
+                  const today = new Date()
+                  handleSelect(today)
+                }}
+                className={cn(
+                  'font-semibold px-2.5 py-1 rounded-md transition-colors text-brand hover:text-brand-strong hover:bg-brand-dim cursor-pointer',
+                  isTodayDisabled && 'opacity-40 cursor-not-allowed hover:bg-transparent'
+                )}
+              >
+                {__( 'Today', 'codeclove-school-management' )}
+              </button>
+            </div>
           </PopoverPrimitive.Content>
         </PopoverPrimitive.Portal>
       </PopoverPrimitive.Root>

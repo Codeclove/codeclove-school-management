@@ -158,15 +158,13 @@ export function Combobox({
       ) as HTMLElement | null
 
       if (activeEl) {
-        const containerTop = containerEl.scrollTop
-        const containerBottom = containerTop + containerEl.clientHeight
-        const elementTop = activeEl.offsetTop
-        const elementBottom = elementTop + activeEl.offsetHeight
+        const containerRect = containerEl.getBoundingClientRect()
+        const activeRect = activeEl.getBoundingClientRect()
 
-        if (elementTop < containerTop) {
-          containerEl.scrollTop = elementTop
-        } else if (elementBottom > containerBottom) {
-          containerEl.scrollTop = elementBottom - containerEl.clientHeight
+        if (activeRect.top < containerRect.top) {
+          containerEl.scrollTop -= (containerRect.top - activeRect.top)
+        } else if (activeRect.bottom > containerRect.bottom) {
+          containerEl.scrollTop += (activeRect.bottom - containerRect.bottom)
         }
       }
     }
@@ -301,20 +299,21 @@ export function Combobox({
           onKeyDown={handleTriggerKeyDown}
           title={triggerDisplay}
           className={cn(
-            'flex h-8 w-full items-center justify-between gap-2 rounded px-3 text-sm min-w-0 [&>span]:truncate [&>span]:block [&>span]:text-start whitespace-nowrap',
-            'bg-bg-surface border transition-all duration-100 text-text outline-none',
+            'flex h-8 w-full items-center justify-between gap-2 rounded px-3 text-sm min-w-0 [&>span]:truncate [&>span]:inline-flex [&>span]:items-center [&>span]:gap-2 [&>span]:text-start whitespace-nowrap',
+            'bg-bg-surface border transition-all duration-100 text-text outline-none focus:outline-none focus:ring-offset-0 focus-visible:ring-offset-0',
             open
-              ? 'border-brand ring-1 ring-brand-ring'
+              ? 'border-brand ring-2 ring-brand-dim'
               : isError
-                ? 'border-danger focus-visible:ring-1 focus-visible:ring-danger'
-                : 'border-border hover:border-border-strong focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand-ring',
+                ? 'border-danger focus:ring-danger focus-visible:ring-1 focus-visible:ring-danger'
+                : 'border-border hover:border-border-strong focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand-dim',
             'disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
             !selectedOption?.label && 'text-text-subtle',
             className
           )}
         >
-          <span className={cn('truncate block text-start flex-1 min-w-0', !selectedOption?.label && 'text-text-subtle')}>
-            {triggerDisplay}
+          <span className={cn('truncate inline-flex items-center gap-2 text-start flex-1 min-w-0', !selectedOption?.label && 'text-text-subtle')}>
+            {selectedOption?.prefix}
+            <span className="truncate">{triggerDisplay}</span>
           </span>
 
           <div className="flex items-center gap-1 shrink-0">
@@ -346,16 +345,16 @@ export function Combobox({
           align="start"
           sideOffset={4}
           className={cn(
-            'z-[100050] overflow-hidden rounded-lg outline-none',
+            'z-[100050] overflow-hidden rounded-xl outline-none',
             'bg-bg-overlay border border-border shadow-modal',
             'animate-slide-down',
-            'w-[var(--radix-popover-trigger-width)] min-w-[220px] max-w-[calc(100vw-2rem)]',
+            'w-[var(--radix-popover-trigger-width)] min-w-[min(100vw-2rem,220px)] max-w-[calc(100vw-2rem)]',
             'max-h-[min(360px,var(--radix-popover-content-available-height))] flex flex-col'
           )}
         >
           {/* Integrated Accessible Search Input Header */}
-          <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-border shrink-0 bg-bg-surface">
-            <Search size={14} className="text-text-subtle shrink-0" aria-hidden="true" />
+          <div className="flex items-center gap-2.5 px-3 py-2 border-b border-border shrink-0 bg-bg-surface">
+            <Search size={13} className="text-text-subtle shrink-0" aria-hidden="true" />
             <input
               ref={searchInputRef}
               id={searchInputId}
@@ -424,7 +423,7 @@ export function Combobox({
             role="listbox"
             tabIndex={-1}
             aria-label={ariaLabel || placeholder}
-            className="overflow-y-auto p-1 flex-1 max-h-56 focus:outline-none divide-y-0"
+            className="relative overflow-y-auto p-1.5 flex-1 max-h-60 focus:outline-none divide-y-0 [scrollbar-width:thin] [scrollbar-color:var(--border-strong)_transparent]"
           >
             {flatFilteredOptions.length === 0 ? (
               <li
@@ -463,6 +462,7 @@ export function Combobox({
                           key={opt.value}
                           id={optionDomId}
                           role="option"
+                          title={opt.label}
                           aria-selected={isSelected}
                           aria-disabled={opt.disabled}
                           data-highlighted={isHighlighted ? 'true' : undefined}
@@ -477,7 +477,7 @@ export function Combobox({
                             }
                           }}
                           className={cn(
-                            'relative flex items-center justify-between gap-2 px-2.5 py-1.5 rounded text-sm cursor-pointer select-none transition-colors duration-75',
+                            'relative flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-sm cursor-pointer select-none transition-colors duration-75',
                             isSelected
                               ? 'text-text font-semibold bg-brand-dim'
                               : isHighlighted
@@ -486,20 +486,25 @@ export function Combobox({
                             opt.disabled && 'opacity-50 pointer-events-none cursor-not-allowed'
                           )}
                         >
+                          {opt.prefix && (
+                            <span className="shrink-0 inline-flex items-center text-text-subtle">
+                              {opt.prefix}
+                            </span>
+                          )}
                           {opt.description ? (
                             <div className="flex flex-col min-w-0 flex-1 py-0.5 text-start">
-                              <span className="truncate text-sm font-medium text-text">
+                              <span className="text-sm font-medium text-text break-words leading-snug">
                                 {opt.label}
                               </span>
-                              <span className="truncate text-xs font-mono text-text-subtle mt-0.5">
+                              <span className="text-xs font-mono text-text-subtle mt-0.5 break-words leading-tight">
                                 {opt.description}
                               </span>
                             </div>
                           ) : (
-                            <span className="truncate flex-1 min-w-0">{opt.label}</span>
+                            <span className="flex-1 min-w-0 break-words leading-snug py-0.5 text-start">{opt.label}</span>
                           )}
                           {isSelected && (
-                            <Check size={12} className="text-brand shrink-0 ms-2" aria-hidden="true" />
+                            <Check size={13} className="text-brand shrink-0 ms-auto" aria-hidden="true" />
                           )}
                         </li>
                       )

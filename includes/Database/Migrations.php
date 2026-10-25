@@ -366,6 +366,7 @@ final class Migrations {
   admission_date date DEFAULT NULL,
   graduation_year int(11) DEFAULT NULL,
   address_json longtext DEFAULT NULL,
+  documents_json  longtext DEFAULT NULL,
   email varchar(190) DEFAULT NULL,
   phone varchar(80) DEFAULT NULL,
   status varchar(40) NOT NULL DEFAULT 'active',

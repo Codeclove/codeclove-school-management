@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { editAdmissionSchema, type EditAdmissionFormValues } from '@/schemas/students'
-import { AlertTriangle, User, X, BookOpen, Users, MapPin } from 'lucide-react'
+import { AlertTriangle, User, X, BookOpen, Users, MapPin, Shield } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import {
   useAdmissionDetails,
@@ -17,7 +17,7 @@ import { useToast } from '@/lib/toast'
 import { useLabels } from '@/lib/labels'
 import { GENDER_OPTIONS } from '@/lib/constants'
 import {
-  Button, FormField, Input, Select, PageHeader, Spinner, EmptyState, FormGroup, DatePicker, Skeleton, Badge
+  Button, FormField, Input, Select, PageHeader, Spinner, EmptyState, FormGroup, DatePicker, Skeleton, Badge, FormActionFooter
 } from '@/components/ui'
 import { __, sprintf } from '@/lib/i18n'
 import { onFormError } from '@/lib/form-errors'
@@ -284,7 +284,7 @@ export default function AdmissionEditPage() {
 
   if (isAppLoading) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="space-y-6">
         <Skeleton className="h-10 w-48 rounded-lg" />
         <Skeleton className="h-64 w-full rounded-xl" />
         <Skeleton className="h-64 w-full rounded-xl" />
@@ -304,7 +304,7 @@ export default function AdmissionEditPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6">
       <PageHeader
         title={sprintf( __( 'Edit %s Details', 'codeclove-school-management' ), admissionLabelSingular )}
         description={sprintf( __( 'Update personal, placement, guardian, and address details for %1$s %2$s.', 'codeclove-school-management' ), application.student_first_name, application.student_last_name )}
@@ -315,6 +315,34 @@ export default function AdmissionEditPage() {
           { label: __( 'Application Details', 'codeclove-school-management' ), href: `/students/admissions/${application.id}` },
           { label: __( 'Edit', 'codeclove-school-management' ) }
         ]}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => navigate(`/students/admissions/${application.id}`)}
+              disabled={updateMutation.isPending}
+              className="h-9 px-4 text-sm font-medium"
+            >
+              {__( 'Cancel', 'codeclove-school-management' )}
+            </Button>
+            <Button
+              type="submit"
+              form="admission-form"
+              disabled={updateMutation.isPending}
+              className="h-9 px-5 text-sm font-semibold shadow-xs"
+            >
+              {updateMutation.isPending ? (
+                <>
+                  <Spinner size="sm" className="text-current me-1.5" />
+                  {__( 'Saving...', 'codeclove-school-management' )}
+                </>
+              ) : (
+                __( 'Save Changes', 'codeclove-school-management' )
+              )}
+            </Button>
+          </div>
+        }
       />
 
       {/* Reference & Status Bar */}
@@ -331,7 +359,7 @@ export default function AdmissionEditPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-6">
+      <form id="admission-form" onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-6">
         {/* Card 1: Student Details */}
         <FormGroup
           title={__( '1. Student Details', 'codeclove-school-management' )}
@@ -584,15 +612,15 @@ export default function AdmissionEditPage() {
           </FormField>
         </FormGroup>
 
-        <div className="flex justify-end gap-3 pt-3">
-          <Button type="button" variant="ghost" onClick={() => navigate(`/students/admissions/${applicationId}`)} disabled={updateMutation.isPending}>
-            {__( 'Cancel', 'codeclove-school-management' )}
-          </Button>
-          <Button type="submit" disabled={updateMutation.isPending} className="gap-1.5">
-            {updateMutation.isPending && <Spinner size="xs" />}
-            {__( 'Save Changes', 'codeclove-school-management' )}
-          </Button>
-        </div>
+        <FormActionFooter
+          icon={Shield}
+          title={sprintf( __( 'Save %s Updates', 'codeclove-school-management' ), admissionLabelSingular )}
+          description={sprintf( __( 'Changes will update the %s record.', 'codeclove-school-management' ), admissionLabelSingular.toLowerCase() )}
+          submitText={__( 'Save Changes', 'codeclove-school-management' )}
+          submittingText={__( 'Saving...', 'codeclove-school-management' )}
+          onCancel={() => navigate(`/students/admissions/${applicationId}`)}
+          isPending={updateMutation.isPending}
+        />
       </form>
     </div>
   )

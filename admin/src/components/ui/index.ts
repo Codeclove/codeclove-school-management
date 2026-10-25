@@ -34,6 +34,7 @@ export { EmptyState }                   from './EmptyState'
 export { FilterBar, type FilterBarProps } from './FilterBar'
 
 // ── Forms ─────────────────────────────────────────────────────────────────────
+export { Checkbox, type CheckboxProps } from './Checkbox'
 export { Select, type SelectOption, type SelectGroup } from './Select'
 export { Combobox, type ComboboxProps, type ComboboxOption, type ComboboxGroup } from './Combobox'
 export { FormField }                    from './FormField'
@@ -43,6 +44,7 @@ export {
   FormGroupHeader,
   FormCheckbox,
 }                                       from './FormSection'
+export { FormActionFooter, type FormActionFooterProps } from './FormActionFooter'
 
 // ── Overlays ──────────────────────────────────────────────────────────────────
 export { Modal, ModalFooter }           from './Modal'

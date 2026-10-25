@@ -21,7 +21,7 @@
     "academic_group": { "singular": "Form", "plural": "Forms" },
     "subject": { "singular": "Subject", "plural": "Subjects" },
     "assessment": { "singular": "Assessment", "plural": "Assessments" },
-    "guardian": { "singular": "Parent / Guardian", "plural": "Parents / Guardians" },
+    "guardian": { "singular": "Guardian", "plural": "Guardians" },
     "student_guardian": { "singular": "Student Guardian", "plural": "Student Guardians" },
     "admission_application": { "singular": "Application", "plural": "Applications" },
     "admission_status": { "singular": "Application Status", "plural": "Application Statuses" },

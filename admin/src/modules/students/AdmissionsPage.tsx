@@ -7,9 +7,11 @@ import {
 } from 'lucide-react'
 import {
   useAdmissions,
+  fetchAdmissions,
   useBulkAdmissionsAction,
   type AdmissionApplication,
 } from '@/api/students'
+import { exportToCSV } from '@/lib/csv'
 import {
   useUnits,
   useSessions,
@@ -260,12 +262,9 @@ export default function AdmissionsPage() {
   const units = useMemo(() => unitData?.data ?? [], [unitData?.data])
   const applications = admissionsData?.data ?? []
   const total = admissionsData?.total ?? 0
+  const [isExportingAll, setIsExportingAll] = useState(false)
 
-  const handleExportCSV = () => {
-    const listToExport = selectedIds.length > 0
-      ? applications.filter(app => selectedIds.includes(app.id))
-      : applications
-
+  const exportAdmissionsToCSV = useCallback((listToExport: AdmissionApplication[]) => {
     if (!listToExport.length) return
     const headers = [
       __( 'Reference', 'codeclove-school-management' ),
@@ -288,14 +287,42 @@ export default function AdmissionsPage() {
         statusCfg.label
       ]
     })
-    const csvContent = [headers, ...rows].map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")).join("\n")
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.setAttribute("href", url)
-    link.setAttribute("download", `admissions_export_${Date.now()}.csv`)
-    link.click()
-  }
+    exportToCSV(`admissions_export_${Date.now()}`, headers, rows)
+    toast.success(
+      sprintf(
+        __( 'Exported %d %s to CSV.', 'codeclove-school-management' ),
+        listToExport.length,
+        listToExport.length === 1 ? admissionLabelSingular.toLowerCase() : admissionLabelPlural.toLowerCase()
+      )
+    )
+  }, [units, statusConfig, formatDate, unitLabelSingular, guardianLabelSingular, admissionLabelSingular, admissionLabelPlural, toast])
+
+  // Exports all admissions matching active filters across all pages
+  const handleExportDirectoryCSV = useCallback(async () => {
+    try {
+      setIsExportingAll(true)
+      const res = await fetchAdmissions({
+        academic_session_id: sessionId ? Number(sessionId) : undefined,
+        academic_unit_id: unitId ? Number(unitId) : undefined,
+        status: status || undefined,
+        search: debouncedSearch || undefined,
+        date_from,
+        date_to,
+        per_page: -1,
+      })
+      exportAdmissionsToCSV(res.data)
+    } catch {
+      toast.error(__( 'Failed to export admissions.', 'codeclove-school-management' ))
+    } finally {
+      setIsExportingAll(false)
+    }
+  }, [sessionId, unitId, status, debouncedSearch, date_from, date_to, exportAdmissionsToCSV, toast])
+
+  // Exports only the selected rows
+  const handleExportSelectedCSV = useCallback(() => {
+    const listToExport = applications.filter((app) => selectedIds.includes(app.id))
+    exportAdmissionsToCSV(listToExport)
+  }, [applications, selectedIds, exportAdmissionsToCSV])
 
   const columns: DataTableColumn<AdmissionApplication>[] = useMemo(
     () => [
@@ -473,12 +500,15 @@ export default function AdmissionsPage() {
             <Button
               variant="secondary"
               size="icon"
-              onClick={handleExportCSV}
-              disabled={!applications.length}
+              onClick={handleExportDirectoryCSV}
+              disabled={isExportingAll || total === 0}
               className="flex-shrink-0"
-              title={__( 'Export CSV', 'codeclove-school-management' )}
+              title={total > 0
+                ? sprintf(__( 'Export all %d %s to CSV', 'codeclove-school-management' ), total, admissionLabelPlural.toLowerCase())
+                : __( 'Export CSV', 'codeclove-school-management' )
+              }
             >
-              <Download size={15} />
+              <Download size={15} className={isExportingAll ? 'animate-bounce' : ''} />
             </Button>
           </div>
         </div>
@@ -505,7 +535,7 @@ export default function AdmissionsPage() {
               } else if (val === 'convert') {
                 setConvertModalOpen(true)
               } else if (val === 'export') {
-                handleExportCSV()
+                handleExportSelectedCSV()
               } else if (val.startsWith('status:')) {
                 handleBulkStatus(val.replace('status:', ''))
               }
@@ -518,7 +548,7 @@ export default function AdmissionsPage() {
                 label: sprintf(__( 'Mark %s', 'codeclove-school-management' ), v.label),
               })),
               { value: 'convert', label: __( 'Convert to Students', 'codeclove-school-management' ) },
-              { value: 'export', label: __( 'Export Selected to CSV', 'codeclove-school-management' ) },
+              { value: 'export', label: sprintf( __( 'Export Selected to CSV (%d)', 'codeclove-school-management' ), selectedIds.length ) },
               { value: 'delete', label: __( 'Delete Selected', 'codeclove-school-management' ) },
             ]}
             className="h-7 text-xs w-full sm:w-48 bg-bg-surface"

@@ -6,9 +6,11 @@ import {
 import { __, sprintf } from '@/lib/i18n'
 import {
   useStaffApplications,
+  fetchStaffApplications,
   useBulkStaffApplicationsAction,
   type StaffApplication,
 } from '@/api/staff'
+import { exportToCSV } from '@/lib/csv'
 import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
 import {
@@ -158,12 +160,9 @@ export default function StaffApplicationsPage() {
     )
   }
 
-  // Export CSV
-  const handleExportCSV = () => {
-    const listToExport = selectedIds.length > 0
-      ? applications.filter((app) => selectedIds.includes(app.id))
-      : applications
+  const [isExportingAll, setIsExportingAll] = useState(false)
 
+  const exportApplicationsToCSV = useCallback((listToExport: StaffApplication[]) => {
     if (!listToExport.length) return
     const headers = [
       __( 'Reference', 'codeclove-school-management' ),
@@ -188,16 +187,39 @@ export default function StaffApplicationsPage() {
         statusCfg.label,
       ]
     })
-    const csvContent = [headers, ...rows]
-      .map((e) => e.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', `staff_applications_${Date.now()}.csv`)
-    link.click()
-  }
+    exportToCSV(`staff_applications_export_${Date.now()}`, headers, rows)
+    toast.success(
+      sprintf(
+        __( 'Exported %d applications to CSV.', 'codeclove-school-management' ),
+        listToExport.length
+      )
+    )
+  }, [statusConfig, formatDate, toast])
+
+  // Exports all applications matching active filters across all pages
+  const handleExportDirectoryCSV = useCallback(async () => {
+    try {
+      setIsExportingAll(true)
+      const res = await fetchStaffApplications({
+        status: status || undefined,
+        search: debouncedSearch || undefined,
+        date_from,
+        date_to,
+        per_page: -1,
+      })
+      exportApplicationsToCSV(res.data)
+    } catch {
+      toast.error(__( 'Failed to export applications.', 'codeclove-school-management' ))
+    } finally {
+      setIsExportingAll(false)
+    }
+  }, [status, debouncedSearch, date_from, date_to, exportApplicationsToCSV, toast])
+
+  // Exports only the selected rows
+  const handleExportSelectedCSV = useCallback(() => {
+    const listToExport = applications.filter((app) => selectedIds.includes(app.id))
+    exportApplicationsToCSV(listToExport)
+  }, [applications, selectedIds, exportApplicationsToCSV])
 
   const columns: DataTableColumn<StaffApplication>[] = useMemo(
     () => [
@@ -380,13 +402,16 @@ export default function StaffApplicationsPage() {
             <Button
               variant="secondary"
               size="icon"
-              onClick={handleExportCSV}
-              disabled={!applications.length}
+              onClick={handleExportDirectoryCSV}
+              disabled={isExportingAll || total === 0}
               className="flex-shrink-0"
-              title={__( 'Export CSV', 'codeclove-school-management' )}
+              title={total > 0
+                ? sprintf(__( 'Export all %d applications to CSV', 'codeclove-school-management' ), total)
+                : __( 'Export CSV', 'codeclove-school-management' )
+              }
               aria-label={__( 'Export CSV', 'codeclove-school-management' )}
             >
-              <Download size={15} />
+              <Download size={15} className={isExportingAll ? 'animate-bounce' : ''} />
             </Button>
           </div>
         </div>
@@ -410,6 +435,8 @@ export default function StaffApplicationsPage() {
             onValueChange={(val) => {
               if (val === 'delete') {
                 handleBulkDelete()
+              } else if (val === 'export') {
+                handleExportSelectedCSV()
               } else if (val.startsWith('status:')) {
                 handleBulkStatus(val.replace('status:', ''))
               }
@@ -417,6 +444,7 @@ export default function StaffApplicationsPage() {
             placeholder={__( 'Bulk Actions', 'codeclove-school-management' )}
             options={[
               { value: '', label: __( 'Bulk Actions', 'codeclove-school-management' ) },
+              { value: 'export', label: sprintf( __( 'Export Selected to CSV (%d)', 'codeclove-school-management' ), selectedIds.length ) },
               { value: 'status:under_review', label: __( 'Mark Under Review', 'codeclove-school-management' ) },
               { value: 'status:interview_scheduled', label: __( 'Schedule Interview', 'codeclove-school-management' ) },
               { value: 'status:accepted', label: __( 'Mark Accepted', 'codeclove-school-management' ) },

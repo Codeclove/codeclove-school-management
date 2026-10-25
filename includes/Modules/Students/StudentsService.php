@@ -22,6 +22,8 @@ use CodeClove\Database\Schema;
 use CodeClove\Database\Transaction;
 use WP_Error;
 use CodeClove\Shared\IdentifierService;
+use CodeClove\Shared\AuditLogger;
+use CodeClove\Modules\Media\DocumentService;
 
 /**
  * Class StudentsService
@@ -97,6 +99,9 @@ final class StudentsService {
 			}
 			if ( ! empty( $validated['phone'] ) ) {
 				$student_data['phone'] = $validated['phone'];
+			}
+			if ( isset( $validated['documents'] ) ) {
+				$student_data['documents_json'] = $validated['documents'];
 			}
 
 			$student_id = $this->db_create_student( $student_data );
@@ -189,6 +194,9 @@ final class StudentsService {
 			}
 			if ( array_key_exists( 'phone', $validated ) ) {
 				$student_data['phone'] = $validated['phone'];
+			}
+			if ( array_key_exists( 'documents', $validated ) ) {
+				$student_data['documents_json'] = $validated['documents'];
 			}
 
 			$this->db_update_student( $id, $student_data );
@@ -834,6 +842,9 @@ final class StudentsService {
 		foreach ( $address as $key => $val ) {
 			$student[ $key ] = $val;
 		}
+		// Decode student documents
+		$student['documents'] = ! empty( $row['documents_json'] ) ? ( json_decode( $row['documents_json'], true ) ?: [] ) : [];
+
 
 		// Decode subjects (now loaded from normalized student_subjects table)
 		$student_id             = (int) $row['id'];
@@ -882,22 +893,27 @@ final class StudentsService {
 				}
 			}
 
+			$is_primary = ! empty( $g['is_primary'] );
+
 			$guardian_mapped = [
-				'id'             => (int) $g['id'],
-				'user_id'        => $g_user_id,
-				'portal_account' => $g_portal,
-				'first_name'     => $g['first_name'],
-				'last_name'      => $g['last_name'],
-				'email'          => $g['email'] ?: '',
-				'phone'          => $g['phone'] ?: '',
-				'occupation'     => $g['occupation'] ?: '',
-				'status'         => $g['status'],
-				'relationship'   => $g['relationship'] ?? '',
+				'id'                   => (int) $g['id'],
+				'user_id'              => $g_user_id,
+				'portal_account'       => $g_portal,
+				'first_name'           => $g['first_name'],
+				'last_name'            => $g['last_name'],
+				'email'                => $g['email'] ?: '',
+				'phone'                => $g['phone'] ?: '',
+				'occupation'           => $g['occupation'] ?: '',
+				'status'               => $g['status'],
+				'relationship'         => $g['relationship'] ?? '',
+				'is_primary'           => $is_primary ? 1 : 0,
+				'is_billing_contact'   => ! empty( $g['is_billing_contact'] ) ? 1 : 0,
+				'is_emergency_contact' => ! empty( $g['is_emergency_contact'] ) ? 1 : 0,
 			];
 
 			$student['guardians'][] = $guardian_mapped;
 
-			if ( ! empty( $g['is_primary'] ) && null === $student['primary_guardian'] ) {
+			if ( $is_primary && null === $student['primary_guardian'] ) {
 				$student['primary_guardian'] = $guardian_mapped;
 			}
 
@@ -926,14 +942,18 @@ final class StudentsService {
 				}
 
 				$student['guardian'] = [
-					'id'             => (int) $g['id'],
-					'user_id'        => $g_user_id,
-					'portal_account' => $g_portal,
-					'first_name'     => $g['first_name'],
-					'last_name'      => $g['last_name'],
-					'email'          => $g['email'] ?: '',
-					'phone'          => $g['phone'] ?: '',
-					'status'         => $g['status'],
+					'id'                   => (int) $g['id'],
+					'user_id'              => $g_user_id,
+					'portal_account'       => $g_portal,
+					'first_name'           => $g['first_name'],
+					'last_name'            => $g['last_name'],
+					'email'                => $g['email'] ?: '',
+					'phone'                => $g['phone'] ?: '',
+					'status'               => $g['status'],
+					'relationship'         => $g['relationship'] ?? '',
+					'is_primary'           => ! empty( $g['is_primary'] ) ? 1 : 0,
+					'is_billing_contact'   => ! empty( $g['is_billing_contact'] ) ? 1 : 0,
+					'is_emergency_contact' => ! empty( $g['is_emergency_contact'] ) ? 1 : 0,
 				];
 				$student['relationship'] = $g['relationship'];
 				$has_other_guardian = true;
@@ -948,6 +968,19 @@ final class StudentsService {
 
 		if ( null === $student['primary_guardian'] ) {
 			$student['primary_guardian'] = $student['father'] ?? $student['mother'] ?? $student['guardian'] ?? null;
+		}
+
+		// Determine primary_contact slug ('father' | 'mother' | 'guardian')
+		if ( $student['primary_guardian'] ) {
+			if ( $student['father'] && (int) $student['primary_guardian']['id'] === (int) $student['father']['id'] ) {
+				$student['primary_contact'] = 'father';
+			} elseif ( $student['mother'] && (int) $student['primary_guardian']['id'] === (int) $student['mother']['id'] ) {
+				$student['primary_contact'] = 'mother';
+			} else {
+				$student['primary_contact'] = 'guardian';
+			}
+		} else {
+			$student['primary_contact'] = 'father';
 		}
 
 		return $student;
@@ -980,6 +1013,10 @@ final class StudentsService {
 		if ( isset( $payload['photo_id'] ) ) {
 			$clean['photo_id'] = empty( $payload['photo_id'] ) ? null : (int) $payload['photo_id'];
 		}
+		if ( isset( $payload['documents'] ) && is_array( $payload['documents'] ) ) {
+			$clean['documents'] = $this->sanitize_documents_payload( $payload['documents'] );
+		}
+
 
 		if ( ! $is_update ) {
 			if ( empty( $payload['academic_session_id'] ) ) {
@@ -1036,6 +1073,27 @@ final class StudentsService {
 		}
 		$clean['relationship'] = isset( $payload['relationship'] ) ? sanitize_text_field( $payload['relationship'] ) : 'guardian';
 
+		// Primary contact selection ('father' | 'mother' | 'guardian')
+		$primary_choice = isset( $payload['primary_contact'] ) ? sanitize_key( (string) $payload['primary_contact'] ) : '';
+		if ( ! in_array( $primary_choice, [ 'father', 'mother', 'guardian' ], true ) ) {
+			$primary_choice = '';
+		}
+
+		// Fallback to first available parent if unselected or empty
+		if ( 'father' === $primary_choice && ! $has_father ) {
+			$primary_choice = $has_mother ? 'mother' : 'guardian';
+		} elseif ( 'mother' === $primary_choice && ! $has_mother ) {
+			$primary_choice = $has_father ? 'father' : 'guardian';
+		} elseif ( 'guardian' === $primary_choice && ! $has_guardian ) {
+			$primary_choice = $has_father ? 'father' : ( $has_mother ? 'mother' : 'guardian' );
+		} elseif ( empty( $primary_choice ) ) {
+			$primary_choice = $has_father ? 'father' : ( $has_mother ? 'mother' : 'guardian' );
+		}
+		$clean['primary_contact'] = $primary_choice;
+
+		// Optional linked guardian IDs for siblings
+		$clean['father_guardian_id'] = ! empty( $payload['father_guardian_id'] ) ? (int) $payload['father_guardian_id'] : null;
+		$clean['mother_guardian_id'] = ! empty( $payload['mother_guardian_id'] ) ? (int) $payload['mother_guardian_id'] : null;
 		// New Student-level fields
 		$clean['admission_date'] = isset( $payload['admission_date'] ) ? sanitize_text_field( $payload['admission_date'] ) : null;
 		$clean['graduation_year'] = isset( $payload['graduation_year'] ) ? (int) $payload['graduation_year'] : null;
@@ -1284,6 +1342,9 @@ final class StudentsService {
 	 * @return void
 	 */
 	public function save_student_parents( int $student_id, array $validated ): void {
+		global $wpdb;
+		$student_guardians_table = Schema::student_guardians();
+
 		$existing_guardians = $this->db_get_student_guardians( $student_id );
 		
 		$father_guardian_id = null;
@@ -1297,20 +1358,34 @@ final class StudentsService {
 				$mother_guardian_id = (int) $eg['id'];
 			} else {
 				$other_guardian_id = (int) $eg['id'];
-				// Clear the junction link first so we can re-create or clean up
-				global $wpdb;
-				$student_guardians_table = Schema::student_guardians();
-				// phpcs:disable WordPress.DB.DirectDatabaseQuery
-				$wpdb->delete( $student_guardians_table, [
-					'student_id'  => $student_id,
-					'guardian_id' => $other_guardian_id,
-				] );
-				// phpcs:enable
 			}
 		}
 
+		if ( empty( $father_guardian_id ) && ! empty( $validated['father_guardian_id'] ) ) {
+			$father_guardian_id = (int) $validated['father_guardian_id'];
+		}
+		if ( empty( $mother_guardian_id ) && ! empty( $validated['mother_guardian_id'] ) ) {
+			$mother_guardian_id = (int) $validated['mother_guardian_id'];
+		}
+		$primary_choice = $validated['primary_contact'] ?? '';
+		$has_father     = ! empty( $validated['father_first_name'] );
+		$has_mother     = ! empty( $validated['mother_first_name'] );
+		$has_guardian   = ! empty( $validated['link_existing_guardian'] )
+			? ! empty( $validated['guardian_id'] )
+			: ( ! empty( $validated['guardian_first_name'] ) );
+
+		if ( 'father' === $primary_choice && ! $has_father ) {
+			$primary_choice = $has_mother ? 'mother' : 'guardian';
+		} elseif ( 'mother' === $primary_choice && ! $has_mother ) {
+			$primary_choice = $has_father ? 'father' : 'guardian';
+		} elseif ( 'guardian' === $primary_choice && ! $has_guardian ) {
+			$primary_choice = $has_father ? 'father' : ( $has_mother ? 'mother' : 'guardian' );
+		} elseif ( empty( $primary_choice ) ) {
+			$primary_choice = $has_father ? 'father' : ( $has_mother ? 'mother' : 'guardian' );
+		}
+
 		// 1. Father Details
-		if ( ! empty( $validated['father_first_name'] ) ) {
+		if ( $has_father ) {
 			$father_data = [
 				'first_name' => $validated['father_first_name'],
 				'last_name'  => $validated['father_last_name'] ?? '',
@@ -1320,8 +1395,10 @@ final class StudentsService {
 				'status'     => 'active',
 				'updated_at' => current_time( 'mysql', true ),
 			];
+			$is_primary = ( 'father' === $primary_choice ) ? 1 : 0;
 			if ( $father_guardian_id ) {
 				$this->db_update_guardian( $father_guardian_id, $father_data );
+				$this->db_upsert_student_guardian_link( $student_id, $father_guardian_id, 'Father', $is_primary );
 			} else {
 				$father_data['created_at'] = current_time( 'mysql', true );
 				$father_guardian_id = $this->db_create_guardian( $father_data );
@@ -1330,17 +1407,24 @@ final class StudentsService {
 						'student_id'           => $student_id,
 						'guardian_id'          => $father_guardian_id,
 						'relationship'         => 'Father',
-						'is_primary'           => 1,
-						'is_billing_contact'   => 1,
+						'is_primary'           => $is_primary,
+						'is_billing_contact'   => $is_primary,
 						'is_emergency_contact' => 1,
 						'created_at'           => current_time( 'mysql', true ),
 					] );
 				}
 			}
+		} elseif ( $father_guardian_id ) {
+			// Father details cleared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->delete( $student_guardians_table, [
+				'student_id'  => $student_id,
+				'guardian_id' => $father_guardian_id,
+			] );
 		}
 
 		// 2. Mother Details
-		if ( ! empty( $validated['mother_first_name'] ) ) {
+		if ( $has_mother ) {
 			$mother_data = [
 				'first_name' => $validated['mother_first_name'],
 				'last_name'  => $validated['mother_last_name'] ?? '',
@@ -1350,8 +1434,10 @@ final class StudentsService {
 				'status'     => 'active',
 				'updated_at' => current_time( 'mysql', true ),
 			];
+			$is_primary = ( 'mother' === $primary_choice ) ? 1 : 0;
 			if ( $mother_guardian_id ) {
 				$this->db_update_guardian( $mother_guardian_id, $mother_data );
+				$this->db_upsert_student_guardian_link( $student_id, $mother_guardian_id, 'Mother', $is_primary );
 			} else {
 				$mother_data['created_at'] = current_time( 'mysql', true );
 				$mother_guardian_id = $this->db_create_guardian( $mother_data );
@@ -1360,24 +1446,41 @@ final class StudentsService {
 						'student_id'           => $student_id,
 						'guardian_id'          => $mother_guardian_id,
 						'relationship'         => 'Mother',
-						'is_primary'           => empty( $validated['father_first_name'] ) ? 1 : 0,
-						'is_billing_contact'   => empty( $validated['father_first_name'] ) ? 1 : 0,
+						'is_primary'           => $is_primary,
+						'is_billing_contact'   => $is_primary,
 						'is_emergency_contact' => 1,
 						'created_at'           => current_time( 'mysql', true ),
 					] );
 				}
 			}
+		} elseif ( $mother_guardian_id ) {
+			// Mother details cleared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->delete( $student_guardians_table, [
+				'student_id'  => $student_id,
+				'guardian_id' => $mother_guardian_id,
+			] );
 		}
 
 		// 3. Other Legal Guardian Details
+		// Clean existing other guardian link first if any
+		if ( $other_guardian_id ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->delete( $student_guardians_table, [
+				'student_id'  => $student_id,
+				'guardian_id' => $other_guardian_id,
+			] );
+		}
+
+		$is_guardian_primary = ( 'guardian' === $primary_choice ) ? 1 : 0;
 		if ( ! empty( $validated['link_existing_guardian'] ) && ! empty( $validated['guardian_id'] ) ) {
 			$guardian_id = (int) $validated['guardian_id'];
 			$this->db_link_student_guardian( [
 				'student_id'           => $student_id,
 				'guardian_id'          => $guardian_id,
 				'relationship'         => $validated['relationship'] ?? 'guardian',
-				'is_primary'           => ( empty( $validated['father_first_name'] ) && empty( $validated['mother_first_name'] ) ) ? 1 : 0,
-				'is_billing_contact'   => ( empty( $validated['father_first_name'] ) && empty( $validated['mother_first_name'] ) ) ? 1 : 0,
+				'is_primary'           => $is_guardian_primary,
+				'is_billing_contact'   => $is_guardian_primary,
 				'is_emergency_contact' => 1,
 				'created_at'           => current_time( 'mysql', true ),
 			] );
@@ -1402,11 +1505,42 @@ final class StudentsService {
 					'student_id'           => $student_id,
 					'guardian_id'          => $guardian_id,
 					'relationship'         => $validated['relationship'] ?? 'guardian',
-					'is_primary'           => ( empty( $validated['father_first_name'] ) && empty( $validated['mother_first_name'] ) ) ? 1 : 0,
-					'is_billing_contact'   => ( empty( $validated['father_first_name'] ) && empty( $validated['mother_first_name'] ) ) ? 1 : 0,
+					'is_primary'           => $is_guardian_primary,
+					'is_billing_contact'   => $is_guardian_primary,
 					'is_emergency_contact' => 1,
 					'created_at'           => current_time( 'mysql', true ),
 				] );
+			}
+		}
+
+		// 4. Ensure exactly one primary guardian exists
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$primary_count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE student_id = %d AND is_primary = 1',
+				$student_guardians_table,
+				$student_id
+			)
+		);
+		if ( 0 === $primary_count ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$first_link_id = $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT id FROM %i WHERE student_id = %d ORDER BY id ASC LIMIT 1',
+					$student_guardians_table,
+					$student_id
+				)
+			);
+			if ( $first_link_id ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->update(
+					$student_guardians_table,
+					[
+						'is_primary'         => 1,
+						'is_billing_contact' => 1,
+					],
+					[ 'id' => (int) $first_link_id ]
+				);
 			}
 		}
 	}
@@ -1636,13 +1770,37 @@ final class StudentsService {
 		global $wpdb;
 		$table = Schema::students();
 
+		$removed_att_ids = [];
+		if ( array_key_exists( 'documents_json', $data ) ) {
+			// Compare previous documents with new documents to clean up any removed attachments.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$prev_docs_json = $wpdb->get_var(
+				$wpdb->prepare( 'SELECT documents_json FROM %i WHERE id = %d', $table, $id )
+			);
+			if ( $prev_docs_json ) {
+				$prev_docs = json_decode( (string) $prev_docs_json, true ) ?: [];
+				$new_docs  = json_decode( (string) $data['documents_json'], true ) ?: [];
+				$new_ids   = array_filter( array_column( $new_docs, 'attachment_id' ) );
+				foreach ( $prev_docs as $pdoc ) {
+					$prev_att_id = (int) ( $pdoc['attachment_id'] ?? 0 );
+					if ( $prev_att_id > 0 && ! in_array( $prev_att_id, $new_ids, true ) ) {
+						$removed_att_ids[] = $prev_att_id;
+					}
+				}
+			}
+		}
+
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery
 		$result = $wpdb->update( $table, $data, [ 'id' => $id ] );
 		// phpcs:enable
-
 		if ( false === $result ) {
 			Logger::error( sprintf( 'Failed to update student record [ID %d]', $id ), $wpdb->last_error );
 			return false;
+		}
+
+		// Now that the student table is updated, delete unreferenced attachments from storage.
+		foreach ( $removed_att_ids as $removed_id ) {
+			DocumentService::delete_attachment_if_unreferenced( $removed_id );
 		}
 
 		return true;
@@ -1736,6 +1894,50 @@ final class StudentsService {
 		// phpcs:enable
 
 		return $result ? (int) $wpdb->insert_id : null;
+	}
+	/**
+	 * Links or updates a student-guardian junction record.
+	 */
+	private function db_upsert_student_guardian_link( int $student_id, int $guardian_id, string $relationship, int $is_primary, int $is_emergency = 1 ): void {
+		global $wpdb;
+		$table = Schema::student_guardians();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$has_link = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT id FROM %i WHERE student_id = %d AND guardian_id = %d LIMIT 1',
+				$table,
+				$student_id,
+				$guardian_id
+			)
+		);
+
+		if ( $has_link ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->update(
+				$table,
+				[
+					'is_primary'           => $is_primary,
+					'is_billing_contact'   => $is_primary,
+					'is_emergency_contact' => $is_emergency,
+					'updated_at'           => current_time( 'mysql', true ),
+				],
+				[
+					'student_id'  => $student_id,
+					'guardian_id' => $guardian_id,
+				]
+			);
+		} else {
+			$this->db_link_student_guardian( [
+				'student_id'           => $student_id,
+				'guardian_id'          => $guardian_id,
+				'relationship'         => $relationship,
+				'is_primary'           => $is_primary,
+				'is_billing_contact'   => $is_primary,
+				'is_emergency_contact' => $is_emergency,
+				'created_at'           => current_time( 'mysql', true ),
+			] );
+		}
 	}
 
 	/**
@@ -2215,5 +2417,142 @@ final class StudentsService {
 		}
 		$ts = strtotime( $date );
 		return $ts ? gmdate( 'Y-m-d', $ts ) : $date;
+	}
+
+	/**
+	 * Sanitizes an array of student document payloads.
+	 *
+	 * Ensures each document is an allowed PDF attachment, has a unique ID,
+	 * formats the display name with a clean .pdf extension without duplicates,
+	 * and includes physical metadata.
+	 *
+	 * @param mixed $docs Raw documents payload.
+	 * @return string JSON-encoded array of sanitized document items.
+	 */
+	public function sanitize_documents_payload( mixed $docs ): string {
+		return DocumentService::sanitize_documents_payload( $docs, 'student' );
+	}
+
+	/**
+	 * Adds a single document to an existing student's documents collection.
+	 *
+	 * Non-destructive: appends to existing documents without replacing them.
+	 *
+	 * @param int   $student_id Student ID.
+	 * @param array $document_data Document attributes (attachment_id, name/title, url).
+	 * @return array|WP_Error Updated documents array or WP_Error.
+	 */
+	public function add_student_document( int $student_id, array $document_data ): array|WP_Error {
+		global $wpdb;
+
+		$student = $this->db_get_student( $student_id );
+		if ( ! $student ) {
+			return new WP_Error( 'codeclove_not_found', __( 'Student not found.', 'codeclove-school-management' ), 404 );
+		}
+
+		if ( empty( $document_data['attachment_id'] ) ) {
+			return new WP_Error( 'codeclove_invalid_document', __( 'Attachment ID is required.', 'codeclove-school-management' ), 400 );
+		}
+
+		$sanitized = json_decode( $this->sanitize_documents_payload( [ $document_data ] ), true );
+		if ( empty( $sanitized[0] ) ) {
+			return new WP_Error( 'codeclove_invalid_file_type', __( 'Only PDF documents are allowed.', 'codeclove-school-management' ), 400 );
+		}
+		$new_doc = $sanitized[0];
+
+		// Retrieve current documents
+		$existing_docs = [];
+		if ( ! empty( $student['documents_json'] ) ) {
+			$existing_docs = json_decode( (string) $student['documents_json'], true ) ?: [];
+		} elseif ( ! empty( $student['documents'] ) && is_array( $student['documents'] ) ) {
+			$existing_docs = $student['documents'];
+		}
+
+		$existing_docs[] = $new_doc;
+
+		// Persist to database
+		$table = Schema::students();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Update custom table.
+		$wpdb->update(
+			$table,
+			[
+				'documents_json' => wp_json_encode( $existing_docs ),
+				'updated_at'     => current_time( 'mysql', true ),
+			],
+			[ 'id' => $student_id ],
+			[ '%s', '%s' ],
+			[ '%d' ]
+		);
+
+		AuditLogger::log( 'students.document_added', [
+			'student_id'    => $student_id,
+			'document_id'   => $new_doc['id'],
+			'attachment_id' => (int) $new_doc['attachment_id'],
+			'name'          => $new_doc['name'],
+		] );
+
+		return $existing_docs;
+	}
+
+	/**
+	 * Deletes a single document by its unique document ID.
+	 *
+	 * Non-destructive to other documents: only the matching document is removed.
+	 *
+	 * @param int    $student_id Student ID.
+	 * @param string $doc_id Unique document ID.
+	 * @return array|WP_Error Updated documents array or WP_Error.
+	 */
+	public function delete_student_document( int $student_id, string $doc_id ): array|WP_Error {
+		global $wpdb;
+
+		$student = $this->db_get_student( $student_id );
+		if ( ! $student ) {
+			return new WP_Error( 'codeclove_not_found', __( 'Student not found.', 'codeclove-school-management' ), 404 );
+		}
+
+		$existing_docs = [];
+		if ( ! empty( $student['documents_json'] ) ) {
+			$existing_docs = json_decode( (string) $student['documents_json'], true ) ?: [];
+		} elseif ( ! empty( $student['documents'] ) && is_array( $student['documents'] ) ) {
+			$existing_docs = $student['documents'];
+		}
+
+		$initial_count  = count( $existing_docs );
+		$deleted_att_id = 0;
+		$filtered_docs  = [];
+		foreach ( $existing_docs as $item ) {
+			if ( isset( $item['id'] ) && (string) $item['id'] === (string) $doc_id ) {
+				$deleted_att_id = (int) ( $item['attachment_id'] ?? 0 );
+			} else {
+				$filtered_docs[] = $item;
+			}
+		}
+
+		if ( count( $filtered_docs ) === $initial_count ) {
+			return new WP_Error( 'codeclove_not_found', __( 'Document not found.', 'codeclove-school-management' ), 404 );
+		}
+		// Persist to database
+		$table = Schema::students();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Update custom table.
+		$wpdb->update(
+			$table,
+			[
+				'documents_json' => wp_json_encode( $filtered_docs ),
+				'updated_at'     => current_time( 'mysql', true ),
+			],
+			[ 'id' => $student_id ],
+			[ '%s', '%s' ],
+			[ '%d' ]
+		);
+		if ( $deleted_att_id > 0 ) {
+			DocumentService::delete_attachment_if_unreferenced( $deleted_att_id );
+		}
+
+		AuditLogger::log( 'students.document_deleted', [
+			'student_id'  => $student_id,
+			'document_id' => $doc_id,
+		] );
+		return $filtered_docs;
 	}
 }

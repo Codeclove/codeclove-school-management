@@ -596,6 +596,22 @@ final class AdmissionsService {
 
 			$admission_date = ! empty( $app['submitted_at'] ) ? substr( (string) $app['submitted_at'], 0, 10 ) : substr( (string) $app['created_at'], 0, 10 );
 
+			// Query and transfer admission documents into student's documents vault
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom table query.
+			$app_docs = $wpdb->get_results(
+				$wpdb->prepare(
+					'SELECT attachment_id, label, document_type, created_at
+					 FROM ' . Schema::app_documents() . '
+					 WHERE application_id = %d AND attachment_id IS NOT NULL',
+					$id
+				),
+				ARRAY_A
+			) ?: [];
+
+			$documents_json = ! empty( $app_docs ) ? $students_service->sanitize_documents_payload( $app_docs ) : null;
+			if ( '[]' === $documents_json ) {
+				$documents_json = null;
+			}
 			$student_id = $students_service->db_create_student( [
 				'student_number'   => $student_number,
 				'admission_number' => $admission_number,
@@ -607,6 +623,7 @@ final class AdmissionsService {
 				'admission_date'   => $admission_date,
 				'photo_id'         => $app['student_photo_id'] ? (int) $app['student_photo_id'] : null,
 				'address_json'     => $app['address_json'] ?? null,
+				'documents_json'   => $documents_json,
 				'status'           => 'active',
 				'created_at'       => current_time( 'mysql', true ),
 				'updated_at'       => current_time( 'mysql', true ),
@@ -633,7 +650,10 @@ final class AdmissionsService {
 			$mother_raw = $custom['mother_name'] ?? '';
 			$other_raw  = $custom['guardian_other_name'] ?? '';
 
+			$primary_choice = ! empty( $params['primary_contact'] ) ? sanitize_key( (string) $params['primary_contact'] ) : ( ! empty( $custom['primary_contact'] ) ? sanitize_key( (string) $custom['primary_contact'] ) : ( ! empty( $father_raw ) ? 'father' : ( ! empty( $mother_raw ) ? 'mother' : 'guardian' ) ) );
+
 			$parent_payload = [
+				'primary_contact'   => $primary_choice,
 				'father_first_name' => $split_name( $father_raw )[0],
 				'father_last_name'  => $split_name( $father_raw )[1],
 				'father_email'      => $custom['father_email'] ?? '',

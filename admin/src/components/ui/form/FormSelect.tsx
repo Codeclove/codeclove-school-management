@@ -42,8 +42,15 @@ export interface FormSelectProps {
   container?: HTMLElement | null
   /** Optional secondary change callback */
   onValueChange?: (value: string) => void
+  /** Enable real-time search filtering via Combobox */
+  searchable?: boolean
+  /** Threshold for auto-enabling search */
+  autoSearchThreshold?: number
+  /** Search input placeholder */
+  searchPlaceholder?: string
+  /** Text to show when no search results match */
+  emptyText?: string
 }
-
 /**
  * Tier 2 FormSelect — Accessible select dropdown bound to react-hook-form via useController.
  * Bridges value and onValueChange cleanly with Radix Select primitive while enforcing
@@ -67,6 +74,10 @@ export function FormSelect({
   id,
   container,
   onValueChange,
+  searchable,
+  autoSearchThreshold,
+  searchPlaceholder,
+  emptyText,
 }: FormSelectProps) {
   const {
     field,
@@ -120,6 +131,10 @@ export function FormSelect({
         error={!!errorMessage}
         className={selectClassName}
         container={container}
+        searchable={searchable}
+        autoSearchThreshold={autoSearchThreshold}
+        searchPlaceholder={searchPlaceholder}
+        emptyText={emptyText}
         aria-invalid={!!errorMessage}
         aria-describedby={describedBy}
       />

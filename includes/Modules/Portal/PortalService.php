@@ -21,6 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use CodeClove\Database\Schema;
 use CodeClove\Modules\Settings\SettingsRepository;
+use CodeClove\Modules\Media\DocumentService;
 
 /**
  * Class PortalService
@@ -971,6 +972,51 @@ final class PortalService {
 		$apps_table = Schema::applications();
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student documents query.
+		$student_row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT documents_json FROM ' . Schema::students() . ' WHERE id = %d AND deleted_at IS NULL',
+				$student_id
+			),
+			ARRAY_A
+		);
+
+		$merged_docs         = [];
+		$seen_attachment_ids = [];
+
+		if ( ! empty( $student_row['documents_json'] ) ) {
+			$decoded = json_decode( (string) $student_row['documents_json'], true );
+			if ( is_array( $decoded ) ) {
+				foreach ( $decoded as $doc ) {
+					$att_id = ! empty( $doc['attachment_id'] ) ? (int) $doc['attachment_id'] : 0;
+					if ( $att_id <= 0 ) {
+						continue;
+					}
+
+					$att_file = get_attached_file( $att_id );
+					if ( ! $att_file || ! file_exists( $att_file ) || ! DocumentService::is_safe_content_path( $att_file ) ) {
+						continue;
+					}
+
+					$url      = DocumentService::get_document_url( $att_id );
+					$filename = ! empty( $doc['name'] ) ? (string) $doc['name'] : ( ! empty( $doc['title'] ) ? (string) $doc['title'] . '.pdf' : 'Document.pdf' );
+					$size     = isset( $doc['file_size'] ) ? (int) $doc['file_size'] : ( (int) filesize( $att_file ) );
+
+					$seen_attachment_ids[ $att_id ] = true;
+
+					$merged_docs[] = [
+						'id'            => sanitize_key( (string) ( $doc['id'] ?? ( 'doc_' . $att_id ) ) ),
+						'document_type' => 'student_document',
+						'file_name'     => sanitize_text_field( $filename ),
+						'file_url'      => esc_url( $url ),
+						'file_size'     => $size,
+						'status'        => 'approved',
+						'created_at'    => (string) ( $doc['uploaded_at'] ?? current_time( 'mysql', true ) ),
+					];
+				}
+			}
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student documents query.
 		$docs = $wpdb->get_results(
 			$wpdb->prepare(
 				'SELECT d.id, d.document_type, d.label, d.attachment_id, d.status, d.created_at
@@ -985,23 +1031,29 @@ final class PortalService {
 			ARRAY_A
 		) ?: [];
 
-		$formatted_docs = [];
 		foreach ( $docs as $d ) {
-			$att_id   = ! empty( $d['attachment_id'] ) ? (int) $d['attachment_id'] : 0;
-			$file_url = '';
+			$att_id = ! empty( $d['attachment_id'] ) ? (int) $d['attachment_id'] : 0;
+			if ( $att_id > 0 && isset( $seen_attachment_ids[ $att_id ] ) ) {
+				continue;
+			}
+
+			$file_url  = '';
 			$file_name = (string) $d['label'];
 			$file_size = null;
 
 			if ( $att_id > 0 ) {
-				$file_url      = wp_get_attachment_url( $att_id ) ?: '';
+				$file_url = DocumentService::get_document_url( $att_id );
 				$attached_file = get_attached_file( $att_id );
 				if ( $attached_file && file_exists( $attached_file ) ) {
-					$file_name = basename( $attached_file );
+					if ( ! DocumentService::is_safe_content_path( $attached_file ) ) {
+						continue;
+					}
+					$file_name = DocumentService::get_clean_display_filename( basename( $attached_file ) );
 					$file_size = (int) filesize( $attached_file );
 				}
 			}
 
-			$formatted_docs[] = [
+			$merged_docs[] = [
 				'id'            => (int) $d['id'],
 				'document_type' => (string) $d['document_type'],
 				'file_name'     => $file_name,
@@ -1013,7 +1065,7 @@ final class PortalService {
 		}
 
 		return [
-			'documents' => $formatted_docs,
+			'documents' => $merged_docs,
 		];
 	}
 

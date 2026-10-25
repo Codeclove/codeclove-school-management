@@ -19,6 +19,7 @@ import {
   Badge,
   Spinner,
   Skeleton,
+  Checkbox,
 } from '@/components/ui'
 import {
   useCreatePortalAccount,
@@ -424,25 +425,20 @@ export default function PortalAccessModal({
               </div>
             </FormField>
 
-            <label className="flex items-start gap-3 p-3 rounded-xl bg-bg-surface border border-border cursor-pointer select-none text-xs">
-              <input
-                type="checkbox"
+            <div className="p-3 rounded-xl bg-bg-surface border border-border">
+              <Checkbox
                 checked={sendWelcomeEmail}
                 onChange={(e) => setSendWelcomeEmail(e.target.checked)}
                 disabled={!email.trim()}
-                className="mt-0.5 rounded border-border text-brand focus:ring-brand"
-              />
-              <div>
-                <span className="font-semibold text-text block">
-                  {__( 'Send welcome notification email with login instructions', 'codeclove-school-management' )}
-                </span>
-                <span className="text-text-muted text-xs block mt-0.5">
-                  {email.trim()
+                label={__( 'Send welcome notification email with login instructions', 'codeclove-school-management' )}
+                labelClassName="text-xs font-semibold text-text"
+                description={
+                  email.trim()
                     ? __( 'Sends an email with password setup instructions so they can log in right away.', 'codeclove-school-management' )
-                    : __( 'Provide an email address above to enable email delivery.', 'codeclove-school-management' )}
-                </span>
-              </div>
-            </label>
+                    : __( 'Provide an email address above to enable email delivery.', 'codeclove-school-management' )
+                }
+              />
+            </div>
           </div>
         )}
 

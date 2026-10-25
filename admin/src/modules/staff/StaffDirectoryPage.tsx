@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import {
   useStaff,
+  fetchStaff,
   useDeleteStaff,
   useBulkStaffAction,
   type Staff,
@@ -83,11 +84,9 @@ export default function StaffDirectoryPage() {
   const staffList = data?.data ?? []
   const total = data?.total ?? 0
 
-  const handleExportCSV = useCallback(() => {
-    const listToExport = selectedIds.length > 0
-      ? staffList.filter((s) => selectedIds.includes(s.id))
-      : staffList
+  const [isExportingAll, setIsExportingAll] = useState(false)
 
+  const exportStaffToCSV = useCallback((listToExport: StaffMember[]) => {
     if (!listToExport.length) {
       toast.error(sprintf(__('No %s available to export.', 'codeclove-school-management'), staffLabelPlural.toLowerCase()))
       return
@@ -128,13 +127,40 @@ export default function StaffDirectoryPage() {
       )
     )
   }, [
-    selectedIds,
-    staffList,
     staffLabelSingular,
     staffLabelPlural,
-    formatDate,
     toast,
   ])
+
+  // Exports the entire filtered directory across all pages
+  const handleExportDirectoryCSV = useCallback(async () => {
+    try {
+      setIsExportingAll(true)
+      const res = await fetchStaff({
+        status: status || undefined,
+        role_id: roleId || undefined,
+        search: debouncedSearch || undefined,
+        per_page: -1,
+      })
+      exportStaffToCSV(res.data)
+    } catch {
+      toast.error(__('Failed to export staff.', 'codeclove-school-management'))
+    } finally {
+      setIsExportingAll(false)
+    }
+  }, [
+    status,
+    roleId,
+    debouncedSearch,
+    exportStaffToCSV,
+    toast,
+  ])
+
+  // Exports only the selected rows
+  const handleExportSelectedCSV = useCallback(() => {
+    const listToExport = staffList.filter((s) => selectedIds.includes(s.id))
+    exportStaffToCSV(listToExport)
+  }, [staffList, selectedIds, exportStaffToCSV])
   // Reset selection on data change
   useEffect(() => {
     setSelectedIds([])
@@ -348,13 +374,16 @@ export default function StaffDirectoryPage() {
           <div className="flex items-center gap-2">
             <Button
               variant="secondary"
-              onClick={handleExportCSV}
-              disabled={!staffList.length}
+              onClick={handleExportDirectoryCSV}
+              disabled={isExportingAll || total === 0}
               className="gap-1.5"
-              title={__('Export CSV', 'codeclove-school-management')}
+              title={total > 0
+                ? sprintf(__('Export all %d %s to CSV', 'codeclove-school-management'), total, staffLabelPlural.toLowerCase())
+                : __('Export CSV', 'codeclove-school-management')
+              }
             >
-              <Download size={14} />
-              {__('Export CSV', 'codeclove-school-management')}
+              <Download size={14} className={isExportingAll ? 'animate-bounce' : ''} />
+              {isExportingAll ? __('Exporting...', 'codeclove-school-management') : __('Export CSV', 'codeclove-school-management')}
             </Button>
             <Button variant="secondary" onClick={() => navigate('/staff/import')} className="gap-1.5">
               <Upload size={14} />
@@ -433,22 +462,13 @@ export default function StaffDirectoryPage() {
               <Printer size={12} />
               {__('Print ID Badges', 'codeclove-school-management')}
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleExportCSV}
-              className="gap-1.5 h-7 text-xs bg-bg-surface"
-            >
-              <Download size={12} />
-              {__('Export CSV', 'codeclove-school-management')}
-            </Button>
             <Select
               value=""
               onValueChange={(val) => {
                 if (val === 'delete') {
                   handleBulkDelete()
                 } else if (val === 'export') {
-                  handleExportCSV()
+                  handleExportSelectedCSV()
                 } else if (val.startsWith('status:')) {
                   handleBulkStatus(val.replace('status:', ''))
                 }
@@ -456,7 +476,7 @@ export default function StaffDirectoryPage() {
               placeholder={__('Bulk Actions', 'codeclove-school-management')}
               options={[
                 { value: '', label: __('Bulk Actions', 'codeclove-school-management') },
-                { value: 'export', label: __('Export Selected to CSV', 'codeclove-school-management') },
+                { value: 'export', label: sprintf( __('Export Selected to CSV (%d)', 'codeclove-school-management'), selectedIds.length ) },
                 { value: 'status:active', label: __('Mark Active', 'codeclove-school-management') },
                 { value: 'status:inactive', label: __('Mark Inactive', 'codeclove-school-management') },
                 { value: 'status:suspended', label: __('Mark Suspended', 'codeclove-school-management') },

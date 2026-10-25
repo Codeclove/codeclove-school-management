@@ -1082,18 +1082,7 @@ final class DemoDataService {
 				] ),
 			};
 
-			$documents = wp_json_encode( [
-				[
-					'label'         => 'Government ID Proof',
-					'attachment_id' => $photo_id ?: ( 500 + $s_idx ),
-					'url'           => 'https://example.com/docs/government-id.pdf',
-				],
-				[
-					'label'         => 'Certified Degree & License',
-					'attachment_id' => $photo_id ?: ( 600 + $s_idx ),
-					'url'           => 'https://example.com/docs/degree-certificate.pdf',
-				],
-			] );
+			$documents = '[]';
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->insert(

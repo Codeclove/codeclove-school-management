@@ -233,8 +233,8 @@
 
   /* Accessible focus ring for interactive non-text elements (buttons, links, checkboxes, radios, focusable triggers).
    * Uses :where() so selector has (0, 0, 0) specificity, allowing Tailwind utility classes (e.g. focus:ring-0) to override.
-   * Form text inputs, textareas, and selects manage their own component focus states (border-brand / ring-1). */
-  :where(:focus-visible:not([role="menuitem"]):not([role="option"]):not(input:not([type="checkbox"]):not([type="radio"])):not(textarea):not(select)) {
+  /* Form text inputs, textareas, and selects manage their own component focus states (border-brand / ring-1). */
+  :where(:focus-visible:not([role="menuitem"]):not([role="option"]):not([role="combobox"]):not([data-radix-select-trigger]):not(input:not([type="checkbox"]):not([type="radio"])):not(textarea):not(select)) {
     @apply ring-2 ring-brand-ring ring-offset-1 ring-offset-bg-base rounded;
   }
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import { FormField, Input, Select } from '@/components/ui'
+import { FormField, Input, Select, Checkbox } from '@/components/ui'
 import type { CertificateTemplate } from '@/api/certificates'
 import { __ } from '@/lib/i18n'
 
@@ -64,21 +64,14 @@ export const IssuanceFields: React.FC<IssuanceFieldsProps> = ({
         </div>
 
         {onUpdateStatusChange && (
-          <div className="p-3 bg-bg-surface border border-border rounded-lg flex items-center justify-between">
-            <label htmlFor="cert-update-status" className="cursor-pointer">
-              <span className="text-xs font-semibold text-text block">
-                {__('Mark Student as Withdrawn upon Issuance', 'codeclove-school-management')}
-              </span>
-              <span className="text-2xs text-text-muted">
-                {__('Automatically completes active enrollment and marks student as withdrawn.', 'codeclove-school-management')}
-              </span>
-            </label>
-            <input
+          <div className="p-3 bg-bg-surface border border-border rounded-lg">
+            <Checkbox
               id="cert-update-status"
-              type="checkbox"
               checked={Boolean(updateStatus)}
               onChange={(e) => onUpdateStatusChange(e.target.checked)}
-              className="w-4 h-4 rounded text-brand focus:ring-brand cursor-pointer"
+              label={__('Mark Student as Withdrawn upon Issuance', 'codeclove-school-management')}
+              labelClassName="text-xs font-semibold text-text"
+              description={__('Automatically completes active enrollment and marks student as withdrawn.', 'codeclove-school-management')}
             />
           </div>
         )}

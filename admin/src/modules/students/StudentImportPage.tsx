@@ -201,7 +201,7 @@ export default function StudentImportPage() {
   }
 
   return (
-    <div className="space-y-5 w-full max-w-5xl mx-auto">
+    <div className="space-y-5 w-full">
       <PageHeader
         title={sprintf( __( 'Bulk Import %s', 'codeclove-school-management' ), studentLabelPlural )}
         description={sprintf( __( 'Enroll batches of %s into academic units via CSV upload with real-time pre-import verification.', 'codeclove-school-management' ), studentLabelPlural.toLowerCase() )}

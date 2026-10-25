@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { AlertTriangle, Eye, BookOpen, Users, Hash } from 'lucide-react'
+import { AlertTriangle, Eye, BookOpen, Users, Hash, Shield } from 'lucide-react'
 import {
   useAdmissionDetails,
   useConvertAdmission,
@@ -16,9 +16,8 @@ import { useSettings } from '@/api/settings'
 import { useToast } from '@/lib/toast'
 import { useLabels } from '@/lib/labels'
 import {
-  Button, Card, FormField, Select, PageHeader, Spinner, EmptyState, FormGroup, FormGroupHeader, Alert, Skeleton
+  Button, Card, FormField, Select, PageHeader, EmptyState, FormGroup, FormGroupHeader, Alert, Skeleton, FormActionFooter, Checkbox
 } from '@/components/ui'
-import { cn } from '@/lib/utils'
 import { __, sprintf } from '@/lib/i18n'
 
 export default function AdmissionConvertPage() {
@@ -71,7 +70,7 @@ export default function AdmissionConvertPage() {
 
   if (isAppLoading) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="space-y-6">
         <Skeleton className="h-10 w-48 rounded-lg" />
         <Skeleton className="h-48 w-full rounded-xl" />
         <Skeleton className="h-48 w-full rounded-xl" />
@@ -146,7 +145,7 @@ export default function AdmissionConvertPage() {
   })
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6">
       <PageHeader
         title={sprintf( __( 'Approval & %s Conversion', 'codeclove-school-management' ), studentLabelSingular )}
         description={sprintf( __( 'Confirm session placement and class section assignment for %1$s %2$s.', 'codeclove-school-management' ), application.student_first_name, application.student_last_name )}
@@ -221,39 +220,15 @@ export default function AdmissionConvertPage() {
           cols={1}
         >
           {/* Styled checkbox matching Settings FormCheckbox visual */}
-          <div className="flex items-start gap-2.5 py-1 select-none col-span-full">
-            <input
-              type="checkbox"
+          <div className="py-1 col-span-full">
+            <Checkbox
               id="link_existing_guardian_convert"
               checked={linkExisting}
               onChange={(e) => setLinkExisting(e.target.checked)}
-              className="sr-only"
+              label={sprintf( __( 'Link to Existing %s', 'codeclove-school-management' ), guardianLabelSingular )}
+              labelClassName="text-xs font-semibold text-text"
+              description={__( 'Avoid duplicate records if applicant has a sibling in the school.', 'codeclove-school-management' )}
             />
-            <label
-              htmlFor="link_existing_guardian_convert"
-              className="flex items-start gap-2.5 cursor-pointer group"
-            >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'mt-0.5 flex-shrink-0 h-4 w-4 rounded-[4px] border transition-colors duration-100 flex items-center justify-center group-hover:border-border-strong',
-                  linkExisting ? 'bg-brand border-brand' : 'bg-bg-surface border-border'
-                )}
-              >
-                <svg
-                  className={cn('w-2.5 h-2.5 text-white transition-transform duration-100', linkExisting ? 'scale-100' : 'scale-0')}
-                  viewBox="0 0 10 8" fill="none" stroke="currentColor"
-                  strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M1 4l3 3 5-5" />
-                </svg>
-              </span>
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold text-text leading-tight">{sprintf( __( 'Link to Existing %s', 'codeclove-school-management' ), guardianLabelSingular )}</span>
-                <span className="text-xs text-text-muted leading-tight mt-0.5">{__( 'Avoid duplicate records if applicant has a sibling in the school.', 'codeclove-school-management' )}</span>
-              </div>
-            </label>
           </div>
 
           {linkExisting && (
@@ -292,15 +267,17 @@ export default function AdmissionConvertPage() {
           </div>
         </Card>
 
-        <div className="flex justify-end gap-3 pt-1">
-          <Button type="button" variant="ghost" onClick={() => navigate(`/students/admissions/${applicationId}`)} disabled={convertMutation.isPending}>
-            {__( 'Cancel', 'codeclove-school-management' )}
-          </Button>
-          <Button onClick={handleConvert} disabled={convertMutation.isPending} className="gap-1.5">
-            {convertMutation.isPending && <Spinner size="xs" />}
-            {__( 'Approve & Register', 'codeclove-school-management' )}
-          </Button>
-        </div>
+        <FormActionFooter
+          icon={Shield}
+          title={sprintf( __( 'Confirm %s Registration', 'codeclove-school-management' ), studentLabelSingular )}
+          description={__( 'Session placement and class section assignment will be applied.', 'codeclove-school-management' )}
+          submitText={__( 'Approve & Register', 'codeclove-school-management' )}
+          submittingText={__( 'Registering...', 'codeclove-school-management' )}
+          submitType="button"
+          onSubmit={handleConvert}
+          onCancel={() => navigate(`/students/admissions/${applicationId}`)}
+          isPending={convertMutation.isPending}
+        />
       </div>
     </div>
   )

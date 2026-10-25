@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type ApiPaginatedResponse } from '@/lib/api-client'
 import { queryKeys } from '@/api/query-keys'
 import type { StudentFormData } from '../schemas/students'
+import { __ } from '@/lib/i18n'
 
 
 export interface PortalAccount {
@@ -64,6 +65,17 @@ export interface AdmissionApplication {
   student_photo_url?: string
 }
 
+export interface StudentDocument {
+  id: string
+  name: string
+  title: string
+  attachment_id: number
+  url: string
+  file_size?: number | null
+  mime_type?: string
+  uploaded_at?: string
+  file?: File
+}
 export interface Student {
   id: number
   user_id?: number | null
@@ -91,8 +103,16 @@ export interface Student {
   country?: string
   email?: string
   phone?: string
+  blood_group?: string
+  unit_name?: string
+  group_name?: string
+  guardian_first_name?: string
+  guardian_last_name?: string
+  guardian_email?: string
+  guardian_phone?: string
+  guardian_relationship?: string
+  documents?: StudentDocument[]
 }
-
 export interface StudentEnrollment {
   id: number
   student_id: number
@@ -122,6 +142,9 @@ export interface Guardian {
   occupation?: string
   address_json?: string
   status: 'active' | 'inactive' | 'archived'
+  is_primary?: boolean | number
+  is_billing_contact?: boolean | number
+  is_emergency_contact?: boolean | number
 }
 
 export interface StudentGuardian {
@@ -143,6 +166,7 @@ export interface FullStudent extends Student {
   mother?: Guardian | null
   guardians?: Guardian[]
   primary_guardian?: Guardian | null
+  primary_contact?: 'father' | 'mother' | 'guardian'
 }
 
 
@@ -199,7 +223,7 @@ export interface ApplicationFilters {
   order?: 'asc' | 'desc' | ''
 }
 
-export function useAdmissions(filters: ApplicationFilters = {}) {
+export async function fetchAdmissions(filters: ApplicationFilters = {}): Promise<PaginatedResponse<AdmissionApplication>> {
   const params: ListParams = {
     page: filters.page ?? 1,
     per_page: filters.per_page ?? 10,
@@ -212,9 +236,13 @@ export function useAdmissions(filters: ApplicationFilters = {}) {
     orderby: filters.orderby || undefined,
     order: filters.order || undefined,
   }
+  return toPaginatedResponse(await api.list<AdmissionApplication[]>(`admissions${toQueryString(params)}`))
+}
+
+export function useAdmissions(filters: ApplicationFilters = {}) {
   return useQuery<PaginatedResponse<AdmissionApplication>>({
     queryKey: queryKeys.admissions.list(filters),
-    queryFn: async () => toPaginatedResponse(await api.list<AdmissionApplication[]>(`admissions${toQueryString(params)}`)),
+    queryFn: () => fetchAdmissions(filters),
   })
 }
 
@@ -294,7 +322,7 @@ export interface StudentFilters {
   order?: 'asc' | 'desc' | ''
 }
 
-export function useStudents(filters: StudentFilters = {}) {
+export async function fetchStudents(filters: StudentFilters = {}): Promise<PaginatedResponse<FullStudent>> {
   const params: ListParams = {
     page: filters.page ?? 1,
     per_page: filters.per_page ?? 10,
@@ -306,9 +334,13 @@ export function useStudents(filters: StudentFilters = {}) {
     orderby: filters.orderby || undefined,
     order: filters.order || undefined,
   }
+  return toPaginatedResponse(await api.list<FullStudent[]>(`students${toQueryString(params)}`))
+}
+
+export function useStudents(filters: StudentFilters = {}) {
   return useQuery<PaginatedResponse<FullStudent>>({
     queryKey: queryKeys.students.list(filters),
-    queryFn: async () => toPaginatedResponse(await api.list<FullStudent[]>(`students${toQueryString(params)}`)),
+    queryFn: () => fetchStudents(filters),
   })
 }
 
@@ -625,5 +657,75 @@ export function useResetPortalPassword() {
       return resetPortalPassword(studentId, data)
     },
   })
+}
+
+export function useAddStudentDocument(studentId: number) {
+  const queryClient = useQueryClient()
+  return useMutation<StudentDocument[], Error, { attachment_id: number; name?: string; title?: string; url?: string; file_size?: number | null }>({
+    mutationFn: async (payload) => {
+      const res = await api.post<StudentDocument[]>(`students/${studentId}/documents`, payload)
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.detail(studentId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all })
+    },
+  })
+}
+
+export function useDeleteStudentDocument(studentId: number) {
+  const queryClient = useQueryClient()
+  return useMutation<StudentDocument[], Error, string>({
+    mutationFn: async (docId: string) => {
+      const res = await api.delete<StudentDocument[]>(`students/${studentId}/documents/${docId}`)
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.detail(studentId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all })
+    },
+  })
+}
+
+export async function uploadStudentDocument(file: File, customName?: string): Promise<StudentDocument> {
+  const ext = file.name.split('.').pop()?.toLowerCase() || ''
+  const isAllowed = ['pdf', 'jpg', 'jpeg', 'png'].includes(ext) || file.type === 'application/pdf' || file.type.startsWith('image/')
+  if (!isAllowed) {
+    throw new Error(__( 'Only PDF, JPG, and PNG documents are allowed.', 'codeclove-school-management' ))
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('type', 'document')
+
+  const res = await api.post<{
+    id: number
+    url: string
+    file_name?: string
+    file_size?: number
+    mime_type?: string
+  }>('media/upload', formData)
+
+  if (!res.success || !res.data?.id) {
+    const msg = 'message' in res && typeof res.message === 'string'
+      ? res.message
+      : __( 'Failed to upload document.', 'codeclove-school-management' )
+    throw new Error(msg)
+  }
+
+  const rawName = customName?.trim() || ''
+  const title = rawName.replace(/\.[^/.]+$/, '') || file.name.replace(/\.[^/.]+$/, '')
+  const cleanName = res.data.file_name || (rawName ? (rawName.includes('.') ? rawName : `${rawName}.${ext || 'pdf'}`) : file.name)
+
+  return {
+    id: 'doc_' + Math.random().toString(36).substring(2, 9),
+    name: cleanName,
+    title,
+    attachment_id: res.data.id,
+    url: res.data.url,
+    file_size: res.data.file_size || file.size,
+    mime_type: res.data.mime_type || file.type || 'application/pdf',
+    uploaded_at: new Date().toISOString(),
+  }
 }
 

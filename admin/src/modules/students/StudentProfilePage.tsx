@@ -4,7 +4,7 @@ import {
   User, RefreshCw, Coins, BookOpen, Pencil, AlertTriangle, MapPin, Users,
   Eye, Printer, ArrowLeftRight, IdCard, KeyRound, UserX, CheckCircle2,
   Copy, History, Receipt, Plus, Filter, MoreHorizontal,
-  Link2, Send
+  Link2, Send, PhoneCall, Mail, FileText, type LucideIcon
 } from 'lucide-react'
 import {
   useStudentDetails,
@@ -30,18 +30,19 @@ import { TablePagination } from '@/components/ui/TablePagination'
 import { cn } from '@/lib/utils'
 import { useInvoices, usePayments, type Invoice, type Payment } from '@/api/finance'
 import { getStatusVariant, getMethodLabel } from '@/modules/finance/finance-utils'
-import { useFormatter, formatGender } from '@/lib/formatter'
+import { useFormatter, formatGender, calculateAge, formatCountry } from '@/lib/formatter'
 import { useLabels } from '@/lib/labels'
 import { useSettings } from '@/api/settings'
 import { api } from '@/lib/api-client'
 import { useToast } from '@/lib/toast'
 import { printElement } from '@/lib/print'
 import { useSession } from '@/lib/session-context'
-import { __, sprintf } from '@/lib/i18n'
+import { __, _n, sprintf } from '@/lib/i18n'
 import PrintInvoiceSheet from '../finance/PrintInvoiceSheet'
 import PrintPaymentReceipt from '../finance/PrintPaymentReceipt'
 import { StudentIdCardSection } from '@/components/print'
 import PortalAccessModal, { type PortalMemberTarget } from './components/PortalAccessModal'
+import { StudentDocumentsTab } from './components/StudentDocumentsTab'
 
 const STATUS_CONFIG: Record<
   string,
@@ -85,7 +86,7 @@ export default function StudentProfilePage() {
   const guardianLabelSingular = getLabel('guardian', false, __( 'Guardian', 'codeclove-school-management' ))
   const subjectLabelPlural = getLabel('subject', true, __( 'Subjects', 'codeclove-school-management' ))
 
-  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'portal' | 'idcard' | 'enrollment' | 'finance' | 'academics'>('overview')
+  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'portal' | 'idcard' | 'enrollment' | 'finance' | 'academics' | 'documents'>('overview')
   // Portal account management state & mutations
   const unlinkPortalAccountMutation = useUnlinkPortalAccount()
   const resetPortalPasswordMutation = useResetPortalPassword()
@@ -154,6 +155,12 @@ export default function StudentProfilePage() {
   const { data: settingsData } = useSettings()
   const school = settingsData?.school
 
+  const copyToClipboard = (text: string, label: string) => {
+    if (!text) return
+    void navigator.clipboard?.writeText(text).then(() => {
+      toast.success(sprintf( __( '%s copied to clipboard.', 'codeclove-school-management' ), label ))
+    })
+  }
   // Finance tab selections
   const [financeTab, setFinanceTab] = useState<'ledger' | 'history'>('ledger')
 
@@ -376,18 +383,51 @@ export default function StudentProfilePage() {
     )
   }
 
-  const matchedUnit = units.find((u) => u.id === student.enrollment?.academic_unit_id)
-  const matchedGroup = groups.find((g) => g.id === student.enrollment?.academic_group_id)
-  const studentSubjects = subjects.filter((s) => student.subject_ids?.includes(s.id))
+  const matchedUnit = units.find((u) => u.id === Number(student.enrollment?.academic_unit_id))
+  const matchedGroup = groups.find((g) => g.id === Number(student.enrollment?.academic_group_id))
+  const currentUnitName =
+    matchedUnit?.name ||
+    student.enrollment?.unit_name ||
+    ''
+  const currentGroupName =
+    matchedGroup?.name ||
+    student.enrollment?.group_name ||
+    ''
+  const currentClassSection =
+    [currentUnitName, currentGroupName].filter(Boolean).join(' • ') ||
+    __( 'Not assigned', 'codeclove-school-management' )
 
-  const tabs = [
+  const rawSessionName =
+    session?.label ||
+    student.enrollment?.session_name ||
+    __( 'Current Session', 'codeclove-school-management' )
+  const sessionName = rawSessionName
+  const hasDistinctStudentNumber =
+    Boolean(student.student_number && student.student_number !== student.admission_number)
+
+  const formattedAddress = (
+    [student.address, student.city, student.state, student.postal_code, formatCountry(student.country)]
+      .filter((p): p is string => typeof p === 'string' && p.trim().length > 0)
+      .join(', ') || __( 'No residential address recorded', 'codeclove-school-management' )
+  )
+
+  const studentSubjects = subjects.filter((s) => student.subject_ids?.includes(s.id))
+  type SubTabId = 'overview' | 'portal' | 'idcard' | 'enrollment' | 'finance' | 'academics' | 'documents'
+  interface ProfileTab {
+    id: SubTabId
+    label: string
+    icon: LucideIcon
+    count?: number
+  }
+  const tabs: ProfileTab[] = [
     { id: 'overview', label: __( 'Overview', 'codeclove-school-management' ), icon: User },
     { id: 'portal', label: __( 'Portal Access', 'codeclove-school-management' ), icon: KeyRound },
     { id: 'idcard', label: __( 'ID Card', 'codeclove-school-management' ), icon: IdCard },
     { id: 'enrollment', label: __( 'Enrollment History', 'codeclove-school-management' ), icon: History },
     { id: 'finance', label: __( 'Finance & Invoices', 'codeclove-school-management' ), icon: Coins },
     { id: 'academics', label: __( 'Academics & Attendance', 'codeclove-school-management' ), icon: BookOpen },
-  ] as const
+    { id: 'documents', label: __( 'Documents', 'codeclove-school-management' ), icon: FileText, count: student.documents?.length || 0 },
+  ]
 
   const linkedGuardiansList: (Guardian & { relationship?: string })[] =
     student.guardians && student.guardians.length > 0
@@ -490,6 +530,8 @@ export default function StudentProfilePage() {
     }),
   ]
 
+
+  const age = calculateAge(student?.date_of_birth)
   const renderPortalAccessSection = () => (
     <div className="rounded-xl border border-border bg-bg-surface overflow-hidden">
       <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between">
@@ -648,309 +690,631 @@ export default function StudentProfilePage() {
         ]}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* Left Column - Profile Sidebar Card */}
-        <div className="lg:col-span-1">
-          <Card className="p-6 flex flex-col items-center text-center space-y-4">
-            <Avatar
-              name={`${student.first_name} ${student.last_name}`}
-              photoUrl={student.photo_url}
-              size="2xl"
-              shape="circle"
-            />
-            <div className="space-y-1">
-              <h2 className="text-base font-bold text-text">
-                {student.first_name} {student.last_name}
-              </h2>
-              <div className="flex justify-center">
-                <Badge variant={statusCfg.variant as any} size="sm">
-                  {statusCfg.label.toUpperCase()}
-                </Badge>
-              </div>
-            </div>
+      {/* 1. Unified Student Hero Header Card with Docked Subtabs */}
+      <Card className="overflow-hidden border border-border shadow-xs">
+        <div className="p-6 sm:p-7">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            {/* Student Avatar / Photo & Primary Demographics */}
+            <div className="flex items-start sm:items-center gap-4 sm:gap-5 min-w-0">
+              <Avatar
+                name={`${student.first_name} ${student.last_name}`}
+                photoUrl={student.photo_url}
+                size="2xl"
+                shape="circle"
+                className="h-16 w-16 sm:h-20 sm:w-20 ring-4 ring-bg-surface border-2 border-border shadow-xs shrink-0"
+              />
 
-            <div className="w-full border-t border-border/60 my-2"></div>
-
-            <div className="w-full space-y-2 text-xs">
-              <div className="flex justify-between py-1.5 border-b border-border/30 items-center">
-                <span className="text-text-muted">{sprintf( __( '%s ID', 'codeclove-school-management' ), studentLabelSingular )}</span>
-                <span className="font-mono font-medium text-text">{student.student_number}</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-border/30 items-center">
-                <span className="text-text-muted">{__( 'Admission No', 'codeclove-school-management' )}</span>
-                <span className="font-mono font-medium text-text">{student.admission_number}</span>
-              </div>
-              {student.enrollment?.roll_number && (
-                <div className="flex justify-between py-1.5 border-b border-border/30 items-center">
-                  <span className="text-text-muted">{__( 'Roll No', 'codeclove-school-management' )}</span>
-                  <span className="font-mono font-medium text-text">{student.enrollment.roll_number}</span>
+              <div className="space-y-1.5 min-w-0">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text truncate">
+                    {student.first_name} {student.last_name}
+                  </h1>
+                  <Badge variant={statusCfg.variant} size="sm">
+                    {statusCfg.label.toUpperCase()}
+                  </Badge>
                 </div>
-              )}
-              <div className="flex justify-between py-1.5 border-b border-border/30 items-center">
-                <span className="text-text-muted">{sprintf( __( 'Current %s', 'codeclove-school-management' ), unitLabelSingular )}</span>
-                <span className="font-medium text-text">{matchedUnit?.name || '—'}</span>
-              </div>
-              <div className="flex justify-between py-1.5 items-center">
-                <span className="text-text-muted">{groupLabelSingular}</span>
-                <span className="font-medium text-text">{matchedGroup?.name || '—'}</span>
+
+                <div className="flex items-center gap-2 text-sm text-text-muted flex-wrap">
+                  <span className="font-semibold text-text">
+                    {currentClassSection}
+                  </span>
+                  <span className="text-text-subtle">•</span>
+                  <span>{sessionName}</span>
+                  {student.enrollment?.roll_number && (
+                    <>
+                      <span className="text-text-subtle">•</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-bg-surface text-text border border-border font-mono">
+                        {sprintf( __( 'Roll #%s', 'codeclove-school-management' ), student.enrollment.roll_number )}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Identity Badges with One-Click Copy */}
+                <div className="flex items-center gap-2 pt-1 flex-wrap text-xs">
+                  {student.admission_number && (
+                    <div className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 text-2xs font-medium text-text border border-border shadow-2xs">
+                      <span className="text-text-subtle uppercase tracking-wider text-3xs font-bold">
+                        {__( 'Adm', 'codeclove-school-management' )}
+                      </span>
+                      <span className="font-mono font-semibold text-text">{student.admission_number}</span>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(student.admission_number || '', __( 'Admission Number', 'codeclove-school-management' ))}
+                        className="text-text-subtle hover:text-brand transition-colors ml-0.5 cursor-pointer"
+                        title={__( 'Copy Admission Number', 'codeclove-school-management' )}
+                        aria-label={__( 'Copy Admission Number', 'codeclove-school-management' )}
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+
+                  {hasDistinctStudentNumber && (
+                    <div className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 text-2xs font-medium text-text border border-border shadow-2xs">
+                      <span className="text-text-subtle uppercase tracking-wider text-3xs font-bold">
+                        {sprintf( __( '%s ID', 'codeclove-school-management' ), studentLabelSingular )}
+                      </span>
+                      <span className="font-mono font-semibold text-text">{student.student_number}</span>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(student.student_number || '', sprintf( __( '%s ID', 'codeclove-school-management' ), studentLabelSingular ))}
+                        className="text-text-subtle hover:text-brand transition-colors ml-0.5 cursor-pointer"
+                        title={sprintf( __( 'Copy %s ID', 'codeclove-school-management' ), studentLabelSingular )}
+                        aria-label={sprintf( __( 'Copy %s ID', 'codeclove-school-management' ), studentLabelSingular )}
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+
+                  {student.admission_date && (
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 text-2xs font-medium text-text-muted border border-border shadow-2xs">
+                      <span className="text-text-subtle uppercase tracking-wider text-3xs font-bold">
+                        {__( 'Enrolled', 'codeclove-school-management' )}
+                      </span>
+                      <span className="font-semibold text-text font-mono">{formatDate(student.admission_date)}</span>
+                    </span>
+                  )}
+
+                  {age !== null && (
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 text-2xs font-medium text-text-muted border border-border shadow-2xs">
+                      <span className="text-text-subtle uppercase tracking-wider text-3xs font-bold">
+                        {__( 'Age', 'codeclove-school-management' )}
+                      </span>
+                      <span className="font-semibold text-text">{sprintf( __( '%d yrs', 'codeclove-school-management' ), age )}</span>
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            <Button
-              variant="secondary"
-              onClick={() => navigate(`/students/${student.id}/edit`)}
-              className="w-full gap-1.5 text-xs py-2 mt-2"
-            >
-              <Pencil size={12} />
-              {__( 'Edit Profile', 'codeclove-school-management' )}
-            </Button>
+            {/* Quick Action Buttons */}
+            <div className="flex items-center gap-2.5 flex-wrap shrink-0 self-start lg:self-center">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => navigate(`/students/${student.id}/edit`)}
+                className="gap-1.5 text-xs font-semibold"
+              >
+                <Pencil size={13} />
+                <span>{__( 'Edit Student', 'codeclove-school-management' )}</span>
+              </Button>
 
-            <Button
-              variant="secondary"
-              onClick={() => setActiveSubTab('idcard')}
-              className="w-full gap-1.5 text-xs py-2 mt-2"
-            >
-              <IdCard size={12} />
-              {__( 'Identity Card', 'codeclove-school-management' )}
-            </Button>
+              {student.status === 'active' && student.enrollment && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={openTransferModal}
+                  className="gap-1.5 text-xs font-semibold"
+                >
+                  <ArrowLeftRight size={13} />
+                  <span>{__( 'Transfer Class', 'codeclove-school-management' )}</span>
+                </Button>
+              )}
 
-            {/* Transfer button — only for active enrolled students */}
-            {student.status === 'active' && student.enrollment && (
               <Button
                 variant="secondary"
-                onClick={openTransferModal}
-                className="w-full gap-1.5 text-xs py-2"
+                size="sm"
+                onClick={() => setActiveSubTab('idcard')}
+                className="gap-1.5 text-xs font-semibold"
               >
-                <ArrowLeftRight size={12} />
-                {__( 'Transfer Class', 'codeclove-school-management' )}
+                <IdCard size={13} />
+                <span>{__( 'Print ID Card', 'codeclove-school-management' )}</span>
               </Button>
-            )}
-
-          </Card>
+            </div>
+          </div>
         </div>
 
-        {/* Right Column - Tabs & Detail Panels */}
-        <div className="lg:col-span-3 space-y-5">
-          {/* Tabs Switcher */}
-          <div
-            role="tablist"
-            aria-label={__( 'Student profile sections', 'codeclove-school-management' )}
-            className="border-b border-border flex overflow-x-auto gap-6 pb-px scrollbar-none"
-          >
-            {tabs.map((tab) => {
-              const Icon = tab.icon
-              const isActive = activeSubTab === tab.id
-              return (
-                <button
-                  key={tab.id}
-                  role="tab"
-                  id={`tab-${tab.id}`}
-                  aria-selected={isActive}
-                  aria-controls={`panel-${tab.id}`}
-                  tabIndex={isActive ? 0 : -1}
-                  onClick={() => setActiveSubTab(tab.id)}
-                  className={`flex items-center gap-2 py-2 px-1 border-b-2 font-semibold text-xs transition-all whitespace-nowrap -mb-px ${
-                    isActive
-                      ? 'border-brand text-brand'
-                      : 'border-transparent text-text-muted hover:text-text hover:border-border'
-                  }`}
-                >
-                  <Icon size={14} className={isActive ? 'text-brand' : 'text-text-muted/70'} />
-                  {tab.label}
-                </button>
-              )
-            })}
-          </div>
+        {/* Docked Subtabs Navigation Bar */}
+        <div className="border-t border-border bg-bg-surface/50 px-6 py-2 flex items-center overflow-x-auto gap-2 scrollbar-none">
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeSubTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                role="tab"
+                id={`tab-${tab.id}`}
+                aria-selected={isActive}
+                aria-controls={`panel-${tab.id}`}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActiveSubTab(tab.id)}
+                className={`flex items-center gap-2 py-2 px-3 rounded-lg font-semibold text-xs transition-all whitespace-nowrap cursor-pointer ${
+                  isActive
+                    ? 'bg-brand text-text-inverted shadow-2xs'
+                    : 'text-text-muted hover:text-text hover:bg-bg-surface'
+                }`}
+              >
+                <Icon size={14} className={isActive ? 'text-text-inverted' : 'text-text-muted/70'} />
+                <span>{tab.label}</span>
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span
+                    className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none ${
+                      isActive ? 'bg-white/20 text-text-inverted' : 'bg-brand/10 text-brand'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </Card>
 
-          {/* Active Tab Panel Card */}
-          <Card
-            role="tabpanel"
-            id={`panel-${activeSubTab}`}
-            aria-labelledby={`tab-${activeSubTab}`}
-            className="p-6"
-          >
-            {activeSubTab === 'overview' && (
-              <div className="space-y-6">
-                {/* 1. Personal Information */}
-                <div>
-                  <h3 className="text-sm font-semibold text-text flex items-center gap-2 mb-4">
-                    <User size={16} className="text-brand" />
-                    {__( 'Personal Information', 'codeclove-school-management' )}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs">
-                    <div className="flex justify-between py-2 border-b border-border/30">
-                      <span className="text-text-muted font-medium">{__( 'First Name', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{student.first_name}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
-                      <span className="text-text-muted font-medium">{__( 'Last Name', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{student.last_name}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
-                      <span className="text-text-muted font-medium">{__( 'Middle Name', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{student.middle_name || '—'}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
-                      <span className="text-text-muted font-medium">{__( 'Date of Birth', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{formatDate(student.date_of_birth)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
-                      <span className="text-text-muted font-medium">{__( 'Gender', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{formatGender(student.gender)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
-                      <span className="text-text-muted font-medium">{__( 'Admission Date', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{student.admission_date ? formatDate(student.admission_date) : '—'}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
-                      <span className="text-text-muted font-medium">{__( 'Graduation Year', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{student.graduation_year || '—'}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
-                      <span className="text-text-muted font-medium">{__( 'Registered On', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{formatDate(student.created_at)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Contact & Address Details */}
-                <div>
-                  <h3 className="text-sm font-semibold text-text flex items-center gap-2 mb-4">
-                    <MapPin size={16} className="text-brand" />
-                    {__( 'Contact & Address Details', 'codeclove-school-management' )}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs">
-                    <div className="flex justify-between py-2 border-b border-border/30 col-span-full">
-                      <span className="text-text-muted font-medium">{__( 'Street Address', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{student.address || '—'}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
-                      <span className="text-text-muted font-medium">{__( 'City', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{student.city || '—'}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
-                      <span className="text-text-muted font-medium">{__( 'State / Province', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{student.state || '—'}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border/30">
-                      <span className="text-text-muted font-medium">{__( 'ZIP / Postal Code', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{student.postal_code || '—'}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border/30 col-span-full">
-                      <span className="text-text-muted font-medium">{__( 'Country', 'codeclove-school-management' )}</span>
-                      <span className="font-medium text-text">{student.country || '—'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Parent & Guardian Contacts */}
-                <div>
-                  <h3 className="text-sm font-semibold text-text flex items-center gap-2 mb-4">
-                    <Users size={16} className="text-brand" />
-                    {guardianLabelSingular.toLowerCase().includes('parent') ? sprintf( __( '%s Contacts', 'codeclove-school-management' ), guardianLabelSingular ) : sprintf( __( 'Parent & %s Contacts', 'codeclove-school-management' ), guardianLabelSingular )}
-                  </h3>
-                  
-                  <div className="space-y-6 divide-y divide-border/30">
-                    {/* Father's Details */}
-                    <div className="pt-2">
-                      <p className="text-2xs font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                        <span className="w-1.5 h-3 rounded-full bg-brand/75"></span>
-                        {__( "Father's Details", 'codeclove-school-management' )}
-                      </p>
-                      {student.father ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs">
-                          <div className="flex justify-between py-2 border-b border-border/30">
-                            <span className="text-text-muted font-medium">{__( 'Name', 'codeclove-school-management' )}</span>
-                            <span className="font-medium text-text">{student.father.first_name} {student.father.last_name}</span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-border/30">
-                            <span className="text-text-muted font-medium">{__( 'Phone', 'codeclove-school-management' )}</span>
-                            <span className="font-medium text-text">{student.father.phone || '—'}</span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-border/30">
-                            <span className="text-text-muted font-medium">{__( 'Email', 'codeclove-school-management' )}</span>
-                            <span className="font-medium text-text">{student.father.email || '—'}</span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-border/30">
-                            <span className="text-text-muted font-medium">{__( 'Occupation', 'codeclove-school-management' )}</span>
-                            <span className="font-medium text-text">{student.father.occupation || '—'}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-4 text-xs text-text-muted border border-dashed border-border rounded-xl">
-                          {__( 'No Father profile registered.', 'codeclove-school-management' )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Mother's Details */}
-                    <div className="pt-5">
-                      <p className="text-2xs font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                        <span className="w-1.5 h-3 rounded-full bg-brand/75"></span>
-                        {__( "Mother's Details", 'codeclove-school-management' )}
-                      </p>
-                      {student.mother ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs">
-                          <div className="flex justify-between py-2 border-b border-border/30">
-                            <span className="text-text-muted font-medium">{__( 'Name', 'codeclove-school-management' )}</span>
-                            <span className="font-medium text-text">{student.mother.first_name} {student.mother.last_name}</span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-border/30">
-                            <span className="text-text-muted font-medium">{__( 'Phone', 'codeclove-school-management' )}</span>
-                            <span className="font-medium text-text">{student.mother.phone || '—'}</span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-border/30">
-                            <span className="text-text-muted font-medium">{__( 'Email', 'codeclove-school-management' )}</span>
-                            <span className="font-medium text-text">{student.mother.email || '—'}</span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-border/30">
-                            <span className="text-text-muted font-medium">{__( 'Occupation', 'codeclove-school-management' )}</span>
-                            <span className="font-medium text-text">{student.mother.occupation || '—'}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-4 text-xs text-text-muted border border-dashed border-border rounded-xl">
-                          {__( 'No Mother profile registered.', 'codeclove-school-management' )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Legal Guardian / Contact */}
-                    <div className="pt-5">
-                      <p className="text-2xs font-bold text-text-muted uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                        <span className="w-1.5 h-3 rounded-full bg-brand/75"></span>
-                        {sprintf( __( 'Primary Legal %s / Contact', 'codeclove-school-management' ), guardianLabelSingular )}
-                      </p>
-                      {student.guardian ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-xs">
-                          <div className="flex justify-between py-2 border-b border-border/30">
-                            <span className="text-text-muted font-medium">{__( 'Name', 'codeclove-school-management' )}</span>
-                            <span className="font-medium text-text">{student.guardian.first_name} {student.guardian.last_name}</span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-border/30">
-                            <span className="text-text-muted font-medium">{__( 'Relationship', 'codeclove-school-management' )}</span>
-                            <span className="font-medium text-text capitalize">{student.relationship || guardianLabelSingular}</span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-border/30">
-                            <span className="text-text-muted font-medium">{__( 'Phone', 'codeclove-school-management' )}</span>
-                            <span className="font-medium text-text">{student.guardian.phone || '—'}</span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-border/30">
-                            <span className="text-text-muted font-medium">{__( 'Email', 'codeclove-school-management' )}</span>
-                            <span className="font-medium text-text">{student.guardian.email || '—'}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-4 text-xs text-text-muted border border-dashed border-border rounded-xl">
-                          {sprintf( __( 'No other legal %s registered.', 'codeclove-school-management' ), guardianLabelSingular.toLowerCase() )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
+      {/* 2. At-a-Glance Student 360 Institutional Vitals Strip */}
+      {activeSubTab === 'overview' && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Vitals Tile 1: Attendance Standing */}
+          <div className="rounded-xl border border-border bg-bg-surface p-4 space-y-1.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle">
+                {__( 'Attendance YTD', 'codeclove-school-management' )}
+              </span>
+              <BookOpen className="w-4 h-4 text-text-muted" />
+            </div>
+            {attendanceStats && attendanceStats.total > 0 ? (
+              <div>
+                <p className={cn(
+                  'text-xl font-bold font-mono',
+                  attendanceStats.rate >= 90 ? 'text-success' : attendanceStats.rate >= 75 ? 'text-warning' : 'text-danger'
+                )}>
+                  {attendanceStats.rate}%
+                </p>
+                <p className="text-2xs text-text-muted">
+                  {sprintf( __( '%1$d of %2$d sessions attended', 'codeclove-school-management' ), attendanceStats.present + attendanceStats.late + Math.floor(attendanceStats.half_day * 0.5), attendanceStats.total )}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm font-semibold text-text">
+                  {__( 'No attendance recorded', 'codeclove-school-management' )}
+                </p>
+                <p className="text-2xs text-text-muted">{__( 'Current academic term', 'codeclove-school-management' )}</p>
               </div>
             )}
+          </div>
+
+          {/* Vitals Tile 2: Financial Clearance */}
+          <div className="rounded-xl border border-border bg-bg-surface p-4 space-y-1.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle">
+                {__( 'Tuition & Invoices', 'codeclove-school-management' )}
+              </span>
+              <Coins className="w-4 h-4 text-text-muted" />
+            </div>
+            <div>
+              <p className={cn(
+                'text-xl font-bold font-mono',
+                outstandingBalance > 0 ? 'text-danger' : 'text-success'
+              )}>
+                {outstandingBalance > 0 ? formatCurrency(outstandingBalance) : __( 'All Clear', 'codeclove-school-management' )}
+              </p>
+              <p className="text-2xs text-text-muted">
+                {outstandingBalance > 0
+                  ? __( 'Outstanding dues balance', 'codeclove-school-management' )
+                  : __( 'No pending student fees', 'codeclove-school-management' )}
+              </p>
+            </div>
+          </div>
+
+          {/* Vitals Tile 3: Academic Curriculum */}
+          <div className="rounded-xl border border-border bg-bg-surface p-4 space-y-1.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle">
+                {__( 'Academic Curriculum', 'codeclove-school-management' )}
+              </span>
+              <BookOpen className="w-4 h-4 text-text-muted" />
+            </div>
+            <div>
+              <p className="text-xl font-bold font-mono text-text">
+                {studentSubjects.length > 0
+                  ? sprintf( __( '%d Subjects', 'codeclove-school-management' ), studentSubjects.length )
+                  : (currentUnitName || __( 'Enrolled', 'codeclove-school-management' ))}
+              </p>
+              <p className="text-2xs text-text-muted truncate">
+                {currentClassSection}
+              </p>
+            </div>
+          </div>
+
+          {/* Vitals Tile 4: Primary Contact */}
+          <div className="rounded-xl border border-border bg-bg-surface p-4 space-y-1.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle">
+                {__( 'Primary Contact', 'codeclove-school-management' )}
+              </span>
+              <PhoneCall className="w-4 h-4 text-text-muted" />
+            </div>
+            {(() => {
+              const primary = student.primary_guardian ||
+                (student.father?.is_primary ? student.father :
+                (student.mother?.is_primary ? student.mother :
+                (student.guardian?.is_primary ? student.guardian :
+                (student.father || student.mother || student.guardian))))
+              if (!primary) {
+                return (
+                  <div>
+                    <p className="text-sm font-semibold text-text-muted italic">{__( 'None recorded', 'codeclove-school-management' )}</p>
+                    <p className="text-2xs text-text-muted">{__( 'No family contacts registered', 'codeclove-school-management' )}</p>
+                  </div>
+                )
+              }
+              const rel = primary === student.father ? __( 'Father', 'codeclove-school-management' ) : primary === student.mother ? __( 'Mother', 'codeclove-school-management' ) : (student.relationship || primary.relationship || guardianLabelSingular)
+              return (
+                <div>
+                  <p className="text-sm font-semibold text-text truncate">
+                    {primary.first_name} {primary.last_name} ({rel})
+                  </p>
+                  {primary.phone ? (
+                    <a
+                      href={`tel:${primary.phone}`}
+                      className="text-xs font-mono font-medium text-brand hover:underline inline-flex items-center gap-1 mt-0.5"
+                    >
+                      <PhoneCall className="w-3 h-3 shrink-0" />
+                      <span>{primary.phone}</span>
+                    </a>
+                  ) : primary.email ? (
+                    <a
+                      href={`mailto:${primary.email}`}
+                      className="text-xs font-mono font-medium text-brand hover:underline inline-flex items-center gap-1 mt-0.5 truncate"
+                    >
+                      <Mail className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{primary.email}</span>
+                    </a>
+                  ) : (
+                    <p className="text-2xs text-text-muted">{__( 'Phone not registered', 'codeclove-school-management' )}</p>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Overview Tab: Balanced 12-Column Grid */}
+      {activeSubTab === 'overview' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column (7 cols): Academic Demographics & Residence */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* Card 1: Official Academic & Personal Demographics */}
+            <Card className="p-6 space-y-5">
+              <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bg-surface border border-border text-text">
+                    <User className="h-4.5 w-4.5 text-text-muted" />
+                  </div>
+                  <h3 className="text-base font-semibold text-text leading-tight">
+                    {__( 'Personal & Academic Demographics', 'codeclove-school-management' )}
+                  </h3>
+                </div>
+                <span className="inline-flex items-center gap-1.5 text-2xs font-semibold text-text-muted bg-bg-surface px-2.5 py-1 rounded-md border border-border shrink-0 whitespace-nowrap">
+                  <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
+                  <span>{__( 'Verified Institutional Record', 'codeclove-school-management' )}</span>
+                </span>
+              </div>
+
+              {/* 3-Column Balanced Definition Grid: High-Value Institutional Vitals */}
+              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6 text-xs">
+                <div className="space-y-1">
+                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
+                    {__( 'Current Class & Section', 'codeclove-school-management' )}
+                  </dt>
+                  <dd className="text-sm font-semibold text-text">
+                    {currentClassSection}
+                  </dd>
+                </div>
+                <div className="space-y-1">
+                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
+                    {__( 'Academic Session', 'codeclove-school-management' )}
+                  </dt>
+                  <dd className="text-sm font-semibold text-text">
+                    {sessionName}
+                  </dd>
+                </div>
+                <div className="space-y-1">
+                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
+                    {__( 'Enrollment Status', 'codeclove-school-management' )}
+                  </dt>
+                  <dd className="text-sm font-semibold text-text">
+                    <Badge variant={statusCfg.variant} size="xs">
+                      {statusCfg.label.toUpperCase()}
+                    </Badge>
+                  </dd>
+                </div>
+
+                <div className="space-y-1">
+                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
+                    {__( 'Roll Number', 'codeclove-school-management' )}
+                  </dt>
+                  <dd className="text-sm font-semibold text-text font-mono">
+                    {student.enrollment?.roll_number ? `#${student.enrollment.roll_number}` : '—'}
+                  </dd>
+                </div>
+                <div className="space-y-1">
+                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
+                    {__( 'Admission No', 'codeclove-school-management' )}
+                  </dt>
+                  <dd className="text-sm font-semibold text-text font-mono">
+                    {student.admission_number || '—'}
+                  </dd>
+                </div>
+                <div className="space-y-1">
+                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
+                    {__( 'Admission Date', 'codeclove-school-management' )}
+                  </dt>
+                  <dd className="text-sm font-semibold text-text font-mono">
+                    {student.admission_date ? formatDate(student.admission_date) : '—'}
+                  </dd>
+                </div>
+
+                <div className="space-y-1">
+                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
+                    {__( 'Date of Birth', 'codeclove-school-management' )}
+                  </dt>
+                  <dd className="text-sm font-semibold text-text">
+                    {student.date_of_birth ? (
+                      <span className="font-mono">
+                        {formatDate(student.date_of_birth)}
+                        {age !== null && (
+                          <span className="text-text-subtle text-xs font-normal ml-1.5">
+                            ({sprintf( __( '%d yrs', 'codeclove-school-management' ), age )})
+                          </span>
+                        )}
+                      </span>
+                    ) : '—'}
+                  </dd>
+                </div>
+                <div className="space-y-1">
+                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
+                    {__( 'Gender', 'codeclove-school-management' )}
+                  </dt>
+                  <dd className="text-sm font-semibold text-text capitalize">
+                    {formatGender(student.gender)}
+                  </dd>
+                </div>
+                <div className="space-y-1">
+                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
+                    {__( 'Blood Group', 'codeclove-school-management' )}
+                  </dt>
+                  <dd className="text-sm font-semibold text-text">
+                    {student.blood_group ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-danger-dim text-danger border border-danger-border">
+                        {student.blood_group}
+                      </span>
+                    ) : (
+                      <span className="text-text-subtle italic text-xs">{__( 'Not on file', 'codeclove-school-management' )}</span>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            </Card>
+
+            {/* Card 2: Contact & Address Details */}
+            <Card className="p-6 space-y-5">
+              <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bg-surface border border-border text-text">
+                    <MapPin className="h-4.5 w-4.5 text-text-muted" />
+                  </div>
+                  <h3 className="text-base font-semibold text-text leading-tight">
+                    {__( 'Contact & Address Details', 'codeclove-school-management' )}
+                  </h3>
+                </div>
+              </div>
+
+              <div className="space-y-4 text-xs">
+                {/* Direct Student Contact Channels */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-border/60">
+                  <div className="space-y-1">
+                    <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
+                      {__( 'Student Direct Email', 'codeclove-school-management' )}
+                    </span>
+                    {student.email ? (
+                      <div className="flex items-center gap-2">
+                        <a href={`mailto:${student.email}`} className="text-sm font-medium text-text font-mono hover:text-brand hover:underline truncate" title={student.email}>
+                          {student.email}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(student.email || '', __( 'Student email', 'codeclove-school-management' ))}
+                          className="p-1 rounded text-text-subtle hover:text-brand transition-colors cursor-pointer shrink-0"
+                          title={__( 'Copy email address', 'codeclove-school-management' )}
+                        >
+                          <Copy size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-text-subtle italic">{__( 'Not provided', 'codeclove-school-management' )}</span>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
+                      {__( 'Student Mobile Phone', 'codeclove-school-management' )}
+                    </span>
+                    {student.phone ? (
+                      <div className="flex items-center gap-2">
+                        <a href={`tel:${student.phone}`} className="text-sm font-semibold text-text font-mono hover:text-brand hover:underline">
+                          {student.phone}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(student.phone || '', __( 'Student phone', 'codeclove-school-management' ))}
+                          className="p-1 rounded text-text-subtle hover:text-brand transition-colors cursor-pointer shrink-0"
+                          title={__( 'Copy phone number', 'codeclove-school-management' )}
+                        >
+                          <Copy size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-text-subtle italic">{__( 'Not provided', 'codeclove-school-management' )}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Residential Address Block */}
+                <div className="space-y-1">
+                  <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
+                    {__( 'Residential Address', 'codeclove-school-management' )}
+                  </span>
+                  <p className="text-sm font-medium text-text leading-relaxed">
+                    {formattedAddress}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Right Column (5 cols): Family Household Cards & Health */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Authorized Family & Household Directory Card */}
+            <Card className="p-6 space-y-4">
+              <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bg-surface border border-border text-text">
+                    <Users className="h-4.5 w-4.5 text-text-muted" />
+                  </div>
+                  <h3 className="text-base font-semibold text-text leading-tight">
+                    {guardianLabelSingular.toLowerCase().includes('parent')
+                      ? sprintf( __( '%s Contacts', 'codeclove-school-management' ), guardianLabelSingular )
+                      : sprintf( __( 'Parent & %s Contacts', 'codeclove-school-management' ), guardianLabelSingular )}
+                  </h3>
+                </div>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-bg-surface text-text-muted border border-border shrink-0 whitespace-nowrap">
+                  {sprintf(
+                    _n( '%d Contact', '%d Contacts', linkedGuardiansList.length, 'codeclove-school-management' ),
+                    linkedGuardiansList.length
+                  )}
+                </span>
+              </div>
+
+              {/* Divided Guardian Directory List */}
+              <div className="divide-y divide-border/60">
+                {linkedGuardiansList.map((p, idx) => {
+                  const isPrimary = Boolean(
+                    p.is_primary ||
+                    (student.primary_guardian && p.id === student.primary_guardian.id) ||
+                    (student.primary_contact && p.relationship?.toLowerCase() === student.primary_contact.toLowerCase())
+                  )
+                  const rel = p.relationship || guardianLabelSingular
+                  return (
+                    <div
+                      key={p.id ?? idx}
+                      className={cn(
+                        'space-y-2',
+                        idx === 0 ? 'pb-3.5' : 'py-3.5'
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-sm font-semibold text-text">
+                            {p.first_name} {p.last_name}
+                          </h4>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-semibold bg-bg-surface text-text-muted border border-border">
+                            {rel}
+                          </span>
+                          {isPrimary && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-semibold bg-brand-dim text-brand border border-brand/20">
+                              <span>{__( 'Primary Contact', 'codeclove-school-management' )}</span>
+                            </span>
+                          )}
+                        </div>
+                        {p.occupation && (
+                          <span className="text-2xs text-text-subtle capitalize">
+                            {p.occupation}
+                          </span>
+                        )}
+                      </div>
+
+                        {/* Contact channels */}
+                        <div className="space-y-1.5 text-xs">
+                          {p.phone && (
+                            <div className="flex items-center justify-between gap-2">
+                              <a
+                                href={`tel:${p.phone}`}
+                                className="text-text-muted hover:text-brand hover:underline flex items-center gap-1.5 font-mono text-xs"
+                                title={__( 'Call', 'codeclove-school-management' )}
+                              >
+                                <PhoneCall className="w-3 h-3 text-text-subtle shrink-0" />
+                                <span>{p.phone}</span>
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(p.phone || '', __( 'Phone number', 'codeclove-school-management' ))}
+                                className="p-1 rounded text-text-subtle hover:text-brand hover:bg-bg-surface transition-colors cursor-pointer"
+                                title={__( 'Copy phone number', 'codeclove-school-management' )}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+
+                          {p.email && (
+                            <div className="flex items-center justify-between gap-2">
+                              <a
+                                href={`mailto:${p.email}`}
+                                className="text-text-muted hover:text-brand hover:underline flex items-center gap-1.5 text-xs truncate min-w-0"
+                                title={p.email}
+                              >
+                                <Mail className="w-3 h-3 text-text-subtle shrink-0" />
+                                <span className="truncate">{p.email}</span>
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(p.email || '', __( 'Email address', 'codeclove-school-management' ))}
+                                className="p-1 rounded text-text-subtle hover:text-brand hover:bg-bg-surface transition-colors cursor-pointer shrink-0"
+                                title={__( 'Copy email address', 'codeclove-school-management' )}
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                {linkedGuardiansList.length === 0 && (
+                  <div className="text-center py-6 text-xs text-text-muted border border-dashed border-border rounded-xl">
+                    {__( 'No legal parents or guardians registered.', 'codeclove-school-management' )}
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Non-Overview Tab Panels */}
+      {activeSubTab !== 'overview' && (
+        <Card
+          role="tabpanel"
+          id={`panel-${activeSubTab}`}
+          aria-labelledby={`tab-${activeSubTab}`}
+          className="p-6"
+        >
 
             {activeSubTab === 'portal' && (
               <div className="space-y-5">
@@ -1606,9 +1970,12 @@ export default function StudentProfilePage() {
                 </div>
               </div>
             )}
-          </Card>
-        </div>
-      </div>
+
+            {activeSubTab === 'documents' && (
+              <StudentDocumentsTab student={student} studentId={studentId} />
+            )}
+        </Card>
+      )}
 
       {/* Transfer Class Modal */}
       {transferOpen && (() => {

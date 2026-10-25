@@ -9,6 +9,7 @@ import {
   Button,
   DatePicker,
   EmptyState,
+  Checkbox,
 } from '@/components/ui'
 import type { CertificateTemplate } from '@/api/certificates'
 import type { FullStudent } from '@/api/students'
@@ -460,14 +461,12 @@ export const BatchIssueForm: React.FC<BatchIssueFormProps> = ({
                           )}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={!isExcluded}
                               onChange={(e) => {
                                 e.stopPropagation()
                                 onToggleExcludeStudent(st.id)
                               }}
-                              className="w-3.5 h-3.5 rounded text-brand focus:ring-brand cursor-pointer shrink-0"
                             />
                             <div className="min-w-0">
                               <span className={cn('text-text truncate block text-xs', isExcluded && 'line-through text-text-muted')}>

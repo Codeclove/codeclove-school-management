@@ -140,6 +140,48 @@ final class StudentsController extends BaseController {
 				],
 			]
 		);
+		register_rest_route(
+			$this->namespace,
+			'/students/(?P<id>\d+)/documents',
+			[
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'add_student_document' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.edit', $request ); },
+					'args'                => [
+						'id' => [
+							'validate_callback' => function ( $param ) {
+								return is_numeric( $param ) && (int) $param > 0;
+							},
+						],
+					],
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/students/(?P<id>\d+)/documents/(?P<doc_id>[a-zA-Z0-9_\-]+)',
+			[
+				[
+					'methods'             => 'DELETE',
+					'callback'            => [ $this, 'delete_student_document' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'students.edit', $request ); },
+					'args'                => [
+						'id'     => [
+							'validate_callback' => function ( $param ) {
+								return is_numeric( $param ) && (int) $param > 0;
+							},
+						],
+						'doc_id' => [
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_key',
+						],
+					],
+				],
+			]
+		);
 
 		register_rest_route(
 			$this->namespace,
@@ -670,5 +712,41 @@ final class StudentsController extends BaseController {
 		}
 
 		return [ $guardian_id, $type ];
+	}
+
+	/**
+	 * Adds a document to a student profile.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function add_student_document( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$id     = (int) $request->get_param( 'id' );
+		$params = $request->get_json_params() ?: [];
+
+		$result = $this->service->add_student_document( $id, $params );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return $this->success( $result );
+	}
+
+	/**
+	 * Deletes a document from a student profile.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function delete_student_document( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$id     = (int) $request->get_param( 'id' );
+		$doc_id = sanitize_key( (string) $request->get_param( 'doc_id' ) );
+
+		$result = $this->service->delete_student_document( $id, $doc_id );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return $this->success( $result );
 	}
 }

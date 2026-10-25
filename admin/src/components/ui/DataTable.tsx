@@ -21,6 +21,7 @@ import {
 import { TablePagination } from './TablePagination'
 import { Card, CardContent } from './Card'
 import { Button } from './Button'
+import { Checkbox } from './Checkbox'
 import { cn } from '@/lib/utils'
 import { __, sprintf } from '@/lib/i18n'
 import { cycleSort, type UseTableStateReturn } from '@/lib/useTableState'
@@ -288,15 +289,21 @@ export function DataTable<T>({
         <Thead>
           <Tr>
             {selectable && (
-              <Th className="w-10 px-3 py-3">
-                <input
+              <Th
+                className="w-10 px-3 py-3 cursor-pointer"
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).tagName !== 'INPUT' && !isLoading && !isError && rowIds.length > 0) {
+                    toggleSelectAll(rowIds)
+                  }
+                }}
+              >
+                <Checkbox
                   ref={headerCheckboxRef}
-                  type="checkbox"
+                  indeterminate={isIndeterminate}
                   aria-label={__('Select all rows', 'codeclove-school-management')}
                   checked={allSelected}
                   onChange={() => toggleSelectAll(rowIds)}
                   disabled={isLoading || isError || rowIds.length === 0}
-                  className="rounded border-border text-brand focus:ring-brand focus:ring-offset-bg-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </Th>
             )}
@@ -406,16 +413,25 @@ export function DataTable<T>({
                 >
                   {selectable && (
                     <Td
-                      className="w-10 px-3 py-3"
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
+                      className="w-10 px-3 py-3 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                          toggleSelect(rowId)
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        e.stopPropagation()
+                        if (e.key === ' ' || e.key === 'Enter') {
+                          e.preventDefault()
+                          toggleSelect(rowId)
+                        }
+                      }}
                     >
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         aria-label={__('Select row', 'codeclove-school-management')}
                         checked={isRowSelected}
                         onChange={() => toggleSelect(rowId)}
-                        className="rounded border-border text-brand focus:ring-brand focus:ring-offset-bg-base cursor-pointer"
                       />
                     </Td>
                   )}

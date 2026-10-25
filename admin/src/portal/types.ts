@@ -47,6 +47,8 @@ export interface PortalGuardian {
   relationship?: string
   phone?: string
   email?: string
+  alternate_phone?: string
+  occupation?: string
   is_emergency_contact?: boolean
   is_primary?: boolean
 }

@@ -34,6 +34,7 @@ import {
   FormGroupHeader,
   Skeleton,
   Avatar,
+  Checkbox,
 } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { useFormatter, formatGender } from '@/lib/formatter'
@@ -719,20 +720,18 @@ export default function AdmissionDetailPage() {
                 {requiredDocs.map((doc) => {
                   const isChecked = Boolean(approvedDocs[doc])
                   return (
-                    <label
+                    <div
                       key={doc}
-                      className="flex items-center gap-2.5 p-2.5 rounded-lg border border-border bg-bg-surface hover:bg-hover-bg cursor-pointer select-none group transition-all duration-100"
+                      className="p-2.5 rounded-lg border border-border bg-bg-surface hover:bg-hover-bg transition-all duration-100"
                     >
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={isChecked}
                         onChange={() => toggleDoc(doc)}
-                        className="h-4 w-4 rounded border-border text-brand accent-brand cursor-pointer"
+                        label={doc.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                        labelClassName={cn('text-xs font-medium transition-colors', isChecked ? 'text-text-muted line-through' : 'text-text')}
+                        containerClassName="w-full cursor-pointer"
                       />
-                      <span className={cn('text-xs font-medium transition-colors', isChecked ? 'text-text-muted line-through' : 'text-text group-hover:text-brand')}>
-                        {doc.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                      </span>
-                    </label>
+                    </div>
                   )
                 })}
               </div>

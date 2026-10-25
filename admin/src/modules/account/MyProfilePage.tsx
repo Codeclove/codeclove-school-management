@@ -5,7 +5,7 @@ import { useTheme } from '@/lib/theme'
 import { useToast } from '@/lib/toast'
 import { __ } from '@/lib/i18n'
 import {
-  Button, Card, FormField, Input, Spinner, PageHeader, Skeleton
+  Button, Card, FormField, Input, Spinner, PageHeader, Skeleton, Checkbox
 } from '@/components/ui'
 import { api } from '@/lib/api-client'
 
@@ -553,19 +553,16 @@ export default function MyProfilePage() {
                   { key: 'notify_invoice_overdue', label: __('Invoice Overdue', 'codeclove-school-management'), desc: __('Bills pass their due date', 'codeclove-school-management') },
                   { key: 'notify_attendance_taken', label: __('Attendance Taken', 'codeclove-school-management'), desc: __('Daily attendance register is saved', 'codeclove-school-management') },
                 ].map(({ key, label, desc }) => (
-                  <label key={key} className="flex items-start gap-3 p-3 rounded-lg border border-border/40 bg-bg-light/10 hover:bg-bg-light/30 transition-colors select-none cursor-pointer">
-                    <input
-                      type="checkbox"
+                  <div key={key} className="p-3 rounded-lg border border-border/40 bg-bg-light/10 hover:bg-bg-light/30 transition-colors">
+                    <Checkbox
                       checked={!!notificationPrefs[key]}
                       disabled={updateMeMutation.isPending}
                       onChange={(e) => handleNotificationPrefChange(key, e.target.checked)}
-                      className="mt-0.5 rounded border-border text-brand focus:ring-brand-ring"
+                      label={label}
+                      labelClassName="text-xs font-medium text-text"
+                      description={desc}
                     />
-                    <div className="text-start min-w-0 flex-1">
-                      <p className="text-xs font-medium text-text">{label}</p>
-                      <p className="text-2xs text-text-subtle mt-0.5">{desc}</p>
-                    </div>
-                  </label>
+                  </div>
                 ))}
               </div>
             </div>

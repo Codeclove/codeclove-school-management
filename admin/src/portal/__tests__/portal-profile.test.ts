@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAddress, formatDate, getInitials } from '../lib/formatter'
+import { calculateAge, formatAddress, formatDate, getInitials } from '../lib/formatter'
 import type { PortalGuardian } from '../types'
 
 describe('Portal Profile Data & Organization', () => {
@@ -71,7 +71,16 @@ describe('Portal Profile Data & Organization', () => {
           city: 'Boston',
           country: 'US',
         })
-      ).toContain('123 Maple St, Boston, US')
+      ).toContain('123 Maple St, Boston, United States')
+      expect(
+        formatAddress({
+          street: 'Flat 101, Park Avenue',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          zip: '400001',
+          country: 'IN',
+        })
+      ).toBe('Flat 101, Park Avenue, Mumbai, Maharashtra, 400001, India')
     })
 
     it('formats ISO dates into readable localized format', () => {
@@ -79,6 +88,30 @@ describe('Portal Profile Data & Organization', () => {
       expect(formatted).toContain('2026')
       expect(formatted).toContain('Sep')
       expect(formatDate(null)).toBe('—')
+    })
+
+    it('accurately calculates student age from birth date across timezone boundaries', () => {
+      expect(calculateAge(null)).toBe(null)
+      expect(calculateAge('')).toBe(null)
+      expect(calculateAge('invalid-date')).toBe(null)
+
+      // Deterministic birthday boundary tests
+      const dob = '2010-05-15'
+      const dayBefore = new Date('2026-05-14T12:00:00')
+      const dayOf = new Date('2026-05-15T12:00:00')
+      const dayAfter = new Date('2026-05-16T12:00:00')
+
+      expect(calculateAge(dob, dayBefore)).toBe(15)
+      expect(calculateAge(dob, dayOf)).toBe(16)
+      expect(calculateAge(dob, dayAfter)).toBe(16)
+
+      // Leap year birth date (Feb 29)
+      const leapDob = '2020-02-29'
+      expect(calculateAge(leapDob, new Date('2021-02-28T12:00:00'))).toBe(0)
+      expect(calculateAge(leapDob, new Date('2021-03-01T12:00:00'))).toBe(1)
+
+      // Future date of birth should return null
+      expect(calculateAge('2030-01-01', new Date('2026-01-01T12:00:00'))).toBe(null)
     })
   })
 })

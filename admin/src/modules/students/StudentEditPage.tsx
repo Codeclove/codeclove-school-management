@@ -6,7 +6,7 @@ import {
 } from '@/api/students'
 import { useToast } from '@/lib/toast'
 import { useLabels } from '@/lib/labels'
-import { Button, PageHeader, EmptyState, Skeleton } from '@/components/ui'
+import { Button, PageHeader, EmptyState, Skeleton, Spinner } from '@/components/ui'
 import { __, sprintf } from '@/lib/i18n'
 import StudentForm from './components/StudentForm'
 
@@ -57,7 +57,7 @@ export default function StudentEditPage() {
 
   if (isStudentLoading) {
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="space-y-6">
         <Skeleton className="h-10 w-48 rounded-lg" />
         <Skeleton className="h-96 w-full rounded-xl" />
       </div>
@@ -76,7 +76,7 @@ export default function StudentEditPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6">
       <PageHeader
         title={sprintf( __( 'Edit %s Profile', 'codeclove-school-management' ), studentLabelSingular )}
         description={
@@ -91,6 +91,34 @@ export default function StudentEditPage() {
           { label: `${student.first_name} ${student.last_name}`, href: `/students/${student.id}` },
           { label: __( 'Edit', 'codeclove-school-management' ) }
         ]}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => navigate(`/students/${studentId}`)}
+              disabled={updateMutation.isPending}
+              className="h-9 px-4 text-sm font-medium"
+            >
+              {__( 'Cancel', 'codeclove-school-management' )}
+            </Button>
+            <Button
+              type="submit"
+              form="student-form"
+              disabled={updateMutation.isPending}
+              className="h-9 px-5 text-sm font-semibold shadow-xs"
+            >
+              {updateMutation.isPending ? (
+                <>
+                  <Spinner size="sm" className="text-current me-1.5" />
+                  {__( 'Saving...', 'codeclove-school-management' )}
+                </>
+              ) : (
+                __( 'Save Changes', 'codeclove-school-management' )
+              )}
+            </Button>
+          </div>
+        }
       />
 
       <StudentForm
