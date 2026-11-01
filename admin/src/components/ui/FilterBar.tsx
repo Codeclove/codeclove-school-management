@@ -130,7 +130,7 @@ export function FilterBar({
   )
 
   if (!cardWrapper) {
-    return <div className={className}>{content}</div>
+    return <div className={cn('p-3 sm:p-3.5', className)}>{content}</div>
   }
 
   return (

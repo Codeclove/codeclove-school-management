@@ -2,11 +2,13 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   User, Pencil, Trash2, Mail, Briefcase, AlertTriangle, FileText, Clock, MapPin, IdCard, Printer, CalendarCheck,
-  PhoneCall, ShieldCheck
+  PhoneCall, ShieldCheck, KeyRound, Unlink, UserPlus
 } from 'lucide-react'
 import {
   useStaffMember,
   useDeleteStaff,
+  useUnlinkStaffWpUser,
+  useResetStaffWpPassword,
 } from '@/api/staff'
 import {
   Button, Badge, Card, PageHeader, Spinner, EmptyState, ConfirmDialog,
@@ -37,6 +39,9 @@ export default function StaffProfilePage() {
   const { data: attendanceHistory, isLoading: isAttendanceLoading } = useStaffAttendanceHistory(staffId)
   const deleteMutation = useDeleteStaff()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false)
+  const unlinkMutation = useUnlinkStaffWpUser()
+  const resetPasswordMutation = useResetStaffWpPassword()
   const [activeSubTab, setActiveSubTab] = useState<'overview' | 'idcard' | 'attendance'>('overview')
   const [badgeDual, setBadgeDual] = useState(true)
   const [isPrintingBadge, setIsPrintingBadge] = useState(false)
@@ -110,7 +115,7 @@ export default function StaffProfilePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={sprintf( __( '%s Profile', 'codeclove-school-management' ), staffLabelSingular )}
         description={__( 'View professional details, contact information, and record details.', 'codeclove-school-management' )}
@@ -356,16 +361,59 @@ export default function StaffProfilePage() {
                       <span className="text-text-muted font-medium">{__( 'Joined Date', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.joined_on ? formatDate(staff.joined_on) : '—'}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-border">
-                      <span className="text-text-muted font-medium">{__( 'Associated User ID', 'codeclove-school-management' )}</span>
-                      <span className="font-mono font-medium text-text">{staff.user_id || '—'}</span>
+                    <div className="flex justify-between py-2 border-b border-border items-center">
+                      <span className="text-text-muted font-medium">{__( 'WordPress User Account', 'codeclove-school-management' )}</span>
+                      {staff.user_id ? (
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          <span className="font-mono font-medium text-brand">@{staff.username || `id:${staff.user_id}`}</span>
+                          <span className="text-2xs text-text-muted font-mono">#{staff.user_id}</span>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="h-6 px-2 text-3xs ms-1"
+                            title={__( 'Send password reset instructions', 'codeclove-school-management' )}
+                            disabled={resetPasswordMutation.isPending}
+                            onClick={async () => {
+                              try {
+                                const res = await resetPasswordMutation.mutateAsync(staff.id)
+                                toast.success(res.message || __( 'Password reset instructions sent.', 'codeclove-school-management' ))
+                              } catch (err: unknown) {
+                                toast.error(err instanceof Error ? err.message : __( 'Failed to send password reset.', 'codeclove-school-management' ))
+                              }
+                            }}
+                          >
+                            <KeyRound size={11} className="mr-1" />
+                            {resetPasswordMutation.isPending
+                              ? __( 'Sending...', 'codeclove-school-management' )
+                              : __( 'Reset Pass', 'codeclove-school-management' )}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-1.5 text-3xs text-danger hover:text-danger hover:bg-danger/10"
+                            title={__( 'Disconnect account', 'codeclove-school-management' )}
+                            onClick={() => setShowDisconnectConfirm(true)}
+                          >
+                            <Unlink size={11} />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-text-muted italic">{__( 'Not Linked', 'codeclove-school-management' )}</span>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => navigate(`/staff/${staff.id}/edit`)}
+                          >
+                            <UserPlus size={11} className="mr-1" />
+                            {__( 'Add User', 'codeclove-school-management' )}
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                    {staff.user_id && (
-                      <div className="flex justify-between py-2 border-b border-border">
-                        <span className="text-text-muted font-medium">{__( 'WordPress Username', 'codeclove-school-management' )}</span>
-                        <span className="font-medium text-text">{staff.username || '—'}</span>
-                      </div>
-                    )}
                     <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-text-muted font-medium">{__( 'Assigned System Role', 'codeclove-school-management' )}</span>
                       <span className="font-medium text-text">{staff.role_name || '—'}</span>
@@ -730,6 +778,31 @@ export default function StaffProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Disconnect WordPress Account Confirmation */}
+      <ConfirmDialog
+        open={showDisconnectConfirm}
+        onOpenChange={setShowDisconnectConfirm}
+        title={__( 'Disconnect WordPress Account', 'codeclove-school-management' )}
+        description={sprintf(
+          __( 'Are you sure you want to disconnect WordPress user account @%1$s from %2$s? They will no longer be able to log in using this account.', 'codeclove-school-management' ),
+          staff?.username || '',
+          `${staff?.first_name} ${staff?.last_name}`
+        )}
+        confirmText={__( 'Disconnect Account', 'codeclove-school-management' )}
+        variant="danger"
+        isLoading={unlinkMutation.isPending}
+        onConfirm={async () => {
+          if (!staff) return
+          try {
+            await unlinkMutation.mutateAsync(staff.id)
+            toast.success(__( 'WordPress account disconnected successfully.', 'codeclove-school-management' ))
+            setShowDisconnectConfirm(false)
+          } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : __( 'Failed to disconnect account.', 'codeclove-school-management' ))
+          }
+        }}
+      />
     </div>
   )
 }

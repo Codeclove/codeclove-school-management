@@ -222,7 +222,7 @@ export default function InvoiceDetailPage() {
   const isPaid = invoice.status === 'paid'
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={sprintf(__('Invoice %s', 'codeclove-school-management'), invoice.invoice_number)}
         description={sprintf(__('Billed to %1$s %2$s (%3$s)', 'codeclove-school-management'), invoice.student_first_name, invoice.student_last_name, invoice.student_number)}

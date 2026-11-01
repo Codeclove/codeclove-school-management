@@ -34,6 +34,8 @@ export const staffSchema = z.object({
   create_user: z.boolean().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
+  send_email: z.boolean().optional(),
+  link_if_exists: z.boolean().optional(),
 })
 
 export type StaffFormData = z.infer<typeof staffSchema>

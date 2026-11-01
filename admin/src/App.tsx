@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { HashRouter, Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import { Component, type ReactNode } from 'react'
 import { ThemeProvider, useTheme } from './lib/theme'
 import { FeedbackProvider, useFeedbackModal } from './lib/feedback-context'
@@ -53,6 +53,11 @@ import MyProfilePage from './modules/account/MyProfilePage'
 import NoticeboardPage from './modules/announcements/NoticeboardPage'
 import NoticeComposerPage from './modules/announcements/NoticeComposerPage'
 import ProUpgradePage from './modules/upgrade/ProUpgradePage'
+import ExamsListPage from './modules/exams/pages/ExamsListPage'
+import ExamFormPage from './modules/exams/pages/ExamFormPage'
+import ExamWorkspacePage from './modules/exams/pages/ExamWorkspacePage'
+import GradingScalesPage from './modules/exams/pages/GradingScalesPage'
+import { useExams } from './api/exams'
 import { ToastProvider } from './lib/toast'
 import { ConfirmProvider } from './lib/confirm'
 import { ROUTES } from './lib/constants'
@@ -60,6 +65,30 @@ import { useSettings } from './api/settings'
 import { useEffect } from 'react'
 import { GraduationCap, Users, UserCog, AlertTriangle } from 'lucide-react'
 
+function LegacyExamRedirect({ defaultTab }: { defaultTab: 'timetable' | 'marks' | 'reports' | 'admit-cards' }) {
+  const [searchParams] = useSearchParams()
+  const examId = searchParams.get('exam_id')
+  const { data: exams = [], isLoading } = useExams()
+  if (examId) {
+    const params = new URLSearchParams(searchParams)
+    params.delete('exam_id')
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    return <Navigate to={`/exams/${examId}/${defaultTab}${qs}`} replace />
+  }
+
+  if (isLoading) {
+    return null
+  }
+
+  if (exams.length > 0) {
+    const targetExam = exams.find((e) => (e.subjects_count ?? 0) > 0) || exams[0]
+    if (targetExam) {
+      const qs = searchParams.toString() ? `?${searchParams.toString()}` : ''
+      return <Navigate to={`/exams/${targetExam.id}/${defaultTab}${qs}`} replace />
+    }
+  }
+  return <Navigate to={ROUTES.EXAMS} replace />
+}
 // ─── Query Client ─────────────────────────────────────────────────────────────
 
 const queryClient = new QueryClient({
@@ -121,8 +150,21 @@ function AppearanceSync() {
   return null
 }
 
-// ─── App ─────────────────────────────────────────────────────────────────────
+function BrandSync() {
+  const { data: settings } = useSettings()
 
+  useEffect(() => {
+    const name = settings?.school?.name || window.CodeCloveConfig?.school?.name
+    if (name) document.title = `${name} — ${__( 'School Management', 'codeclove-school-management' )}`
+    const logo = settings?.school?.logo || window.CodeCloveConfig?.school?.logo
+    const icon = document.querySelector<HTMLLinkElement>("link[rel*='icon']")
+    if (logo && icon) icon.href = logo
+  }, [settings?.school?.name, settings?.school?.logo])
+
+  return null
+}
+
+// ─── App ─────────────────────────────────────────────────────────────────────
 export default function App() {
   const isPro = window.CodeCloveConfig?.isPro ?? false
 
@@ -135,6 +177,7 @@ export default function App() {
           <ConfirmProvider>
             <FeedbackProvider>
               <AppearanceSync />
+              <BrandSync />
             <HashRouter>
               <ErrorBoundary>
                 <Routes>
@@ -166,6 +209,27 @@ export default function App() {
                 </>
               )}
 
+              {/* ── Examinations (Pro only) ─────────────────────────── */}
+              {isPro ? (
+                <>
+                  <Route path={ROUTES.EXAM_OVERVIEW} element={<Navigate to={ROUTES.EXAMS} replace />} />
+                  <Route path={ROUTES.EXAMS} element={<ExamsListPage />} />
+                  <Route path={ROUTES.EXAM_NEW} element={<ExamFormPage />} />
+                  <Route path="/exams/:id/edit" element={<ExamFormPage />} />
+                  <Route path="/exams/:id" element={<ExamWorkspacePage />} />
+                  <Route path="/exams/:id/:tab" element={<ExamWorkspacePage />} />
+                  <Route path={ROUTES.EXAM_TIMETABLE} element={<LegacyExamRedirect defaultTab="timetable" />} />
+                  <Route path={ROUTES.EXAM_ADMIT_CARDS} element={<LegacyExamRedirect defaultTab="admit-cards" />} />
+                  <Route path={ROUTES.EXAM_MARKS} element={<LegacyExamRedirect defaultTab="marks" />} />
+                  <Route path={ROUTES.EXAM_REPORTS} element={<LegacyExamRedirect defaultTab="reports" />} />
+                  <Route path={ROUTES.EXAM_GRADING} element={<GradingScalesPage />} />
+                </>
+              ) : (
+                <>
+                  <Route path={ROUTES.EXAMS} element={<Navigate to="/pro-upgrade?feature=examinations" replace />} />
+                  <Route path="/exams/*" element={<Navigate to="/pro-upgrade?feature=examinations" replace />} />
+                </>
+              )}
               {/* ── Students ──────────────────────────────────────────── */}
               <Route path={ROUTES.STUDENT_DIRECTORY} element={<StudentDirectoryPage />} />
               <Route path="/students/new" element={<StudentAdmitPage />} />
@@ -237,6 +301,7 @@ export default function App() {
                 <Route path="/activity" element={<Navigate to="/settings" replace />} />
               )}
               <Route path={ROUTES.MY_ACCOUNT} element={<MyProfilePage />} />
+              <Route path="/my-account" element={<Navigate to={ROUTES.MY_ACCOUNT} replace />} />
               {!isPro && <Route path="/pro-upgrade" element={<ProUpgradePage />} />}
             </Route>
 

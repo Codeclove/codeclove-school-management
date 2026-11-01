@@ -75,6 +75,13 @@ export function LocalizationTab({ register, control }: LocalizationTabProps) {
     { value: '6', label: `${__( 'Saturday', 'codeclove-school-management' )}${wpStartOfWeek === 6 ? ' (WP Default)' : ''}` },
   ], [wpStartOfWeek])
 
+  const weekendOptions = useMemo(() => [
+    { value: 'saturday_sunday', label: __( 'Saturday & Sunday (Standard 5-day week)', 'codeclove-school-management' ) },
+    { value: 'sunday_only', label: __( 'Sunday Only (Standard 6-day week)', 'codeclove-school-management' ) },
+    { value: 'friday_saturday', label: __( 'Friday & Saturday (Middle East)', 'codeclove-school-management' ) },
+    { value: 'friday_only', label: __( 'Friday Only', 'codeclove-school-management' ) },
+  ], [])
+
   const dateFormats = useMemo(() => [
     { value: 'd/m/Y', label: `DD/MM/YYYY (19/06/2026)${wpDateFormat === 'd/m/Y' ? ' (WP Default)' : ''}` },
     { value: 'm/d/Y', label: `MM/DD/YYYY (06/19/2026)${wpDateFormat === 'm/d/Y' ? ' (WP Default)' : ''}` },
@@ -190,6 +197,12 @@ export function LocalizationTab({ register, control }: LocalizationTabProps) {
           name="localization.week_start_day"
           register={register}
           options={weekDays}
+        />
+        <FormSelect
+          label={__( 'Weekend / Off Days', 'codeclove-school-management' )}
+          name="localization.weekend_days"
+          register={register}
+          options={weekendOptions}
         />
         <FormSelect
           label={__( 'Date Format', 'codeclove-school-management' )}

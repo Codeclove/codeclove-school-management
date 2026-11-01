@@ -1,7 +1,7 @@
 /**
  * CodeClove Portal — Core TypeScript Types & Interfaces.
  */
-
+import type { ReportCardData, AdmitCardsDataset } from '@/modules/exams/types'
 export type UserRole = 'guardian' | 'student' | 'admin'
 
 export interface PortalUser {
@@ -68,7 +68,8 @@ export interface PortalLocalization {
   currency?: string
   currency_position?: 'left' | 'left_space' | 'right' | 'right_space'
   decimal_precision?: number
-  number_format?: 'standard' | 'indian'
+  number_format?: 'standard' | 'indian' | 'european'
+  rtl?: boolean
 }
 
 export interface PortalSchool {
@@ -285,6 +286,52 @@ export interface DashboardData {
   calendar_events?: CalendarEvent[]
 }
 
+export interface PortalExamPaper {
+  subject_name: string
+  subject_code: string
+  exam_date: string
+  start_time: string
+  end_time: string
+  room: string
+  max_marks: number
+  pass_marks: number
+}
+
+export interface PortalAdmitCardItem {
+  exam_id: number
+  exam_name: string
+  code?: string
+  starts_on: string
+  ends_on: string
+  dataset: AdmitCardsDataset
+}
+
+export interface PortalUpcomingExam {
+  id: number
+  name: string
+  code: string
+  starts_on: string
+  ends_on: string
+  status: string
+  can_download_admit_card?: boolean
+  admit_card?: AdmitCardsDataset | null
+  papers: PortalExamPaper[]
+}
+
+export interface PortalPublishedExam {
+  id: number
+  name: string
+  code: string
+  starts_on: string
+  ends_on: string
+  report_card: ReportCardData
+}
+
+export interface PortalExamsData {
+  upcoming_exams: PortalUpcomingExam[]
+  published_exams: PortalPublishedExam[]
+  admit_cards?: PortalAdmitCardItem[]
+}
 export interface CodeClovePortalConfig {
   restUrl: string
   nonce: string

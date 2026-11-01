@@ -201,7 +201,7 @@ export default function FinanceDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       {/* ── 1. Page Header with Quick-Actions & Range Filter ───────── */}
       <PageHeader
         title={__('Finance', 'codeclove-school-management')}
@@ -449,7 +449,7 @@ export default function FinanceDashboard() {
                       fontSize={11}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(v) => formatCurrency(v).split('.')[0] || ''}
+                      tickFormatter={(v) => formatCurrency(v).replace(/[,.]\d{2}(?=[^\d]*$)/, '')}
                     />
                     <Tooltip
                       contentStyle={{

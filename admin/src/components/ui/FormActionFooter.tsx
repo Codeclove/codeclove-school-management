@@ -18,6 +18,7 @@ export interface FormActionFooterProps {
   isPending?: boolean
   disabled?: boolean
   formId?: string
+  extraActions?: React.ReactNode
   className?: string
 }
 
@@ -34,6 +35,7 @@ export function FormActionFooter({
   isPending = false,
   disabled = false,
   formId,
+  extraActions,
   className,
 }: FormActionFooterProps) {
   return (
@@ -69,6 +71,7 @@ export function FormActionFooter({
             {cancelText}
           </Button>
         )}
+        {extraActions}
         <Button
           type={submitType}
           form={formId}

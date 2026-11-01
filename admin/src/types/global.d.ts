@@ -38,6 +38,10 @@ export interface CodeCloveConfigType {
   isPaid?: boolean
   /** Whether running on demo showcase site (demo.codeclove.com) */
   isDemo?: boolean
+  /** Active education system preset, e.g. 'IN', 'US', 'GB' */
+  preset?: string
+  /** Active education system preset name, e.g. 'India' */
+  presetName?: string
    /** Active license state and summary */
   license?: {
     status: string
@@ -59,6 +63,14 @@ export interface CodeCloveConfigType {
   i18nUrl: string | null
   /** Currently authenticated WordPress user */
   currentUser: CodeCloveCurrentUser
+  /** Basic school registration profile */
+  school?: {
+    name?: string
+    code?: string
+    logo?: string
+  }
+  /** Bootstrapped localization settings */
+  localization?: Record<string, unknown>
   /** Milestone review prompt status */
   reviewPrompt?: {
     shouldShow?: boolean

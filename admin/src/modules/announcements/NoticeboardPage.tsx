@@ -344,10 +344,17 @@ export default function NoticeboardPage() {
   const total = data?.total ?? 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       {/* ─── Header ────────────────────────────────────────────────────────── */}
       <PageHeader
         title={__( 'Noticeboard', 'codeclove-school-management' )}
+        badge={
+          total > 0 ? (
+            <Badge variant="neutral" className="tabular-nums font-mono text-xs font-normal">
+              {sprintf(__('%d total', 'codeclove-school-management'), total)}
+            </Badge>
+          ) : undefined
+        }
         description={__( 'Publish and manage school-wide announcements, portal updates, and staff circulars.', 'codeclove-school-management' )}
         actions={
           <Button onClick={handleOpenCreate} className="gap-1.5 shadow-sm">
@@ -356,44 +363,6 @@ export default function NoticeboardPage() {
           </Button>
         }
       />
-
-      {/* ─── Unified Standard FilterBar ────────────────────────────────────── */}
-      <FilterBar
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder={__( 'Search announcements...', 'codeclove-school-management' )}
-        activeFilterCount={( statusFilter !== 'all' ? 1 : 0 ) + ( audienceFilter !== 'all' ? 1 : 0 ) + ( eventTypeFilter !== 'all' ? 1 : 0 )}
-        onClearAll={() => {
-          setSearch( '' )
-          setStatusFilter( 'all' )
-          setAudienceFilter( 'all' )
-          setEventTypeFilter( 'all' )
-          table.resetPage()
-          table.clearSelection()
-        }}
-      >
-        <Select
-          value={statusFilter}
-          onValueChange={setStatusFilter}
-          options={STATUS_FILTER_OPTIONS}
-          className="text-xs w-36"
-        />
-
-        <Select
-          value={audienceFilter}
-          onValueChange={setAudienceFilter}
-          options={AUDIENCE_FILTER_OPTIONS}
-          className="text-xs w-48"
-        />
-
-        <Select
-          value={eventTypeFilter}
-          onValueChange={setEventTypeFilter}
-          options={CATEGORY_FILTER_OPTIONS}
-          className="text-xs w-48"
-          aria-label={__( 'Filter by category', 'codeclove-school-management' )}
-        />
-      </FilterBar>
 
       {/* ─── Data Table & Async States ───────────────────────────────────────── */}
       <DataTable<NoticeboardItem>
@@ -404,6 +373,45 @@ export default function NoticeboardPage() {
         isLoading={isLoading}
         isError={isError}
         selectable
+        toolbar={
+          <FilterBar
+            cardWrapper={false}
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={__( 'Search announcements...', 'codeclove-school-management' )}
+            activeFilterCount={( statusFilter !== 'all' ? 1 : 0 ) + ( audienceFilter !== 'all' ? 1 : 0 ) + ( eventTypeFilter !== 'all' ? 1 : 0 )}
+            onClearAll={() => {
+              setSearch( '' )
+              setStatusFilter( 'all' )
+              setAudienceFilter( 'all' )
+              setEventTypeFilter( 'all' )
+              table.resetPage()
+              table.clearSelection()
+            }}
+          >
+            <Select
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              options={STATUS_FILTER_OPTIONS}
+              className="text-xs w-36"
+            />
+
+            <Select
+              value={audienceFilter}
+              onValueChange={setAudienceFilter}
+              options={AUDIENCE_FILTER_OPTIONS}
+              className="text-xs w-48"
+            />
+
+            <Select
+              value={eventTypeFilter}
+              onValueChange={setEventTypeFilter}
+              options={CATEGORY_FILTER_OPTIONS}
+              className="text-xs w-48"
+              aria-label={__( 'Filter by category', 'codeclove-school-management' )}
+            />
+          </FilterBar>
+        }
         bulkActions={bulkActions}
         onRowClick={( item ) => navigate( ROUTES.ANNOUNCEMENT_EDIT.replace( ':id', String( item.id ) ) )}
         onRetry={() => refetch()}

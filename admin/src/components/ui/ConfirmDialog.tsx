@@ -1,21 +1,21 @@
 /**
- * ConfirmDialog — Tier 2 reusable confirmation modal for CodeClove admin UI.
+ * ConfirmDialog — shadcn/ui style AlertDialog confirmation modal for CodeClove admin UI.
  *
  * Implements:
- *   - Modal with size="sm"
- *   - Variant styling ('danger' | 'warning' | 'info' | 'default') with contextual icons
+ *   - Modal with size="sm" (max-w-[425px])
+ *   - Clean typographic AlertDialogHeader (Title + Description)
  *   - Async pending state with <Spinner size="xs" />
+ *   - Tactile destructive micro-icon in confirmation button
  *   - Disabled cancel and confirm buttons while mutation is pending
  *   - Prevention of modal dismissal (outside click, escape key) while running
  *   - WCAG AA accessibility and design token alignment (Overlay Layer 3)
  */
 
 import { useState, type ReactNode } from 'react'
-import { AlertTriangle, Info, HelpCircle, type LucideIcon } from 'lucide-react'
-import { Modal, ModalFooter } from './Modal'
+import { Modal } from './Modal'
 import { Button } from './Button'
 import { Spinner } from './Spinner'
-import { cn } from '@/lib/utils'
+import { Trash2, AlertTriangle } from 'lucide-react'
 import { __ } from '@/lib/i18n'
 
 export type ConfirmDialogVariant = 'danger' | 'warning' | 'info' | 'default'
@@ -38,38 +38,23 @@ export interface ConfirmDialogProps {
 const VARIANT_CONFIG: Record<
   ConfirmDialogVariant,
   {
-    icon: LucideIcon
-    iconClass: string
-    iconBgClass: string
     buttonVariant: 'danger' | 'default'
     defaultConfirmText: string
   }
 > = {
   danger: {
-    icon: AlertTriangle,
-    iconClass: 'text-danger',
-    iconBgClass: 'bg-danger-dim border border-danger-border',
     buttonVariant: 'danger',
     defaultConfirmText: __( 'Delete', 'codeclove-school-management' ),
   },
   warning: {
-    icon: AlertTriangle,
-    iconClass: 'text-warning',
-    iconBgClass: 'bg-warning-dim border border-warning-border',
     buttonVariant: 'danger',
     defaultConfirmText: __( 'Confirm', 'codeclove-school-management' ),
   },
   info: {
-    icon: Info,
-    iconClass: 'text-brand',
-    iconBgClass: 'bg-brand-dim border border-brand-border',
     buttonVariant: 'default',
     defaultConfirmText: __( 'Confirm', 'codeclove-school-management' ),
   },
   default: {
-    icon: HelpCircle,
-    iconClass: 'text-text-subtle',
-    iconBgClass: 'bg-bg-surface border border-border',
     buttonVariant: 'default',
     defaultConfirmText: __( 'Confirm', 'codeclove-school-management' ),
   },
@@ -93,7 +78,12 @@ export function ConfirmDialog({
   const isPending = isLoading || isInternalLoading
 
   const config = VARIANT_CONFIG[variant] ?? VARIANT_CONFIG.default
-  const IconComponent = config.icon
+  const isDestructive = variant === 'danger' || variant === 'warning'
+  const titleStr = typeof title === 'string' ? title : ''
+  const isDelete =
+    /delete|remove|trash|purge|erase/i.test(titleStr) ||
+    /delete|remove|trash|purge|erase/i.test(confirmText || '')
+
   const handleOpenChange = (nextOpen: boolean) => {
     // Prevent closing via backdrop, Escape key, or close button while action is running
     if (isPending) return
@@ -118,40 +108,41 @@ export function ConfirmDialog({
       open={open}
       onOpenChange={handleOpenChange}
       isLoading={isPending}
-      title={
-        <span className="flex items-center gap-2.5">
-          <span
-            className={cn(
-              'flex items-center justify-center w-8 h-8 rounded-lg shrink-0',
-              config.iconBgClass
-            )}
-            aria-hidden="true"
-          >
-            <IconComponent size={16} className={config.iconClass} />
-          </span>
-          <span className="leading-tight font-semibold text-text">{title}</span>
-        </span>
-      }
+      title={title}
       description={description}
       size="sm"
       className={className}
       container={container}
+      hideHeader
       noHeaderBorder
     >
-      <div className="space-y-4">
-        {children && (
-          <div className="text-sm text-text-muted leading-relaxed">
-            {children}
-          </div>
-        )}
+      <div className="p-6 space-y-4">
+        {/* shadcn AlertDialogHeader */}
+        <div className="space-y-2 text-left">
+          <h3 className="text-lg font-semibold tracking-tight text-text leading-tight">
+            {title}
+          </h3>
+          {description && (
+            <p className="text-sm text-text-muted leading-relaxed">
+              {description}
+            </p>
+          )}
+          {children && (
+            <div className="text-sm text-text-muted leading-relaxed">
+              {children}
+            </div>
+          )}
+        </div>
 
-        <ModalFooter className={cn('border-t border-border pt-3 mt-4')}>
+        {/* shadcn AlertDialogFooter */}
+        <div className="flex items-center justify-end gap-2 pt-2">
           <Button
             type="button"
             variant="secondary"
             data-dialog-cancel
             onClick={() => handleOpenChange(false)}
             disabled={isPending}
+            className="h-9 px-4 text-sm font-medium"
           >
             {cancelText ?? __( 'Cancel', 'codeclove-school-management' )}
           </Button>
@@ -161,12 +152,18 @@ export function ConfirmDialog({
             data-dialog-confirm
             onClick={handleConfirm}
             disabled={isPending}
-            className="gap-1.5"
+            className="h-9 px-4 text-sm font-medium gap-1.5 shadow-sm"
           >
-            {isPending && <Spinner size="xs" className="text-current shrink-0" />}
+            {isPending ? (
+              <Spinner size="xs" className="text-current shrink-0" />
+            ) : isDelete ? (
+              <Trash2 size={14} className="shrink-0" />
+            ) : isDestructive ? (
+              <AlertTriangle size={14} className="shrink-0" />
+            ) : null}
             <span>{confirmText ?? config.defaultConfirmText}</span>
           </Button>
-        </ModalFooter>
+        </div>
       </div>
     </Modal>
   )

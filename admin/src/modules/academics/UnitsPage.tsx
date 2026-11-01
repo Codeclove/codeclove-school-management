@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { unitSchema, type UnitFormValues } from '@/schemas/academics'
 import {
   Plus, Pencil, Trash2, RefreshCw, BookOpen,
-  AlertTriangle, Search, X
+  AlertTriangle
 } from 'lucide-react'
 import {
   useUnits,
@@ -35,7 +35,7 @@ import { useDebounce } from '@/lib/useDebounce'
 import {
   DataTable,
   type DataTableColumn,
-  Button, Badge, Card,
+  Button, Badge, FilterBar,
   Modal, ModalFooter, FormField, Input, Select,
   TableRoot, Thead, Tbody, Tr, Th, Td, TableSkeleton,
   PageHeader, Spinner,
@@ -232,9 +232,16 @@ export default function UnitsPage() {
   }, [session_id, status, debouncedSearch, resetPage, clearSelection])
 
   return (
-    <div className="space-y-5 w-full">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={unitLabelPlural}
+        badge={
+          total > 0 ? (
+            <Badge variant="neutral" className="tabular-nums font-mono text-xs font-normal">
+              {sprintf(__('%d total', 'codeclove-school-management'), total)}
+            </Badge>
+          ) : undefined
+        }
         breadcrumbs={[{ label: __( 'Academics', 'codeclove-school-management' ) }, { label: unitLabelPlural }]}
         description={sprintf(
           __( 'Manage the %1$s or grades configured under the selected %2$s.', 'codeclove-school-management' ),
@@ -258,25 +265,31 @@ export default function UnitsPage() {
 
       <AcademicsNav />
 
-      {/* Filters Toolbar */}
-      <Card className="p-4">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3">
-          <div className="flex-1">
-            <FormField label={sprintf( __( 'Search %s', 'codeclove-school-management' ), unitLabelPlural )}>
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={__( 'Search by name, code...', 'codeclove-school-management' )}
-                  className="pl-9"
-                />
-              </div>
-            </FormField>
-          </div>
-          <div className="w-full sm:w-40 lg:w-48 min-w-[140px]">
-            <FormField label={__( 'Status', 'codeclove-school-management' )}>
+      <DataTable<AcademicUnit>
+        data={units}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        toolbar={
+          <FilterBar
+            cardWrapper={false}
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={__( 'Search by name, code...', 'codeclove-school-management' )}
+            activeFilterCount={status ? 1 : 0}
+            onClearAll={() => {
+              setSearch('')
+              setStatus('')
+              table.resetPage()
+              table.clearSelection()
+            }}
+          >
+            <div className="w-full sm:w-40 lg:w-48 shrink-0">
               <Select
+                aria-label={__( 'Status', 'codeclove-school-management' )}
                 value={status}
                 onValueChange={setStatus}
                 placeholder={__( 'All statuses', 'codeclove-school-management' )}
@@ -287,36 +300,9 @@ export default function UnitsPage() {
                   { value: 'archived', label: __( 'Archived', 'codeclove-school-management' ) },
                 ]}
               />
-            </FormField>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 h-9">
-            {(search || status) && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setSearch('')
-                  setStatus('')
-                  table.resetPage()
-                  table.clearSelection()
-                }}
-                className="text-xs text-text-muted hover:text-text gap-1"
-              >
-                <X size={12} />
-                {__( 'Clear Filters', 'codeclove-school-management' )}
-              </Button>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      <DataTable<AcademicUnit>
-        data={units}
-        columns={columns}
-        table={table}
-        total={total}
-        isLoading={isLoading}
-        isError={isError}
-        onRetry={() => refetch()}
+            </div>
+          </FilterBar>
+        }
         emptyState={
           isError
             ? {
@@ -499,7 +485,7 @@ function UnitModal({
       size="lg"
     >
       <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-4">
-        <FormField label={sprintf( __( '%s/Grade Name', 'codeclove-school-management' ), unitLabelSingular )} error={errors.name?.message} required>
+        <FormField label={sprintf( __( '%s Name', 'codeclove-school-management' ), unitLabelSingular )} error={errors.name?.message} required>
           <Input
             {...register('name')}
             placeholder={__( 'e.g. Grade 10', 'codeclove-school-management' )}

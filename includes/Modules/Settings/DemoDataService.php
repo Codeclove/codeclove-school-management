@@ -88,9 +88,13 @@ final class DemoDataService {
 		set_transient( self::LOCK_TRANSIENT, 1, 120 );
 
 		try {
+			// Ensure database schema is installed and current before importing demo records.
+			if ( class_exists( '\CodeClove\Database\Migrations' ) && ! \CodeClove\Database\Migrations::is_schema_installed() ) {
+				\CodeClove\Database\Migrations::run();
+			}
+
 			// Clear any previous demo data first to ensure an idempotent run.
 			$this->clear();
-
 			// Pre-resolve or upload demo media attachments.
 			$media_data = $this->prepare_demo_media();
 
@@ -198,8 +202,23 @@ final class DemoDataService {
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE code LIKE %s', Schema::fee_types(), 'DEMO-%' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE staff_number LIKE %s', Schema::staff_members(), 'DEMO-%' ) );
+			// Also clean seeded mock data with example.com emails or DEMO admission numbers
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE admission_number LIKE %s', Schema::students(), 'DEMO-%' ) );
+			$seeded_student_ids = $wpdb->get_col(
+				$wpdb->prepare(
+					'SELECT id FROM %i WHERE admission_number LIKE %s OR email LIKE %s OR email LIKE %s',
+					Schema::students(),
+					'DEMO-%',
+					'%@student.example.com',
+					'%@school.example.com'
+				)
+			);
+			if ( ! empty( $seeded_student_ids ) ) {
+				$students_service = new \CodeClove\Modules\Students\StudentsService();
+				foreach ( $seeded_student_ids as $sid ) {
+					$students_service->db_force_delete_student( (int) $sid );
+				}
+			}
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE invoice_number LIKE %s', Schema::invoices(), 'DEMO-%' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -208,10 +227,14 @@ final class DemoDataService {
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE reference_number LIKE %s', Schema::applications(), 'DEMO-%' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE reference_number LIKE %s', Schema::staff_apps(), 'DEMO-%' ) );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE title LIKE %s OR content LIKE %s', Schema::notifications(), '%CodeClove (Demo)%', '%(Demo)%' ) );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE actor_label LIKE %s', Schema::activity_logs(), '%(Demo)%' ) );
+			if ( $this->table_exists( Schema::notifications() ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE title LIKE %s OR content LIKE %s', Schema::notifications(), '%CodeClove (Demo)%', '%(Demo)%' ) );
+			}
+			if ( $this->table_exists( Schema::activity_logs() ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE actor_label LIKE %s', Schema::activity_logs(), '%(Demo)%' ) );
+			}
 			// Restore previous settings if backed up.
 			$prev_settings = get_option( self::OPTION_PREV_SETTINGS, null );
 			if ( is_array( $prev_settings ) ) {
@@ -257,16 +280,21 @@ final class DemoDataService {
 		$imported         = (bool) get_option( self::OPTION_IMPORTED, false );
 		$prompt_dismissed = (bool) get_option( self::OPTION_PROMPT_DISMISSED, false );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$student_count = (int) $wpdb->get_var(
-			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NULL', Schema::students() )
-		);
+		$student_count = 0;
+		if ( $this->table_exists( Schema::students() ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$student_count = (int) $wpdb->get_var(
+				$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NULL', Schema::students() )
+			);
+		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$session_count = (int) $wpdb->get_var(
-			$wpdb->prepare( 'SELECT COUNT(*) FROM %i', Schema::sessions() )
-		);
-
+		$session_count = 0;
+		if ( $this->table_exists( Schema::sessions() ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$session_count = (int) $wpdb->get_var(
+				$wpdb->prepare( 'SELECT COUNT(*) FROM %i', Schema::sessions() )
+			);
+		}
 		$should_show_prompt = ( ! $imported && ! $prompt_dismissed && 0 === $student_count && 0 === $session_count );
 
 		return [
@@ -1025,7 +1053,7 @@ final class DemoDataService {
 			],
 		};
 
-		$role_records  = $wpdb->get_results( 'SELECT id, slug FROM ' . Schema::roles(), ARRAY_A );
+		$role_records  = $wpdb->get_results( $wpdb->prepare( 'SELECT id, slug FROM %i', Schema::roles() ), ARRAY_A );
 		$role_slug_map = array_change_key_case( array_column( $role_records ?: [], 'id', 'slug' ), CASE_LOWER );
 
 		$staff_middle_pool = match ( $country_code ) {
@@ -1307,7 +1335,7 @@ final class DemoDataService {
 					'staff_application_id' => $sa_id,
 					'document_type'        => 'resume',
 					'label'                => 'Curriculum Vitae / Resume',
-					'attachment_id'        => $media_data['staff_photo_ids'][ $sa_idx % count( $media_data['staff_photo_ids'] ?? [ 1 ] ) ] ?? 501,
+					'attachment_id'        => ! empty( $media_data['staff_photo_ids'] ) ? ( $media_data['staff_photo_ids'][ $sa_idx % count( $media_data['staff_photo_ids'] ) ] ?? null ) : null,
 					'status'               => 'uploaded',
 					'required'             => 1,
 					'uploaded_by_email'    => $sa['email'],
@@ -1985,7 +2013,7 @@ final class DemoDataService {
 				'accent_color' => 'indigo',
 				'icon'         => 'calendar',
 				'is_pinned'    => 0,
-				'url'          => '/timetable',
+				'url'          => null,
 			],
 			[
 				'title'        => 'School Library Digital Catalog & Circular',
@@ -2025,27 +2053,29 @@ final class DemoDataService {
 			],
 		];
 
-		foreach ( $announcements as $ann ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->insert(
-				Schema::notifications(),
-				[
-					'user_id'      => 0,
-					'student_id'   => null,
-					'audience'     => 'portal',
-					'title'        => $ann['title'],
-					'content'      => $ann['content'],
-					'notice_date'  => substr( $now, 0, 10 ),
-					'event_type'   => $ann['event_type'],
-					'accent_color' => $ann['accent_color'],
-					'icon'         => $ann['icon'],
-					'is_pinned'    => $ann['is_pinned'],
-					'url'          => $ann['url'],
-					'is_read'      => 0,
-					'created_at'   => $now,
-				]
-			);
-			$tracked_ids['notification_ids'][] = (int) $wpdb->insert_id;
+		if ( $this->table_exists( Schema::notifications() ) ) {
+			foreach ( $announcements as $ann ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->insert(
+					Schema::notifications(),
+					[
+						'user_id'      => 0,
+						'student_id'   => null,
+						'audience'     => 'portal',
+						'title'        => $ann['title'],
+						'content'      => $ann['content'],
+						'notice_date'  => substr( $now, 0, 10 ),
+						'event_type'   => $ann['event_type'],
+						'accent_color' => $ann['accent_color'],
+						'icon'         => $ann['icon'],
+						'is_pinned'    => $ann['is_pinned'],
+						'url'          => $ann['url'],
+						'is_read'      => 0,
+						'created_at'   => $now,
+					]
+				);
+				$tracked_ids['notification_ids'][] = (int) $wpdb->insert_id;
+			}
 		}
 		// ── 13. Demo Activity Logs ────────────────────────────────────────────
 		$demo_audit_events = [
@@ -2071,6 +2101,8 @@ final class DemoDataService {
 			);
 			$tracked_ids['audit_log_ids'][] = (int) $wpdb->insert_id;
 		}
+
+
 		// Persist the IDs map for clean teardown.
 		update_option( self::OPTION_RECORD_IDS, $tracked_ids, false );
 
@@ -2198,7 +2230,7 @@ final class DemoDataService {
 		global $wpdb;
 
 		$filtered_ids = array_filter( array_map( 'intval', $ids ) );
-		if ( empty( $filtered_ids ) ) {
+		if ( empty( $filtered_ids ) || ! $this->table_exists( $table ) ) {
 			return;
 		}
 
@@ -2211,5 +2243,18 @@ final class DemoDataService {
 				...$filtered_ids
 			)
 		);
+	}
+
+	/**
+	 * Checks if a database table physically exists.
+	 *
+	 * @param string $table Fully qualified database table name.
+	 * @return bool
+	 */
+	private function table_exists( string $table ): bool {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return (string) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table;
 	}
 }

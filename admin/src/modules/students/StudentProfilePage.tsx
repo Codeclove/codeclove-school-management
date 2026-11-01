@@ -1,9 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
-  User, RefreshCw, Coins, BookOpen, Pencil, AlertTriangle, MapPin, Users,
+  User, Coins, BookOpen, Pencil, AlertTriangle,
   Eye, Printer, ArrowLeftRight, IdCard, KeyRound, UserX, CheckCircle2,
-  Copy, History, Receipt, Plus, Filter, MoreHorizontal,
+  Copy, History, Receipt, Plus, MoreHorizontal,
   Link2, Send, PhoneCall, Mail, FileText, type LucideIcon
 } from 'lucide-react'
 import {
@@ -21,8 +21,8 @@ import {
 } from '@/api/academics'
 import { useStudentAttendanceHistory } from '@/api/attendance'
 import {
-  Button, Badge, Card, PageHeader, Spinner, EmptyState, FormGroupHeader,
-  Modal, ModalFooter, ConfirmDialog, FormField, Input, Select, Skeleton,
+  Button, Badge, Card, PageHeader, Spinner, EmptyState,
+  Modal, ModalFooter, ConfirmDialog, FormField, Input, Select,
   TableRoot, Thead, Tbody, Tr, Th, Td, TableEmpty, Avatar,
   Dropdown, DropdownItem, DropdownSeparator
 } from '@/components/ui'
@@ -246,7 +246,12 @@ export default function StudentProfilePage() {
   const outstandingBalance = useMemo(() => {
     return activeInvoices.reduce((sum, inv) => sum + inv.balance_minor, 0)
   }, [activeInvoices])
-
+  const collectionPercentage = useMemo(() => {
+    return totalBilled > 0 ? Math.min(100, Math.round((totalPaid / totalBilled) * 100)) : 0
+  }, [totalBilled, totalPaid])
+  const overdueInvoicesCount = useMemo(() => {
+    return invoices.filter((i) => i.status === 'overdue').length
+  }, [invoices])
   const handleTermFilterChange = (val: string) => {
     setSelectedTermFilter(val)
     setFinancePage(1)
@@ -273,16 +278,21 @@ export default function StudentProfilePage() {
   }, [sortedPayments, paymentPage])
   const uniqueYears = useMemo(() => {
     if (!attendanceHistory) return []
-    const years = attendanceHistory.map(h => new Date(h.attendance_date).getFullYear())
+    // ponytail: parse YYYY-MM-DD directly by splitting on '-' to avoid UTC midnight shifts
+    const years = attendanceHistory.map((h) => {
+      const [y] = (h.attendance_date || '').split('-').map(Number)
+      return y
+    }).filter((y): y is number => Boolean(y && !isNaN(y)))
     return Array.from(new Set(years)).sort((a, b) => b - a)
   }, [attendanceHistory])
 
   const filteredLogs = useMemo(() => {
     if (!attendanceHistory) return []
     return attendanceHistory.filter((h) => {
-      const dateObj = new Date(h.attendance_date)
-      const matchYear = !yearFilter || dateObj.getFullYear() === Number(yearFilter)
-      const matchMonth = !monthFilter || (dateObj.getMonth() + 1) === Number(monthFilter)
+      // ponytail: split on '-' to extract year/month safely across all timezones
+      const [y, m] = (h.attendance_date || '').split('-').map(Number)
+      const matchYear = !yearFilter || y === Number(yearFilter)
+      const matchMonth = !monthFilter || m === Number(monthFilter)
       const matchStatus = !statusFilter || h.status === statusFilter
       return matchYear && matchMonth && matchStatus
     })
@@ -309,19 +319,20 @@ export default function StudentProfilePage() {
 
   const formatAttendanceDate = (dateStr: string) => {
     if (!dateStr) return '—'
-    const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return dateStr
-    const weekday = d.toLocaleDateString(undefined, { weekday: 'short' })
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const localDate = y && m && d ? new Date(y, m - 1, d) : new Date(dateStr)
+    if (isNaN(localDate.getTime())) return dateStr
+    const weekday = localDate.toLocaleDateString(undefined, { weekday: 'short' })
     return `${weekday}, ${formatDate(dateStr)}`
   }
   // Query units & groups based on student's enrollment
   const sessionId = student?.enrollment?.academic_session_id ?? 1
   const { data: termsData } = useTerms(Number(sessionId))
-  const { data: unitData } = useUnits({ session_id: Number(sessionId) })
-  const { data: groupData } = useGroups({ academic_unit_id: Number(student?.enrollment?.academic_unit_id) })
+  const { data: unitData } = useUnits({ session_id: Number(sessionId), per_page: 200 })
+  const { data: groupData } = useGroups({ academic_unit_id: Number(student?.enrollment?.academic_unit_id), per_page: 200 })
   // All groups in the session — used by Transfer modal to populate section options per class
   const { data: allGroupsData } = useGroups({ per_page: 500 })
-  const { data: subjectData } = useSubjects()
+  const { data: subjectData } = useSubjects({ per_page: 500 })
 
   const units = unitData?.data ?? []
   const groups = groupData?.data ?? []
@@ -330,44 +341,8 @@ export default function StudentProfilePage() {
 
   if (isStudentLoading) {
     return (
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-64 rounded" />
-          <Skeleton className="h-4 w-96 rounded" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-          <div className="lg:col-span-1">
-            <Card className="p-6 flex flex-col items-center space-y-4">
-              <Skeleton className="w-20 h-20 rounded-full" />
-              <div className="space-y-2 w-full flex flex-col items-center">
-                <Skeleton className="h-5 w-36" />
-                <Skeleton className="h-4 w-20 rounded-full" />
-              </div>
-              <div className="w-full border-t border-border/60 my-2" />
-              <div className="w-full space-y-3">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-              </div>
-            </Card>
-          </div>
-          <div className="lg:col-span-3 space-y-6">
-            <Card className="p-6 space-y-4">
-              <div className="flex gap-2 border-b border-border/60 pb-3">
-                <Skeleton className="h-8 w-24 rounded-lg" />
-                <Skeleton className="h-8 w-28 rounded-lg" />
-                <Skeleton className="h-8 w-24 rounded-lg" />
-                <Skeleton className="h-8 w-32 rounded-lg" />
-              </div>
-              <div className="space-y-4 pt-2">
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-24 w-full rounded-xl" />
-                <Skeleton className="h-40 w-full rounded-xl" />
-              </div>
-            </Card>
-          </div>
-        </div>
+      <div className="flex h-96 items-center justify-center">
+        <Spinner size="lg" />
       </div>
     )
   }
@@ -412,6 +387,9 @@ export default function StudentProfilePage() {
   )
 
   const studentSubjects = subjects.filter((s) => student.subject_ids?.includes(s.id))
+  const coreSubjects = studentSubjects.filter((s) => s.type === 'core' || !s.type)
+  const electiveSubjects = studentSubjects.filter((s) => s.type === 'elective')
+  const otherSubjects = studentSubjects.filter((s) => s.type && s.type !== 'core' && s.type !== 'elective')
   type SubTabId = 'overview' | 'portal' | 'idcard' | 'enrollment' | 'finance' | 'academics' | 'documents'
   interface ProfileTab {
     id: SubTabId
@@ -421,12 +399,12 @@ export default function StudentProfilePage() {
   }
   const tabs: ProfileTab[] = [
     { id: 'overview', label: __( 'Overview', 'codeclove-school-management' ), icon: User },
-    { id: 'portal', label: __( 'Portal Access', 'codeclove-school-management' ), icon: KeyRound },
-    { id: 'idcard', label: __( 'ID Card', 'codeclove-school-management' ), icon: IdCard },
-    { id: 'enrollment', label: __( 'Enrollment History', 'codeclove-school-management' ), icon: History },
-    { id: 'finance', label: __( 'Finance & Invoices', 'codeclove-school-management' ), icon: Coins },
-    { id: 'academics', label: __( 'Academics & Attendance', 'codeclove-school-management' ), icon: BookOpen },
+    { id: 'academics', label: __( 'Academics', 'codeclove-school-management' ), icon: BookOpen },
+    { id: 'finance', label: __( 'Finance', 'codeclove-school-management' ), icon: Coins, count: activeInvoices.length },
     { id: 'documents', label: __( 'Documents', 'codeclove-school-management' ), icon: FileText, count: student.documents?.length || 0 },
+    { id: 'portal', label: __( 'Portal', 'codeclove-school-management' ), icon: KeyRound },
+    { id: 'enrollment', label: __( 'Enrollment', 'codeclove-school-management' ), icon: History },
+    { id: 'idcard', label: __( 'ID Card', 'codeclove-school-management' ), icon: IdCard },
   ]
 
   const linkedGuardiansList: (Guardian & { relationship?: string })[] =
@@ -438,6 +416,17 @@ export default function StudentProfilePage() {
           ...(student.guardian ? [{ ...student.guardian, relationship: student.relationship || guardianLabelSingular }] : []),
         ]
 
+  // ponytail: derive primary contact from already-resolved guardian list
+  const primaryGuardian = linkedGuardiansList.find(
+    (g) => g.is_primary || g.id === student.primary_guardian?.id || (student.primary_contact && g.relationship?.toLowerCase() === student.primary_contact.toLowerCase())
+  ) || linkedGuardiansList[0]
+
+  const primaryGuardianContact = primaryGuardian ? {
+    name: `${primaryGuardian.first_name} ${primaryGuardian.last_name}`.trim(),
+    relationship: primaryGuardian.relationship || guardianLabelSingular,
+    phone: primaryGuardian.phone,
+    email: primaryGuardian.email,
+  } : null
   const openPortalAccessModal = (member: PortalMemberTarget, initialTab: 'create' | 'link' = 'create') => {
     setPortalModalTarget(member)
     setPortalModalInitialTab(initialTab)
@@ -533,17 +522,26 @@ export default function StudentProfilePage() {
 
   const age = calculateAge(student?.date_of_birth)
   const renderPortalAccessSection = () => (
-    <div className="rounded-xl border border-border bg-bg-surface overflow-hidden">
-      <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between">
+    <div className="divide-y divide-border">
+      <div className="px-6 py-4 flex items-center justify-between">
         <div>
           <h4 className="text-sm font-semibold text-text flex items-center gap-2">
             <KeyRound size={16} className="text-brand" />
-            {__( 'Portal Access & Accounts', 'codeclove-school-management' )}
+            <span>{__( 'Portal Access & Accounts', 'codeclove-school-management' )}</span>
           </h4>
           <p className="text-xs text-text-muted mt-0.5">
             {__( 'Manage login accounts for this student and linked family members.', 'codeclove-school-management' )}
           </p>
         </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleCopyPortalUrl}
+          className="gap-1.5 text-xs h-7.5 px-2.5 font-medium shrink-0"
+        >
+          <Copy size={12} />
+          <span>{__( 'Copy Portal Link', 'codeclove-school-management' )}</span>
+        </Button>
       </div>
 
       <div className="divide-y divide-border">
@@ -678,7 +676,7 @@ export default function StudentProfilePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={sprintf( __( '%s Profile', 'codeclove-school-management' ), studentLabelSingular )}
         description={__( 'Manage academic records, billing summaries, and associated family contacts.', 'codeclove-school-management' )}
@@ -690,7 +688,7 @@ export default function StudentProfilePage() {
         ]}
       />
 
-      {/* 1. Unified Student Hero Header Card with Docked Subtabs */}
+      {/* 1. Executive Student Dossier Hero Card */}
       <Card className="overflow-hidden border border-border shadow-xs">
         <div className="p-6 sm:p-7">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -710,7 +708,7 @@ export default function StudentProfilePage() {
                     {student.first_name} {student.last_name}
                   </h1>
                   <Badge variant={statusCfg.variant} size="sm">
-                    {statusCfg.label.toUpperCase()}
+                    {statusCfg.label}
                   </Badge>
                 </div>
 
@@ -730,12 +728,12 @@ export default function StudentProfilePage() {
                   )}
                 </div>
 
-                {/* Identity Badges with One-Click Copy */}
+                {/* Identity Metadata Badges with One-Click Copy */}
                 <div className="flex items-center gap-2 pt-1 flex-wrap text-xs">
                   {student.admission_number && (
-                    <div className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 text-2xs font-medium text-text border border-border shadow-2xs">
-                      <span className="text-text-subtle uppercase tracking-wider text-3xs font-bold">
-                        {__( 'Adm', 'codeclove-school-management' )}
+                    <div className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 text-xs font-medium text-text border border-border shadow-2xs">
+                      <span className="text-text-subtle font-medium text-xs">
+                        {__( 'Adm:', 'codeclove-school-management' )}
                       </span>
                       <span className="font-mono font-semibold text-text">{student.admission_number}</span>
                       <button
@@ -751,9 +749,9 @@ export default function StudentProfilePage() {
                   )}
 
                   {hasDistinctStudentNumber && (
-                    <div className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 text-2xs font-medium text-text border border-border shadow-2xs">
-                      <span className="text-text-subtle uppercase tracking-wider text-3xs font-bold">
-                        {sprintf( __( '%s ID', 'codeclove-school-management' ), studentLabelSingular )}
+                    <div className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 text-xs font-medium text-text border border-border shadow-2xs">
+                      <span className="text-text-subtle font-medium text-xs">
+                        {sprintf( __( '%s ID:', 'codeclove-school-management' ), studentLabelSingular )}
                       </span>
                       <span className="font-mono font-semibold text-text">{student.student_number}</span>
                       <button
@@ -769,18 +767,18 @@ export default function StudentProfilePage() {
                   )}
 
                   {student.admission_date && (
-                    <span className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 text-2xs font-medium text-text-muted border border-border shadow-2xs">
-                      <span className="text-text-subtle uppercase tracking-wider text-3xs font-bold">
-                        {__( 'Enrolled', 'codeclove-school-management' )}
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 text-xs font-medium text-text-muted border border-border shadow-2xs">
+                      <span className="text-text-subtle font-medium">
+                        {__( 'Enrolled:', 'codeclove-school-management' )}
                       </span>
                       <span className="font-semibold text-text font-mono">{formatDate(student.admission_date)}</span>
                     </span>
                   )}
 
                   {age !== null && (
-                    <span className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 text-2xs font-medium text-text-muted border border-border shadow-2xs">
-                      <span className="text-text-subtle uppercase tracking-wider text-3xs font-bold">
-                        {__( 'Age', 'codeclove-school-management' )}
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 text-xs font-medium text-text-muted border border-border shadow-2xs">
+                      <span className="text-text-subtle font-medium">
+                        {__( 'Age:', 'codeclove-school-management' )}
                       </span>
                       <span className="font-semibold text-text">{sprintf( __( '%d yrs', 'codeclove-school-management' ), age )}</span>
                     </span>
@@ -790,7 +788,7 @@ export default function StudentProfilePage() {
             </div>
 
             {/* Quick Action Buttons */}
-            <div className="flex items-center gap-2.5 flex-wrap shrink-0 self-start lg:self-center">
+            <div className="flex items-center gap-2 flex-wrap shrink-0 self-start lg:self-center">
               <Button
                 variant="default"
                 size="sm"
@@ -813,327 +811,309 @@ export default function StudentProfilePage() {
                 </Button>
               )}
 
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setActiveSubTab('idcard')}
-                className="gap-1.5 text-xs font-semibold"
-              >
-                <IdCard size={13} />
-                <span>{__( 'Print ID Card', 'codeclove-school-management' )}</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Docked Subtabs Navigation Bar */}
-        <div className="border-t border-border bg-bg-surface/50 px-6 py-2 flex items-center overflow-x-auto gap-2 scrollbar-none">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeSubTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                role="tab"
-                id={`tab-${tab.id}`}
-                aria-selected={isActive}
-                aria-controls={`panel-${tab.id}`}
-                tabIndex={isActive ? 0 : -1}
-                onClick={() => setActiveSubTab(tab.id)}
-                className={`flex items-center gap-2 py-2 px-3 rounded-lg font-semibold text-xs transition-all whitespace-nowrap cursor-pointer ${
-                  isActive
-                    ? 'bg-brand text-text-inverted shadow-2xs'
-                    : 'text-text-muted hover:text-text hover:bg-bg-surface'
-                }`}
-              >
-                <Icon size={14} className={isActive ? 'text-text-inverted' : 'text-text-muted/70'} />
-                <span>{tab.label}</span>
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span
-                    className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none ${
-                      isActive ? 'bg-white/20 text-text-inverted' : 'bg-brand/10 text-brand'
-                    }`}
+              <Dropdown
+                align="end"
+                trigger={
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="gap-1 text-xs font-semibold px-2.5"
+                    title={__( 'More Actions', 'codeclove-school-management' )}
                   >
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      </Card>
-
-      {/* 2. At-a-Glance Student 360 Institutional Vitals Strip */}
-      {activeSubTab === 'overview' && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* Vitals Tile 1: Attendance Standing */}
-          <div className="rounded-xl border border-border bg-bg-surface p-4 space-y-1.5 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle">
-                {__( 'Attendance YTD', 'codeclove-school-management' )}
-              </span>
-              <BookOpen className="w-4 h-4 text-text-muted" />
+                    <MoreHorizontal size={14} />
+                  </Button>
+                }
+              >
+                <DropdownItem
+                  icon={IdCard}
+                  label={__( 'Print ID Card', 'codeclove-school-management' )}
+                  onClick={() => setActiveSubTab('idcard')}
+                />
+                <DropdownItem
+                  icon={Coins}
+                  label={__( 'Create Invoice', 'codeclove-school-management' )}
+                  onClick={() => navigate(`/finance/invoices/new?student_id=${studentId}&unit_id=${student.enrollment?.academic_unit_id ?? ''}`)}
+                />
+                <DropdownSeparator />
+                <DropdownItem
+                  icon={Copy}
+                  label={__( 'Copy Portal Login Link', 'codeclove-school-management' )}
+                  onClick={handleCopyPortalUrl}
+                />
+              </Dropdown>
             </div>
-            {attendanceStats && attendanceStats.total > 0 ? (
-              <div>
-                <p className={cn(
-                  'text-xl font-bold font-mono',
-                  attendanceStats.rate >= 90 ? 'text-success' : attendanceStats.rate >= 75 ? 'text-warning' : 'text-danger'
-                )}>
-                  {attendanceStats.rate}%
-                </p>
-                <p className="text-2xs text-text-muted">
-                  {sprintf( __( '%1$d of %2$d sessions attended', 'codeclove-school-management' ), attendanceStats.present + attendanceStats.late + Math.floor(attendanceStats.half_day * 0.5), attendanceStats.total )}
-                </p>
-              </div>
-            ) : (
-              <div>
-                <p className="text-sm font-semibold text-text">
-                  {__( 'No attendance recorded', 'codeclove-school-management' )}
-                </p>
-                <p className="text-2xs text-text-muted">{__( 'Current academic term', 'codeclove-school-management' )}</p>
-              </div>
-            )}
+          </div>
+        </div>
+
+        {/* Integrated Executive Vitals Strip (Single monolithic container, divide-x) */}
+        <div className="border-t border-border bg-bg-surface/50 grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border">
+          {/* Metric 1: Attendance Standing */}
+          <div className="p-4 sm:px-6 sm:py-4 space-y-1">
+            <div className="flex items-center justify-between text-xs text-text-subtle">
+              <span className="font-medium">{__( 'Attendance Standing', 'codeclove-school-management' )}</span>
+              <BookOpen className="w-3.5 h-3.5 opacity-70" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className={cn(
+                'text-xl font-bold font-mono tabular-nums leading-tight',
+                attendanceStats.total === 0
+                  ? 'text-text-subtle'
+                  : attendanceStats.rate >= 90
+                  ? 'text-success'
+                  : attendanceStats.rate >= 75
+                  ? 'text-warning'
+                  : 'text-danger'
+              )}>
+                {attendanceStats.total > 0 ? `${attendanceStats.rate}%` : '—'}
+              </span>
+              <span className="text-2xs text-text-muted">
+                {attendanceStats.total > 0
+                  ? sprintf( __( '%1$d/%2$d sessions attended', 'codeclove-school-management' ), attendanceStats.present + attendanceStats.late + Math.floor(attendanceStats.half_day * 0.5), attendanceStats.total )
+                  : __( 'No logs recorded', 'codeclove-school-management' )}
+              </span>
+            </div>
           </div>
 
-          {/* Vitals Tile 2: Financial Clearance */}
-          <div className="rounded-xl border border-border bg-bg-surface p-4 space-y-1.5 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle">
-                {__( 'Tuition & Invoices', 'codeclove-school-management' )}
-              </span>
-              <Coins className="w-4 h-4 text-text-muted" />
+          {/* Metric 2: Financial Clearance */}
+          <div className="p-4 sm:px-6 sm:py-4 space-y-1">
+            <div className="flex items-center justify-between text-xs text-text-subtle">
+              <span className="font-medium">{__( 'Financial Clearance', 'codeclove-school-management' )}</span>
+              <Coins className="w-3.5 h-3.5 opacity-70" />
             </div>
-            <div>
-              <p className={cn(
-                'text-xl font-bold font-mono',
+            <div className="flex items-baseline gap-2">
+              <span className={cn(
+                'text-xl font-bold font-mono tabular-nums leading-tight',
                 outstandingBalance > 0 ? 'text-danger' : 'text-success'
               )}>
                 {outstandingBalance > 0 ? formatCurrency(outstandingBalance) : __( 'All Clear', 'codeclove-school-management' )}
-              </p>
-              <p className="text-2xs text-text-muted">
+              </span>
+              <span className="text-2xs text-text-muted">
                 {outstandingBalance > 0
-                  ? __( 'Outstanding dues balance', 'codeclove-school-management' )
-                  : __( 'No pending student fees', 'codeclove-school-management' )}
-              </p>
+                  ? sprintf( __( '%d overdue invoice(s)', 'codeclove-school-management' ), overdueInvoicesCount )
+                  : __( 'No pending student dues', 'codeclove-school-management' )}
+              </span>
             </div>
           </div>
 
-          {/* Vitals Tile 3: Academic Curriculum */}
-          <div className="rounded-xl border border-border bg-bg-surface p-4 space-y-1.5 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle">
-                {__( 'Academic Curriculum', 'codeclove-school-management' )}
-              </span>
-              <BookOpen className="w-4 h-4 text-text-muted" />
+          {/* Metric 3: Academic Curriculum */}
+          <div className="p-4 sm:px-6 sm:py-4 space-y-1">
+            <div className="flex items-center justify-between text-xs text-text-subtle">
+              <span className="font-medium">{__( 'Academic Placement', 'codeclove-school-management' )}</span>
+              <BookOpen className="w-3.5 h-3.5 opacity-70" />
             </div>
-            <div>
-              <p className="text-xl font-bold font-mono text-text">
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl font-bold font-mono tabular-nums text-text leading-tight">
                 {studentSubjects.length > 0
                   ? sprintf( __( '%d Subjects', 'codeclove-school-management' ), studentSubjects.length )
                   : (currentUnitName || __( 'Enrolled', 'codeclove-school-management' ))}
-              </p>
-              <p className="text-2xs text-text-muted truncate">
+              </span>
+              <span className="text-2xs text-text-muted truncate">
                 {currentClassSection}
-              </p>
+              </span>
             </div>
           </div>
 
-          {/* Vitals Tile 4: Primary Contact */}
-          <div className="rounded-xl border border-border bg-bg-surface p-4 space-y-1.5 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle">
-                {__( 'Primary Contact', 'codeclove-school-management' )}
-              </span>
-              <PhoneCall className="w-4 h-4 text-text-muted" />
+          {/* Metric 4: Primary Contact */}
+          <div className="p-4 sm:px-6 sm:py-4 space-y-1">
+            <div className="flex items-center justify-between text-xs text-text-subtle">
+              <span className="font-medium">{__( 'Primary Contact', 'codeclove-school-management' )}</span>
+              <PhoneCall className="w-3.5 h-3.5 opacity-70" />
             </div>
-            {(() => {
-              const primary = student.primary_guardian ||
-                (student.father?.is_primary ? student.father :
-                (student.mother?.is_primary ? student.mother :
-                (student.guardian?.is_primary ? student.guardian :
-                (student.father || student.mother || student.guardian))))
-              if (!primary) {
-                return (
-                  <div>
-                    <p className="text-sm font-semibold text-text-muted italic">{__( 'None recorded', 'codeclove-school-management' )}</p>
-                    <p className="text-2xs text-text-muted">{__( 'No family contacts registered', 'codeclove-school-management' )}</p>
-                  </div>
-                )
-              }
-              const rel = primary === student.father ? __( 'Father', 'codeclove-school-management' ) : primary === student.mother ? __( 'Mother', 'codeclove-school-management' ) : (student.relationship || primary.relationship || guardianLabelSingular)
-              return (
-                <div>
-                  <p className="text-sm font-semibold text-text truncate">
-                    {primary.first_name} {primary.last_name} ({rel})
-                  </p>
-                  {primary.phone ? (
-                    <a
-                      href={`tel:${primary.phone}`}
-                      className="text-xs font-mono font-medium text-brand hover:underline inline-flex items-center gap-1 mt-0.5"
-                    >
-                      <PhoneCall className="w-3 h-3 shrink-0" />
-                      <span>{primary.phone}</span>
-                    </a>
-                  ) : primary.email ? (
-                    <a
-                      href={`mailto:${primary.email}`}
-                      className="text-xs font-mono font-medium text-brand hover:underline inline-flex items-center gap-1 mt-0.5 truncate"
-                    >
-                      <Mail className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{primary.email}</span>
-                    </a>
-                  ) : (
-                    <p className="text-2xs text-text-muted">{__( 'Phone not registered', 'codeclove-school-management' )}</p>
-                  )}
-                </div>
-              )
-            })()}
+            {primaryGuardianContact ? (
+              <div className="space-y-0.5">
+                <p className="text-sm font-semibold text-text truncate">
+                  {primaryGuardianContact.name} <span className="text-text-subtle font-normal text-xs">({primaryGuardianContact.relationship})</span>
+                </p>
+                {primaryGuardianContact.phone ? (
+                  <a
+                    href={`tel:${primaryGuardianContact.phone}`}
+                    className="text-xs font-mono font-medium text-brand hover:underline inline-flex items-center gap-1"
+                  >
+                    <PhoneCall size={11} className="shrink-0" />
+                    <span>{primaryGuardianContact.phone}</span>
+                  </a>
+                ) : primaryGuardianContact.email ? (
+                  <a
+                    href={`mailto:${primaryGuardianContact.email}`}
+                    className="text-xs font-mono font-medium text-brand hover:underline inline-flex items-center gap-1 truncate"
+                  >
+                    <Mail size={11} className="shrink-0" />
+                    <span className="truncate">{primaryGuardianContact.email}</span>
+                  </a>
+                ) : (
+                  <span className="text-2xs text-text-subtle">{__( 'No direct contact', 'codeclove-school-management' )}</span>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-text-subtle italic">{__( 'None recorded', 'codeclove-school-management' )}</p>
+            )}
           </div>
         </div>
-      )}
+      </Card>
 
-      {/* 3. Overview Tab: Balanced 12-Column Grid */}
-      {activeSubTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column (7 cols): Academic Demographics & Residence */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* Card 1: Official Academic & Personal Demographics */}
-            <Card className="p-6 space-y-5">
-              <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bg-surface border border-border text-text">
-                    <User className="h-4.5 w-4.5 text-text-muted" />
-                  </div>
-                  <h3 className="text-base font-semibold text-text leading-tight">
-                    {__( 'Personal & Academic Demographics', 'codeclove-school-management' )}
-                  </h3>
-                </div>
-                <span className="inline-flex items-center gap-1.5 text-2xs font-semibold text-text-muted bg-bg-surface px-2.5 py-1 rounded-md border border-border shrink-0 whitespace-nowrap">
-                  <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
-                  <span>{__( 'Verified Institutional Record', 'codeclove-school-management' )}</span>
-                </span>
-              </div>
+      {/* 2. Unified Content Card with Embedded Tab Navigation Header */}
+      <div className="bg-bg-elevated border border-border rounded-xl shadow-xs overflow-hidden mt-6">
+        {/* Card Header: Tab Navigation Bar */}
+        <div className="border-b border-border px-4 sm:px-6 flex items-center bg-bg-surface/30">
+          {/* Left: Scrollable Underline Tabs */}
+          <div
+            className="flex items-center gap-1 sm:gap-2 -mb-px overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden min-w-0 flex-1"
+            role="tablist"
+          >
+            {tabs.map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeSubTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  id={`tab-${tab.id}`}
+                  aria-selected={isActive}
+                  aria-controls={`panel-${tab.id}`}
+                  tabIndex={isActive ? 0 : -1}
+                  onClick={() => setActiveSubTab(tab.id)}
+                  className={cn(
+                    'group inline-flex items-center gap-2 py-3.5 px-3 sm:px-3.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors cursor-pointer select-none shrink-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
+                    isActive
+                      ? 'border-brand text-brand font-semibold'
+                      : 'border-transparent text-text-muted hover:text-text hover:border-border'
+                  )}
+                >
+                  <Icon size={15} className={cn('transition-colors', isActive ? 'text-brand' : 'text-text-subtle group-hover:text-text')} />
+                  <span>{tab.label}</span>
+                  {tab.count !== undefined && tab.count > 0 && (
+                    <span
+                      className={cn(
+                        'ms-1 px-1.5 py-0.5 rounded-full text-2xs font-bold font-mono transition-colors',
+                        isActive
+                          ? 'bg-brand/10 text-brand'
+                          : 'bg-bg-surface border border-border text-text-subtle group-hover:text-text'
+                      )}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
-              {/* 3-Column Balanced Definition Grid: High-Value Institutional Vitals */}
-              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6 text-xs">
-                <div className="space-y-1">
-                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
-                    {__( 'Current Class & Section', 'codeclove-school-management' )}
-                  </dt>
-                  <dd className="text-sm font-semibold text-text">
-                    {currentClassSection}
-                  </dd>
-                </div>
-                <div className="space-y-1">
-                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
-                    {__( 'Academic Session', 'codeclove-school-management' )}
-                  </dt>
-                  <dd className="text-sm font-semibold text-text">
-                    {sessionName}
-                  </dd>
-                </div>
-                <div className="space-y-1">
-                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
-                    {__( 'Enrollment Status', 'codeclove-school-management' )}
-                  </dt>
-                  <dd className="text-sm font-semibold text-text">
-                    <Badge variant={statusCfg.variant} size="xs">
-                      {statusCfg.label.toUpperCase()}
-                    </Badge>
-                  </dd>
-                </div>
-
-                <div className="space-y-1">
-                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
-                    {__( 'Roll Number', 'codeclove-school-management' )}
-                  </dt>
-                  <dd className="text-sm font-semibold text-text font-mono">
-                    {student.enrollment?.roll_number ? `#${student.enrollment.roll_number}` : '—'}
-                  </dd>
-                </div>
-                <div className="space-y-1">
-                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
-                    {__( 'Admission No', 'codeclove-school-management' )}
-                  </dt>
-                  <dd className="text-sm font-semibold text-text font-mono">
-                    {student.admission_number || '—'}
-                  </dd>
-                </div>
-                <div className="space-y-1">
-                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
-                    {__( 'Admission Date', 'codeclove-school-management' )}
-                  </dt>
-                  <dd className="text-sm font-semibold text-text font-mono">
-                    {student.admission_date ? formatDate(student.admission_date) : '—'}
-                  </dd>
+        {/* Card Body: Active Tab Workspace */}
+        <div
+          role="tabpanel"
+          id={`panel-${activeSubTab}`}
+          aria-labelledby={`tab-${activeSubTab}`}
+        >
+          {/* Overview Tab: Unified Executive Dossier */}
+          {activeSubTab === 'overview' && (
+            <div className="divide-y divide-border">
+              {/* Section 1: Academic & Demographic Details */}
+              <div>
+                <div className="px-6 py-4 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold tracking-tight text-text">
+                    {__( 'Personal & Academic Details', 'codeclove-school-management' )}
+                  </h2>
                 </div>
 
-                <div className="space-y-1">
-                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
-                    {__( 'Date of Birth', 'codeclove-school-management' )}
-                  </dt>
-                  <dd className="text-sm font-semibold text-text">
-                    {student.date_of_birth ? (
-                      <span className="font-mono">
-                        {formatDate(student.date_of_birth)}
-                        {age !== null && (
-                          <span className="text-text-subtle text-xs font-normal ml-1.5">
-                            ({sprintf( __( '%d yrs', 'codeclove-school-management' ), age )})
-                          </span>
-                        )}
-                      </span>
-                    ) : '—'}
-                  </dd>
-                </div>
-                <div className="space-y-1">
-                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
-                    {__( 'Gender', 'codeclove-school-management' )}
-                  </dt>
-                  <dd className="text-sm font-semibold text-text capitalize">
-                    {formatGender(student.gender)}
-                  </dd>
-                </div>
-                <div className="space-y-1">
-                  <dt className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
-                    {__( 'Blood Group', 'codeclove-school-management' )}
-                  </dt>
-                  <dd className="text-sm font-semibold text-text">
-                    {student.blood_group ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-danger-dim text-danger border border-danger-border">
-                        {student.blood_group}
-                      </span>
-                    ) : (
-                      <span className="text-text-subtle italic text-xs">{__( 'Not on file', 'codeclove-school-management' )}</span>
-                    )}
-                  </dd>
-                </div>
-              </dl>
-            </Card>
-
-            {/* Card 2: Contact & Address Details */}
-            <Card className="p-6 space-y-5">
-              <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bg-surface border border-border text-text">
-                    <MapPin className="h-4.5 w-4.5 text-text-muted" />
-                  </div>
-                  <h3 className="text-base font-semibold text-text leading-tight">
-                    {__( 'Contact & Address Details', 'codeclove-school-management' )}
-                  </h3>
-                </div>
-              </div>
-
-              <div className="space-y-4 text-xs">
-                {/* Direct Student Contact Channels */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-border/60">
+              <div className="px-6 pb-6 pt-1">
+                <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-y-5 gap-x-8 text-xs">
                   <div className="space-y-1">
-                    <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
-                      {__( 'Student Direct Email', 'codeclove-school-management' )}
+                    <dt className="text-xs font-medium text-text-muted">
+                      {__( 'Admission Date', 'codeclove-school-management' )}
+                    </dt>
+                    <dd className="text-sm font-semibold text-text font-mono">
+                      {student.admission_date ? formatDate(student.admission_date) : '—'}
+                    </dd>
+                  </div>
+
+                  <div className="space-y-1">
+                    <dt className="text-xs font-medium text-text-muted">
+                      {__( 'Date of Birth', 'codeclove-school-management' )}
+                    </dt>
+                    <dd className="text-sm font-semibold text-text">
+                      {student.date_of_birth ? (
+                        <span className="font-mono">
+                          {formatDate(student.date_of_birth)}
+                          {age !== null && (
+                            <span className="text-text-subtle text-xs font-normal ml-1.5 font-sans">
+                              ({sprintf( __( '%d yrs', 'codeclove-school-management' ), age )})
+                            </span>
+                          )}
+                        </span>
+                      ) : '—'}
+                    </dd>
+                  </div>
+
+                  <div className="space-y-1">
+                    <dt className="text-xs font-medium text-text-muted">
+                      {__( 'Gender', 'codeclove-school-management' )}
+                    </dt>
+                    <dd className="text-sm font-semibold text-text capitalize">
+                      {formatGender(student.gender)}
+                    </dd>
+                  </div>
+
+                  <div className="space-y-1">
+                    <dt className="text-xs font-medium text-text-muted">
+                      {__( 'Blood Group', 'codeclove-school-management' )}
+                    </dt>
+                    <dd className="text-sm font-semibold text-text">
+                      {student.blood_group ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-danger-dim text-danger border border-danger-border font-mono">
+                          {student.blood_group}
+                        </span>
+                      ) : (
+                        <span className="text-text-subtle italic text-xs">{__( 'Not on file', 'codeclove-school-management' )}</span>
+                      )}
+                    </dd>
+                  </div>
+
+                  <div className="space-y-1">
+                    <dt className="text-xs font-medium text-text-muted">
+                      {__( 'Nationality', 'codeclove-school-management' )}
+                    </dt>
+                    <dd className="text-sm font-semibold text-text">
+                      {formatCountry(student.country) || '—'}
+                    </dd>
+                  </div>
+
+                  <div className="space-y-1">
+                    <dt className="text-xs font-medium text-text-muted">
+                      {__( 'Curriculum Enrolled', 'codeclove-school-management' )}
+                    </dt>
+                    <dd className="text-sm font-semibold text-text">
+                      {studentSubjects.length > 0
+                        ? sprintf( __( '%d Subjects', 'codeclove-school-management' ), studentSubjects.length )
+                        : __( 'General Track', 'codeclove-school-management' )}
+                    </dd>
+                  </div>
+
+                </dl>
+              </div>
+            </div>
+
+            {/* Section 2: Contact Channels & Residence */}
+            <div>
+              <div className="px-6 py-4 flex items-center justify-between">
+                <h2 className="text-sm font-semibold tracking-tight text-text">
+                  {__( 'Contact & Address Details', 'codeclove-school-management' )}
+                </h2>
+              </div>
+
+              <div className="px-6 pb-6 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-xs">
+                  <div className="space-y-1">
+                    <span className="text-xs font-medium text-text-muted block">
+                      {__( 'Direct Student Email', 'codeclove-school-management' )}
                     </span>
                     {student.email ? (
                       <div className="flex items-center gap-2">
-                        <a href={`mailto:${student.email}`} className="text-sm font-medium text-text font-mono hover:text-brand hover:underline truncate" title={student.email}>
+                        <a
+                          href={`mailto:${student.email}`}
+                          className="text-sm font-medium text-text font-mono hover:text-brand hover:underline truncate"
+                          title={student.email}
+                        >
                           {student.email}
                         </a>
                         <button
@@ -1151,12 +1131,15 @@ export default function StudentProfilePage() {
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
-                      {__( 'Student Mobile Phone', 'codeclove-school-management' )}
+                    <span className="text-xs font-medium text-text-muted block">
+                      {__( 'Direct Student Mobile', 'codeclove-school-management' )}
                     </span>
                     {student.phone ? (
                       <div className="flex items-center gap-2">
-                        <a href={`tel:${student.phone}`} className="text-sm font-semibold text-text font-mono hover:text-brand hover:underline">
+                        <a
+                          href={`tel:${student.phone}`}
+                          className="text-sm font-semibold text-text font-mono hover:text-brand hover:underline"
+                        >
                           {student.phone}
                         </a>
                         <button
@@ -1172,37 +1155,28 @@ export default function StudentProfilePage() {
                       <span className="text-sm text-text-subtle italic">{__( 'Not provided', 'codeclove-school-management' )}</span>
                     )}
                   </div>
-                </div>
 
-                {/* Residential Address Block */}
-                <div className="space-y-1">
-                  <span className="text-3xs font-bold uppercase tracking-wider text-text-subtle block">
-                    {__( 'Residential Address', 'codeclove-school-management' )}
-                  </span>
-                  <p className="text-sm font-medium text-text leading-relaxed">
-                    {formattedAddress}
-                  </p>
+                  <div className="space-y-1 sm:col-span-2 lg:col-span-1">
+                    <span className="text-xs font-medium text-text-muted block">
+                      {__( 'Residential Address', 'codeclove-school-management' )}
+                    </span>
+                    <p className="text-sm font-medium text-text leading-relaxed">
+                      {formattedAddress}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </Card>
-          </div>
+            </div>
 
-          {/* Right Column (5 cols): Family Household Cards & Health */}
-          <div className="lg:col-span-5 space-y-6">
-            {/* Authorized Family & Household Directory Card */}
-            <Card className="p-6 space-y-4">
-              <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bg-surface border border-border text-text">
-                    <Users className="h-4.5 w-4.5 text-text-muted" />
-                  </div>
-                  <h3 className="text-base font-semibold text-text leading-tight">
-                    {guardianLabelSingular.toLowerCase().includes('parent')
-                      ? sprintf( __( '%s Contacts', 'codeclove-school-management' ), guardianLabelSingular )
-                      : sprintf( __( 'Parent & %s Contacts', 'codeclove-school-management' ), guardianLabelSingular )}
-                  </h3>
-                </div>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-bg-surface text-text-muted border border-border shrink-0 whitespace-nowrap">
+            {/* Section 3: Parent & Guardian Contacts */}
+            <div>
+              <div className="px-6 py-4 flex items-center justify-between">
+                <h2 className="text-sm font-semibold tracking-tight text-text">
+                  {guardianLabelSingular.toLowerCase().includes('parent')
+                    ? sprintf( __( '%s Contacts', 'codeclove-school-management' ), guardianLabelSingular )
+                    : sprintf( __( 'Parent & %s Contacts', 'codeclove-school-management' ), guardianLabelSingular )}
+                </h2>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-2xs font-mono font-medium bg-bg-surface text-text-subtle border border-border">
                   {sprintf(
                     _n( '%d Contact', '%d Contacts', linkedGuardiansList.length, 'codeclove-school-management' ),
                     linkedGuardiansList.length
@@ -1210,7 +1184,6 @@ export default function StudentProfilePage() {
                 </span>
               </div>
 
-              {/* Divided Guardian Directory List */}
               <div className="divide-y divide-border/60">
                 {linkedGuardiansList.map((p, idx) => {
                   const isPrimary = Boolean(
@@ -1219,15 +1192,14 @@ export default function StudentProfilePage() {
                     (student.primary_contact && p.relationship?.toLowerCase() === student.primary_contact.toLowerCase())
                   )
                   const rel = p.relationship || guardianLabelSingular
+
                   return (
                     <div
                       key={p.id ?? idx}
-                      className={cn(
-                        'space-y-2',
-                        idx === 0 ? 'pb-3.5' : 'py-3.5'
-                      )}
+                      className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4"
                     >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                      {/* Guardian Name, Relationship, Occupation */}
+                      <div className="space-y-1 min-w-[200px]">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="text-sm font-semibold text-text">
                             {p.first_name} {p.last_name}
@@ -1237,202 +1209,226 @@ export default function StudentProfilePage() {
                           </span>
                           {isPrimary && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-semibold bg-brand-dim text-brand border border-brand/20">
-                              <span>{__( 'Primary Contact', 'codeclove-school-management' )}</span>
+                              {__( 'Primary Contact', 'codeclove-school-management' )}
                             </span>
                           )}
                         </div>
                         {p.occupation && (
-                          <span className="text-2xs text-text-subtle capitalize">
+                          <p className="text-xs text-text-subtle capitalize">
                             {p.occupation}
-                          </span>
+                          </p>
                         )}
                       </div>
 
-                        {/* Contact channels */}
-                        <div className="space-y-1.5 text-xs">
-                          {p.phone && (
-                            <div className="flex items-center justify-between gap-2">
-                              <a
-                                href={`tel:${p.phone}`}
-                                className="text-text-muted hover:text-brand hover:underline flex items-center gap-1.5 font-mono text-xs"
-                                title={__( 'Call', 'codeclove-school-management' )}
-                              >
-                                <PhoneCall className="w-3 h-3 text-text-subtle shrink-0" />
-                                <span>{p.phone}</span>
-                              </a>
-                              <button
-                                type="button"
-                                onClick={() => copyToClipboard(p.phone || '', __( 'Phone number', 'codeclove-school-management' ))}
-                                className="p-1 rounded text-text-subtle hover:text-brand hover:bg-bg-surface transition-colors cursor-pointer"
-                                title={__( 'Copy phone number', 'codeclove-school-management' )}
-                              >
-                                <Copy className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
+                      {/* Contact Channels (Phone & Email) */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 text-xs min-w-0">
+                        {p.phone && (
+                          <div className="flex items-center gap-1.5 font-mono">
+                            <PhoneCall className="w-3.5 h-3.5 text-text-subtle shrink-0" />
+                            <a
+                              href={`tel:${p.phone}`}
+                              className="text-text font-medium hover:text-brand hover:underline"
+                              title={__( 'Call', 'codeclove-school-management' )}
+                            >
+                              {p.phone}
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(p.phone || '', __( 'Phone number', 'codeclove-school-management' ))}
+                              className="p-1 rounded text-text-subtle hover:text-brand hover:bg-bg-surface transition-colors cursor-pointer"
+                              title={__( 'Copy phone number', 'codeclove-school-management' )}
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
 
-                          {p.email && (
-                            <div className="flex items-center justify-between gap-2">
-                              <a
-                                href={`mailto:${p.email}`}
-                                className="text-text-muted hover:text-brand hover:underline flex items-center gap-1.5 text-xs truncate min-w-0"
-                                title={p.email}
-                              >
-                                <Mail className="w-3 h-3 text-text-subtle shrink-0" />
-                                <span className="truncate">{p.email}</span>
-                              </a>
-                              <button
-                                type="button"
-                                onClick={() => copyToClipboard(p.email || '', __( 'Email address', 'codeclove-school-management' ))}
-                                className="p-1 rounded text-text-subtle hover:text-brand hover:bg-bg-surface transition-colors cursor-pointer shrink-0"
-                                title={__( 'Copy email address', 'codeclove-school-management' )}
-                              >
-                                <Copy className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        {p.email && (
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Mail className="w-3.5 h-3.5 text-text-subtle shrink-0" />
+                            <a
+                              href={`mailto:${p.email}`}
+                              className="text-text font-medium hover:text-brand hover:underline truncate max-w-[220px]"
+                              title={p.email}
+                            >
+                              {p.email}
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(p.email || '', __( 'Email address', 'codeclove-school-management' ))}
+                              className="p-1 rounded text-text-subtle hover:text-brand hover:bg-bg-surface transition-colors cursor-pointer shrink-0"
+                              title={__( 'Copy email address', 'codeclove-school-management' )}
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )
-                  })}
+
+                      {/* Portal Access Status */}
+                      <div className="flex items-center gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-border/40">
+                        {p.portal_account ? (
+                          <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                            <KeyRound size={12} className="text-success shrink-0" />
+                            <span className="font-mono text-2xs font-medium text-text">@{p.portal_account.username}</span>
+                            <Badge variant="active" size="xs">{__( 'Active Portal', 'codeclove-school-management' )}</Badge>
+                          </div>
+                        ) : (
+                          <span className="text-2xs text-text-subtle italic">{__( 'No portal account linked', 'codeclove-school-management' )}</span>
+                        )}
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2.5 text-xs text-brand hover:bg-brand/10 font-medium"
+                          onClick={() => setActiveSubTab('portal')}
+                        >
+                          {p.portal_account ? __( 'Manage', 'codeclove-school-management' ) : __( 'Set Up', 'codeclove-school-management' )}
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
 
                 {linkedGuardiansList.length === 0 && (
-                  <div className="text-center py-6 text-xs text-text-muted border border-dashed border-border rounded-xl">
+                  <div className="p-8 text-center text-xs text-text-muted">
                     {__( 'No legal parents or guardians registered.', 'codeclove-school-management' )}
                   </div>
                 )}
               </div>
-            </Card>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* 4. Non-Overview Tab Panels */}
-      {activeSubTab !== 'overview' && (
-        <Card
-          role="tabpanel"
-          id={`panel-${activeSubTab}`}
-          aria-labelledby={`tab-${activeSubTab}`}
-          className="p-6"
-        >
+        )}
 
             {activeSubTab === 'portal' && (
-              <div className="space-y-5">
-                {renderPortalAccessSection()}
-              </div>
+              renderPortalAccessSection()
             )}
             {activeSubTab === 'idcard' && (
-              <StudentIdCardSection
-                student={student}
-                unitName={matchedUnit?.name}
-                groupName={matchedGroup?.name}
-                rollNumber={student.enrollment?.roll_number}
-                school={school}
-                sessionLabel={session?.label}
-                formatDate={formatDate}
-              />
+              <div className="p-6">
+                <StudentIdCardSection
+                  student={student}
+                  unitName={matchedUnit?.name}
+                  groupName={matchedGroup?.name}
+                  rollNumber={student.enrollment?.roll_number}
+                  school={school}
+                  sessionLabel={session?.label}
+                  formatDate={formatDate}
+                  studentLabel={studentLabelSingular}
+                />
+              </div>
             )}
 
             {activeSubTab === 'enrollment' && (
-              <div className="space-y-6">
+              <div className="divide-y divide-border">
+                {/* Section 1: Current Enrollment Placement */}
                 <div>
-                  <FormGroupHeader title={__( 'Current Enrollment Placement', 'codeclove-school-management' )} icon={RefreshCw} />
-                  {student.enrollment ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 text-xs">
-                      <div className="flex justify-between py-2.5 border-b border-border/40 items-center">
-                        <span className="text-text-muted font-medium">{sprintf( __( 'Current %s', 'codeclove-school-management' ), unitLabelSingular )}</span>
-                        <span className="text-text font-medium">{matchedUnit?.name || '—'}</span>
-                      </div>
-                      <div className="flex justify-between py-2.5 border-b border-border/40 items-center">
-                        <span className="text-text-muted font-medium">{sprintf( __( 'Assigned %s', 'codeclove-school-management' ), groupLabelSingular )}</span>
-                        <span className="text-text font-medium">{matchedGroup?.name || '—'}</span>
-                      </div>
-                      <div className="flex justify-between py-2.5 border-b border-border/40 items-center">
-                        <span className="text-text-muted font-medium">{__( 'Academic Roll Number', 'codeclove-school-management' )}</span>
-                        <span className="font-mono text-text font-medium">{student.enrollment.roll_number || '—'}</span>
-                      </div>
-                      <div className="flex justify-between py-2.5 border-b border-border/40 items-center">
-                        <span className="text-text-muted font-medium">{__( 'Placement Start Date', 'codeclove-school-management' )}</span>
-                        <span className="text-text font-medium">{formatDate(student.enrollment.starts_on)}</span>
-                      </div>
-                      <div className="flex justify-between py-2.5 border-b border-border/40 items-center">
-                        <span className="text-text-muted font-medium">{__( 'Status', 'codeclove-school-management' )}</span>
-                        <span className="text-text font-medium capitalize">{student.enrollment.status}</span>
-                      </div>
+                  <div className="px-6 py-4 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-sm font-semibold tracking-tight text-text">
+                        {__( 'Current Enrollment Placement', 'codeclove-school-management' )}
+                      </h2>
                     </div>
-                  ) : (
-                    <div className="text-center py-6 text-xs text-text-muted">{__( 'No active enrollment record found.', 'codeclove-school-management' )}</div>
-                  )}
+                    {student.enrollment && (
+                      <Badge size="sm" variant={ENROLLMENT_STATUS_VARIANTS[student.enrollment.status] ?? 'default'} className="capitalize">
+                        {student.enrollment.status}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="p-6">
+                    {student.enrollment ? (
+                      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-y-4 gap-x-6 text-xs">
+                        <div className="space-y-1">
+                          <dt className="text-xs font-medium text-text-muted">{sprintf( __( 'Current %s', 'codeclove-school-management' ), unitLabelSingular )}</dt>
+                          <dd className="text-sm font-semibold text-text">{matchedUnit?.name || '—'}</dd>
+                        </div>
+                        <div className="space-y-1">
+                          <dt className="text-xs font-medium text-text-muted">{sprintf( __( 'Assigned %s', 'codeclove-school-management' ), groupLabelSingular )}</dt>
+                          <dd className="text-sm font-semibold text-text">{matchedGroup?.name || '—'}</dd>
+                        </div>
+                        <div className="space-y-1">
+                          <dt className="text-xs font-medium text-text-muted">{__( 'Academic Roll Number', 'codeclove-school-management' )}</dt>
+                          <dd className="text-sm font-semibold font-mono text-text">{student.enrollment.roll_number || '—'}</dd>
+                        </div>
+                        <div className="space-y-1">
+                          <dt className="text-xs font-medium text-text-muted">{__( 'Placement Start Date', 'codeclove-school-management' )}</dt>
+                          <dd className="text-sm font-semibold text-text">{formatDate(student.enrollment.starts_on)}</dd>
+                        </div>
+                      </dl>
+                    ) : (
+                      <div className="text-center py-6 text-xs text-text-muted">{__( 'No active enrollment record found.', 'codeclove-school-management' )}</div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Academic Session History */}
-                <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-semibold text-text uppercase tracking-wider">
-                      {__( 'Academic Session History', 'codeclove-school-management' )}
-                    </h4>
-                    <span className="text-2xs text-text-muted font-medium">
+                {/* Section 2: Academic Session History */}
+                <div>
+                  <div className="px-6 py-4 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-sm font-semibold tracking-tight text-text">
+                        {__( 'Academic Session History', 'codeclove-school-management' )}
+                      </h2>
+                    </div>
+                    <span className="text-2xs font-mono font-medium text-text-subtle bg-bg-surface px-2.5 py-0.5 rounded-md border border-border">
                       {sprintf( __( '%d session(s) recorded', 'codeclove-school-management' ), student.enrollments?.length ?? 0 )}
                     </span>
                   </div>
 
                   {student.enrollments?.length ? (
-                    <div className="border border-border/40 rounded overflow-hidden">
-                      <TableRoot>
-                        <Thead>
-                          <Tr>
-                            <Th className="p-3">{__( 'Academic Session', 'codeclove-school-management' )}</Th>
-                            <Th className="p-3">{unitLabelSingular}</Th>
-                            <Th className="p-3">{groupLabelSingular}</Th>
-                            <Th className="p-3">{__( 'Roll Number', 'codeclove-school-management' )}</Th>
-                            <Th className="p-3">{__( 'Placement Period', 'codeclove-school-management' )}</Th>
-                            <Th className="p-3 text-center">{__( 'Status', 'codeclove-school-management' )}</Th>
+                    <TableRoot>
+                      <Thead>
+                        <Tr>
+                          <Th className="p-3.5 ps-6">{__( 'Academic Session', 'codeclove-school-management' )}</Th>
+                          <Th className="p-3.5">{unitLabelSingular}</Th>
+                          <Th className="p-3.5">{groupLabelSingular}</Th>
+                          <Th className="p-3.5">{__( 'Roll Number', 'codeclove-school-management' )}</Th>
+                          <Th className="p-3.5">{__( 'Placement Period', 'codeclove-school-management' )}</Th>
+                          <Th className="p-3.5 pe-6 text-center">{__( 'Status', 'codeclove-school-management' )}</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody className="divide-y divide-border/40 text-xs">
+                        {student.enrollments.map((enr) => (
+                          <Tr key={enr.id} className="hover:bg-bg-overlay/10">
+                            <Td className="p-3.5 ps-6 font-medium text-text">
+                              {enr.session_name || sprintf( __( 'Session #%s', 'codeclove-school-management' ), enr.academic_session_id )}
+                            </Td>
+                            <Td className="p-3.5 text-text-muted">
+                              {enr.unit_name || sprintf( __( 'Class #%s', 'codeclove-school-management' ), enr.academic_unit_id )}
+                            </Td>
+                            <Td className="p-3.5 text-text-muted">
+                              {enr.group_name || '—'}
+                            </Td>
+                            <Td className="p-3.5 font-mono text-text">
+                              {enr.roll_number || '—'}
+                            </Td>
+                            <Td className="p-3.5 text-text-muted">
+                              {enr.starts_on ? formatDate(enr.starts_on) : '—'}
+                              {enr.ends_on ? ` – ${formatDate(enr.ends_on)}` : ''}
+                            </Td>
+                            <Td className="p-3.5 pe-6 text-center">
+                              <Badge size="sm" variant={ENROLLMENT_STATUS_VARIANTS[enr.status] ?? 'default'} className="capitalize">
+                                {enr.status}
+                              </Badge>
+                            </Td>
                           </Tr>
-                        </Thead>
-                        <Tbody className="divide-y divide-border/20 text-xs">
-                          {student.enrollments.map((enr) => (
-                            <Tr key={enr.id} className="hover:bg-bg-overlay/10">
-                              <Td className="p-3 font-medium text-text">
-                                {enr.session_name || sprintf( __( 'Session #%s', 'codeclove-school-management' ), enr.academic_session_id )}
-                              </Td>
-                              <Td className="p-3 text-text-muted">
-                                {enr.unit_name || sprintf( __( 'Class #%s', 'codeclove-school-management' ), enr.academic_unit_id )}
-                              </Td>
-                              <Td className="p-3 text-text-muted">
-                                {enr.group_name || '—'}
-                              </Td>
-                              <Td className="p-3 font-mono text-text">
-                                {enr.roll_number || '—'}
-                              </Td>
-                              <Td className="p-3 text-text-muted">
-                                {enr.starts_on ? formatDate(enr.starts_on) : '—'}
-                                {enr.ends_on ? ` – ${formatDate(enr.ends_on)}` : ''}
-                              </Td>
-                              <Td className="p-3 text-center">
-                                <Badge size="sm" variant={ENROLLMENT_STATUS_VARIANTS[enr.status] ?? 'default'} className="capitalize">
-                                  {enr.status}
-                                </Badge>
-                              </Td>
-                            </Tr>
-                          ))}
-                        </Tbody>
-                      </TableRoot>
-                    </div>
+                        ))}
+                      </Tbody>
+                    </TableRoot>
                   ) : (
-                    <p className="text-xs text-text-muted italic py-2">{__( 'No historical enrollments recorded.', 'codeclove-school-management' )}</p>
+                    <div className="p-6 text-center text-xs text-text-muted">{__( 'No historical enrollments recorded.', 'codeclove-school-management' )}</div>
                   )}
                 </div>
               </div>
             )}
 
             {activeSubTab === 'finance' && (
-              <div className="space-y-6">
+              <div>
                 {isInvoicesLoading || isPaymentsLoading ? (
                   <div className="flex h-48 items-center justify-center">
                     <Spinner size="md" />
                   </div>
                 ) : invoices.length === 0 && payments.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 space-y-3 text-center">
+                  <div className="p-12 flex flex-col items-center justify-center text-center space-y-3">
                     <div className="w-12 h-12 rounded-full bg-brand-dim flex items-center justify-center text-brand/80 mb-1">
                       <Coins size={22} />
                     </div>
@@ -1442,135 +1438,180 @@ export default function StudentProfilePage() {
                     </p>
                   </div>
                 ) : (
-                  <>
-                    {/* Zone 2 — Financial Summary Card */}
-                    <div className="bg-bg-surface border border-border rounded-xl p-5">
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                        {/* KPI Metrics */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 divide-y sm:divide-y-0 sm:divide-x divide-border flex-1">
-                          <div className="space-y-1">
-                            <span className="text-2xs font-semibold text-text-muted uppercase tracking-wider block">
-                              {__( 'Total Billed', 'codeclove-school-management' )}
-                            </span>
-                            <div className="text-xl font-bold text-text tabular-nums leading-tight">
-                              {formatCurrency(totalBilled)}
-                            </div>
-                            <span className="text-3xs text-text-muted">
-                              {sprintf( __( '%1$d %2$s', 'codeclove-school-management' ), activeInvoices.length, activeInvoices.length === 1 ? __( 'invoice', 'codeclove-school-management' ) : __( 'invoices', 'codeclove-school-management' ) )}
-                            </span>
-                          </div>
-
-                          <div className="space-y-1 sm:pl-6">
-                            <span className="text-2xs font-semibold text-text-muted uppercase tracking-wider block">
-                              {__( 'Total Collected', 'codeclove-school-management' )}
-                            </span>
-                            <div className="text-xl font-bold text-success tabular-nums leading-tight">
-                              {formatCurrency(totalPaid)}
-                            </div>
-                            <span className="text-3xs text-text-muted">
-                              {sprintf( __( '%d%% collected', 'codeclove-school-management' ), totalBilled > 0 ? Math.min(100, Math.round((totalPaid / totalBilled) * 100)) : 0 )}
-                            </span>
-                          </div>
-
-                          <div className="space-y-1 sm:pl-6">
-                            <span className="text-2xs font-semibold text-text-muted uppercase tracking-wider block">
-                              {__( 'Outstanding Balance', 'codeclove-school-management' )}
-                            </span>
-                            <div className={cn(
-                              'text-xl font-bold tabular-nums leading-tight',
-                              outstandingBalance > 0 ? 'text-danger' : 'text-text'
-                            )}>
-                              {formatCurrency(outstandingBalance)}
-                            </div>
-                            <div className="flex items-center gap-1.5 pt-0.5">
-                              {invoices.filter((i) => i.status === 'overdue').length > 0 ? (
-                                 <Badge variant="danger" size="sm">
-                                  {sprintf( __( '%d Overdue', 'codeclove-school-management' ), invoices.filter((i) => i.status === 'overdue').length )}
-                                </Badge>
-                              ) : (
-                                <span className="text-3xs text-text-muted">{__( 'No overdue balance', 'codeclove-school-management' )}</span>
-                              )}
-                            </div>
+                  <div className="divide-y divide-border">
+                    {/* Zone 2 — Financial KPI Metrics Ribbon */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border bg-bg-surface/20">
+                      <div className="p-5 sm:p-6 flex flex-col justify-between gap-3">
+                        <div>
+                          <span className="text-xs font-medium text-text-muted block">
+                            {__( 'Total Billed', 'codeclove-school-management' )}
+                          </span>
+                          <div className="text-2xl font-bold text-text tabular-nums tracking-tight mt-1">
+                            {formatCurrency(totalBilled)}
                           </div>
                         </div>
+                        <div className="text-xs text-text-subtle tabular-nums">
+                          {sprintf(
+                            __( '%1$d %2$s issued', 'codeclove-school-management' ),
+                            activeInvoices.length,
+                            activeInvoices.length === 1
+                              ? __( 'invoice', 'codeclove-school-management' )
+                              : __( 'invoices', 'codeclove-school-management' )
+                          )}
+                        </div>
+                      </div>
 
-                        {/* Quick Action */}
-                        <div className="flex items-center lg:self-center">
+                      <div className="p-5 sm:p-6 flex flex-col justify-between gap-3">
+                        <div>
+                          <span className="text-xs font-medium text-text-muted block">
+                            {__( 'Total Collected', 'codeclove-school-management' )}
+                          </span>
+                          <div className="text-2xl font-bold text-success tabular-nums tracking-tight mt-1">
+                            {formatCurrency(totalPaid)}
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <div className="text-xs text-text-subtle tabular-nums">
+                            {sprintf( __( '%d%% collected', 'codeclove-school-management' ), collectionPercentage )}
+                          </div>
+                          <div className="w-full bg-border/50 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="bg-success h-full rounded-full transition-all duration-300"
+                              style={{ width: `${collectionPercentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-5 sm:p-6 flex flex-col justify-between gap-3">
+                        <div>
+                          <span className="text-xs font-medium text-text-muted block">
+                            {__( 'Outstanding Balance', 'codeclove-school-management' )}
+                          </span>
+                          <div className={cn(
+                            'text-2xl font-bold tabular-nums tracking-tight mt-1',
+                            outstandingBalance > 0 ? 'text-danger' : 'text-text'
+                          )}>
+                            {formatCurrency(outstandingBalance)}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {overdueInvoicesCount > 0 ? (
+                            <Badge variant="danger" size="sm" className="font-semibold">
+                              {sprintf( __( '%d Overdue', 'codeclove-school-management' ), overdueInvoicesCount )}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-text-subtle flex items-center gap-1.5">
+                              <CheckCircle2 size={13} className="text-success shrink-0" />
+                              <span>{__( 'No overdue balance', 'codeclove-school-management' )}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sub-tabs & Filter Toolbar */}
+                    <div className="px-6 py-3 bg-bg-surface/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-h-[52px]">
+                      <div
+                        role="tablist"
+                        aria-label={__( 'Financial ledger sections', 'codeclove-school-management' )}
+                        className="p-1 rounded-xl bg-bg-base/70 dark:bg-bg-surface border border-border inline-flex items-center gap-1 self-start sm:self-auto text-xs font-medium"
+                      >
+                        {([
+                          { id: 'ledger' as const, label: __( 'Invoice Ledger', 'codeclove-school-management' ), icon: FileText, count: filteredInvoices.length },
+                          { id: 'history' as const, label: __( 'Payment History', 'codeclove-school-management' ), icon: Receipt, count: payments.length },
+                        ]).map((tab) => {
+                          const Icon = tab.icon
+                          const isActive = financeTab === tab.id
+                          return (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              role="tab"
+                              id={`tab-finance-${tab.id}`}
+                              aria-selected={isActive}
+                              aria-controls={`panel-finance-${tab.id}`}
+                              tabIndex={isActive ? 0 : -1}
+                              onClick={() => setFinanceTab(tab.id)}
+                              className={cn(
+                                'inline-flex items-center justify-center gap-2 text-xs font-semibold rounded-lg transition-colors duration-150 h-8 px-3.5 select-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1',
+                                isActive
+                                  ? 'bg-bg-elevated text-text shadow-xs border border-border/80 dark:border-white/10'
+                                  : 'text-text-muted hover:text-text hover:bg-hover-bg/70 border border-transparent'
+                              )}
+                            >
+                              <Icon size={14} className={cn('transition-colors', isActive ? 'text-brand' : 'text-text-subtle')} />
+                              <span>{tab.label}</span>
+                              <span
+                                className={cn(
+                                  'px-1.5 py-0.5 rounded-full text-xs font-semibold font-mono tabular-nums min-w-[20px] text-center transition-colors',
+                                  isActive
+                                    ? 'bg-brand-dim text-brand'
+                                    : 'bg-border/60 text-text-subtle'
+                                )}
+                              >
+                                {tab.count}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* Term filter select or Payment count summary */}
+                      {financeTab === 'ledger' ? (
+                        <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap sm:flex-nowrap">
+                          <div className="w-full sm:w-44">
+                            <Select
+                              value={selectedTermFilter}
+                              onValueChange={handleTermFilterChange}
+                              options={[
+                                { value: 'all', label: __( 'All Terms', 'codeclove-school-management' ) },
+                                ...(termsData ?? []).map((term) => ({
+                                  value: String(term.id),
+                                  label: term.name,
+                                })),
+                              ]}
+                              placeholder={__( 'Filter by Term', 'codeclove-school-management' )}
+                            />
+                          </div>
                           <Button
                             variant="default"
                             size="sm"
                             onClick={() => navigate(`/finance/invoices/new?student_id=${studentId}&unit_id=${student.enrollment?.academic_unit_id ?? ''}`)}
-                            className="gap-1.5"
+                            className="gap-1.5 text-xs h-8 px-3 font-semibold shadow-xs shrink-0"
                           >
-                            <Plus size={14} />
-                            {__( 'Create Invoice', 'codeclove-school-management' )}
+                            <Plus size={13} />
+                            <span>{__( 'Create Invoice', 'codeclove-school-management' )}</span>
                           </Button>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Finance Sub-tabs & Filter bar */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-                      <div className="p-1 rounded-xl bg-bg-surface border border-border inline-flex items-center gap-1 self-start text-xs font-medium">
-                        {([
-                          { id: 'ledger', label: __( 'Invoice Ledger', 'codeclove-school-management' ), count: filteredInvoices.length },
-                          { id: 'history', label: __( 'Payment History', 'codeclove-school-management' ), count: payments.length },
-                        ] as const).map((tab) => (
-                          <button
-                            key={tab.id}
-                            type="button"
-                            onClick={() => setFinanceTab(tab.id)}
-                            className={cn(
-                              'inline-flex items-center justify-center gap-2 font-medium text-xs rounded-lg transition-all h-8 px-3.5 select-none cursor-pointer',
-                              financeTab === tab.id
-                                ? 'bg-bg-elevated text-text font-semibold shadow-xs border border-border'
-                                : 'text-text-muted hover:text-text hover:bg-hover-bg'
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-xs text-text-muted tabular-nums self-end sm:self-auto py-1">
+                          <CheckCircle2 size={14} className="text-success shrink-0" />
+                          <span>
+                            {sprintf(
+                              __( '%1$d %2$s recorded', 'codeclove-school-management' ),
+                              payments.length,
+                              payments.length === 1
+                                ? __( 'receipt', 'codeclove-school-management' )
+                                : __( 'receipts', 'codeclove-school-management' )
                             )}
-                          >
-                            <span>{tab.label}</span>
-                            <span className={cn(
-                              'px-1.5 py-0.5 rounded-full text-[10px] font-bold font-mono',
-                              financeTab === tab.id
-                                ? 'bg-brand-dim text-brand'
-                                : 'bg-hover-bg text-text-subtle'
-                            )}>
-                              {tab.count}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Term filter select */}
-                      {financeTab === 'ledger' && (
-                        <div className="w-48 self-end sm:self-auto">
-                          <Select
-                            value={selectedTermFilter}
-                            onValueChange={handleTermFilterChange}
-                            options={[
-                              { value: 'all', label: __( 'All Terms', 'codeclove-school-management' ) },
-                              ...(termsData ?? []).map((term) => ({
-                                value: String(term.id),
-                                label: term.name,
-                              })),
-                            ]}
-                            placeholder={__( 'Filter by Term', 'codeclove-school-management' )}
-                          />
+                          </span>
                         </div>
                       )}
                     </div>
 
-                    {/* Tab Contents */}
+                    {/* Tab Contents: Invoices or Payments Table */}
                     {financeTab === 'ledger' ? (
-                      <div className="space-y-4">
+                      <div id="panel-finance-ledger" role="tabpanel" aria-labelledby="tab-finance-ledger">
                         <TableRoot>
                           <Thead>
                             <Tr>
-                              <Th type="code">{__( 'Invoice #', 'codeclove-school-management' )}</Th>
+                              <Th type="code" className="ps-6">{__( 'Invoice #', 'codeclove-school-management' )}</Th>
                               <Th type="date">{__( 'Issue Date', 'codeclove-school-management' )}</Th>
                               <Th>{__( 'Fee Description', 'codeclove-school-management' )}</Th>
                               <Th type="number">{__( 'Amount', 'codeclove-school-management' )}</Th>
                               <Th type="badge">{__( 'Status', 'codeclove-school-management' )}</Th>
-                              <Th type="actions">{__( 'Actions', 'codeclove-school-management' )}</Th>
+                              <Th type="actions" className="pe-6">{__( 'Actions', 'codeclove-school-management' )}</Th>
                             </Tr>
                           </Thead>
                           <Tbody>
@@ -1587,7 +1628,7 @@ export default function StudentProfilePage() {
                                 const isOverdue = inv.status === 'overdue' || (inv.status !== 'paid' && inv.status !== 'cancelled' && inv.status !== 'void' && inv.due_date && new Date(inv.due_date) < new Date())
                                 return (
                                   <Tr key={inv.id}>
-                                    <Td type="code">
+                                    <Td type="code" className="ps-6">
                                       <Link
                                         to={`/finance/invoices/${inv.id}`}
                                         className="font-mono font-semibold text-text hover:text-brand hover:underline transition-colors"
@@ -1628,7 +1669,7 @@ export default function StudentProfilePage() {
                                         <div className="text-3xs text-danger font-semibold mt-0.5">{__( 'Overdue', 'codeclove-school-management' )}</div>
                                       )}
                                     </Td>
-                                    <Td type="actions">
+                                    <Td type="actions" className="pe-6">
                                       <div className="flex items-center justify-end gap-1">
                                         <Button
                                           variant="ghost"
@@ -1662,24 +1703,26 @@ export default function StudentProfilePage() {
                           </Tbody>
                         </TableRoot>
 
-                        <TablePagination
-                          page={financePage}
-                          perPage={FINANCE_ITEMS_PER_PAGE}
-                          total={filteredInvoices.length}
-                          onPageChange={setFinancePage}
-                        />
+                        <div className="border-t border-border px-6 py-3 bg-bg-surface/20">
+                          <TablePagination
+                            page={financePage}
+                            perPage={FINANCE_ITEMS_PER_PAGE}
+                            total={filteredInvoices.length}
+                            onPageChange={setFinancePage}
+                          />
+                        </div>
                       </div>
                     ) : (
-                      <div className="space-y-4">
+                      <div id="panel-finance-history" role="tabpanel" aria-labelledby="tab-finance-history">
                         <TableRoot>
                           <Thead>
                             <Tr>
-                              <Th type="code">{__( 'Receipt #', 'codeclove-school-management' )}</Th>
+                              <Th type="code" className="ps-6">{__( 'Receipt #', 'codeclove-school-management' )}</Th>
                               <Th type="date">{__( 'Date', 'codeclove-school-management' )}</Th>
                               <Th type="code">{__( 'Invoice #', 'codeclove-school-management' )}</Th>
                               <Th>{__( 'Method & Ref', 'codeclove-school-management' )}</Th>
                               <Th type="number">{__( 'Amount', 'codeclove-school-management' )}</Th>
-                              <Th type="actions">{__( 'Actions', 'codeclove-school-management' )}</Th>
+                              <Th type="actions" className="pe-6">{__( 'Actions', 'codeclove-school-management' )}</Th>
                             </Tr>
                           </Thead>
                           <Tbody>
@@ -1695,7 +1738,7 @@ export default function StudentProfilePage() {
                                 const isReversed = p.status === 'cancelled' || p.status === 'refunded'
                                 return (
                                   <Tr key={p.id} className="hover:bg-hover-bg transition-colors">
-                                    <Td type="code">
+                                    <Td type="code" className="ps-6">
                                       <span className="font-mono font-semibold text-text">{p.payment_number}</span>
                                     </Td>
                                     <Td type="date">{formatDate(p.paid_on)}</Td>
@@ -1733,7 +1776,7 @@ export default function StudentProfilePage() {
                                         </div>
                                       )}
                                     </Td>
-                                    <Td type="actions">
+                                    <Td type="actions" className="pe-6">
                                       <div className="flex items-center justify-end">
                                         <Button
                                           variant="ghost"
@@ -1758,212 +1801,289 @@ export default function StudentProfilePage() {
                           </Tbody>
                         </TableRoot>
 
-                        <TablePagination
-                          page={paymentPage}
-                          perPage={FINANCE_ITEMS_PER_PAGE}
-                          total={sortedPayments.length}
-                          onPageChange={setPaymentPage}
-                        />
+                        <div className="border-t border-border px-6 py-3 bg-bg-surface/20">
+                          <TablePagination
+                            page={paymentPage}
+                            perPage={FINANCE_ITEMS_PER_PAGE}
+                            total={sortedPayments.length}
+                            onPageChange={setPaymentPage}
+                          />
+                        </div>
                       </div>
                     )}
-
-                  </>
+                  </div>
                 )}
               </div>
             )}
 
             {activeSubTab === 'academics' && (
-              <div className="space-y-5">
-                <FormGroupHeader title={__( 'Academic Enrollment & Attendance', 'codeclove-school-management' )} icon={BookOpen} />
-                
-                {/* Enrolled Subjects */}
-                <div className="space-y-2.5 pb-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xs font-bold text-text-muted uppercase tracking-wider">{__( 'Enrolled Subjects', 'codeclove-school-management' )}</span>
-                    {studentSubjects.length > 0 && (
-                      <span className="text-2xs text-text-muted">{sprintf( __( '%d Subjects', 'codeclove-school-management' ), studentSubjects.length )}</span>
-                    )}
+              <div className="divide-y divide-border">
+                {/* Section 1: Enrolled Subjects & Coursework */}
+                <div>
+                  <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <h2 className="text-sm font-semibold tracking-tight text-text">
+                      {__( 'Enrolled Coursework & Subjects', 'codeclove-school-management' )}
+                    </h2>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-bg-surface border border-border text-text font-mono tabular-nums shadow-2xs">
+                        {sprintf( __( '%d Subjects', 'codeclove-school-management' ), studentSubjects.length )}
+                      </span>
+                    </div>
                   </div>
+
                   {studentSubjects.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-6 text-center text-xs text-text-muted bg-bg-surface rounded-lg border border-border/50">
+                    <div className="p-8 text-center text-xs text-text-muted flex flex-col items-center justify-center gap-1.5">
                       <BookOpen size={20} className="text-text-subtle mb-1" />
-                      {sprintf( __( 'No academic %s enrolled yet.', 'codeclove-school-management' ), subjectLabelPlural.toLowerCase() )}
+                      <p>{sprintf( __( 'No academic %s enrolled yet.', 'codeclove-school-management' ), subjectLabelPlural.toLowerCase() )}</p>
                     </div>
                   ) : (
-                    <div className="flex flex-wrap gap-2 pt-0.5">
-                      {studentSubjects.map((sub) => (
-                        <Badge key={sub.id} variant={sub.type === 'core' ? 'brand' : 'default'} size="sm" className="gap-1.5 px-2.5 py-1 text-xs capitalize">
-                          <BookOpen size={11} className="opacity-70" />
-                          {sub.name}
-                          <span className="text-[10px] opacity-75 font-normal">({sub.type})</span>
-                        </Badge>
-                      ))}
+                    <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
+                      {/* Left Column: Core Curriculum */}
+                      <div className="p-5 sm:p-6 space-y-3">
+                        <div className="flex items-center justify-between text-xs font-semibold text-text">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-brand shrink-0" aria-hidden="true" />
+                            <span>{__( 'Core Curriculum', 'codeclove-school-management' )}</span>
+                          </div>
+                          <span className="text-2xs text-text-muted font-mono tabular-nums">
+                            {sprintf( __( '%d subjects', 'codeclove-school-management' ), coreSubjects.length )}
+                          </span>
+                        </div>
+
+                        {coreSubjects.length === 0 ? (
+                          <div className="px-3.5 py-6 text-center text-xs text-text-muted border border-dashed border-border rounded-lg bg-bg-surface/30">
+                            {__( 'No core subjects enrolled.', 'codeclove-school-management' )}
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-border/60 border border-border rounded-lg overflow-hidden bg-bg-surface shadow-2xs">
+                            {coreSubjects.map((sub) => (
+                              <div
+                                key={sub.id}
+                                className="px-3.5 py-2.5 flex items-center justify-between text-xs hover:bg-hover-bg/40 transition-colors duration-150 select-none"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  {sub.code ? (
+                                    <span className="font-mono text-2xs font-bold px-1.5 py-0.5 rounded bg-brand-dim text-brand tracking-wide shrink-0">
+                                      {sub.code}
+                                    </span>
+                                  ) : (
+                                    <span className="font-mono text-2xs text-text-subtle bg-hover-bg px-1.5 py-0.5 rounded shrink-0">—</span>
+                                  )}
+                                  <span className="font-medium text-text truncate">{sub.name}</span>
+                                </div>
+                                <span className="text-3xs font-semibold uppercase px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20 shrink-0 font-mono tracking-wide">
+                                  {__( 'Core', 'codeclove-school-management' )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right Column: Electives & Tracks */}
+                      <div className="p-5 sm:p-6 space-y-3">
+                        <div className="flex items-center justify-between text-xs font-semibold text-text">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" aria-hidden="true" />
+                            <span>{__( 'Electives & Specializations', 'codeclove-school-management' )}</span>
+                          </div>
+                          <span className="text-2xs text-text-muted font-mono tabular-nums">
+                            {sprintf( __( '%d subjects', 'codeclove-school-management' ), electiveSubjects.length + otherSubjects.length )}
+                          </span>
+                        </div>
+
+                        {electiveSubjects.length === 0 && otherSubjects.length === 0 ? (
+                          <div className="px-3.5 py-6 text-center text-xs text-text-muted border border-dashed border-border rounded-lg bg-bg-surface/30">
+                            {__( 'No elective tracks enrolled.', 'codeclove-school-management' )}
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-border/60 border border-border rounded-lg overflow-hidden bg-bg-surface shadow-2xs">
+                            {[...electiveSubjects, ...otherSubjects].map((sub) => (
+                              <div
+                                key={sub.id}
+                                className="px-3.5 py-2.5 flex items-center justify-between text-xs hover:bg-hover-bg/40 transition-colors duration-150 select-none"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  {sub.code ? (
+                                    <span className="font-mono text-2xs font-bold px-1.5 py-0.5 rounded bg-hover-bg text-text-subtle tracking-wide shrink-0">
+                                      {sub.code}
+                                    </span>
+                                  ) : (
+                                    <span className="font-mono text-2xs text-text-subtle bg-hover-bg px-1.5 py-0.5 rounded shrink-0">—</span>
+                                  )}
+                                  <span className="font-medium text-text truncate">{sub.name}</span>
+                                </div>
+                                <span className="text-3xs font-semibold uppercase px-2 py-0.5 rounded-full bg-bg-elevated text-text-subtle border border-border shrink-0 font-mono tracking-wide">
+                                  {sub.type === 'activity' ? __( 'Activity', 'codeclove-school-management' ) : __( 'Elective', 'codeclove-school-management' )}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {/* Attendance Section */}
-                <div className="border-t border-border/40 pt-4 space-y-4">
-                  <h3 className="text-xs font-bold text-text uppercase tracking-wider">{__( 'Attendance Logs', 'codeclove-school-management' )}</h3>
+                {/* Section 2: Attendance Standing & Metrics */}
+                <div>
+                  <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-sm font-semibold tracking-tight text-text">
+                        {__( 'Attendance Standing & History', 'codeclove-school-management' )}
+                      </h2>
+                    </div>
+
+                    {/* Integrated Filters Toolbar */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <select
+                          value={yearFilter}
+                          onChange={(e) => {
+                            setYearFilter(e.target.value)
+                            setCurrentPage(1)
+                          }}
+                          className="bg-bg-surface border border-border rounded-md px-2 py-1 text-xs text-text outline-none focus:ring-1 focus:ring-brand-ring cursor-pointer"
+                        >
+                          <option value="">{__( 'All Years', 'codeclove-school-management' )}</option>
+                          {uniqueYears.map((y) => (
+                            <option key={y} value={String(y)}>{y}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <select
+                          value={monthFilter}
+                          onChange={(e) => {
+                            setMonthFilter(e.target.value)
+                            setCurrentPage(1)
+                          }}
+                          className="bg-bg-surface border border-border rounded-md px-2 py-1 text-xs text-text outline-none focus:ring-1 focus:ring-brand-ring cursor-pointer"
+                        >
+                          <option value="">{__( 'All Months', 'codeclove-school-management' )}</option>
+                          {[
+                            { v: '1', l: __( 'January', 'codeclove-school-management' ) },
+                            { v: '2', l: __( 'February', 'codeclove-school-management' ) },
+                            { v: '3', l: __( 'March', 'codeclove-school-management' ) },
+                            { v: '4', l: __( 'April', 'codeclove-school-management' ) },
+                            { v: '5', l: __( 'May', 'codeclove-school-management' ) },
+                            { v: '6', l: __( 'June', 'codeclove-school-management' ) },
+                            { v: '7', l: __( 'July', 'codeclove-school-management' ) },
+                            { v: '8', l: __( 'August', 'codeclove-school-management' ) },
+                            { v: '9', l: __( 'September', 'codeclove-school-management' ) },
+                            { v: '10', l: __( 'October', 'codeclove-school-management' ) },
+                            { v: '11', l: __( 'November', 'codeclove-school-management' ) },
+                            { v: '12', l: __( 'December', 'codeclove-school-management' ) },
+                          ].map((m) => (
+                            <option key={m.v} value={m.v}>{m.l}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => {
+                            setStatusFilter(e.target.value)
+                            setCurrentPage(1)
+                          }}
+                          className="bg-bg-surface border border-border rounded-md px-2 py-1 text-xs text-text outline-none focus:ring-1 focus:ring-brand-ring capitalize cursor-pointer"
+                        >
+                          <option value="">{__( 'All Statuses', 'codeclove-school-management' )}</option>
+                          {['present', 'absent', 'late', 'half_day', 'excused', 'holiday'].map((st) => (
+                            <option key={st} value={st} className="capitalize">{st.replace('_', ' ')}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Summary Metric Ribbon with Vertical Hairline Dividers */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-border bg-bg-surface/30 border-b border-border">
+                    {[
+                      { label: __( 'Attendance Rate', 'codeclove-school-management' ), value: `${attendanceStats.rate}%`, color: attendanceStats.rate >= 75 ? 'text-success' : 'text-danger' },
+                      { label: __( 'Present', 'codeclove-school-management' ), value: sprintf( __( '%d days', 'codeclove-school-management' ), attendanceStats.present ), color: 'text-success' },
+                      { label: __( 'Late', 'codeclove-school-management' ), value: sprintf( __( '%d days', 'codeclove-school-management' ), attendanceStats.late ), color: 'text-warning' },
+                      { label: __( 'Half Day', 'codeclove-school-management' ), value: sprintf( __( '%d days', 'codeclove-school-management' ), attendanceStats.half_day ), color: 'text-warning' },
+                      { label: __( 'Absent', 'codeclove-school-management' ), value: sprintf( __( '%d days', 'codeclove-school-management' ), attendanceStats.absent ), color: 'text-danger' },
+                    ].map((stat) => (
+                      <div key={stat.label} className="p-4 space-y-1">
+                        <span className="text-2xs text-text-muted uppercase tracking-wider font-semibold block">{stat.label}</span>
+                        <span className={cn('text-lg font-bold block', stat.color)}>{stat.value}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Attendance Log Table */}
                   {isAttendanceLoading ? (
-                    <div className="flex justify-center py-8"><Spinner /></div>
+                    <div className="flex justify-center py-12"><Spinner /></div>
                   ) : !attendanceHistory || attendanceHistory.length === 0 ? (
-                    <p className="text-xs text-text-muted italic py-2">{__( 'No attendance records found for this student.', 'codeclove-school-management' )}</p>
+                    <div className="p-8 text-center text-xs text-text-muted italic">{__( 'No attendance records found for this student.', 'codeclove-school-management' )}</div>
                   ) : (
-                    <div className="space-y-4">
-                      {/* Summary stats */}
-                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                        {[
-                          { label: __( 'Attendance Rate', 'codeclove-school-management' ), value: `${attendanceStats.rate}%`, color: attendanceStats.rate >= 75 ? 'text-success' : 'text-danger' },
-                          { label: __( 'Present', 'codeclove-school-management' ), value: sprintf( __( '%d days', 'codeclove-school-management' ), attendanceStats.present ), color: 'text-success' },
-                          { label: __( 'Late', 'codeclove-school-management' ), value: sprintf( __( '%d days', 'codeclove-school-management' ), attendanceStats.late ), color: 'text-warning' },
-                          { label: __( 'Half Day', 'codeclove-school-management' ), value: sprintf( __( '%d days', 'codeclove-school-management' ), attendanceStats.half_day ), color: 'text-warning' },
-                          { label: __( 'Absent', 'codeclove-school-management' ), value: sprintf( __( '%d days', 'codeclove-school-management' ), attendanceStats.absent ), color: 'text-danger' },
-                        ].map((stat) => (
-                          <div key={stat.label} className="p-3 bg-bg-surface border border-border/60 rounded-lg space-y-1">
-                            <span className="text-2xs text-text-muted uppercase tracking-wider font-semibold block">{stat.label}</span>
-                            <span className={cn('text-lg font-bold block', stat.color)}>{stat.value}</span>
+                    <div>
+                      <TableRoot>
+                        <Thead>
+                          <Tr>
+                            <Th className="p-3.5 ps-6">{__( 'Date', 'codeclove-school-management' )}</Th>
+                            <Th className="p-3.5 text-center">{__( 'Status', 'codeclove-school-management' )}</Th>
+                            <Th className="p-3.5 pe-6">{__( 'Note / Remarks', 'codeclove-school-management' )}</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody className="divide-y divide-border/40 text-xs">
+                          {paginatedLogs.map((h) => (
+                            <Tr key={h.id} className="hover:bg-bg-overlay/10">
+                              <Td className="p-3.5 ps-6 font-mono text-text">
+                                {formatAttendanceDate(h.attendance_date)}
+                              </Td>
+                              <Td className="p-3.5 text-center">
+                                <Badge size="sm" variant={ATTENDANCE_BADGE_VARIANTS[h.status] || 'default'} className="capitalize">
+                                  {h.status.replace('_', ' ')}
+                                </Badge>
+                              </Td>
+                              <Td className="p-3.5 pe-6 text-text-muted italic">
+                                {h.note || '—'}
+                              </Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </TableRoot>
+
+                      {/* Pagination Footer */}
+                      {totalPages > 1 && (
+                        <div className="border-t border-border px-6 py-3 flex justify-between items-center text-xs text-text-muted bg-bg-surface/20">
+                          <span>
+                            {sprintf(
+                              __( 'Showing %1$d to %2$d of %3$d logs', 'codeclove-school-management' ),
+                              ((currentPage - 1) * ITEMS_PER_PAGE) + 1,
+                              Math.min(currentPage * ITEMS_PER_PAGE, filteredLogs.length),
+                              filteredLogs.length
+                            )}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={currentPage === 1}
+                              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                              className="h-7 px-3 text-2xs"
+                            >
+                              {__( 'Previous', 'codeclove-school-management' )}
+                            </Button>
+                            <span className="font-semibold text-text">
+                              {sprintf( __( 'Page %1$d of %2$d', 'codeclove-school-management' ), currentPage, totalPages )}
+                            </span>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={currentPage === totalPages}
+                              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                              className="h-7 px-3 text-2xs"
+                            >
+                              {__( 'Next', 'codeclove-school-management' )}
+                            </Button>
                           </div>
-                        ))}
-                      </div>
-                      {/* Filters */}
-                      <div className="flex flex-wrap items-center gap-3 p-3 bg-bg-surface border border-border/70 rounded-lg text-xs">
-                        <div className="flex items-center gap-1.5 text-text-muted font-semibold pe-1">
-                          <Filter size={13} className="text-text-subtle" />
-                          <span>{__( 'Filter Logs:', 'codeclove-school-management' )}</span>
                         </div>
-                        
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-text-subtle font-medium">{__( 'Year:', 'codeclove-school-management' )}</span>
-                          <select
-                            value={yearFilter}
-                            onChange={(e) => {
-                              setYearFilter(e.target.value)
-                              setCurrentPage(1)
-                            }}
-                            className="bg-bg-base border border-border rounded px-2.5 py-1 text-xs text-text outline-none focus:ring-1 focus:ring-brand-ring"
-                          >
-                            <option value="">{__( 'All Years', 'codeclove-school-management' )}</option>
-                            {uniqueYears.map(y => (
-                              <option key={y} value={String(y)}>{y}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-text-subtle font-medium">{__( 'Month:', 'codeclove-school-management' )}</span>
-                          <select
-                            value={monthFilter}
-                            onChange={(e) => {
-                              setMonthFilter(e.target.value)
-                              setCurrentPage(1)
-                            }}
-                            className="bg-bg-base border border-border rounded px-2.5 py-1 text-xs text-text outline-none focus:ring-1 focus:ring-brand-ring"
-                          >
-                            <option value="">{__( 'All Months', 'codeclove-school-management' )}</option>
-                            {[
-                              { v: '1', l: __( 'January', 'codeclove-school-management' ) },
-                              { v: '2', l: __( 'February', 'codeclove-school-management' ) },
-                              { v: '3', l: __( 'March', 'codeclove-school-management' ) },
-                              { v: '4', l: __( 'April', 'codeclove-school-management' ) },
-                              { v: '5', l: __( 'May', 'codeclove-school-management' ) },
-                              { v: '6', l: __( 'June', 'codeclove-school-management' ) },
-                              { v: '7', l: __( 'July', 'codeclove-school-management' ) },
-                              { v: '8', l: __( 'August', 'codeclove-school-management' ) },
-                              { v: '9', l: __( 'September', 'codeclove-school-management' ) },
-                              { v: '10', l: __( 'October', 'codeclove-school-management' ) },
-                              { v: '11', l: __( 'November', 'codeclove-school-management' ) },
-                              { v: '12', l: __( 'December', 'codeclove-school-management' ) }
-                            ].map(m => (
-                              <option key={m.v} value={m.v}>{m.l}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-text-subtle font-medium">{__( 'Status:', 'codeclove-school-management' )}</span>
-                          <select
-                            value={statusFilter}
-                            onChange={(e) => {
-                              setStatusFilter(e.target.value)
-                              setCurrentPage(1)
-                            }}
-                            className="bg-bg-base border border-border rounded px-2.5 py-1 text-xs text-text outline-none focus:ring-1 focus:ring-brand-ring capitalize"
-                          >
-                            <option value="">{__( 'All Statuses', 'codeclove-school-management' )}</option>
-                            {['present', 'absent', 'late', 'half_day', 'excused', 'holiday'].map(st => (
-                              <option key={st} value={st}>{st.replace('_', ' ')}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* Log Table */}
-                      {paginatedLogs.length === 0 ? (
-                        <p className="text-xs text-text-muted italic py-4 text-center">{__( 'No attendance records match your active filters.', 'codeclove-school-management' )}</p>
-                      ) : (
-                        <>
-                          <div className="border border-border/40 rounded-lg overflow-hidden">
-                            <TableRoot>
-                              <Thead>
-                                <Tr>
-                                  <Th className="p-3 w-48">{__( 'Date', 'codeclove-school-management' )}</Th>
-                                  <Th type="badge" className="p-3 w-32">{__( 'Status', 'codeclove-school-management' )}</Th>
-                                  <Th className="p-3">{__( 'Note / Remarks', 'codeclove-school-management' )}</Th>
-                                </Tr>
-                              </Thead>
-                              <Tbody className="divide-y divide-border/20 text-xs">
-                                {paginatedLogs.map((h) => (
-                                  <Tr key={h.id} className="hover:bg-bg-overlay/10">
-                                    <Td className="p-3 font-medium text-text">
-                                      {formatAttendanceDate(h.attendance_date)}
-                                    </Td>
-                                    <Td type="badge" className="p-3">
-                                      <Badge size="sm" variant={ATTENDANCE_BADGE_VARIANTS[h.status] || 'default'} className="capitalize">
-                                        {h.status.replace('_', ' ')}
-                                      </Badge>
-                                    </Td>
-                                    <Td className="p-3 text-text-muted italic">
-                                      {h.note || '—'}
-                                    </Td>
-                                  </Tr>
-                                ))}
-                              </Tbody>
-                            </TableRoot>
-                          </div>
-
-                          {/* Pagination controls */}
-                          {totalPages > 1 && (
-                            <div className="flex justify-between items-center text-xs py-2 px-1 text-text-muted">
-                              <span>
-                                {sprintf( __( 'Showing %1$d to %2$d of %3$d logs', 'codeclove-school-management' ), ((currentPage - 1) * ITEMS_PER_PAGE) + 1, Math.min(currentPage * ITEMS_PER_PAGE, filteredLogs.length), filteredLogs.length )}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  disabled={currentPage === 1}
-                                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                  className="h-7 px-3 text-2xs"
-                                >
-                                  {__( 'Previous', 'codeclove-school-management' )}
-                                </Button>
-                                <span className="font-semibold text-text">
-                                  {sprintf( __( 'Page %1$d of %2$d', 'codeclove-school-management' ), currentPage, totalPages )}
-                                </span>
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  disabled={currentPage === totalPages}
-                                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                  className="h-7 px-3 text-2xs"
-                                >
-                                  {__( 'Next', 'codeclove-school-management' )}
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </>
                       )}
                     </div>
                   )}
@@ -1974,8 +2094,8 @@ export default function StudentProfilePage() {
             {activeSubTab === 'documents' && (
               <StudentDocumentsTab student={student} studentId={studentId} />
             )}
-        </Card>
-      )}
+        </div>
+      </div>
 
       {/* Transfer Class Modal */}
       {transferOpen && (() => {

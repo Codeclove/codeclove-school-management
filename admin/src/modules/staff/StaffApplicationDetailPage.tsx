@@ -294,7 +294,7 @@ export default function StaffApplicationDetailPage() {
   const isHired = application.status === 'hired'
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={__( 'Staff Application Details', 'codeclove-school-management' )}
         description={__( 'Review candidate qualifications, work history, manage hiring stages, and onboard active staff.', 'codeclove-school-management' )}

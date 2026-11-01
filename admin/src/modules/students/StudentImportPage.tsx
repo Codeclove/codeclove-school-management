@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Download, Upload, CheckCircle2, AlertTriangle, FileText, Filter, Globe, ShieldCheck, UserCheck } from 'lucide-react'
 import { useSessions, useUnits, useGroups } from '@/api/academics'
+import { useSession } from '@/lib/session-context'
 import { useImportStudentsBulk, getImportTemplate, type BulkImportResult } from '@/api/students'
 import { useToast } from '@/lib/toast'
 import { useLabels } from '@/lib/labels'
@@ -31,18 +32,29 @@ export default function StudentImportPage() {
   const studentLabelPlural = getLabel('student', true, __( 'Students', 'codeclove-school-management' ))
   const unitLabelSingular = getLabel('academic_unit', false, __( 'Class Level', 'codeclove-school-management' ))
   const groupLabelSingular = getLabel('academic_group', false, __( 'Section', 'codeclove-school-management' ))
+  const { session } = useSession()
   // Academic placement state
-  const [sessionId, setSessionId] = useState<string>('')
+  const [sessionId, setSessionId] = useState<string>(() => (session?.id ? String(session.id) : ''))
   const [unitId, setUnitId] = useState<string>('')
   const [groupId, setGroupId] = useState<string>('')
 
-  // Query options for placement selects
-  const { data: sessionsRes, isLoading: loadingSessions } = useSessions()
-  const { data: unitsRes, isLoading: loadingUnits } = useUnits()
-  const { data: groupsRes, isLoading: loadingGroups } = useGroups(
-    unitId ? { unit_id: Number(unitId) } : undefined
-  )
+  // Sync active session if loaded asynchronously
+  useEffect(() => {
+    if (session?.id && !sessionId) {
+      setSessionId(String(session.id))
+    }
+  }, [session?.id, sessionId])
 
+  // Query options for placement selects
+  const { data: sessionsRes, isLoading: loadingSessions } = useSessions({ per_page: 100 })
+  const { data: unitsRes, isLoading: loadingUnits } = useUnits(
+    sessionId ? { session_id: Number(sessionId), per_page: 200 } : undefined,
+    { enabled: Boolean(sessionId) }
+  )
+  const { data: groupsRes, isLoading: loadingGroups } = useGroups(
+    unitId ? { unit_id: Number(unitId), per_page: 200 } : undefined,
+    { enabled: Boolean(unitId) }
+  )
   const importMutation = useImportStudentsBulk()
 
   // Wizard state: 'upload' | 'preview' | 'completed'
@@ -59,12 +71,12 @@ export default function StudentImportPage() {
     [sessionsRes]
   )
   const unitOptions = useMemo(
-    () => (unitsRes?.data || []).map((u) => ({ value: String(u.id), label: u.name })),
-    [unitsRes]
+    () => (!sessionId ? [] : (unitsRes?.data || []).map((u) => ({ value: String(u.id), label: u.name }))),
+    [sessionId, unitsRes]
   )
   const groupOptions = useMemo(
-    () => (groupsRes?.data || []).map((g) => ({ value: String(g.id), label: g.name })),
-    [groupsRes]
+    () => (!unitId ? [] : (groupsRes?.data || []).map((g) => ({ value: String(g.id), label: g.name }))),
+    [unitId, groupsRes]
   )
 
   // Pre-import client validation
@@ -252,7 +264,11 @@ export default function StudentImportPage() {
                 <FormField label={__( 'Academic Session', 'codeclove-school-management' )} required>
                   <Select
                     value={sessionId}
-                    onValueChange={(val) => setSessionId(val)}
+                    onValueChange={(val) => {
+                      setSessionId(val)
+                      setUnitId('')
+                      setGroupId('')
+                    }}
                     options={[{ value: '', label: __( 'Select Session...', 'codeclove-school-management' ) }, ...sessionOptions]}
                     disabled={loadingSessions}
                   />
@@ -264,8 +280,16 @@ export default function StudentImportPage() {
                       setUnitId(val)
                       setGroupId('')
                     }}
-                    options={[{ value: '', label: sprintf( __( 'Select %s...', 'codeclove-school-management' ), unitLabelSingular ) }, ...unitOptions]}
-                    disabled={loadingUnits}
+                    options={[
+                      {
+                        value: '',
+                        label: !sessionId
+                          ? sprintf( __( 'Select %s first...', 'codeclove-school-management' ), __( 'Session', 'codeclove-school-management' ) )
+                          : sprintf( __( 'Select %s...', 'codeclove-school-management' ), unitLabelSingular ),
+                      },
+                      ...unitOptions,
+                    ]}
+                    disabled={!sessionId || loadingUnits}
                   />
                 </FormField>
                 <FormField label={sprintf( __( '%s (Optional)', 'codeclove-school-management' ), groupLabelSingular )}>

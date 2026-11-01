@@ -307,7 +307,7 @@ export default function CreateInvoicePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={sprintf(__('Create %s', 'codeclove-school-management'), invoiceLabel)}
         description={__('Select a student, add fee line items, and issue the invoice.', 'codeclove-school-management')}

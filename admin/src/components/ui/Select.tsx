@@ -45,6 +45,7 @@ export interface SelectProps {
   className?: string
   name?: string
   container?: HTMLElement | null
+  modal?: boolean
   'aria-invalid'?: boolean | 'true' | 'false'
   'aria-describedby'?: string
   'aria-label'?: string
@@ -103,10 +104,10 @@ export function Select(props: SelectProps) {
         title={selectedLabel}
         className={cn(
           'flex h-8 w-full items-center justify-between gap-2 rounded px-3 text-sm min-w-0 [&>span]:truncate [&>span]:inline-flex [&>span]:items-center [&>span]:gap-2 [&>span]:text-start whitespace-nowrap',
-          'bg-bg-surface border transition-colors duration-100 text-text outline-none focus:outline-none focus:ring-offset-0 focus-visible:ring-offset-0',
+          'bg-bg-surface border border-border shadow-xs transition-colors duration-100 text-text outline-none focus:outline-none focus:ring-offset-0 focus-visible:ring-offset-0',
           isError
             ? 'border-danger focus:ring-danger'
-            : 'border-border hover:border-border-strong focus:border-brand focus:ring-2 focus:ring-brand-dim',
+            : 'hover:border-border-strong focus:border-brand focus:ring-2 focus:ring-brand-dim',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           'data-[placeholder]:text-text-subtle',
           className

@@ -60,7 +60,7 @@ final class DeactivationFeedback {
 		// Dispatch non-blocking HTTP request to CodeClove deactivation receiver.
 		$api_url = ( defined( 'CODECLOVE_DEACTIVATION_API_URL' ) && CODECLOVE_DEACTIVATION_API_URL )
 			? CODECLOVE_DEACTIVATION_API_URL
-			: 'https://feedback.codeclove.com/nexora/v1/deactivate';
+			: 'https://feedback.codeclove.com/codeclove/v1/deactivate';
 
 		$receiver_url = (string) apply_filters( 'codeclove_deactivation_api_url', $api_url );
 		wp_remote_post(

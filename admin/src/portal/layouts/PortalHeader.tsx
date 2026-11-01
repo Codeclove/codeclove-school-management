@@ -39,7 +39,7 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
   isMaximized,
   onToggleMaximize,
 }) => {
-  const { user, userRole, logoutUrl, students } = usePortal()
+  const { user, userRole, logoutUrl, students, siteName, logoUrl } = usePortal()
   const isPro = window.CodeClovePortalConfig?.isPro ?? false
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
@@ -87,11 +87,26 @@ export const PortalHeader: React.FC<PortalHeaderProps> = ({
 
         <Link
           to="/"
-          className="flex items-center shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-lg group"
+          className="flex items-center gap-2.5 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-lg group"
         >
-          <span className="text-base sm:text-lg font-bold tracking-tight text-text group-hover:text-brand transition-colors">
-            {userRole === 'guardian' ? __( 'Parent Portal', 'codeclove-school-management' ) : __( 'Student Portal', 'codeclove-school-management' )}
-          </span>
+          {logoUrl ? (
+            <div className="w-8 h-8 rounded-lg bg-bg-surface dark:bg-bg-elevated border border-border/80 flex items-center justify-center p-0.5 overflow-hidden shrink-0 shadow-2xs">
+              <img src={logoUrl} alt={siteName} className="w-full h-full object-contain" />
+            </div>
+          ) : null}
+          <div className="flex flex-col min-w-0">
+            <span
+              className="text-sm sm:text-base font-bold tracking-tight text-text group-hover:text-brand transition-colors truncate max-w-[180px] sm:max-w-xs"
+              title={siteName || undefined}
+            >
+              {siteName || (userRole === 'guardian' ? __( 'Parent Portal', 'codeclove-school-management' ) : __( 'Student Portal', 'codeclove-school-management' ))}
+            </span>
+            {siteName && (
+              <span className="text-2xs text-text-muted leading-tight truncate">
+                {userRole === 'guardian' ? __( 'Parent Portal', 'codeclove-school-management' ) : __( 'Student Portal', 'codeclove-school-management' )}
+              </span>
+            )}
+          </div>
         </Link>
       </div>
 

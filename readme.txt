@@ -4,7 +4,7 @@ Tags: school management, student management, attendance, school, education
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.10
+Stable tag: 1.0.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Business Model: freemium
@@ -215,6 +215,13 @@ The voluntary deactivation survey (shown only when an administrator deactivates 
 For full details see: https://codeclove.com/privacy-policy/
 
 == Changelog ==
+
+= 1.0.11 =
+* Fix: Student cascade deletion safely validates table existence before cleanup.
+* Tweak: Streamlined navigation menu by removing locked submenu links for a clean, 100% operational interface.
+* Security: Hardened database queries with strict placeholder parameterization.
+* I18n: Added translation descriptors and ordered placeholders across string formatting.
+* UI: Refined date pickers, popovers, and student document preview modals.
 
 = 1.0.10 =
 * Feature: WordPress login screen branding with school logo and custom styling.

@@ -20,6 +20,7 @@ function mount() {
   }
 
   const isRtl = Boolean(config?.rtl)
+  document.documentElement.dir = isRtl ? 'rtl' : 'ltr'
   rootElement.dir = isRtl ? 'rtl' : 'ltr'
 
   // Pre-apply theme class before React renders to prevent flash of wrong theme

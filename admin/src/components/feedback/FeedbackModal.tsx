@@ -822,11 +822,11 @@ export function FeedbackModal() {
               )}
 
               <ModalFooter className="pt-3 mt-3 flex-row justify-end">
-                <Button variant="secondary" size="sm" onClick={() => setView('form')} className="text-xs h-8.5">
+                <Button variant="secondary" size="sm" onClick={() => setView('form')} className="text-xs h-8">
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   <span>{__( 'New Report', 'codeclove-school-management' )}</span>
                 </Button>
-                <Button variant="ghost" size="sm" onClick={closeFeedback} className="text-xs h-8.5">
+                <Button variant="ghost" size="sm" onClick={closeFeedback} className="text-xs h-8">
                   {__( 'Close', 'codeclove-school-management' )}
                 </Button>
               </ModalFooter>

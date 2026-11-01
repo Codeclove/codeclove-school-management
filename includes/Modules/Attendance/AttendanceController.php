@@ -142,11 +142,16 @@ final class AttendanceController extends BaseController {
 		$session_id = $request->get_param( 'academic_session_id' );
 		$unit_id    = $request->get_param( 'academic_unit_id' );
 		$group_id   = $request->get_param( 'academic_group_id' );
-		$date       = $request->get_param( 'attendance_date' );
+		$date       = $this->get_date_param( $request );
 		$records    = $request->get_param( 'records' );
 
 		if ( empty( $session_id ) || empty( $unit_id ) || empty( $date ) || ! is_array( $records ) ) {
 			return $this->error( 'invalid_data', __( 'Invalid or incomplete attendance payload.', 'codeclove-school-management' ), 400 );
+		}
+
+		$today = current_time( 'Y-m-d' );
+		if ( $date > $today ) {
+			return $this->error( 'invalid_date', __( 'Cannot record attendance for future dates.', 'codeclove-school-management' ), 400 );
 		}
 
 		$user_id = get_current_user_id();
@@ -208,6 +213,11 @@ final class AttendanceController extends BaseController {
 
 		if ( ! $date || ! is_array( $records ) ) {
 			return $this->error( 'invalid_data', __( 'Invalid or incomplete attendance payload.', 'codeclove-school-management' ), 400 );
+		}
+
+		$today = current_time( 'Y-m-d' );
+		if ( $date > $today ) {
+			return $this->error( 'invalid_date', __( 'Cannot record attendance for future dates.', 'codeclove-school-management' ), 400 );
 		}
 
 		$user_id = get_current_user_id();

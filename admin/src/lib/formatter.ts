@@ -1,7 +1,7 @@
 /**
  * Hook: useFormatter — React hook wrapping formatting helpers with dynamic localization settings.
  */
-import { useSettings } from '@/api/settings'
+import { useSettings, type LocalizationSettings } from '@/api/settings'
 import { format } from 'date-fns'
 
 export { formatGender } from './constants'
@@ -53,11 +53,10 @@ export function formatBytes(bytes?: number | null): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
 }
-
-
 export function useFormatter() {
   const { data: settings } = useSettings()
-  const localization = settings?.localization
+  const localization = settings?.localization ?? (globalThis.window?.CodeCloveConfig?.localization as LocalizationSettings | undefined)
+  const locale = localization?.number_format === 'indian' ? 'en-IN' : localization?.number_format === 'european' ? 'de-DE' : 'en-US'
 
   // 1. Dynamic Date Formatter
   const formatDate = (date: string | Date | null | undefined): string => {
@@ -93,8 +92,10 @@ export function useFormatter() {
   // 3. Dynamic Time Formatter
   const formatTime = (date: string | Date | null | undefined): string => {
     if (!date) return '—'
-    const d = typeof date === 'string' ? new Date(date) : date
-    if (isNaN(d.getTime())) return '—'
+    const d = typeof date === 'string' && /^\d{1,2}:\d{2}/.test(date)
+      ? new Date(`1970-01-01T${date.length === 5 ? `${date}:00` : date.slice(0, 8)}`)
+      : (typeof date === 'string' ? new Date(date) : date)
+    if (!d || isNaN(d.getTime())) return '—'
 
     const timeFormat = localization?.time_format || 'H:i'
     try {
@@ -107,14 +108,12 @@ export function useFormatter() {
   // 4. Dynamic Number Formatter (Indian or standard grouping)
   const formatNumber = (value: number | null | undefined): string => {
     if (value === null || value === undefined) return '0'
-    const locale = localization?.number_format === 'indian' ? 'en-IN' : 'en-US'
     return new Intl.NumberFormat(locale).format(value)
   }
 
-  // 3. Dynamic Currency / Money Formatter
+  // 5. Dynamic Currency / Money Formatter
   const formatCurrency = (amountMinor: number): string => {
     const currency = localization?.currency || 'USD'
-    const locale = localization?.number_format === 'indian' ? 'en-IN' : 'en-US'
     const precision = localization?.decimal_precision ?? 2
     const position = localization?.currency_position || 'left'
 
@@ -159,3 +158,5 @@ export function useFormatter() {
     localization,
   }
 }
+
+export type Formatter = ReturnType<typeof useFormatter>

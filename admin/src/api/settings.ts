@@ -91,6 +91,7 @@ export interface IdentifierFormat {
   next_number: number
   reset_rule: string
   separator: string
+  scope?: 'global' | 'class' | 'section' | 'unit' | 'group'
 }
 
 export interface IdentifierSettings {
@@ -109,6 +110,7 @@ export interface LocalizationSettings {
   date_format: string
   time_format: string
   week_start_day: number
+  weekend_days?: 'saturday_sunday' | 'sunday_only' | 'friday_saturday' | 'friday_only'
   timezone: string
   currency: string
   currency_position: 'left' | 'right' | 'left_space' | 'right_space'
@@ -293,11 +295,13 @@ export interface PreviewData {
     education_system: EducationSystemSettings
     labels: Partial<TerminologyLabels>
     localization: Partial<LocalizationSettings>
+    identifiers?: Record<string, unknown>
   }
   preset: {
     education_system: EducationSystemSettings
     labels: Partial<TerminologyLabels>
     localization: Partial<LocalizationSettings>
+    identifiers?: Record<string, unknown>
   }
 }
 
@@ -491,6 +495,47 @@ export function useTestGatewayConnection() {
     mutationFn: async (data: GatewayTestConnectionParams): Promise<GatewayTestConnectionResult> => {
       const res = await api.post<GatewayTestConnectionResult>('finance/gateways/test-connection', data)
       return res.data
+    },
+  })
+}
+
+export interface TrashStats {
+  students: number
+  staff: number
+  invoices: number
+  apps: number
+  total: number
+}
+
+export interface PurgeTrashResult {
+  purged_students: number
+  purged_staff: number
+  purged_invoices: number
+  purged_apps: number
+  total_purged: number
+  message: string
+}
+
+export function useTrashStats() {
+  return useQuery<TrashStats, Error>({
+    queryKey: ['settings', 'trash-stats'],
+    queryFn: async () => {
+      const res = await api.get<TrashStats>('settings/trash-stats')
+      return res.data
+    },
+  })
+}
+
+export function usePurgeTrash() {
+  const queryClient = useQueryClient()
+  return useMutation<PurgeTrashResult, Error>({
+    mutationFn: async () => {
+      const res = await api.post<PurgeTrashResult>('settings/purge-trash')
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'trash-stats'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all })
     },
   })
 }

@@ -9,7 +9,7 @@ export default function StudentAttendanceLayout() {
   const studentLabelSingular = getLabel('student', false, __('Student', 'codeclove-school-management'))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={sprintf(__('%s Attendance', 'codeclove-school-management'), studentLabelSingular)}
         description={sprintf(__('Record and manage daily or monthly %s attendance.', 'codeclove-school-management'), studentLabelSingular.toLowerCase())}

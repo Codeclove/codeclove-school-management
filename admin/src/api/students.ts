@@ -91,6 +91,7 @@ export interface Student {
   status: 'active' | 'inactive' | 'graduated' | 'withdrawn'
   created_at: string
   updated_at: string
+  deleted_at?: string | null
   photo_id?: number | null
   photo_url?: string
   admission_date?: string
@@ -179,6 +180,10 @@ export interface PaginatedResponse<T> {
   page: number
   per_page: number
   total_pages: number
+  meta?: {
+    trash_count?: number
+    [key: string]: unknown
+  }
 }
 
 interface ListParams {
@@ -200,13 +205,14 @@ function toQueryString(params?: ListParams): string {
   return qs ? `?${qs}` : ''
 }
 
-function toPaginatedResponse<T>(res: ApiPaginatedResponse<T[]>): PaginatedResponse<T> {
+function toPaginatedResponse<T>(res: ApiPaginatedResponse<T[]> & { meta?: { trash_count?: number; [key: string]: unknown } }): PaginatedResponse<T> {
   return {
     data:        res.data,
     total:       res.pagination.total,
     page:        res.pagination.current_page,
     per_page:    res.pagination.per_page,
     total_pages: res.pagination.total_pages,
+    meta:        res.meta,
   }
 }
 
@@ -451,7 +457,6 @@ export function useBulkStudentsAction() {
     },
   })
 }
-
 export function useBulkAdmissionsAction() {
   const queryClient = useQueryClient()
   return useMutation<any, Error, { action: string; ids: number[]; status?: string; session_id?: number; unit_id?: number; group_id?: number }>({
@@ -689,7 +694,7 @@ export function useDeleteStudentDocument(studentId: number) {
 
 export async function uploadStudentDocument(file: File, customName?: string): Promise<StudentDocument> {
   const ext = file.name.split('.').pop()?.toLowerCase() || ''
-  const isAllowed = ['pdf', 'jpg', 'jpeg', 'png'].includes(ext) || file.type === 'application/pdf' || file.type.startsWith('image/')
+  const isAllowed = ['pdf', 'jpg', 'jpeg', 'png'].includes(ext) || file.type === 'application/pdf' || file.type === 'image/jpeg' || file.type === 'image/png'
   if (!isAllowed) {
     throw new Error(__( 'Only PDF, JPG, and PNG documents are allowed.', 'codeclove-school-management' ))
   }

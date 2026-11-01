@@ -253,4 +253,19 @@ export const queryKeys = {
     issuedSingle: (id: number) => [...queryKeys.certificates.issued(), id] as const,
     feeSummary: (studentId: number) => [...queryKeys.certificates.all, 'fee-summary', studentId] as const,
   },
+
+  // ─── Examinations ──────────────────────────────────────────────────────────
+  exams: {
+    all: ['codeclove', 'exams'] as const,
+    lists: () => [...queryKeys.exams.all, 'list'] as const,
+    list: (filters?: unknown) => [...queryKeys.exams.lists(), filters] as const,
+    details: () => [...queryKeys.exams.all, 'detail'] as const,
+    detail: (id: number) => [...queryKeys.exams.details(), id] as const,
+    timetable: (examId: number, unitId?: number) => [...queryKeys.exams.all, 'timetable', examId, unitId] as const,
+    marks: (examId: number, unitId: number, subjectId: number, groupId?: number) => [...queryKeys.exams.all, 'marks', examId, unitId, subjectId, groupId] as const,
+    tabulation: (examId: number, unitId: number, groupId?: number) => [...queryKeys.exams.all, 'tabulation', examId, unitId, groupId] as const,
+    reportCard: (examId: number, studentId: number) => [...queryKeys.exams.all, 'reportCard', examId, studentId] as const,
+    admitCards: (examId: number, unitId?: number, groupId?: number, studentId?: number) => [...queryKeys.exams.all, 'admitCards', examId, unitId, groupId, studentId] as const,
+    gradingScales: () => [...queryKeys.exams.all, 'grading-scales'] as const,
+  },
 } as const

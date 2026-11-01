@@ -15,6 +15,7 @@ import {
   Award,
   TrendingUp,
   History,
+  FileCheck,
 } from 'lucide-react'
 import { __ } from '@/lib/i18n'
 
@@ -118,6 +119,19 @@ export default function ProUpgradePage() {
         __( 'Event tracking across finance, admissions, staff, and attendance', 'codeclove-school-management' ),
         __( 'Captures user ID, timestamp, IP address, and change payload', 'codeclove-school-management' ),
         __( 'Filterable timeline to investigate any record modification', 'codeclove-school-management' ),
+      ],
+    },
+    {
+      id: 'examinations',
+      title: __( 'Examinations, Grading & Report Cards', 'codeclove-school-management' ),
+      description: __( 'Manage term examinations, publish clash-free date sheets, record student marks, and generate formal printable report cards.', 'codeclove-school-management' ),
+      icon: FileCheck,
+      badge: __( 'Examinations', 'codeclove-school-management' ),
+      perks: [
+        __( 'Official international grading scales (CBSE 8-pt/9-pt, US 4.0 GPA, GCSE 9-1)', 'codeclove-school-management' ),
+        __( 'Scheduled subject paper timetables with room and invigilator tracking', 'codeclove-school-management' ),
+        __( 'Fast batch marks entry with attendance and pass/fail thresholds', 'codeclove-school-management' ),
+        __( 'Printable student report cards and comprehensive class tabulation ledgers', 'codeclove-school-management' ),
       ],
     },
   ], [])
@@ -366,6 +380,7 @@ export default function ProUpgradePage() {
                   [__( 'Online Admissions & Public Application Form', 'codeclove-school-management' ), true, true],
                   [__( 'Fee Types, Invoicing & Manual Receipts', 'codeclove-school-management' ), true, true],
                   [__( 'Bulk CSV Spreadsheet Import (Students & Staff)', 'codeclove-school-management' ), true, true],
+                  [__( 'Examinations, Marks Entry & Report Cards', 'codeclove-school-management' ), false, true, 'examinations'],
                   [__( 'Online Payment Gateways (Stripe & Razorpay)', 'codeclove-school-management' ), false, true, 'payment_gateways'],
                   [__( 'Financial Analytics & Revenue Breakdown Charts', 'codeclove-school-management' ), false, true],
                   [__( 'Fee Defaulters Reports & Overdue Auditing', 'codeclove-school-management' ), false, true, 'defaulters'],

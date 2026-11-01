@@ -192,3 +192,45 @@ if ( ! function_exists( 'codeclove_is_paid' ) ) {
 		return false;
 	}
 }
+
+if ( ! function_exists( 'codeclove_format_currency' ) ) {
+	/**
+	 * Formats minor currency units according to school localization settings.
+	 */
+	function codeclove_format_currency( int $minor, ?string $currency_code = null ): string {
+		$settings = get_option( 'codeclove_settings', [] );
+		$loc      = $settings['localization'] ?? [];
+		$code     = strtoupper( (string) ( $currency_code ?: ( $loc['currency'] ?? 'USD' ) ) );
+		$symbol   = match ( $code ) {
+			'INR'   => '₹',
+			'USD'   => '$',
+			'GBP'   => '£',
+			'EUR'   => '€',
+			'CAD'   => '$',
+			'AUD'   => '$',
+			'NGN'   => '₦',
+			'KES'   => 'KSh',
+			'GHS'   => 'GH₵',
+			'ZAR'   => 'R',
+			'PKR'   => '₨',
+			'BDT'   => '৳',
+			'AED'   => 'AED ',
+			'SAR'   => 'SAR ',
+			default => $code . ' ',
+		};
+
+		$position  = $loc['currency_position'] ?? 'left';
+		$precision = isset( $loc['decimal_precision'] ) ? (int) $loc['decimal_precision'] : 2;
+		$num_fmt   = $loc['number_format'] ?? 'standard';
+		$dec_point = ( 'european' === $num_fmt ) ? ',' : '.';
+		$thousands = ( 'european' === $num_fmt ) ? '.' : ',';
+		$amount    = number_format( $minor / 100, $precision, $dec_point, $thousands );
+
+		return match ( $position ) {
+			'right'       => $amount . $symbol,
+			'right_space' => $amount . ' ' . $symbol,
+			'left_space'  => $symbol . ' ' . $amount,
+			default       => $symbol . $amount,
+		};
+	}
+}

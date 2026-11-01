@@ -145,6 +145,64 @@ final class StaffController extends BaseController {
 				],
 			]
 		);
+		register_rest_route(
+			$this->namespace,
+			'/staff/wp-users',
+			[
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'search_wp_users' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool {
+						return $this->can( 'staff.view', $request ) || $this->can( 'staff.add', $request ) || $this->can( 'staff.edit', $request );
+					},
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/staff/(?P<id>\d+)/wp-user',
+			[
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'create_wp_user' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff.edit', $request ); },
+				],
+				[
+					'methods'             => 'DELETE',
+					'callback'            => [ $this, 'unlink_wp_user' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff.edit', $request ); },
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/staff/(?P<id>\d+)/wp-user/link',
+			[
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'link_wp_user' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool {
+						return current_user_can( 'manage_options' )
+							|| $this->can( 'roles_permissions.manage', $request )
+							|| $this->can( 'roles.manage', $request );
+					},
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/staff/(?P<id>\d+)/wp-user/reset-password',
+			[
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'reset_wp_password' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'staff.edit', $request ); },
+				],
+			]
+		);
 
 		register_rest_route(
 			$this->namespace,
@@ -595,4 +653,101 @@ final class StaffController extends BaseController {
 		return $this->success( $result );
 	}
 
+	/**
+	 * Searches WordPress users for staff linking.
+	 *
+	 * @param WP_REST_Request $request Incoming REST request.
+	 * @return WP_REST_Response
+	 */
+	public function search_wp_users( WP_REST_Request $request ): WP_REST_Response {
+		$search = (string) ( $request->get_param( 'search' ) ?: '' );
+		$email  = (string) ( $request->get_param( 'email' ) ?: '' );
+
+		$results = $this->service->search_wp_users( $search, $email );
+		return $this->success( $results );
+	}
+
+	/**
+	 * Creates a new WordPress user and links it to an existing staff member.
+	 *
+	 * @param WP_REST_Request $request Incoming REST request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function create_wp_user( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$staff_id = (int) $request->get_param( 'id' );
+		$params   = $this->json_body( $request );
+		if ( is_wp_error( $params ) ) {
+			return $params;
+		}
+
+		$result = $this->service->create_staff_wp_user( $staff_id, $params );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		AuditLogger::log( 'staff_member.wp_user_created', [ 'staff_member_id' => $staff_id, 'user_id' => $result['user_id'] ] );
+		return $this->success( $result );
+	}
+
+	/**
+	 * Links an existing WordPress user to a staff member.
+	 *
+	 * @param WP_REST_Request $request Incoming REST request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function link_wp_user( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$staff_id = (int) $request->get_param( 'id' );
+		$params   = $this->json_body( $request );
+		if ( is_wp_error( $params ) ) {
+			return $params;
+		}
+
+		$user_id = ! empty( $params['user_id'] ) ? (int) $params['user_id'] : 0;
+		if ( $user_id <= 0 ) {
+			return new WP_Error( 'codeclove_invalid_user_id', __( 'Please provide a valid WordPress user ID.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+
+		$result = $this->service->link_staff_wp_user( $staff_id, $user_id );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		AuditLogger::log( 'staff_member.wp_user_linked', [ 'staff_member_id' => $staff_id, 'user_id' => $user_id ] );
+		return $this->success( $result );
+	}
+
+	/**
+	 * Unlinks a WordPress user from a staff member.
+	 *
+	 * @param WP_REST_Request $request Incoming REST request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function unlink_wp_user( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$staff_id = (int) $request->get_param( 'id' );
+
+		$result = $this->service->unlink_staff_wp_user( $staff_id );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		AuditLogger::log( 'staff_member.wp_user_unlinked', [ 'staff_member_id' => $staff_id ] );
+		return $this->success( [ 'unlinked' => true ] );
+	}
+
+	/**
+	 * Sends password reset instructions to a staff member's linked WordPress user.
+	 *
+	 * @param WP_REST_Request $request Incoming REST request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function reset_wp_password( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$staff_id = (int) $request->get_param( 'id' );
+
+		$result = $this->service->send_staff_wp_password_reset( $staff_id );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return $this->success( $result );
+	}
 }

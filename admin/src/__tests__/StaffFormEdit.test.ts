@@ -146,4 +146,26 @@ describe('Staff edit schema validation regression', () => {
     const result = staffSchema.safeParse(editValues)
     expect(result.success).toBe(true)
   })
+  it('validates a new staff member registering with create_user enabled and send_email', () => {
+    const newStaffWithUser: StaffFormValues = {
+      first_name: 'Sophia',
+      last_name: 'Loren',
+      email: 'sophia.loren@school.edu',
+      status: 'active',
+      create_user: true,
+      username: 'sophia.loren',
+      password: 'GeneratedSecurePassword123!',
+      send_email: true,
+      link_if_exists: false,
+    }
+
+    const result = staffSchema.safeParse(newStaffWithUser)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.create_user).toBe(true)
+      expect(result.data.username).toBe('sophia.loren')
+      expect(result.data.password).toBe('GeneratedSecurePassword123!')
+      expect(result.data.send_email).toBe(true)
+    }
+  })
 })

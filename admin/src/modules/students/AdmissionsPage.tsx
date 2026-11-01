@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSession } from '@/lib/session-context'
 import { __, sprintf } from '@/lib/i18n'
 import {
-  Search, Pencil, X, Download, Trash2
+  Pencil, Download, Trash2
 } from 'lucide-react'
 import {
   useAdmissions,
@@ -20,8 +20,8 @@ import {
 import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
 import {
-  Button, Badge, Card,
-  FormField, Input, Select,
+  Button, Badge,
+  FormField, Select, FilterBar,
   PageHeader, Modal, ModalFooter,
   DataTable, type DataTableColumn,
   type BadgeProps
@@ -409,36 +409,71 @@ export default function AdmissionsPage() {
     [unitLabelSingular, guardianLabelSingular, units, statusConfig, formatDate, navigate, handleSingleDelete]
   )
   return (
-    <div className="space-y-5 w-full">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={sprintf(__( '%s Dashboard', 'codeclove-school-management' ), admissionLabelPlural)}
+        badge={
+          total > 0 ? (
+            <Badge variant="neutral" className="tabular-nums font-mono text-xs font-normal">
+              {sprintf(__('%d total', 'codeclove-school-management'), total)}
+            </Badge>
+          ) : undefined
+        }
         breadcrumbs={[{ label: studentLabelPlural }, { label: admissionLabelPlural }]}
         description={sprintf(
           __( 'Review incoming %1$s applications, manage document checks, and convert accepted applicants to registered %2$s.', 'codeclove-school-management' ),
           studentLabelSingular.toLowerCase(),
           studentLabelPlural.toLowerCase()
         )}
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportDirectoryCSV}
+            disabled={isExportingAll || total === 0}
+            className="gap-1.5"
+            title={total > 0
+              ? sprintf(__( 'Export all %d %s to CSV', 'codeclove-school-management' ), total, admissionLabelPlural.toLowerCase())
+              : __( 'Export CSV', 'codeclove-school-management' )
+            }
+          >
+            <Download size={14} className={isExportingAll ? 'animate-bounce' : ''} />
+            {isExportingAll ? __( 'Exporting...', 'codeclove-school-management' ) : __( 'Export CSV', 'codeclove-school-management' )}
+          </Button>
+        }
       />
 
-      {/* Filter Toolbar */}
-      <Card className="p-4">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3">
-          <div className="flex-1">
-            <FormField label={__( 'Search Applicants', 'codeclove-school-management' )}>
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={__( 'Search by name, reference...', 'codeclove-school-management' )}
-                  className="pl-9"
-                />
-              </div>
-            </FormField>
-          </div>
-          <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-            <FormField label={unitLabelSingular}>
+      {/* Applications Data Table */}
+      <DataTable<AdmissionApplication>
+        data={applications}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        errorMessage={sprintf(__( 'Could not load %s list.', 'codeclove-school-management' ), admissionLabelPlural.toLowerCase())}
+        onRetry={() => refetch()}
+        selectable
+        onRowClick={(app) => navigate(`/students/admissions/${app.id}`)}
+        toolbar={
+          <FilterBar
+            cardWrapper={false}
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={__( 'Search by name, reference...', 'codeclove-school-management' )}
+            activeFilterCount={(unitId ? 1 : 0) + (status ? 1 : 0) + (datePreset ? 1 : 0)}
+            onClearAll={() => {
+              setUnitId('')
+              setStatus('')
+              setDatePreset('')
+              setSearch('')
+              table.resetPage()
+              table.clearSelection()
+            }}
+          >
+            <div className="w-full sm:w-40 lg:w-48 shrink-0">
               <Select
+                aria-label={unitLabelSingular}
                 value={unitId}
                 onValueChange={setUnitId}
                 placeholder={sprintf(__( 'All %s', 'codeclove-school-management' ), unitLabelPlural.toLowerCase())}
@@ -447,11 +482,11 @@ export default function AdmissionsPage() {
                   ...units.map((u) => ({ value: String(u.id), label: u.name })),
                 ]}
               />
-            </FormField>
-          </div>
-          <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-            <FormField label={__( 'Status', 'codeclove-school-management' )}>
+            </div>
+
+            <div className="w-full sm:w-40 lg:w-48 shrink-0">
               <Select
+                aria-label={__( 'Status', 'codeclove-school-management' )}
                 value={status}
                 onValueChange={setStatus}
                 placeholder={__( 'All statuses', 'codeclove-school-management' )}
@@ -463,11 +498,11 @@ export default function AdmissionsPage() {
                   })),
                 ]}
               />
-            </FormField>
-          </div>
-          <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-            <FormField label={__( 'Submission Date', 'codeclove-school-management' )}>
+            </div>
+
+            <div className="w-full sm:w-40 lg:w-44 shrink-0">
               <Select
+                aria-label={__( 'Submission Date', 'codeclove-school-management' )}
                 value={datePreset}
                 onValueChange={setDatePreset}
                 placeholder={__( 'All time', 'codeclove-school-management' )}
@@ -478,54 +513,9 @@ export default function AdmissionsPage() {
                   { value: 'this_month', label: __( 'Last 30 days', 'codeclove-school-management' ) },
                 ]}
               />
-            </FormField>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 h-9">
-            {(unitId || status || datePreset || search) && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setUnitId('')
-                  setStatus('')
-                  setDatePreset('')
-                  setSearch('')
-                  table.resetPage()
-                  table.clearSelection()
-                }}
-              >
-                <X size={12} />
-                {__( 'Clear Filters', 'codeclove-school-management' )}
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              size="icon"
-              onClick={handleExportDirectoryCSV}
-              disabled={isExportingAll || total === 0}
-              className="flex-shrink-0"
-              title={total > 0
-                ? sprintf(__( 'Export all %d %s to CSV', 'codeclove-school-management' ), total, admissionLabelPlural.toLowerCase())
-                : __( 'Export CSV', 'codeclove-school-management' )
-              }
-            >
-              <Download size={15} className={isExportingAll ? 'animate-bounce' : ''} />
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Applications Data Table */}
-      <DataTable<AdmissionApplication>
-        data={applications}
-        columns={columns}
-        table={table}
-        total={total}
-        isLoading={isLoading}
-        isError={isError}
-        errorMessage={sprintf(__( 'Could not load %s', 'codeclove-school-management' ), admissionLabelPlural.toLowerCase())}
-        onRetry={() => refetch()}
-        selectable
-        onRowClick={(app) => navigate(`/students/admissions/${app.id}`)}
+            </div>
+          </FilterBar>
+        }
         bulkActions={
           <Select
             value=""

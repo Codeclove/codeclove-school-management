@@ -182,21 +182,23 @@ abstract class BaseController extends WP_REST_Controller {
 		mixed $data,
 		int $total,
 		int $page,
-		int $per_page
+		int $per_page,
+		array $meta = []
 	): WP_REST_Response {
-		return new WP_REST_Response(
-			[
-				'success'    => true,
-				'data'       => $data,
-				'pagination' => [
-					'total'        => $total,
-					'per_page'     => $per_page,
-					'current_page' => $page,
-					'total_pages'  => (int) ceil( $total / max( 1, $per_page ) ),
-				],
+		$payload = [
+			'success'    => true,
+			'data'       => $data,
+			'pagination' => [
+				'total'        => $total,
+				'per_page'     => $per_page,
+				'current_page' => $page,
+				'total_pages'  => (int) ceil( $total / max( 1, $per_page ) ),
 			],
-			200
-		);
+		];
+		if ( ! empty( $meta ) ) {
+			$payload['meta'] = $meta;
+		}
+		return new WP_REST_Response( $payload, 200 );
 	}
 
 	/**

@@ -35,17 +35,19 @@ final class RolesService {
 		$roles_table = Schema::roles();
 		$permissions_table = Schema::role_permissions();
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- List roles with permissions count.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- List roles with permissions and assigned staff counts.
 		$results = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT r.*, COUNT(rp.id) as permission_count
+				'SELECT r.*, COUNT(DISTINCT rp.id) as permission_count, COUNT(DISTINCT s.id) as staff_count
 				 FROM %i r
 				 LEFT JOIN %i rp ON rp.role_id = r.id AND rp.allowed = %d
+				 LEFT JOIN %i s ON s.role_id = r.id AND s.deleted_at IS NULL
 				 GROUP BY r.id
 				 ORDER BY r.is_system DESC, r.name ASC',
 				Schema::roles(),
 				Schema::role_permissions(),
-				1
+				1,
+				Schema::staff_members()
 			),
 			ARRAY_A
 		);
@@ -60,6 +62,7 @@ final class RolesService {
 				'is_system'        => (int) $row['is_system'] === 1,
 				'is_locked'        => (int) $row['is_locked'] === 1,
 				'permission_count' => (int) $row['permission_count'],
+				'staff_count'      => (int) ( $row['staff_count'] ?? 0 ),
 			];
 		}
 
@@ -96,6 +99,16 @@ final class RolesService {
 			)
 		);
 
+		// Count assigned active staff members
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Count active staff members assigned to this role.
+		$staff_count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE role_id = %d AND deleted_at IS NULL',
+				Schema::staff_members(),
+				$id
+			)
+		);
+
 		return [
 			'id'          => (int) $row['id'],
 			'slug'        => $row['slug'],
@@ -103,6 +116,7 @@ final class RolesService {
 			'description' => $row['description'],
 			'is_system'   => (int) $row['is_system'] === 1,
 			'is_locked'   => (int) $row['is_locked'] === 1,
+			'staff_count' => $staff_count,
 			'permissions' => (array) $perm_rows,
 		];
 	}
@@ -224,8 +238,8 @@ final class RolesService {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->update( Schema::roles(), $update_data, [ 'id' => $id ] );
 
-		// Mapped permissions (Owner role permissions are locked and cannot be updated)
-		if ( isset( $data['permissions'] ) && 'owner' !== $slug ) {
+		// Mapped permissions (locked role permissions cannot be updated)
+		if ( isset( $data['permissions'] ) && empty( $existing['is_locked'] ) ) {
 			$permissions = (array) $data['permissions'];
 			$permissions_table = Schema::role_permissions();
 			$now = gmdate( 'Y-m-d H:i:s' );

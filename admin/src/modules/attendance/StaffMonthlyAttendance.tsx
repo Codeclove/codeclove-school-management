@@ -4,6 +4,7 @@ import {
   Check, X, Sun, CalendarMinus, AlertCircle
 } from 'lucide-react'
 import { useMonthlyStaffAttendance } from '@/api/attendance'
+import { useSettings } from '@/api/settings'
 import { useLabels } from '@/lib/labels'
 import { __, sprintf } from '@/lib/i18n'
 import {
@@ -32,10 +33,23 @@ const STATUS_BADGE_CONFIG: Record<string, { label: string; className: string }> 
   holiday: { label: 'Hl', className: 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold' },
 }
 
+const WEEKDAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const DEFAULT_WEEKEND = [0, 6]
+const WEEKEND_SETS: Record<string, number[]> = {
+  sunday_only: [0],
+  friday_saturday: [5, 6],
+  friday_only: [5],
+  saturday_sunday: DEFAULT_WEEKEND,
+}
+
 export default function StaffMonthlyAttendance() {
   const { getLabel } = useLabels()
+  const { data: settings } = useSettings()
+  const weekStartDay = Number(settings?.localization?.week_start_day ?? globalThis.window?.CodeCloveConfig?.wpSettings?.startOfWeek ?? 1)
+  const isIndianSchool = settings?.education_system?.preset === 'IN'
+  const weekendDays = settings?.localization?.weekend_days ?? (isIndianSchool ? 'sunday_only' : 'saturday_sunday')
+  const weekendSet = (weekendDays && WEEKEND_SETS[weekendDays]) || DEFAULT_WEEKEND
   const staffLabelSingular = getLabel('staff_member', false, __('Staff', 'codeclove-school-management'))
-
   // Filter States
   const [departmentFilter, setDepartmentFilter] = useState<string>('')
   const [designationFilter, setDesignationFilter] = useState<string>('')
@@ -65,12 +79,12 @@ export default function StaffMonthlyAttendance() {
       return {
         day: d,
         dateStr: `${y}-${mPad}-${String(d).padStart(2, '0')}`,
-        isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
-        isMonday: dayOfWeek === 1 && d > 1,
-        weekdayLetter: dateObj.toLocaleDateString('en-US', { weekday: 'narrow' }),
+        isWeekend: weekendSet.includes(dayOfWeek),
+        isWeekStart: dayOfWeek === weekStartDay && d > 1,
+        weekdayLetter: WEEKDAY_NAMES[dayOfWeek],
       }
     })
-  }, [monthlyDaysCount, year, month])
+  }, [monthlyDaysCount, year, month, weekStartDay, weekendDays])
 
   // Extract unique departments & designations
   const departmentsList = useMemo(() => [...new Set(monthlyStaffList.map((s) => s.department).filter(Boolean))].sort() as string[], [monthlyStaffList])
@@ -412,7 +426,7 @@ export default function StaffMonthlyAttendance() {
                           <th
                             key={info.day}
                             className={`p-0.5 sm:p-1 text-center text-2xs font-mono w-[28px] sm:w-[32px] min-w-[28px] sm:min-w-[32px] max-w-[28px] sm:max-w-[32px] ${
-                              info.isMonday ? 'border-l border-border/80' : ''
+                              info.isWeekStart ? 'border-l border-border/80' : ''
                             } ${info.isWeekend ? 'bg-black/[0.03] dark:bg-white/[0.04] text-text-subtle/60' : 'text-text'}`}
                           >
                             <div className="flex flex-col items-center">
@@ -499,7 +513,7 @@ export default function StaffMonthlyAttendance() {
                                   <td
                                     key={info.day}
                                     className={`p-0.5 sm:p-1 text-center w-[28px] sm:w-[32px] min-w-[28px] sm:min-w-[32px] max-w-[28px] sm:max-w-[32px] ${
-                                      info.isMonday ? 'border-l border-border/80' : ''
+                                      info.isWeekStart ? 'border-l border-border/80' : ''
                                     } ${info.isWeekend ? 'bg-black/[0.03] dark:bg-white/[0.04]' : ''}`}
                                   >
                                     <Tooltip content={tooltipContent} delay={100}>

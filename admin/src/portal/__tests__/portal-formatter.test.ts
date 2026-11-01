@@ -127,6 +127,20 @@ describe('Portal Formatter Utilities', () => {
     it('formats numbers with Indian grouping when configured', () => {
       expect(formatNumber(1250000, { number_format: 'indian' })).toBe('12,50,000')
     })
+
+    it('formats numbers and currency with European grouping when configured', () => {
+      const formattedEuroNum = formatNumber(1234567, { number_format: 'european' })
+      expect(formattedEuroNum).toContain('1.234.567')
+
+      const formattedEuroCurr = formatCurrency(1234.5, 'EUR', {
+        currency: 'EUR',
+        number_format: 'european',
+        currency_position: 'right_space',
+        decimal_precision: 2,
+      })
+      expect(formattedEuroCurr).toContain('1.234,50')
+      expect(formattedEuroCurr).toContain('€')
+    })
   })
   describe('getInitials', () => {
     it('extracts two initials from single and multi-word names', () => {

@@ -248,7 +248,7 @@ export default function RecordPaymentPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={__('Record Fee Receipt', 'codeclove-school-management')}
         description={sprintf(__('Recording payment for %1$s %2$s', 'codeclove-school-management'), invoiceLabel, invoice.invoice_number)}

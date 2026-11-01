@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Pencil, Trash2, Coins } from 'lucide-react'
+import { Plus, Pencil, Trash2, Coins } from 'lucide-react'
 import { __, _n, sprintf } from '@/lib/i18n'
 import {
   useFeeTypes,
@@ -16,11 +16,9 @@ import { useTableState } from '@/lib/useTableState'
 import {
   Button,
   PageHeader,
-  Card,
-  CardContent,
   Badge,
-  Input,
   Select,
+  FilterBar,
   DataTable,
   type DataTableColumn,
 } from '@/components/ui'
@@ -185,9 +183,16 @@ export default function FeeTypesPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={feeTypeLabelPlural}
+        badge={
+          total > 0 ? (
+            <Badge variant="neutral" className="tabular-nums font-mono text-xs font-normal">
+              {sprintf(__('%d total', 'codeclove-school-management'), total)}
+            </Badge>
+          ) : undefined
+        }
         description={sprintf(__('Manage fee templates, pricing defaults, and payment schedules for %s.', 'codeclove-school-management'), feeTypeLabelPlural.toLowerCase())}
         breadcrumbs={[{ label: __('Finance', 'codeclove-school-management') }, { label: feeTypeLabelPlural }]}
         actions={
@@ -198,25 +203,39 @@ export default function FeeTypesPage() {
         }
       />
 
-      {/* Filters Card */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-              <Input
-                type="text"
-                placeholder={__('Search templates...', 'codeclove-school-management')}
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  table.resetPage()
-                }}
-                className="pl-9 w-full"
-              />
-            </div>
-            <div>
+      {/* Main List */}
+      <DataTable<FeeType>
+        columns={columns}
+        data={feeTypes}
+        table={table}
+        total={total}
+        toolbar={
+          <FilterBar
+            cardWrapper={false}
+            search={search}
+            onSearchChange={(val) => {
+              setSearch(val)
+              table.resetPage()
+            }}
+            searchPlaceholder={__('Search templates...', 'codeclove-school-management')}
+            activeFilterCount={
+              (frequency !== 'all' ? 1 : 0) +
+              (scope !== 'all' ? 1 : 0) +
+              (hasOverrides !== 'all' ? 1 : 0) +
+              (status !== 'all' ? 1 : 0)
+            }
+            onClearAll={() => {
+              setSearch('')
+              setFrequency('all')
+              setScope('all')
+              setHasOverrides('all')
+              setStatus('all')
+              table.resetPage()
+            }}
+          >
+            <div className="w-full sm:w-36 lg:w-40 shrink-0">
               <Select
+                aria-label={__('Filter by frequency', 'codeclove-school-management')}
                 value={frequency}
                 onValueChange={(val) => {
                   setFrequency(val)
@@ -234,8 +253,10 @@ export default function FeeTypesPage() {
                 ]}
               />
             </div>
-            <div>
+
+            <div className="w-full sm:w-36 lg:w-36 shrink-0">
               <Select
+                aria-label={__('Filter by scope', 'codeclove-school-management')}
                 value={scope}
                 onValueChange={(val) => {
                   setScope(val)
@@ -249,8 +270,10 @@ export default function FeeTypesPage() {
                 ]}
               />
             </div>
-            <div>
+
+            <div className="w-full sm:w-36 lg:w-40 shrink-0">
               <Select
+                aria-label={__('Filter by customization', 'codeclove-school-management')}
                 value={hasOverrides}
                 onValueChange={(val) => {
                   setHasOverrides(val as 'all' | 'yes' | 'no')
@@ -264,8 +287,10 @@ export default function FeeTypesPage() {
                 ]}
               />
             </div>
-            <div>
+
+            <div className="w-full sm:w-32 lg:w-36 shrink-0">
               <Select
+                aria-label={__('Filter by status', 'codeclove-school-management')}
                 value={status}
                 onValueChange={(val) => {
                   setStatus(val)
@@ -279,19 +304,9 @@ export default function FeeTypesPage() {
                 ]}
               />
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Main List */}
-      <DataTable<FeeType>
-        columns={columns}
-        data={feeTypes}
-        table={table}
-        total={total}
-        loading={isLoading}
+          </FilterBar>
+        }
         isLoading={isLoading}
-        error={isError}
         isError={isError}
         errorMessage={sprintf(__("We couldn't retrieve the list of %s. Please try again.", 'codeclove-school-management'), feeTypeLabelPlural.toLowerCase())}
         onRetry={() => refetch()}

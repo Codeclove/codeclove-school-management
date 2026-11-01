@@ -8,7 +8,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { groupSchema, type GroupFormValues } from '@/schemas/academics'
 import {
-  Plus, Trash2, RefreshCw, AlertTriangle, Pencil, Search, X
+  Plus, Trash2, RefreshCw, AlertTriangle, Pencil
 } from 'lucide-react'
 import {
   useGroups,
@@ -31,7 +31,7 @@ import { useDebounce } from '@/lib/useDebounce'
 import {
   DataTable,
   type DataTableColumn,
-  Button, Badge, Card,
+  Button, Badge, FilterBar,
   Modal, ModalFooter, FormField, Input, Select,
   PageHeader, Spinner,
 } from '@/components/ui'
@@ -199,9 +199,16 @@ export default function GroupsPage() {
     clearSelection()
   }, [selectedUnitFilter, status, debouncedSearch, resetPage, clearSelection])
   return (
-    <div className="space-y-5 w-full">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={groupLabelPlural}
+        badge={
+          total > 0 ? (
+            <Badge variant="neutral" className="tabular-nums font-mono text-xs font-normal">
+              {sprintf(__('%d total', 'codeclove-school-management'), total)}
+            </Badge>
+          ) : undefined
+        }
         breadcrumbs={[{ label: __( 'Academics', 'codeclove-school-management' ) }, { label: groupLabelPlural }]}
         description={sprintf(
           __( 'Manage the classroom %1$s, homerooms, or streams mapped under each %2$s.', 'codeclove-school-management' ),
@@ -222,25 +229,32 @@ export default function GroupsPage() {
 
       <AcademicsNav />
 
-      {/* Filters Toolbar */}
-      <Card className="p-4">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3">
-          <div className="flex-1">
-            <FormField label={sprintf( __( 'Search %s', 'codeclove-school-management' ), groupLabelPlural )}>
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={sprintf( __( 'Search by %s name, code...', 'codeclove-school-management' ), groupLabelSingular.toLowerCase() )}
-                  className="pl-9"
-                />
-              </div>
-            </FormField>
-          </div>
-          <div className="w-full sm:w-40 lg:w-48 min-w-[140px]">
-            <FormField label={unitLabelSingular}>
+      <DataTable<AcademicGroup>
+        data={groups}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        toolbar={
+          <FilterBar
+            cardWrapper={false}
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={sprintf( __( 'Search by %s name, code...', 'codeclove-school-management' ), groupLabelSingular.toLowerCase() )}
+            activeFilterCount={(selectedUnitFilter !== 0 ? 1 : 0) + (status ? 1 : 0)}
+            onClearAll={() => {
+              setSearch('')
+              setSelectedUnitFilter(0)
+              setStatus('')
+              table.resetPage()
+              table.clearSelection()
+            }}
+          >
+            <div className="w-full sm:w-40 lg:w-48 shrink-0">
               <Select
+                aria-label={unitLabelSingular}
                 value={selectedUnitFilter.toString()}
                 onValueChange={(v) => setSelectedUnitFilter(parseInt(v, 10) || 0)}
                 options={[
@@ -251,11 +265,11 @@ export default function GroupsPage() {
                   })),
                 ]}
               />
-            </FormField>
-          </div>
-          <div className="w-full sm:w-40 lg:w-48 min-w-[140px]">
-            <FormField label={__( 'Status', 'codeclove-school-management' )}>
+            </div>
+
+            <div className="w-full sm:w-40 lg:w-48 shrink-0">
               <Select
+                aria-label={__( 'Status', 'codeclove-school-management' )}
                 value={status}
                 onValueChange={setStatus}
                 placeholder={__( 'All statuses', 'codeclove-school-management' )}
@@ -266,36 +280,9 @@ export default function GroupsPage() {
                   { value: 'archived', label: __( 'Archived', 'codeclove-school-management' ) },
                 ]}
               />
-            </FormField>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 h-9">
-            {(search || selectedUnitFilter !== 0 || status) && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setSearch('')
-                  setSelectedUnitFilter(0)
-                  setStatus('')
-                  table.resetPage()
-                  table.clearSelection()
-                }}
-              >
-                <X size={12} />
-                {__( 'Clear Filters', 'codeclove-school-management' )}
-              </Button>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      <DataTable<AcademicGroup>
-        data={groups}
-        columns={columns}
-        table={table}
-        total={total}
-        isLoading={isLoading}
-        isError={isError}
-        onRetry={() => refetch()}
+            </div>
+          </FilterBar>
+        }
         emptyState={
           isError
             ? {
@@ -347,6 +334,7 @@ export default function GroupsPage() {
         }}
         session_id={session_id}
         units={units}
+        defaultUnitId={selectedUnitFilter || undefined}
         editTarget={editTarget}
         onSuccess={() => {
           setShowModal(false)
@@ -364,6 +352,7 @@ function GroupModal({
   onClose,
   session_id,
   units,
+  defaultUnitId,
   editTarget,
   onSuccess,
 }: {
@@ -371,6 +360,7 @@ function GroupModal({
   onClose: () => void
   session_id: number
   units: Array<{ id: number; name: string }>
+  defaultUnitId?: number
   editTarget: AcademicGroup | null
   onSuccess: () => void
 }) {
@@ -391,7 +381,7 @@ function GroupModal({
     formState: { errors },
   } = useForm<GroupFormValues>({
     resolver: zodResolver(groupSchema),
-    defaultValues: { unit_id: units[0]?.id || 0 },
+    defaultValues: { unit_id: defaultUnitId || units[0]?.id || 0 },
   })
 
   useEffect(() => {
@@ -406,7 +396,7 @@ function GroupModal({
         })
       } else {
         reset({
-          unit_id:  units[0]?.id || 0,
+          unit_id:  defaultUnitId || units[0]?.id || 0,
           name:     '',
           code:     '',
           capacity: undefined,
@@ -414,7 +404,7 @@ function GroupModal({
         })
       }
     }
-  }, [open, units, editTarget, reset])
+  }, [open, units, editTarget, defaultUnitId, reset])
 
   const handleClose = () => {
     reset()
@@ -477,7 +467,7 @@ function GroupModal({
       onOpenChange={(o) => {
         if (!o) handleClose()
       }}
-      title={editTarget ? sprintf( __( 'Edit %s', 'codeclove-school-management' ), groupLabelSingular ) : sprintf( __( 'New %s / Homeroom', 'codeclove-school-management' ), groupLabelSingular )}
+      title={editTarget ? sprintf( __( 'Edit %s', 'codeclove-school-management' ), groupLabelSingular ) : sprintf( __( 'New %s', 'codeclove-school-management' ), groupLabelSingular )}
       description={
         editTarget
           ? sprintf( __( 'Update classroom %s details.', 'codeclove-school-management' ), groupLabelSingular.toLowerCase() )
@@ -489,7 +479,7 @@ function GroupModal({
         <FormField label={sprintf( __( 'Parent %s', 'codeclove-school-management' ), unitLabelSingular )} error={errors.unit_id?.message} required>
           <Select
             value={unitIdValue ? unitIdValue.toString() : ''}
-            onValueChange={(v) => setValue('unit_id', parseInt(v, 10) || 0)}
+            onValueChange={(v) => setValue('unit_id', parseInt(v, 10) || 0, { shouldValidate: true, shouldDirty: true })}
             options={units.map((u) => ({
               value: u.id.toString(),
               label: u.name,

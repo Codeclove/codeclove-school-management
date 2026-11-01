@@ -38,6 +38,19 @@
 				payload[k] = v;
 			});
 
+			if (formId === 'codeclove-admission-form') {
+				var hasFather = Boolean(payload.father_name && payload.father_name.trim());
+				var hasMother = Boolean(payload.mother_name && payload.mother_name.trim());
+				var hasGuardian = Boolean((payload.guardian_other_name && payload.guardian_other_name.trim()) || (payload.guardian_name && payload.guardian_name.trim()));
+				if (!hasFather && !hasMother && !hasGuardian) {
+					btn.disabled = false;
+					btn.innerText = orig;
+					msg.style.display = 'block';
+					msg.className = 'codeclove-response-msg error';
+					msg.textContent = strings.parentRequired || strings.failed;
+					return;
+				}
+			}
 			fetch(url, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },

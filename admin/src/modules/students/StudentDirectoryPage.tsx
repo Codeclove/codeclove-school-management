@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSession } from '@/lib/session-context'
 import { __, sprintf } from '@/lib/i18n'
 import {
-  Plus, Search, Pencil, X, Trash2, Printer, Upload, Download, Award
+  Plus, Pencil, Trash2, Printer, Upload, Download, Award, RotateCcw
 } from 'lucide-react'
 import {
   useStudents,
@@ -26,8 +26,8 @@ import { useFormatter } from '@/lib/formatter'
 import { useEntity } from '@/lib/useEntity'
 import { useSettings } from '@/api/settings'
 import {
-  Button, Badge, Card,
-  FormField, Input, Select,
+  Button, Badge,
+  FormField, Select, FilterBar,
   PageHeader, PersonAvatar, Modal, ModalFooter,
   DataTable, type DataTableColumn
 } from '@/components/ui'
@@ -81,7 +81,7 @@ export default function StudentDirectoryPage() {
     clearSelection()
   }, [unitId, groupId, status, debouncedSearch, resetPage, clearSelection])
 
-  const { data: unitData } = useUnits({ session_id: Number(sessionId) })
+  const { data: unitData } = useUnits({ session_id: Number(sessionId), per_page: 200 })
   const { data: groupData } = useGroups({
     session_id: sessionId ? Number(sessionId) : undefined,
     academic_unit_id: unitId ? Number(unitId) : undefined,
@@ -258,8 +258,10 @@ export default function StudentDirectoryPage() {
 
   const handleBulkDelete = async () => {
     const isConfirmed = await confirm({
-      title: sprintf(__( 'Delete Selected %s', 'codeclove-school-management' ), studentLabelPlural),
-      message: sprintf(__( 'Are you sure you want to delete the %1$d selected %2$s?', 'codeclove-school-management' ), selectedIds.length, studentLabelPlural.toLowerCase()),
+      title: sprintf(__( 'Move %d %s to trash?', 'codeclove-school-management' ), selectedIds.length, studentLabelPlural.toLowerCase()),
+      message: sprintf(__( 'Are you sure you want to move the %1$d selected %2$s to the trash? They can be restored later or permanently deleted.', 'codeclove-school-management' ), selectedIds.length, studentLabelPlural.toLowerCase()),
+      variant: 'warning',
+      confirmText: sprintf(__( 'Move %d to Trash', 'codeclove-school-management' ), selectedIds.length),
     })
     if (!isConfirmed) return
 
@@ -283,8 +285,10 @@ export default function StudentDirectoryPage() {
   const handleSingleDelete = useCallback(
     async (id: number, name: string) => {
       const isConfirmed = await confirm({
-        title: sprintf(__( 'Delete %s', 'codeclove-school-management' ), studentLabelSingular),
-        message: sprintf(__( 'Are you sure you want to delete student %s?', 'codeclove-school-management' ), name),
+        title: sprintf(__( 'Move %s to trash?', 'codeclove-school-management' ), name || studentLabelSingular),
+        message: sprintf(__( 'Are you sure you want to move %s to the trash? You can restore this student later or permanently delete them from the trash view.', 'codeclove-school-management' ), name || studentLabelSingular),
+        variant: 'warning',
+        confirmText: __( 'Move to Trash', 'codeclove-school-management' ),
       })
       if (!isConfirmed) return
 
@@ -304,6 +308,71 @@ export default function StudentDirectoryPage() {
       )
     },
     [confirm, studentLabelSingular, bulkActionMutation, toast]
+  )
+
+  const trashCount = (studentData?.meta?.trash_count as number) || 0
+
+  const handleRestore = useCallback(
+    (ids: number[], name?: string) => {
+      bulkActionMutation.mutate(
+        { action: 'restore', ids },
+        {
+          onSuccess: (res) => {
+            if (ids.length > 1) setSelectedIds([])
+            toast.success(
+              name
+                ? sprintf(__( 'Successfully restored student %s!', 'codeclove-school-management' ), name)
+                : sprintf(__( 'Successfully restored %1$d %2$s!', 'codeclove-school-management' ), res.restored_count || ids.length, studentLabelPlural.toLowerCase())
+            )
+          },
+          onError: (err) => {
+            toast.error(err.message || __( 'Failed to restore student.', 'codeclove-school-management' ))
+          }
+        }
+      )
+    },
+    [bulkActionMutation, studentLabelPlural, toast]
+  )
+
+  const handleForceDelete = useCallback(
+    async (ids: number[], name?: string) => {
+      const isConfirmed = await confirm({
+        title: name
+          ? sprintf(__( 'Permanently delete %s?', 'codeclove-school-management' ), name)
+          : sprintf(__( 'Permanently delete %d %s?', 'codeclove-school-management' ), ids.length, studentLabelPlural.toLowerCase()),
+        message: name
+          ? __( 'Are you sure you want to permanently delete this student? This will erase all attendance, grades, and enrollments from the database. This action cannot be undone.', 'codeclove-school-management' )
+          : sprintf(
+            __( 'Are you sure you want to permanently delete the %1$d selected %2$s from the database? All related attendance, marks, and enrollments will be erased. This action cannot be undone.', 'codeclove-school-management' ),
+            ids.length,
+            studentLabelPlural.toLowerCase()
+          ),
+        variant: 'danger',
+        confirmText: __( 'Delete Permanently', 'codeclove-school-management' ),
+      })
+      if (!isConfirmed) return
+
+      bulkActionMutation.mutate(
+        { action: 'force_delete', ids },
+        {
+          onSuccess: (res) => {
+            if (ids.length > 1) setSelectedIds([])
+            toast.success(
+              name
+                ? sprintf(__( 'Permanently deleted student %s!', 'codeclove-school-management' ), name)
+                : sprintf(__( 'Permanently deleted %1$d %2$s!', 'codeclove-school-management' ), res.deleted_count, studentLabelPlural.toLowerCase())
+            )
+            if (res.errors && res.errors.length > 0) {
+              toast.error(res.errors.join('; '))
+            }
+          },
+          onError: (err) => {
+            toast.error(err.message || __( 'Failed to permanently delete student.', 'codeclove-school-management' ))
+          }
+        }
+      )
+    },
+    [confirm, studentLabelSingular, studentLabelPlural, bulkActionMutation, toast]
   )
 
   const units = unitData?.data ?? []
@@ -452,45 +521,76 @@ export default function StudentDirectoryPage() {
         type: 'badge',
         sortable: true,
         sortKey: 'status',
-        render: (student) => (
-          <Badge variant={student.status}>{student.status}</Badge>
-        ),
+        render: (student) => {
+          if (student.deleted_at || status === 'trash') {
+            return <Badge variant="danger">{__( 'In Trash', 'codeclove-school-management' )}</Badge>
+          }
+          return <Badge variant={student.status}>{student.status}</Badge>
+        },
       },
       {
         key: 'actions',
         header: __( 'Actions', 'codeclove-school-management' ),
         type: 'actions',
-        render: (student) => (
-          <div className="flex items-center justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(isPro ? `/academics/certificates/issue?student_id=${student.id}` : '/pro-upgrade?feature=certificates')}
-              className="h-8 w-8 text-text-subtle hover:text-brand"
-              title={isPro ? __( 'Issue Certificate', 'codeclove-school-management' ) : __( 'Issue Certificate (PRO)', 'codeclove-school-management' )}
-            >
-              <Award size={14} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(`/students/${student.id}/edit`)}
-              className="h-8 w-8 text-text-subtle hover:text-brand"
-              title={__( 'Edit Profile', 'codeclove-school-management' )}
-            >
-              <Pencil size={14} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleSingleDelete(student.id, `${student.first_name} ${student.last_name}`)}
-              className="h-8 w-8 text-text-subtle hover:text-danger"
-              title={__( 'Delete Record', 'codeclove-school-management' )}
-            >
-              <Trash2 size={14} />
-            </Button>
-          </div>
-        ),
+        render: (student) => {
+          const studentName = `${student.first_name} ${student.last_name}`.trim()
+          if (status === 'trash') {
+            return (
+              <div className="flex items-center justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRestore([student.id], studentName)}
+                  className="h-8 w-8 text-text-subtle hover:text-brand"
+                  title={__( 'Restore Student', 'codeclove-school-management' )}
+                >
+                  <RotateCcw size={14} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleForceDelete([student.id], studentName)}
+                  className="h-8 w-8 text-danger hover:bg-danger/10"
+                  title={__( 'Delete Permanently', 'codeclove-school-management' )}
+                >
+                  <Trash2 size={14} />
+                </Button>
+              </div>
+            )
+          }
+
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(isPro ? `/academics/certificates/issue?student_id=${student.id}` : '/pro-upgrade?feature=certificates')}
+                className="h-8 w-8 text-text-subtle hover:text-brand"
+                title={isPro ? __( 'Issue Certificate', 'codeclove-school-management' ) : __( 'Issue Certificate (PRO)', 'codeclove-school-management' )}
+              >
+                <Award size={14} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(`/students/${student.id}/edit`)}
+                className="h-8 w-8 text-text-subtle hover:text-brand"
+                title={__( 'Edit Profile', 'codeclove-school-management' )}
+              >
+                <Pencil size={14} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleSingleDelete(student.id, studentName)}
+                className="h-8 w-8 text-text-subtle hover:text-danger"
+                title={__( 'Delete Record', 'codeclove-school-management' )}
+              >
+                <Trash2 size={14} />
+              </Button>
+            </div>
+          )
+        },
       },
     ],
     [
@@ -500,19 +600,29 @@ export default function StudentDirectoryPage() {
       guardianLabelSingular,
       navigate,
       handleSingleDelete,
+      handleRestore,
+      handleForceDelete,
+      status,
+      isPro,
     ]
   )
 
   return (
-    <div className="space-y-5 w-full">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={sprintf(__( '%s Directory', 'codeclove-school-management' ), studentLabelSingular)}
         breadcrumbs={[{ label: studentLabelPlural }, { label: sprintf(__( '%s Directory', 'codeclove-school-management' ), studentLabelSingular) }]}
+        badge={
+          total > 0 ? (
+            <Badge variant="neutral" className="tabular-nums font-mono text-xs font-normal">
+              {sprintf(__( '%d total', 'codeclove-school-management' ), total)}
+            </Badge>
+          ) : undefined
+        }
         description={sprintf(
-          __( 'View registered %1$s directories, %2$s details, primary emergency contacts, and enroll manual %3$s records.', 'codeclove-school-management' ),
+          __( 'Manage registered %1$s records, %2$s placements, and guardian contacts.', 'codeclove-school-management' ),
           studentLabelSingular.toLowerCase(),
-          unitLabelSingular.toLowerCase(),
-          studentLabelSingular.toLowerCase()
+          unitLabelSingular.toLowerCase()
         )}
         actions={
           <div className="flex items-center gap-2">
@@ -541,88 +651,6 @@ export default function StudentDirectoryPage() {
         }
       />
 
-      {/* Filters Toolbar */}
-      <Card className="p-4">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3">
-          <div className="flex-1">
-            <FormField label={sprintf(__( 'Search %s', 'codeclove-school-management' ), studentLabelPlural)}>
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={__( 'Search by name, ID number...', 'codeclove-school-management' )}
-                  className="pl-9"
-                />
-              </div>
-            </FormField>
-          </div>
-          <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-            <FormField label={unitLabelSingular}>
-              <Select
-                value={unitId}
-                onValueChange={(val) => {
-                  setUnitId(val)
-                  setGroupId('')
-                }}
-                placeholder={sprintf(__( 'All %s', 'codeclove-school-management' ), unitLabelPlural.toLowerCase())}
-                options={[
-                  { value: '', label: sprintf(__( 'All %s', 'codeclove-school-management' ), unitLabelPlural.toLowerCase()) },
-                  ...units.map((u) => ({ value: String(u.id), label: u.name })),
-                ]}
-              />
-            </FormField>
-          </div>
-          <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-            <FormField label={groupLabelSingular}>
-              <Select
-                value={groupId}
-                onValueChange={setGroupId}
-                placeholder={sprintf(__( 'All %s', 'codeclove-school-management' ), groupLabelPlural.toLowerCase())}
-                disabled={!unitId}
-                options={[
-                  { value: '', label: sprintf(__( 'All %s', 'codeclove-school-management' ), groupLabelPlural.toLowerCase()) },
-                  ...groups.map((g) => ({ value: String(g.id), label: g.name })),
-                ]}
-              />
-            </FormField>
-          </div>
-          <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-            <FormField label={__( 'Status', 'codeclove-school-management' )}>
-              <Select
-                value={status}
-                onValueChange={setStatus}
-                placeholder={__( 'All statuses', 'codeclove-school-management' )}
-                options={[
-                  { value: '', label: __( 'All statuses', 'codeclove-school-management' ) },
-                  { value: 'active', label: __( 'Active', 'codeclove-school-management' ) },
-                  { value: 'inactive', label: __( 'Inactive', 'codeclove-school-management' ) },
-                  { value: 'graduated', label: __( 'Graduated', 'codeclove-school-management' ) },
-                  { value: 'withdrawn', label: __( 'Withdrawn', 'codeclove-school-management' ) },
-                ]}
-              />
-            </FormField>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 h-9">
-            {(unitId || groupId || status || search) && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setUnitId('')
-                  setGroupId('')
-                  setStatus('')
-                  setSearch('')
-                  table.clearSelection()
-                }}
-              >
-                <X size={12} />
-                {__( 'Clear Filters', 'codeclove-school-management' )}
-              </Button>
-            )}
-          </div>
-        </div>
-      </Card>
-
       {/* Students Data Table */}
       <DataTable<Student>
         data={students}
@@ -634,47 +662,140 @@ export default function StudentDirectoryPage() {
         errorMessage={sprintf(__( 'Could not load %s list', 'codeclove-school-management' ), studentLabelSingular.toLowerCase())}
         onRetry={() => refetch()}
         selectable
-        onRowClick={(student) => navigate(`/students/${student.id}`)}
+        onRowClick={(student) => (status !== 'trash' ? navigate(`/students/${student.id}`) : undefined)}
+        toolbar={
+          <FilterBar
+            cardWrapper={false}
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={__( 'Search by name, ID number...', 'codeclove-school-management' )}
+            activeFilterCount={(unitId ? 1 : 0) + (groupId ? 1 : 0) + (status ? 1 : 0)}
+            onClearAll={() => {
+              setUnitId('')
+              setGroupId('')
+              setStatus('')
+              setSearch('')
+              table.resetPage()
+              clearSelection()
+            }}
+          >
+            <div className="w-full sm:w-40 lg:w-48 shrink-0">
+              <Select
+                aria-label={unitLabelSingular}
+                value={unitId}
+                onValueChange={(val) => {
+                  setUnitId(val)
+                  setGroupId('')
+                }}
+                placeholder={sprintf(__( 'All %s', 'codeclove-school-management' ), unitLabelPlural.toLowerCase())}
+                options={[
+                  { value: '', label: sprintf(__( 'All %s', 'codeclove-school-management' ), unitLabelPlural.toLowerCase()) },
+                  ...units.map((u) => ({ value: String(u.id), label: u.name })),
+                ]}
+              />
+            </div>
+
+            <div className="w-full sm:w-36 lg:w-40 shrink-0">
+              <Select
+                aria-label={groupLabelSingular}
+                value={groupId}
+                onValueChange={(val) => setGroupId(val)}
+                placeholder={sprintf(__( 'All %s', 'codeclove-school-management' ), groupLabelPlural.toLowerCase())}
+                disabled={!unitId}
+                options={[
+                  { value: '', label: sprintf(__( 'All %s', 'codeclove-school-management' ), groupLabelPlural.toLowerCase()) },
+                  ...groups.map((g) => ({ value: String(g.id), label: g.name })),
+                ]}
+              />
+            </div>
+
+            <div className="w-full sm:w-36 shrink-0">
+              <Select
+                aria-label={__( 'Status', 'codeclove-school-management' )}
+                value={status}
+                onValueChange={(val) => setStatus(val)}
+                placeholder={__( 'All statuses', 'codeclove-school-management' )}
+                options={[
+                  { value: '', label: __( 'All statuses', 'codeclove-school-management' ) },
+                  { value: 'active', label: __( 'Active', 'codeclove-school-management' ) },
+                  { value: 'inactive', label: __( 'Inactive', 'codeclove-school-management' ) },
+                  { value: 'graduated', label: __( 'Graduated', 'codeclove-school-management' ) },
+                  { value: 'suspended', label: __( 'Suspended', 'codeclove-school-management' ) },
+                  { value: 'withdrawn', label: __( 'Withdrawn', 'codeclove-school-management' ) },
+                  {
+                    value: 'trash',
+                    label: trashCount > 0
+                      ? sprintf( __( 'Trash (%d)', 'codeclove-school-management' ), trashCount )
+                      : __( 'Trash', 'codeclove-school-management' ),
+                  },
+                ]}
+              />
+            </div>
+          </FilterBar>
+        }
         bulkActions={
-          <>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleBulkPrintIdCards}
-              className="h-7 text-xs flex items-center gap-1"
-            >
-              <Printer size={12} /> {__( 'Print ID Cards', 'codeclove-school-management' )}
-            </Button>
-            <Select
-              value=""
-              onValueChange={(val) => {
-                if (val === 'delete') {
-                  handleBulkDelete()
-                } else if (val === 'export') {
-                  handleExportSelectedCSV()
-                } else if (val === 'promote') {
-                  setPromoteModalOpen(true)
-                } else if (val === 'assign_section') {
-                  setAssignModalOpen(true)
-                } else if (val.startsWith('status:')) {
-                  handleBulkStatus(val.replace('status:', ''))
-                }
-              }}
-              placeholder={__( 'Bulk Actions', 'codeclove-school-management' )}
-              options={[
-                { value: '', label: __( 'Bulk Actions', 'codeclove-school-management' ) },
-                { value: 'export', label: sprintf( __( 'Export Selected to CSV (%d)', 'codeclove-school-management' ), selectedIds.length ) },
-                { value: 'status:active', label: __( 'Mark Active', 'codeclove-school-management' ) },
-                { value: 'status:inactive', label: __( 'Mark Inactive', 'codeclove-school-management' ) },
-                { value: 'status:graduated', label: __( 'Mark Graduated', 'codeclove-school-management' ) },
-                { value: 'status:withdrawn', label: __( 'Mark Withdrawn', 'codeclove-school-management' ) },
-                { value: 'promote', label: __( 'Promote Selected', 'codeclove-school-management' ) },
-                { value: 'assign_section', label: __( 'Assign Class & Section', 'codeclove-school-management' ) },
-                { value: 'delete', label: __( 'Delete Selected', 'codeclove-school-management' ) },
-              ]}
-              className="h-7 text-xs w-full sm:w-48 bg-bg-surface"
-            />
-          </>
+          status === 'trash' ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleRestore(selectedIds)}
+                disabled={selectedIds.length === 0 || bulkActionMutation.isPending}
+                className="h-7 text-xs flex items-center gap-1.5"
+              >
+                <RotateCcw size={12} /> {sprintf( __( 'Restore Selected (%d)', 'codeclove-school-management' ), selectedIds.length )}
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => handleForceDelete(selectedIds)}
+                disabled={selectedIds.length === 0 || bulkActionMutation.isPending}
+                className="h-7 text-xs flex items-center gap-1.5"
+              >
+                <Trash2 size={12} /> {sprintf( __( 'Delete Permanently (%d)', 'codeclove-school-management' ), selectedIds.length )}
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleBulkPrintIdCards}
+                className="h-7 text-xs flex items-center gap-1"
+              >
+                <Printer size={12} /> {__( 'Print ID Cards', 'codeclove-school-management' )}
+              </Button>
+              <Select
+                value=""
+                onValueChange={(val) => {
+                  if (val === 'delete') {
+                    handleBulkDelete()
+                  } else if (val === 'export') {
+                    handleExportSelectedCSV()
+                  } else if (val === 'promote') {
+                    setPromoteModalOpen(true)
+                  } else if (val === 'assign_section') {
+                    setAssignModalOpen(true)
+                  } else if (val.startsWith('status:')) {
+                    handleBulkStatus(val.replace('status:', ''))
+                  }
+                }}
+                placeholder={__( 'Bulk Actions', 'codeclove-school-management' )}
+                options={[
+                  { value: '', label: __( 'Bulk Actions', 'codeclove-school-management' ) },
+                  { value: 'export', label: sprintf( __( 'Export Selected to CSV (%d)', 'codeclove-school-management' ), selectedIds.length ) },
+                  { value: 'status:active', label: __( 'Mark Active', 'codeclove-school-management' ) },
+                  { value: 'status:inactive', label: __( 'Mark Inactive', 'codeclove-school-management' ) },
+                  { value: 'status:graduated', label: __( 'Mark Graduated', 'codeclove-school-management' ) },
+                  { value: 'status:withdrawn', label: __( 'Mark Withdrawn', 'codeclove-school-management' ) },
+                  { value: 'promote', label: __( 'Promote Selected', 'codeclove-school-management' ) },
+                  { value: 'assign_section', label: __( 'Assign Class & Section', 'codeclove-school-management' ) },
+                  { value: 'delete', label: __( 'Delete Selected', 'codeclove-school-management' ) },
+                ]}
+                className="h-7 text-xs w-full sm:w-48 bg-bg-surface"
+              />
+            </>
+          )
         }
         emptyState={{
           icon: entity.icon,

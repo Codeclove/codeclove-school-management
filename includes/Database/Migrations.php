@@ -64,6 +64,7 @@ final class Migrations {
 		self::migrate_staff_tables( $charset_collate );
 		self::migrate_attendance_tables( $charset_collate );
 		self::migrate_finance_tables( $charset_collate );
+		self::migrate_notification_tables( $charset_collate );
 		do_action( 'codeclove_run_migrations_db', $charset_collate );
 
 
@@ -204,6 +205,63 @@ final class Migrations {
   KEY idx_user (user_id),
   KEY idx_role (role_id)
 ) $cc;" );
+
+		// v1.0.29: Migrate legacy 'owner' role to 'administrator' and remove owner role.
+		self::cleanup_legacy_owner_role();
+	}
+
+	/**
+	 * Migrates any assignments from the legacy 'owner' role to 'administrator' and deletes 'owner'.
+	 */
+	public static function cleanup_legacy_owner_role(): void {
+		global $wpdb;
+
+		$roles_table = Schema::roles();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$owner = $wpdb->get_row(
+			$wpdb->prepare( "SELECT id FROM {$roles_table} WHERE slug = %s", 'owner' ),
+			ARRAY_A
+		);
+
+		if ( ! $owner ) {
+			return;
+		}
+
+		$owner_id = (int) $owner['id'];
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$admin = $wpdb->get_row(
+			$wpdb->prepare( "SELECT id FROM {$roles_table} WHERE slug = %s", 'administrator' ),
+			ARRAY_A
+		);
+
+		if ( $admin ) {
+			$admin_id         = (int) $admin['id'];
+			$user_roles_table = Schema::user_roles();
+			$staff_table      = Schema::staff_members();
+
+			// 1. Reassign user_roles from owner to administrator if not already assigned
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE IGNORE {$user_roles_table} SET role_id = %d WHERE role_id = %d",
+					$admin_id,
+					$owner_id
+				)
+			);
+			// Delete any remaining owner user_roles that collided with existing admin roles
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->delete( $user_roles_table, [ 'role_id' => $owner_id ] );
+
+			// 2. Reassign staff_members from owner to administrator
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->update( $staff_table, [ 'role_id' => $admin_id ], [ 'role_id' => $owner_id ] );
+		}
+
+		// 3. Remove permissions and the owner role itself
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->delete( Schema::role_permissions(), [ 'role_id' => $owner_id ] );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->delete( $roles_table, [ 'id' => $owner_id ] );
 	}
 
 	// ─── Admission Tables ─────────────────────────────────────────────────────
@@ -757,6 +815,38 @@ final class Migrations {
   KEY idx_unit (academic_unit_id)
 ) $cc;" );
 
+	}
+	// ─── Notification Tables ─────────────────────────────────────────────────
+
+	/**
+	 * Creates or upgrades the in-app notifications and announcements table.
+	 *
+	 * @param string $cc Character set collate string.
+	 */
+	public static function migrate_notification_tables( string $cc ): void {
+		dbDelta( "CREATE TABLE " . Schema::notifications() . " (
+  id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+  student_id bigint(20) UNSIGNED DEFAULT NULL,
+  audience varchar(20) NOT NULL DEFAULT 'staff',
+  title varchar(160) NOT NULL,
+  content text NOT NULL,
+  event_type varchar(60) NOT NULL,
+  notice_date date DEFAULT NULL,
+  expires_at datetime DEFAULT NULL,
+  is_pinned tinyint(1) NOT NULL DEFAULT 0,
+  accent_color varchar(30) DEFAULT NULL,
+  icon varchar(50) DEFAULT NULL,
+  is_read tinyint(1) NOT NULL DEFAULT 0,
+  url varchar(255) DEFAULT NULL,
+  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  read_at datetime DEFAULT NULL,
+  PRIMARY KEY  (id),
+  KEY idx_user_read (user_id, is_read),
+  KEY idx_portal_student (audience, student_id),
+  KEY idx_lifecycle (audience, notice_date, expires_at, is_pinned),
+  KEY idx_created_at (created_at)
+) $cc;" );
 	}
 
 	// ─── Private Helpers ─────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Search, Pencil, X, Download, Trash2, Briefcase
+  Pencil, Download, Trash2, Briefcase
 } from 'lucide-react'
 import { __, sprintf } from '@/lib/i18n'
 import {
@@ -14,8 +14,8 @@ import { exportToCSV } from '@/lib/csv'
 import { useToast } from '@/lib/toast'
 import { useConfirm } from '@/lib/confirm'
 import {
-  Button, Badge, Card,
-  FormField, Input, Select,
+  Button, Badge,
+  Select, FilterBar,
   PageHeader,
   DataTable, type DataTableColumn,
   type BadgeProps
@@ -322,100 +322,38 @@ export default function StaffApplicationsPage() {
   )
 
   return (
-    <div className="space-y-5 w-full">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={__( 'Staff Applications', 'codeclove-school-management' )}
+        badge={
+          total > 0 ? (
+            <Badge variant="neutral" className="tabular-nums font-mono text-xs font-normal">
+              {sprintf(__('%d total', 'codeclove-school-management'), total)}
+            </Badge>
+          ) : undefined
+        }
         breadcrumbs={[{ label: staffLabelPlural }, { label: __( 'Applications', 'codeclove-school-management' ) }]}
         description={__(
           'Review incoming employee recruitment applications, manage hiring stages, and onboard candidates as active staff members.',
           'codeclove-school-management'
         )}
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportDirectoryCSV}
+            disabled={isExportingAll || total === 0}
+            className="gap-1.5"
+            title={total > 0
+              ? sprintf(__( 'Export all %d applications to CSV', 'codeclove-school-management' ), total)
+              : __( 'Export CSV', 'codeclove-school-management' )
+            }
+          >
+            <Download size={14} className={isExportingAll ? 'animate-bounce' : ''} />
+            {isExportingAll ? __( 'Exporting...', 'codeclove-school-management' ) : __( 'Export CSV', 'codeclove-school-management' )}
+          </Button>
+        }
       />
-
-      {/* Filter Toolbar */}
-      <Card className="p-4 bg-bg-elevated border border-border">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3">
-          <div className="flex-1">
-            <FormField inputId="staff-app-search" label={__( 'Search Candidates', 'codeclove-school-management' )}>
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
-                <Input
-                  id="staff-app-search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={__( 'Search by name, reference, email...', 'codeclove-school-management' )}
-                  className="pl-9 bg-bg-surface border-border text-sm"
-                />
-              </div>
-            </FormField>
-          </div>
-
-          <div className="w-full sm:w-44 lg:flex-1 lg:max-w-xs min-w-[140px]">
-            <FormField label={__( 'Application Status', 'codeclove-school-management' )}>
-              <Select
-                value={status}
-                onValueChange={setStatus}
-                placeholder={__( 'All statuses', 'codeclove-school-management' )}
-                options={[
-                  { value: '', label: __( 'All statuses', 'codeclove-school-management' ) },
-                  ...Object.entries(statusConfig).map(([k, v]) => ({
-                    value: k,
-                    label: v.label,
-                  })),
-                ]}
-              />
-            </FormField>
-          </div>
-
-          <div className="w-full sm:w-44 lg:flex-1 lg:max-w-xs min-w-[140px]">
-            <FormField label={__( 'Submission Date', 'codeclove-school-management' )}>
-              <Select
-                value={datePreset}
-                onValueChange={setDatePreset}
-                placeholder={__( 'All time', 'codeclove-school-management' )}
-                options={[
-                  { value: '', label: __( 'All time', 'codeclove-school-management' ) },
-                  { value: 'today', label: __( 'Today', 'codeclove-school-management' ) },
-                  { value: 'this_week', label: __( 'Last 7 days', 'codeclove-school-management' ) },
-                  { value: 'this_month', label: __( 'Last 30 days', 'codeclove-school-management' ) },
-                ]}
-              />
-            </FormField>
-          </div>
-
-          <div className="flex items-center gap-2 flex-shrink-0 h-9">
-            {(status || datePreset || search) && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setStatus('')
-                  setDatePreset('')
-                  setSearch('')
-                  table.resetPage()
-                  table.clearSelection()
-                }}
-              >
-                <X size={12} className="me-1" />
-                {__( 'Clear Filters', 'codeclove-school-management' )}
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              size="icon"
-              onClick={handleExportDirectoryCSV}
-              disabled={isExportingAll || total === 0}
-              className="flex-shrink-0"
-              title={total > 0
-                ? sprintf(__( 'Export all %d applications to CSV', 'codeclove-school-management' ), total)
-                : __( 'Export CSV', 'codeclove-school-management' )
-              }
-              aria-label={__( 'Export CSV', 'codeclove-school-management' )}
-            >
-              <Download size={15} className={isExportingAll ? 'animate-bounce' : ''} />
-            </Button>
-          </div>
-        </div>
-      </Card>
 
       {/* Applications Data Table */}
       <DataTable<StaffApplication>
@@ -429,6 +367,53 @@ export default function StaffApplicationsPage() {
         onRetry={() => refetch()}
         selectable
         onRowClick={(app) => navigate(`/staff/applications/${app.id}`)}
+        toolbar={
+          <FilterBar
+            cardWrapper={false}
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={__( 'Search by name, reference, email...', 'codeclove-school-management' )}
+            activeFilterCount={(status ? 1 : 0) + (datePreset ? 1 : 0)}
+            onClearAll={() => {
+              setStatus('')
+              setDatePreset('')
+              setSearch('')
+              table.resetPage()
+              table.clearSelection()
+            }}
+          >
+            <div className="w-full sm:w-44 lg:w-48 shrink-0">
+              <Select
+                aria-label={__( 'Application Status', 'codeclove-school-management' )}
+                value={status}
+                onValueChange={setStatus}
+                placeholder={__( 'All statuses', 'codeclove-school-management' )}
+                options={[
+                  { value: '', label: __( 'All statuses', 'codeclove-school-management' ) },
+                  ...Object.entries(statusConfig).map(([k, v]) => ({
+                    value: k,
+                    label: v.label,
+                  })),
+                ]}
+              />
+            </div>
+
+            <div className="w-full sm:w-40 lg:w-44 shrink-0">
+              <Select
+                aria-label={__( 'Submission Date', 'codeclove-school-management' )}
+                value={datePreset}
+                onValueChange={setDatePreset}
+                placeholder={__( 'All time', 'codeclove-school-management' )}
+                options={[
+                  { value: '', label: __( 'All time', 'codeclove-school-management' ) },
+                  { value: 'today', label: __( 'Today', 'codeclove-school-management' ) },
+                  { value: 'this_week', label: __( 'Last 7 days', 'codeclove-school-management' ) },
+                  { value: 'this_month', label: __( 'Last 30 days', 'codeclove-school-management' ) },
+                ]}
+              />
+            </div>
+          </FilterBar>
+        }
         bulkActions={
           <Select
             value=""

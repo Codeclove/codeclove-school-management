@@ -131,17 +131,6 @@ export default function StaffDailyAttendance() {
     )
   }
 
-  const handleMarkAll = (status: string) => {
-    if (!registerRecords) return
-    const updated = { ...localRecords }
-    registerRecords.forEach((r) => {
-      updated[r.staff_member_id] = {
-        status,
-        note: updated[r.staff_member_id]?.note ?? '',
-      }
-    })
-    setLocalRecords(updated)
-  }
 
   // Date steppers
   const shiftDate = (days: number) => {
@@ -197,6 +186,17 @@ export default function StaffDailyAttendance() {
       return matchesSearch && matchesDept && matchesDesig
     })
   }, [recordsList, searchQuery, departmentFilter, designationFilter])
+  const handleMarkAll = (status: string) => {
+    if (!filteredRecordsList.length) return
+    const updated = { ...localRecords }
+    filteredRecordsList.forEach((r) => {
+      updated[r.staff_member_id] = {
+        status,
+        note: updated[r.staff_member_id]?.note ?? '',
+      }
+    })
+    setLocalRecords(updated)
+  }
 
 
   return (
@@ -390,7 +390,7 @@ export default function StaffDailyAttendance() {
                       variant="secondary"
                       size="sm"
                       onClick={() => handleMarkAll('present')}
-                      disabled={saveMutation.isPending || recordsList.length === 0}
+                      disabled={saveMutation.isPending || filteredRecordsList.length === 0}
                       className="h-8 text-2xs font-semibold gap-1.5"
                     >
                       <Check size={12} className="text-emerald-600 stroke-[2.5]" />

@@ -62,7 +62,7 @@ describe('Modal & Confirm Dialog Keyboard & Focus Accessibility Standards', () =
 
   describe('Imperative useConfirm Hook (confirm.tsx)', () => {
     it('tags Cancel button with data-dialog-cancel for safe default focus on open', () => {
-      expect(confirmHookSource).toMatch(/<button[\s\S]*?data-dialog-cancel/)
+      expect(confirmHookSource).toMatch(/<(?:Button|button)[\s\S]*?data-dialog-cancel/)
     })
 
     it('tags Confirm button with data-dialog-confirm for chorded shortcut trigger', () => {

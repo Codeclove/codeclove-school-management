@@ -40,6 +40,7 @@
     "date_format": "d/m/Y",
     "time_format": "H:i",
     "week_start_day": 1,
+    "weekend_days": "saturday_sunday",
     "timezone": "Europe/London",
     "currency": "GBP",
     "currency_position": "left",

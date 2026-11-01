@@ -768,40 +768,6 @@ final class DashboardService {
 		);
 	}
 
-	/**
-	 * Formats minor currency units according to school localization settings.
-	 */
-	private function format_currency_amount( int $minor ): string {
-		$settings = get_option( 'codeclove_settings', [] );
-		$loc      = $settings['localization'] ?? [];
-		$code     = strtoupper( (string) ( $loc['currency'] ?? 'INR' ) );
-		$symbol   = match ( $code ) {
-			'INR'   => '₹',
-			'USD'   => '$',
-			'GBP'   => '£',
-			'EUR'   => '€',
-			'NGN'   => '₦',
-			'KES'   => 'KSh',
-			'GHS'   => 'GH₵',
-			'ZAR'   => 'R',
-			'PKR'   => '₨',
-			'BDT'   => '৳',
-			'AED'   => 'AED ',
-			'SAR'   => 'SAR ',
-			default => $code . ' ',
-		};
-
-		$position  = $loc['currency_position'] ?? 'left';
-		$precision = isset( $loc['decimal_precision'] ) ? (int) $loc['decimal_precision'] : 2;
-		$amount    = number_format( $minor / 100, $precision );
-
-		return match ( $position ) {
-			'right'       => $amount . $symbol,
-			'right_space' => $amount . ' ' . $symbol,
-			'left_space'  => $symbol . ' ' . $amount,
-			default       => $symbol . $amount,
-		};
-	}
 
 	/**
 	 * Returns the 10 most recent audit log events visible to the user,
@@ -979,7 +945,7 @@ final class DashboardService {
 				$student_name = $pay ? trim( $pay['first_name'] . ' ' . $pay['last_name'] ) : ( $meta['student_name'] ?? 'Student' );
 				$unit_name    = $pay['unit_name'] ?? '';
 				$amount_minor = (int) ( $pay['amount_minor'] ?? ( $meta['amount_minor'] ?? 0 ) );
-				$amount_fmt   = $this->format_currency_amount( $amount_minor );
+				$amount_fmt   = codeclove_format_currency( $amount_minor );
 				$prefix       = 'Fee payment reconciled:';
 				$detail       = $unit_name ? "{$student_name} ({$unit_name}) · {$amount_fmt}" : "{$student_name} · {$amount_fmt}";
 				if ( 'Administrator' === $actor_name ) {

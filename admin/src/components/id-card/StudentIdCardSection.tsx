@@ -4,7 +4,7 @@ import { Button } from '@/components/ui'
 import { StudentIdCard, type StudentIdCardProps } from '@/modules/students/components/StudentIdCard'
 import { printElement } from '@/lib/print'
 import type { SchoolSettings } from '@/components/ui/PrintLetterhead'
-import { __ } from '@/lib/i18n'
+import { __, sprintf } from '@/lib/i18n'
 
 export interface StudentIdCardSectionProps {
   student: StudentIdCardProps['student']
@@ -17,6 +17,7 @@ export interface StudentIdCardSectionProps {
   sessionLabel?: string
   formatDate?: (dateStr: string) => string
   className?: string
+  studentLabel?: string
 }
 
 /**
@@ -35,6 +36,7 @@ export function StudentIdCardSection({
   rollNumber,
   sessionLabel = 'Current Session',
   formatDate,
+  studentLabel = 'Student',
   className = '',
 }: StudentIdCardSectionProps) {
   const [badgeDual, setBadgeDual] = useState(true)
@@ -50,11 +52,16 @@ export function StudentIdCardSection({
     <div className={`space-y-5 ${className}`}>
       {/* Header with Title and Single/Dual & Print Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
-        <div>
-          <h3 className="text-sm font-semibold text-text flex items-center gap-2">
-            <IdCard size={16} className="text-brand" />
-            <span>{__( 'Student Identity Card', 'codeclove-school-management' )}</span>
-          </h3>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h3 className="text-sm font-semibold text-text flex items-center gap-2">
+              <IdCard size={16} className="text-brand" />
+              <span>{__( 'Student Identity Card', 'codeclove-school-management' )}</span>
+            </h3>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-2xs font-mono font-medium bg-bg-surface border border-border text-text-subtle">
+              {sprintf( __( 'Template: %s', 'codeclove-school-management' ), studentLabel )}
+            </span>
+          </div>
           <p className="text-xs text-text-muted mt-0.5">
             {badgeDual
               ? __( 'CR80 dual-sided foldable badge preview.', 'codeclove-school-management' )
@@ -98,8 +105,8 @@ export function StudentIdCardSection({
       </div>
 
       {/* Card Preview Container */}
-      <div className="bg-bg-surface border border-border rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center overflow-x-auto">
-        <div ref={printRef} className="bg-white text-black font-sans">
+      <div className="bg-bg-base/60 border border-border/80 rounded-2xl p-6 sm:p-10 flex flex-col items-center justify-center overflow-x-auto shadow-inner">
+        <div ref={printRef} className="bg-white text-black font-sans shadow-md rounded-xl p-4">
           <StudentIdCard
             student={student}
             unitName={unitName}

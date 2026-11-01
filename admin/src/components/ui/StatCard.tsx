@@ -9,7 +9,7 @@
  *   - Delta badge is color-coded and directional
  */
 import type { ReactNode } from 'react'
-import { type LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
+import { type LucideIcon, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from './Skeleton'
 
@@ -72,12 +72,12 @@ export function StatCard({
       return (
         <div
           className={cn(
-            'rounded-lg bg-bg-elevated border border-border p-3.5 flex items-center gap-3.5',
+            'rounded-lg bg-bg-elevated border border-border p-3.5 flex items-center gap-3.5 shadow-card',
             className
           )}
         >
-          <Skeleton className="w-8 h-8 rounded-lg" />
-          <div className="space-y-1">
+          <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
+          <div className="space-y-1.5 flex-1">
             <Skeleton className="h-5 w-16" />
             <Skeleton className="h-3.5 w-20" />
           </div>
@@ -87,17 +87,19 @@ export function StatCard({
     return (
       <div
         className={cn(
-          'rounded-2xl bg-bg-elevated border border-border p-5 space-y-4',
+          'rounded-xl bg-bg-elevated border border-border p-4 sm:p-5 flex flex-col justify-between shadow-card',
           className
         )}
       >
-        <div className="flex items-start justify-between">
-          <Skeleton className="w-9 h-9 rounded-lg" />
-          <Skeleton className="w-12 h-5 rounded" />
+        <div className="flex items-center justify-between gap-2 min-h-[1.75rem]">
+          <Skeleton className="h-4 w-28 rounded" />
+          <Skeleton className="w-7 h-7 rounded-lg shrink-0" />
         </div>
-        <div className="space-y-1.5">
-          <Skeleton className="h-7 w-16" />
-          <Skeleton className="h-4 w-24" />
+        <div className="mt-3">
+          <Skeleton className="h-8 w-20 rounded" />
+        </div>
+        <div className="mt-2">
+          <Skeleton className="h-3.5 w-36 rounded" />
         </div>
       </div>
     )
@@ -108,10 +110,10 @@ export function StatCard({
       <div
         onClick={onClick}
         className={cn(
-          'rounded-lg bg-bg-elevated border border-border p-3.5 flex items-center gap-3.5',
+          'rounded-lg bg-bg-elevated border border-border p-3 sm:p-3.5 flex items-center gap-3 shadow-card',
           'transition-all duration-150',
           clickable
-            ? 'cursor-pointer hover:border-border-strong hover:-translate-y-[1px] hover:shadow-card'
+            ? 'cursor-pointer hover:border-border-strong hover:-translate-y-[1px] hover:shadow-card-md'
             : 'hover:border-border-strong',
           className
         )}
@@ -135,7 +137,7 @@ export function StatCard({
           >
             {value}
           </p>
-          <p className="text-xs text-text-muted mt-1 leading-none">{label}</p>
+          <p className="text-xs text-text-muted mt-1 leading-none truncate">{label}</p>
           {children}
         </div>
       </div>
@@ -146,61 +148,77 @@ export function StatCard({
     <div
       onClick={onClick}
       className={cn(
-        'rounded-2xl bg-bg-elevated border border-border p-5 flex flex-col',
+        'group relative rounded-xl bg-bg-elevated border border-border p-4 sm:p-5 flex flex-col justify-between shadow-card',
         'transition-all duration-150',
         clickable
-          ? 'cursor-pointer hover:border-border-strong hover:-translate-y-[1px] hover:shadow-card'
+          ? 'cursor-pointer hover:border-border-strong hover:shadow-card-md hover:-translate-y-[1px]'
           : 'hover:border-border-strong',
         className
       )}
     >
-      {/* ── Top row: icon + delta ────────────────────────────────── */}
-      {(Icon || badge || delta !== undefined) && (
-        <div className="flex items-start justify-between mb-4">
-          {Icon ? (
-            <div
-              className={cn(
-                'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
-                iconBg
-              )}
-            >
-              <Icon size={17} className={iconColor} />
-            </div>
-          ) : (
-            <div />
-          )}
+      <div>
+        {/* ── Top row: label + utility icons/badges ──────────────────── */}
+        <div className="flex items-center justify-between gap-2 min-h-[1.75rem]">
+          <span className="text-xs sm:text-sm font-medium text-text-muted truncate select-none group-hover:text-text transition-colors">
+            {label}
+          </span>
 
-          {badge ? (
-            badge
-          ) : delta !== undefined ? (
-            <DeltaBadge delta={delta} positive={deltaPositive} />
-          ) : null}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {badge ? (
+              badge
+            ) : delta !== undefined ? (
+              <DeltaBadge delta={delta} positive={deltaPositive} />
+            ) : null}
+
+            {Icon && (
+              <div
+                className={cn(
+                  'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors',
+                  iconBg || 'bg-bg-surface border border-border-subtle text-text-subtle'
+                )}
+              >
+                <Icon size={15} className={iconColor || 'text-text-subtle'} />
+              </div>
+            )}
+
+            {clickable && (
+              <ArrowUpRight
+                size={14}
+                className="text-text-subtle opacity-40 group-hover:opacity-100 group-hover:text-brand group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all -ml-0.5"
+              />
+            )}
+          </div>
         </div>
-      )}
 
-      {/* ── Value ────────────────────────────────────────────────── */}
-      <p
-        className={cn(
-          'text-3xl font-bold text-text tabular-nums tracking-tight leading-none',
-          valueClassName
+        {/* ── Value ────────────────────────────────────────────────── */}
+        <div className="mt-3 flex items-baseline gap-2">
+          <div
+            className={cn(
+              'text-2xl sm:text-3xl font-bold text-text tabular-nums tracking-tight leading-none',
+              valueClassName
+            )}
+          >
+            {value}
+          </div>
+        </div>
+
+        {/* ── Optional children content (e.g. progress bar) ────────── */}
+        {children && <div className="mt-3">{children}</div>}
+
+        {/* ── Delta context label or subtext ────────────────────────── */}
+        {(subtext || deltaLabel) && (
+          <p className="text-xs text-text-subtle mt-2 leading-relaxed">
+            {subtext || deltaLabel}
+          </p>
         )}
-      >
-        {value}
-      </p>
-
-      {/* ── Label ────────────────────────────────────────────────── */}
-      <p className="text-sm font-medium text-text-muted mt-2">{label}</p>
-
-      {/* ── Optional children content (e.g. progress bar) ────────── */}
-      {children && <div className="mt-3">{children}</div>}
-
-      {/* ── Delta context label or subtext ────────────────────────── */}
-      {(subtext || deltaLabel) && (
-        <p className="text-xs text-text-subtle mt-1.5">{subtext || deltaLabel}</p>
-      )}
+      </div>
 
       {/* ── Optional footer content (e.g. actions/drilldown) ─────── */}
-      {footer && <div className="mt-auto pt-3">{footer}</div>}
+      {footer && (
+        <div className="mt-auto pt-3 border-t border-border-subtle text-xs text-text-subtle">
+          {footer}
+        </div>
+      )}
     </div>
   )
 }

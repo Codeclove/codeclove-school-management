@@ -93,6 +93,9 @@ final class Plugin {
 
 		ReviewPromptService::ensure_installed_at();
 
+		// Set transient to redirect to the dashboard on first activation.
+		set_transient( '_codeclove_activation_redirect', true, 60 );
+
 		do_action( 'codeclove_activate' );
 
 		flush_rewrite_rules();
@@ -114,11 +117,10 @@ final class Plugin {
 		$rest = new RestApi();
 
 		add_action( 'init', [ $this, 'init' ] );
+		add_action( 'admin_init', [ $this, 'maybe_activation_redirect' ] );
 		add_action( 'admin_menu', [ $this, 'register_admin_menu' ] );
 		add_action( 'admin_notices', static fn() => do_action( 'codeclove_admin_notices' ) );
 		add_action( 'admin_notices', [ $this, 'maybe_render_review_notice' ] );
-
-		// Register the REST API namespace and all routes.
 		add_action( 'rest_api_init', [ $rest, 'register_routes' ] );
 
 		// Run migrations when the plugin's DB version is outdated.
@@ -198,6 +200,11 @@ final class Plugin {
 			static fn() => null
 		);
 
+		global $submenu;
+		if ( isset( $submenu[ $menu_slug ][0][0] ) ) {
+			$submenu[ $menu_slug ][0][0] = __( 'Dashboard', 'codeclove-school-management' );
+		}
+
 		// In Free version only: register submenu item highlighting the Pro upgrade.
 		if ( ! $is_pro ) {
 			add_submenu_page(
@@ -214,6 +221,26 @@ final class Plugin {
 		add_action( 'load-' . $page_hook, [ $assets, 'render_fullscreen_spa' ] );
 	}
 
+	/**
+	 * Automatically redirects to the main dashboard upon plugin activation.
+	 */
+	public function maybe_activation_redirect(): void {
+		if ( wp_doing_ajax() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+			return;
+		}
+
+		if ( get_transient( '_codeclove_activation_redirect' ) ) {
+			delete_transient( '_codeclove_activation_redirect' );
+
+			if ( ! is_network_admin() && current_user_can( 'manage_options' ) ) {
+				$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+				if ( ! str_starts_with( $page, 'codeclove' ) ) {
+					wp_safe_redirect( admin_url( 'admin.php?page=codeclove-school-management' ) );
+					exit;
+				}
+			}
+		}
+	}
 	/**
 	 * Adds Settings and Upgrade / License links to the plugin action links on plugins.php.
 	 *
@@ -402,7 +429,7 @@ final class Plugin {
 
 		$db_version = defined( 'CODECLOVE_DB_VERSION' ) ? CODECLOVE_DB_VERSION : '1.0.0';
 
-		if ( version_compare( $stored_version, $db_version, '<' ) ) {
+		if ( version_compare( $stored_version, $db_version, '<' ) || ! Migrations::is_schema_installed() ) {
 			$this->run_migrations( $stored_version, $db_version );
 		}
 	}

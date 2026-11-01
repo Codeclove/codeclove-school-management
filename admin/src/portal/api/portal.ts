@@ -10,6 +10,7 @@ import type {
   DashboardData,
   FinanceData,
   NotificationsResponse,
+  PortalExamsData,
   PortalMeResponse,
   ProfileData,
   TimetableData,
@@ -24,9 +25,10 @@ export const portalKeys = {
   academics: (studentId?: number) => ['portal', 'academics', studentId] as const,
   notifications: {
     all: ['portal', 'notifications'] as const,
-    list: (studentId?: number, page?: number) => ['portal', 'notifications', studentId, page] as const,
+    list: (studentId?: number, page?: number, perPage?: number | string) => ['portal', 'notifications', studentId, page, perPage] as const,
   },
   profile: (studentId?: number) => ['portal', 'profile', studentId] as const,
+  exams: (studentId?: number) => ['portal', 'exams', studentId] as const,
 }
 
 export function usePortalMe(initialData?: PortalMeResponse) {
@@ -78,14 +80,22 @@ export function useAcademics(studentId?: number) {
   })
 }
 
-export function useNotifications(studentId?: number, page = 1, perPage = 20) {
+export function usePortalExams(studentId?: number) {
   return useQuery({
-    queryKey: portalKeys.notifications.list(studentId, page),
+    queryKey: portalKeys.exams(studentId),
+    queryFn: () => portalApi.get<PortalExamsData>('exams', { student_id: studentId }),
+    enabled: Boolean(studentId),
+  })
+}
+
+export function useNotifications(studentId?: number, page = 1, perPage: number | string = 20) {
+  return useQuery({
+    queryKey: portalKeys.notifications.list(studentId, page, perPage),
     queryFn: () =>
       portalApi.get<NotificationsResponse>('notifications', {
         student_id: studentId,
         page,
-        per_page: perPage,
+        per_page: perPage === 'all' ? 100 : perPage,
       }),
     enabled: Boolean(studentId),
   })

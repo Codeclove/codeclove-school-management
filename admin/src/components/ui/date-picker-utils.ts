@@ -23,7 +23,7 @@ export function parseFlexibleDate(val: string, formatStr: string): Date | null {
   const mIdx = lowerFormat.indexOf('m')
   const yIdx = lowerFormat.indexOf('y')
 
-  const parts = cleanVal.split(/[^0-9]+/)
+  const parts = cleanVal.split(/[^0-9]+/).filter(Boolean)
   if (parts.length === 3) {
     let day = 0, month = 0, year = 0
 

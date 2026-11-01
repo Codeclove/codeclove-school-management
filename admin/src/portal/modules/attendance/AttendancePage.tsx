@@ -96,7 +96,8 @@ export const AttendancePage: React.FC = () => {
     const month = parseInt(parts[1] ?? '1', 10) - 1
 
     const jsDay = new Date(year, month, 1).getDay() // 0 = Sun
-    const firstDayIndex = weekStartDay === 0 ? jsDay : (jsDay + 6) % 7
+    const startDay = ((weekStartDay % 7) + 7) % 7
+    const firstDayIndex = (jsDay - startDay + 7) % 7
     const totalDaysInMonth = new Date(year, month + 1, 0).getDate()
     const recordsMap = new Map<number, AttendanceRecord>()
     for (const rec of records) {
@@ -152,25 +153,19 @@ export const AttendancePage: React.FC = () => {
     ],
     []
   )
-  const weekHeaders = weekStartDay === 0
-    ? [
-        __( 'Sun', 'codeclove-school-management' ),
-        __( 'Mon', 'codeclove-school-management' ),
-        __( 'Tue', 'codeclove-school-management' ),
-        __( 'Wed', 'codeclove-school-management' ),
-        __( 'Thu', 'codeclove-school-management' ),
-        __( 'Fri', 'codeclove-school-management' ),
-        __( 'Sat', 'codeclove-school-management' ),
-      ]
-    : [
-        __( 'Mon', 'codeclove-school-management' ),
-        __( 'Tue', 'codeclove-school-management' ),
-        __( 'Wed', 'codeclove-school-management' ),
-        __( 'Thu', 'codeclove-school-management' ),
-        __( 'Fri', 'codeclove-school-management' ),
-        __( 'Sat', 'codeclove-school-management' ),
-        __( 'Sun', 'codeclove-school-management' ),
-      ]
+  const baseDayHeaders = [
+    __( 'Sun', 'codeclove-school-management' ),
+    __( 'Mon', 'codeclove-school-management' ),
+    __( 'Tue', 'codeclove-school-management' ),
+    __( 'Wed', 'codeclove-school-management' ),
+    __( 'Thu', 'codeclove-school-management' ),
+    __( 'Fri', 'codeclove-school-management' ),
+    __( 'Sat', 'codeclove-school-management' ),
+  ]
+  const weekHeaders = useMemo(() => {
+    const start = ((weekStartDay % 7) + 7) % 7
+    return Array.from({ length: 7 }, (_, i) => baseDayHeaders[(i + start) % 7])
+  }, [weekStartDay])
 
   return (
     <div className="space-y-6">
@@ -187,7 +182,7 @@ export const AttendancePage: React.FC = () => {
               className="h-7 w-7 p-0 rounded-lg hover:bg-hover-bg"
               aria-label={__( 'Previous month', 'codeclove-school-management' )}
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
             </Button>
             <span className="min-w-[130px] text-center text-xs font-semibold text-text">
               {monthDisplayTitle}
@@ -199,7 +194,7 @@ export const AttendancePage: React.FC = () => {
               className="h-7 w-7 p-0 rounded-lg hover:bg-hover-bg"
               aria-label={__( 'Next month', 'codeclove-school-management' )}
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4 rtl:rotate-180" />
             </Button>
           </div>
         }

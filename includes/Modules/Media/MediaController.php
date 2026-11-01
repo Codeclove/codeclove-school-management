@@ -52,6 +52,9 @@ final class MediaController extends BaseController {
 						return $this->can( 'students.edit', $request )
 							|| $this->can( 'students.add', $request )
 							|| $this->can( 'admissions.edit', $request )
+							|| $this->can( 'admissions.add', $request )
+							|| $this->can( 'admission_documents.edit', $request )
+							|| $this->can( 'staff_applications.edit', $request )
 							|| $this->can( 'settings.edit', $request )
 							|| $this->can( 'staff.edit', $request )
 							|| $this->can( 'staff.add', $request );
@@ -69,9 +72,14 @@ final class MediaController extends BaseController {
 					'callback'            => [ $this, 'view_document' ],
 					'permission_callback' => [ $this, 'check_document_permission' ],
 					'args'                => [
-						'id' => [
+						'id'       => [
 							'required'          => true,
 							'validate_callback' => static fn( $val ) => is_numeric( $val ) && (int) $val > 0,
+						],
+						'download' => [
+							'required'          => false,
+							'validate_callback' => static fn( $val ) => is_bool( $val ) || in_array( (string) $val, [ '1', '0', 'true', 'false' ], true ),
+							'sanitize_callback' => static fn( $val ) => filter_var( $val, FILTER_VALIDATE_BOOLEAN ),
 						],
 					],
 				],
@@ -111,6 +119,9 @@ final class MediaController extends BaseController {
 				|| codeclove_user_can( $user_id, 'staff.edit' )
 				|| codeclove_user_can( $user_id, 'staff.add' )
 				|| codeclove_user_can( $user_id, 'admissions.edit' )
+				|| codeclove_user_can( $user_id, 'admissions.add' )
+				|| codeclove_user_can( $user_id, 'admission_documents.edit' )
+				|| codeclove_user_can( $user_id, 'staff_applications.edit' )
 				|| codeclove_user_can( $user_id, 'settings.edit' )
 			) );
 
@@ -276,7 +287,8 @@ final class MediaController extends BaseController {
 	 */
 	public function view_document( WP_REST_Request $request ) {
 		$attachment_id = (int) $request->get_param( 'id' );
-		return DocumentService::stream( $attachment_id );
+		$download      = (bool) $request->get_param( 'download' );
+		return DocumentService::stream( $attachment_id, $download );
 	}
 
 	/**

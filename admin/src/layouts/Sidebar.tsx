@@ -16,26 +16,31 @@ import {
   LifeBuoy,
   LayoutDashboard,
   GraduationCap,
-  CalendarDays,
-  Award,
-  BookOpen,
+  CalendarRange,
+  School,
   BookMarked,
   Layers,
-  Clock,
+  CalendarClock,
+  ScrollText,
+  FileCheck,
   Users,
-  ClipboardList,
+  Contact,
+  UserPlus,
   CalendarCheck,
+  TrendingUp,
   UserCog,
   Briefcase,
+  UserSearch,
+  Clock3,
   ShieldCheck,
   Wallet,
+  BarChart3,
   BadgeDollarSign,
-  FileText,
+  Receipt,
   CreditCard,
+  ClockAlert,
   Settings,
   ChevronDown,
-  AlertTriangle,
-  RefreshCw,
   Megaphone,
   Sparkles,
   PanelLeftClose,
@@ -48,6 +53,7 @@ import { cn } from '@/lib/utils'
 import { ROUTES, PERMISSIONS } from '@/lib/constants'
 import { useLabels } from '@/lib/labels'
 import { usePermissions, type PermissionKey } from '@/lib/permissions'
+import { useSettings } from '@/api/settings'
 import { Tooltip, Dropdown, DropdownItem, DropdownLabel, DropdownSeparator } from '@/components/ui'
 import { __ } from '@/lib/i18n'
 import { isRtl } from '@/lib/rtl'
@@ -127,56 +133,69 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
   const helpLabel = isPaid ? __( 'Help & Feedback', 'codeclove-school-management' ) : __( 'Help & Support', 'codeclove-school-management' )
 
   // Navigation groups and items matching docs/NAVIGATION.md
+  // Calm UI iconography: distinct metaphors, zero collisions, non-alarmist indicators
   const rawNavGroups: NavGroup[] = [
     {
       id: 'academics', label: __( 'Academics', 'codeclove-school-management' ), icon: GraduationCap,
       items: [
-        { label: getLabel('academic_session', true, __( 'Sessions', 'codeclove-school-management' )),             to: ROUTES.SESSIONS,  icon: CalendarDays, permission: PERMISSIONS.SESSIONS_VIEW },
-        { label: getLabel('academic_unit',  true, __( 'Classes', 'codeclove-school-management' )),                to: ROUTES.UNITS,     icon: BookOpen,     permission: PERMISSIONS.UNITS_VIEW },
-        { label: getLabel('academic_group', true, __( 'Sections', 'codeclove-school-management' )),               to: ROUTES.GROUPS,    icon: Layers,        permission: PERMISSIONS.GROUPS_VIEW },
-        { label: getLabel('subject',        true, __( 'Subjects', 'codeclove-school-management' )),               to: ROUTES.SUBJECTS,  icon: BookMarked,    permission: PERMISSIONS.SUBJECTS_VIEW },
-        {
-          label: __( 'Timetable', 'codeclove-school-management' ),
-          to: ROUTES.TIMETABLE,
-          icon: Clock,
-          permission: PERMISSIONS.TIMETABLE_VIEW,
-          pro: true,
-        },
-        {
-          label: __( 'Certificates', 'codeclove-school-management' ),
-          to: ROUTES.CERTIFICATES,
-          icon: Award,
-          permission: PERMISSIONS.SESSIONS_VIEW,
-          pro: true,
-        },
+        { label: getLabel('academic_session', true, __( 'Sessions', 'codeclove-school-management' )),             to: ROUTES.SESSIONS,  icon: CalendarRange,  permission: PERMISSIONS.SESSIONS_VIEW },
+        { label: getLabel('academic_unit',  true, __( 'Classes', 'codeclove-school-management' )),                to: ROUTES.UNITS,     icon: School,         permission: PERMISSIONS.UNITS_VIEW },
+        { label: getLabel('academic_group', true, __( 'Sections', 'codeclove-school-management' )),               to: ROUTES.GROUPS,    icon: Layers,         permission: PERMISSIONS.GROUPS_VIEW },
+        { label: getLabel('subject',        true, __( 'Subjects', 'codeclove-school-management' )),               to: ROUTES.SUBJECTS,  icon: BookMarked,     permission: PERMISSIONS.SUBJECTS_VIEW },
+        ...(isPro ? [
+          {
+            label: __( 'Timetable', 'codeclove-school-management' ),
+            to: ROUTES.TIMETABLE,
+            icon: CalendarClock,
+            permission: PERMISSIONS.TIMETABLE_VIEW,
+            pro: true,
+          },
+          {
+            label: __( 'Certificates', 'codeclove-school-management' ),
+            to: ROUTES.CERTIFICATES,
+            icon: ScrollText,
+            permission: PERMISSIONS.SESSIONS_VIEW,
+            pro: true,
+          },
+        ] : []),
       ],
     },
     {
       id: 'students', label: getLabel('student', true, __( 'Students', 'codeclove-school-management' )), icon: Users,
       items: [
-        { label: `${getLabel('student', false, __( 'Student', 'codeclove-school-management' ))} ${__( 'Directory', 'codeclove-school-management' )}`,          to: ROUTES.STUDENT_DIRECTORY, icon: Users, permission: PERMISSIONS.STUDENTS_VIEW, end: true },
-        { label: __( 'Admissions', 'codeclove-school-management' ),                                                   to: ROUTES.ADMISSIONS,        icon: ClipboardList,  permission: PERMISSIONS.ADMISSIONS_VIEW },
-        { label: __( 'Student Attendance', 'codeclove-school-management' ),                                          to: ROUTES.ATTENDANCE,        icon: CalendarCheck,  permission: PERMISSIONS.ATTENDANCE_VIEW },
-        { label: __( 'Promotion & Rollover', 'codeclove-school-management' ),                                        to: ROUTES.PROMOTION_ROLLOVER, icon: RefreshCw,     permission: PERMISSIONS.STUDENTS_PROMOTE, pro: true },
+        { label: `${getLabel('student', false, __( 'Student', 'codeclove-school-management' ))} ${__( 'Directory', 'codeclove-school-management' )}`,          to: ROUTES.STUDENT_DIRECTORY, icon: Contact,       permission: PERMISSIONS.STUDENTS_VIEW, end: true },
+        { label: __( 'Admissions', 'codeclove-school-management' ),                                                   to: ROUTES.ADMISSIONS,        icon: UserPlus,      permission: PERMISSIONS.ADMISSIONS_VIEW },
+        { label: __( 'Student Attendance', 'codeclove-school-management' ),                                          to: ROUTES.ATTENDANCE,        icon: CalendarCheck, permission: PERMISSIONS.ATTENDANCE_VIEW },
+        { label: __( 'Promotion & Rollover', 'codeclove-school-management' ),                                        to: ROUTES.PROMOTION_ROLLOVER, icon: TrendingUp,    permission: PERMISSIONS.STUDENTS_PROMOTE, pro: true },
       ],
     },
     {
       id: 'staff', label: getLabel('staff_member', true, __( 'Staff & HR', 'codeclove-school-management' )), icon: UserCog,
       items: [
         { label: `${getLabel('staff_member', false, __( 'Staff', 'codeclove-school-management' ))} ${__( 'Directory', 'codeclove-school-management' )}`,      to: ROUTES.STAFF_DIRECTORY,    icon: Briefcase,   permission: PERMISSIONS.STAFF_VIEW, end: true },
-        { label: __( 'Staff Applications', 'codeclove-school-management' ),                                         to: ROUTES.STAFF_APPLICATIONS, icon: ClipboardList, permission: PERMISSIONS.STAFF_APPS_VIEW },
-        { label: __( 'Staff Attendance', 'codeclove-school-management' ),                                           to: '/staff/attendance',       icon: CalendarCheck, permission: PERMISSIONS.STAFF_ATTENDANCE_VIEW },
-        { label: __( 'Roles & Permissions', 'codeclove-school-management' ),  to: ROUTES.ROLES_PERMISSIONS,  icon: ShieldCheck,         permission: PERMISSIONS.ROLES_MANAGE },
+        { label: __( 'Staff Applications', 'codeclove-school-management' ),                                         to: ROUTES.STAFF_APPLICATIONS, icon: UserSearch,  permission: PERMISSIONS.STAFF_APPS_VIEW },
+        { label: __( 'Staff Attendance', 'codeclove-school-management' ),                                           to: '/staff/attendance',       icon: Clock3,      permission: PERMISSIONS.STAFF_ATTENDANCE_VIEW },
+        { label: __( 'Roles & Permissions', 'codeclove-school-management' ),  to: ROUTES.ROLES_PERMISSIONS,  icon: ShieldCheck, permission: PERMISSIONS.ROLES_MANAGE },
       ],
     },
+    ...(isPro ? [
+      {
+        id: 'examinations', label: __( 'Examinations', 'codeclove-school-management' ), icon: FileCheck,
+        items: [
+          { label: __( 'Examinations', 'codeclove-school-management' ), to: ROUTES.EXAMS, icon: FileCheck, permission: PERMISSIONS.EXAMS_VIEW, end: true, pro: true },
+        ],
+      },
+    ] : []),
     {
       id: 'finance', label: __( 'Finance', 'codeclove-school-management' ), icon: Wallet,
       items: [
-        { label: __( 'Overview', 'codeclove-school-management' ),                                      to: ROUTES.FINANCE_DASHBOARD, icon: Wallet,          permission: PERMISSIONS.FINANCE_VIEW, end: true, pro: true },
+        { label: __( 'Overview', 'codeclove-school-management' ),                                      to: ROUTES.FINANCE_DASHBOARD, icon: BarChart3,        permission: PERMISSIONS.FINANCE_VIEW, end: true, pro: true },
         { label: getLabel('fee_type', true, __( 'Fee Types', 'codeclove-school-management' )),         to: ROUTES.FEE_TYPES,         icon: BadgeDollarSign, permission: PERMISSIONS.FEE_TYPES_VIEW },
-        { label: getLabel('invoice',  true, __( 'Invoices', 'codeclove-school-management' )),          to: ROUTES.INVOICES,          icon: FileText,        permission: PERMISSIONS.INVOICES_VIEW },
+        { label: getLabel('invoice',  true, __( 'Invoices', 'codeclove-school-management' )),          to: ROUTES.INVOICES,          icon: Receipt,         permission: PERMISSIONS.INVOICES_VIEW },
         { label: getLabel('payment',  true, __( 'Payments', 'codeclove-school-management' )),          to: ROUTES.PAYMENTS,          icon: CreditCard,      permission: PERMISSIONS.PAYMENTS_VIEW },
-        { label: __( 'Defaulters', 'codeclove-school-management' ), to: ROUTES.DEFAULTERS_REPORT, icon: AlertTriangle, permission: PERMISSIONS.FINANCE_VIEW, pro: true },
+        ...(isPro ? [
+          { label: __( 'Defaulters', 'codeclove-school-management' ), to: ROUTES.DEFAULTERS_REPORT, icon: ClockAlert, permission: PERMISSIONS.FINANCE_VIEW, pro: true },
+        ] : []),
       ],
     },
   ]
@@ -271,7 +290,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
                       )
                     }
                   >
-                    <Sparkles size={16} className="text-amber-500" />
+                    <Sparkles size={16} strokeWidth={1.75} className="text-amber-500" />
                   </NavLink>
                 </div>
               </Tooltip>
@@ -288,7 +307,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
                 }
               >
                 <div className="w-6 h-6 rounded-md bg-amber-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <Sparkles size={14} className="text-amber-600 dark:text-amber-400 fill-amber-500/20" />
+                  <Sparkles size={14} strokeWidth={1.75} className="text-amber-600 dark:text-amber-400 fill-amber-500/20" />
                 </div>
                 <span className="truncate leading-tight font-medium">
                   {__( 'Upgrade to Pro', 'codeclove-school-management' )}
@@ -310,7 +329,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
                     className="w-9 h-9 mx-auto flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-hover-bg transition-colors duration-150 cursor-pointer"
                     aria-label={helpLabel}
                   >
-                    <LifeBuoy size={16} className="text-text-subtle hover:text-text" />
+                    <LifeBuoy size={16} strokeWidth={1.75} className="text-text-subtle hover:text-text" />
                   </button>
                 </div>
               </Tooltip>
@@ -320,7 +339,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
                 onClick={() => openFeedback()}
                 className="w-full flex items-center rounded-md px-2.5 py-1.5 gap-2.5 text-sm text-text-muted hover:text-text hover:bg-hover-bg transition-colors duration-150 group cursor-pointer"
               >
-                <LifeBuoy size={16} className="flex-shrink-0 text-text-subtle group-hover:text-text transition-colors" />
+                <LifeBuoy size={16} strokeWidth={1.75} className="flex-shrink-0 text-text-subtle group-hover:text-text transition-colors" />
                 <span className="text-sm leading-snug sidebar-link-text truncate min-w-0">
                   {helpLabel}
                 </span>
@@ -346,7 +365,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
                   className="w-9 h-9 mx-auto flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-hover-bg transition-colors duration-150"
                   aria-label={__( 'WordPress Admin', 'codeclove-school-management' )}
                 >
-                  <ExternalLink size={16} className="text-text-subtle hover:text-text" />
+                  <ExternalLink size={16} strokeWidth={1.75} className="text-text-subtle hover:text-text" />
                 </a>
               </Tooltip>
 
@@ -360,7 +379,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
                   className="hidden md:flex w-9 h-9 mx-auto items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-hover-bg transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
                   aria-label={`${__( 'Expand Sidebar', 'codeclove-school-management' )} (${shortcutLabel})`}
                 >
-                  <PanelLeftOpen size={16} className="rtl:-scale-x-100 flex-shrink-0 text-text-subtle hover:text-text" />
+                  <PanelLeftOpen size={16} strokeWidth={1.75} className="rtl:-scale-x-100 flex-shrink-0 text-text-subtle hover:text-text" />
                 </button>
               </Tooltip>
             </>
@@ -372,7 +391,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium text-text-muted hover:text-text hover:bg-hover-bg transition-colors duration-150 min-w-0 flex-1 group"
                 title={__( 'WordPress Admin', 'codeclove-school-management' )}
               >
-                <ExternalLink size={14} className="flex-shrink-0 text-text-subtle group-hover:text-text transition-colors" />
+                <ExternalLink size={14} strokeWidth={1.75} className="flex-shrink-0 text-text-subtle group-hover:text-text transition-colors" />
                 <span className="truncate sidebar-link-text">{__( 'WP Admin', 'codeclove-school-management' )}</span>
               </a>
 
@@ -388,6 +407,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
                 >
                   <PanelLeftClose
                     size={14}
+                    strokeWidth={1.75}
                     className="flex-shrink-0 text-text-subtle group-hover:text-text transition-colors rtl:-scale-x-100"
                   />
                   <span className="text-xs sidebar-link-text">{__( 'Collapse', 'codeclove-school-management' )}</span>
@@ -412,28 +432,73 @@ interface SidebarBrandProps {
 }
 
 function SidebarBrand({ collapsed, onCloseMobile }: SidebarBrandProps) {
+  const { data: settings } = useSettings()
+  const [failedLogo, setFailedLogo] = useState<string | null>(null)
+
+  const rawSchoolName = settings?.school?.name || window.CodeCloveConfig?.school?.name || 'CodeClove'
+  const isCustomBrand = Boolean(settings?.school?.name || window.CodeCloveConfig?.school?.name)
+  const rawLogo = settings?.school?.logo || window.CodeCloveConfig?.school?.logo
+  const schoolLogo = rawLogo && failedLogo !== rawLogo ? rawLogo : null
+
+  // Deduplicate accidental repeated adjacent words (e.g. "academy Academy" -> "Academy")
+  const schoolName = rawSchoolName.replace(/\b(\w+)\s+\1\b/gi, '$1').trim()
+  const nameLen = schoolName.length
+
   return (
     <div className={cn(
-      "flex items-center h-[52px] border-b border-border flex-shrink-0 sidebar-brand transition-all duration-200",
-      collapsed ? "justify-center px-2" : "px-3 justify-between"
+      "flex items-center min-h-[52px] border-b border-border flex-shrink-0 sidebar-brand transition-all duration-200",
+      collapsed ? "justify-center px-2 py-2" : "px-3 py-2 justify-between"
     )}>
       <NavLink
         to={ROUTES.DASHBOARD}
         className={cn(
-          "flex items-center gap-2.5 min-w-0 rounded-md py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring group",
+          "flex items-center gap-2.5 min-w-0 rounded-md py-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring group",
           collapsed ? "justify-center" : "flex-1"
         )}
-        title={collapsed ? `${__( 'CodeClove', 'codeclove-school-management' )} — ${__( 'Dashboard', 'codeclove-school-management' )}` : undefined}
+        title={collapsed ? `${schoolName} — ${__( 'Dashboard', 'codeclove-school-management' )}` : schoolName}
       >
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand to-brand-strong flex items-center justify-center flex-shrink-0 shadow-xs transition-transform duration-150 group-hover:scale-105">
-          <svg viewBox="0 0 20 20" fill="none" className="w-4 h-4">
-            <path d="M3 4h14M3 10h10M3 16h6" stroke="white" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </div>
+        {schoolLogo ? (
+          <div className="w-8 h-8 rounded-lg bg-bg-surface dark:bg-bg-elevated border border-border/80 flex items-center justify-center flex-shrink-0 shadow-2xs overflow-hidden transition-transform duration-150 group-hover:scale-105 p-0.5">
+            <img
+              src={schoolLogo}
+              alt={schoolName}
+              onError={() => setFailedLogo(rawLogo || null)}
+              className="w-full h-full object-contain"
+            />
+          </div>
+        ) : (
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-brand-strong flex items-center justify-center flex-shrink-0 shadow-xs transition-transform duration-150 group-hover:scale-105 text-white">
+            <svg viewBox="0 0 20 20" fill="none" className="w-4 h-4">
+              <path d="M3 4h14M3 10h10M3 16h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+        )}
         {!collapsed && (
-          <div className="min-w-0 sidebar-brand-text animate-fade-in whitespace-nowrap">
-            <p className="text-sm font-bold text-text leading-tight group-hover:text-brand transition-colors">CodeClove</p>
-            <p className="text-xs text-text-muted leading-tight mt-0.5">{__( 'School Management', 'codeclove-school-management' )}</p>
+          <div className="min-w-0 sidebar-brand-text animate-fade-in flex-1 overflow-hidden pr-1">
+            {isCustomBrand ? (
+              <p
+                className={cn(
+                  'text-text group-hover:text-brand transition-colors break-words [text-wrap:balance]',
+                  nameLen > 36
+                    ? 'text-[11px] leading-[1.25] font-semibold'
+                    : nameLen > 20
+                    ? 'text-xs leading-[1.3] font-semibold'
+                    : 'text-sm leading-tight font-bold'
+                )}
+                title={schoolName}
+              >
+                {schoolName}
+              </p>
+            ) : (
+              <>
+                <p className="text-sm font-bold text-text leading-tight group-hover:text-brand transition-colors truncate">
+                  CodeClove
+                </p>
+                <p className="text-xs text-text-muted leading-tight mt-0.5 truncate">
+                  {__( 'School Management', 'codeclove-school-management' )}
+                </p>
+              </>
+            )}
           </div>
         )}
       </NavLink>
@@ -443,10 +508,10 @@ function SidebarBrand({ collapsed, onCloseMobile }: SidebarBrandProps) {
         <button
           type="button"
           onClick={onCloseMobile}
-          className="flex md:hidden items-center justify-center w-7 h-7 rounded-md text-text-subtle hover:text-text hover:bg-hover-bg transition-colors"
+          className="flex md:hidden items-center justify-center w-7 h-7 rounded-md text-text-subtle hover:text-text hover:bg-hover-bg transition-colors shrink-0"
           aria-label={__( 'Close menu', 'codeclove-school-management' )}
         >
-          <X size={16} />
+          <X size={16} strokeWidth={1.75} />
         </button>
       )}
     </div>
@@ -463,10 +528,24 @@ interface SidebarGroupProps {
 function SidebarGroup({ group, isCollapsed, onToggle, sidebarCollapsed = false }: SidebarGroupProps) {
   const location = useLocation()
   const navigate = useNavigate()
+
+  const single = group.items[0]
+  if (group.items.length === 1 && single && !single.pro) {
+    return (
+      <SidebarLink
+        to={single.to}
+        icon={group.icon || single.icon}
+        label={group.label}
+        end={single.end}
+        proBadge={single.proBadge}
+        sidebarCollapsed={sidebarCollapsed}
+      />
+    )
+  }
+
   const isAnyChildActive = group.items.some((item) =>
     location.hash.includes(item.to) || location.pathname.includes(item.to)
   )
-
   if (sidebarCollapsed) {
     return (
       <Dropdown
@@ -482,6 +561,7 @@ function SidebarGroup({ group, isCollapsed, onToggle, sidebarCollapsed = false }
           >
             <group.icon
               size={16}
+              strokeWidth={1.75}
               className={isAnyChildActive ? 'text-brand' : 'text-text-subtle'}
             />
           </button>
@@ -520,6 +600,7 @@ function SidebarGroup({ group, isCollapsed, onToggle, sidebarCollapsed = false }
       >
         <group.icon
           size={16}
+          strokeWidth={1.75}
           className={cn('flex-shrink-0 transition-colors', isAnyChildActive ? 'text-brand' : 'text-text-subtle')}
         />
         <span className="flex-1 text-start sidebar-group-title truncate min-w-0 font-medium">
@@ -527,6 +608,7 @@ function SidebarGroup({ group, isCollapsed, onToggle, sidebarCollapsed = false }
         </span>
         <ChevronDown
           size={14}
+          strokeWidth={1.75}
           className={cn(
             'text-text-subtle transition-transform duration-200 sidebar-group-chevron flex-shrink-0',
             !open && '-rotate-90 rtl:rotate-90'
@@ -591,7 +673,8 @@ function SidebarLink({
       {({ isActive }) => (
         <>
           <Icon
-            size={16}
+            size={isChild ? 15 : 16}
+            strokeWidth={1.75}
             className={cn('flex-shrink-0 transition-colors', isActive ? 'text-brand' : 'text-text-subtle')}
           />
           {!sidebarCollapsed && (

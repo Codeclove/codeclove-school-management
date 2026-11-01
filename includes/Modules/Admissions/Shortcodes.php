@@ -264,16 +264,16 @@ final class Shortcodes {
 				<div class="codeclove-section-title"><?php esc_html_e( 'Parent & Contact Details', 'codeclove-school-management' ); ?></div>
 				<div class="codeclove-form-grid">
 					<div class="codeclove-field full">
-						<label for="<?php echo esc_attr( $form_id ); ?>_parent_name"><?php echo esc_html( $is_inquiry ? __( 'Parent / Guardian Full Name', 'codeclove-school-management' ) : __( 'Father Full Name', 'codeclove-school-management' ) ); ?> <span class="req">*</span></label>
-						<input type="text" id="<?php echo esc_attr( $form_id ); ?>_parent_name" name="father_name" required placeholder="<?php esc_attr_e( 'Full name', 'codeclove-school-management' ); ?>">
+						<label for="<?php echo esc_attr( $form_id ); ?>_parent_name"><?php echo esc_html( $is_inquiry ? __( 'Parent / Guardian Full Name', 'codeclove-school-management' ) : __( 'Father Full Name', 'codeclove-school-management' ) ); ?><?php if ( $is_inquiry ) : ?> <span class="req">*</span><?php endif; ?></label>
+						<input type="text" id="<?php echo esc_attr( $form_id ); ?>_parent_name" name="father_name" <?php echo $is_inquiry ? 'required' : ''; ?> placeholder="<?php esc_attr_e( 'Full name', 'codeclove-school-management' ); ?>">
 					</div>
 					<div class="codeclove-field">
-						<label for="<?php echo esc_attr( $form_id ); ?>_parent_phone"><?php esc_html_e( 'Mobile Phone', 'codeclove-school-management' ); ?> <span class="req">*</span></label>
-						<input type="tel" id="<?php echo esc_attr( $form_id ); ?>_parent_phone" name="father_phone" required placeholder="+1 (555) 000-0000">
+						<label for="<?php echo esc_attr( $form_id ); ?>_parent_phone"><?php echo esc_html( $is_inquiry ? __( 'Mobile Phone', 'codeclove-school-management' ) : __( 'Father Mobile Phone', 'codeclove-school-management' ) ); ?><?php if ( $is_inquiry ) : ?> <span class="req">*</span><?php endif; ?></label>
+						<input type="tel" id="<?php echo esc_attr( $form_id ); ?>_parent_phone" name="father_phone" <?php echo $is_inquiry ? 'required' : ''; ?> placeholder="+1 (555) 000-0000">
 					</div>
 					<div class="codeclove-field">
-						<label for="<?php echo esc_attr( $form_id ); ?>_parent_email"><?php esc_html_e( 'Email Address', 'codeclove-school-management' ); ?> <span class="req">*</span></label>
-						<input type="email" id="<?php echo esc_attr( $form_id ); ?>_parent_email" name="father_email" required placeholder="parent@example.com">
+						<label for="<?php echo esc_attr( $form_id ); ?>_parent_email"><?php echo esc_html( $is_inquiry ? __( 'Email Address', 'codeclove-school-management' ) : __( 'Father Email Address', 'codeclove-school-management' ) ); ?><?php if ( $is_inquiry ) : ?> <span class="req">*</span><?php endif; ?></label>
+						<input type="email" id="<?php echo esc_attr( $form_id ); ?>_parent_email" name="father_email" <?php echo $is_inquiry ? 'required' : ''; ?> placeholder="<?php echo $is_inquiry ? 'parent@example.com' : 'father@example.com'; ?>">
 					</div>
 					<?php if ( ! $is_inquiry ) : ?>
 						<div class="codeclove-field">
@@ -291,6 +291,22 @@ final class Shortcodes {
 						<div class="codeclove-field">
 							<label for="<?php echo esc_attr( $form_id ); ?>_mother_email"><?php esc_html_e( 'Mother Email Address', 'codeclove-school-management' ); ?></label>
 							<input type="email" id="<?php echo esc_attr( $form_id ); ?>_mother_email" name="mother_email" placeholder="mother@example.com">
+						</div>
+						<div class="codeclove-field">
+							<label for="<?php echo esc_attr( $form_id ); ?>_guardian_name"><?php esc_html_e( 'Legal Guardian Full Name', 'codeclove-school-management' ); ?></label>
+							<input type="text" id="<?php echo esc_attr( $form_id ); ?>_guardian_name" name="guardian_other_name" placeholder="<?php esc_attr_e( 'Legal Guardian name', 'codeclove-school-management' ); ?>">
+						</div>
+						<div class="codeclove-field">
+							<label for="<?php echo esc_attr( $form_id ); ?>_guardian_rel"><?php esc_html_e( 'Guardian Relationship', 'codeclove-school-management' ); ?></label>
+							<input type="text" id="<?php echo esc_attr( $form_id ); ?>_guardian_rel" name="guardian_other_relationship" placeholder="<?php esc_attr_e( 'e.g. Legal Guardian, Aunt, Grandparent', 'codeclove-school-management' ); ?>">
+						</div>
+						<div class="codeclove-field">
+							<label for="<?php echo esc_attr( $form_id ); ?>_guardian_phone"><?php esc_html_e( 'Guardian Mobile Number', 'codeclove-school-management' ); ?></label>
+							<input type="tel" id="<?php echo esc_attr( $form_id ); ?>_guardian_phone" name="guardian_other_phone" placeholder="+1 (555) 000-0000">
+						</div>
+						<div class="codeclove-field">
+							<label for="<?php echo esc_attr( $form_id ); ?>_guardian_email"><?php esc_html_e( 'Guardian Email Address', 'codeclove-school-management' ); ?></label>
+							<input type="email" id="<?php echo esc_attr( $form_id ); ?>_guardian_email" name="guardian_other_email" placeholder="guardian@example.com">
 						</div>
 					<?php endif; ?>
 				</div>
@@ -323,9 +339,10 @@ final class Shortcodes {
 			<?php
 			$success_msg  = '<strong>' . ( $is_inquiry ? __( 'Inquiry Sent!', 'codeclove-school-management' ) : __( 'Application Received!', 'codeclove-school-management' ) ) . '</strong> ' . __( 'Your reference number is', 'codeclove-school-management' ) . ' <strong>{ref}</strong>.';
 			$i18n_strings = [
-				'submitting'   => __( 'Submitting...', 'codeclove-school-management' ),
-				'failed'       => __( 'Submission failed. Please verify required fields.', 'codeclove-school-management' ),
-				'networkError' => __( 'Network error occurred. Please try again.', 'codeclove-school-management' ),
+				'submitting'     => __( 'Submitting...', 'codeclove-school-management' ),
+				'failed'         => __( 'Submission failed. Please verify required fields.', 'codeclove-school-management' ),
+				'parentRequired' => __( 'Please provide contact information for at least one parent or guardian (Father, Mother, or Guardian).', 'codeclove-school-management' ),
+				'networkError'   => __( 'Network error occurred. Please try again.', 'codeclove-school-management' ),
 			];
 			wp_add_inline_script(
 				'codeclove-public-admissions',

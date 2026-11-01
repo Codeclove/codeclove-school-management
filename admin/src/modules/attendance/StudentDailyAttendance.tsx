@@ -31,12 +31,16 @@ export default function StudentDailyAttendance() {
   const [date, setDate] = useState<string>(() => new Date().toISOString().split('T')[0] || '')
   const [searchQuery, setSearchQuery] = useState<string>('')
 
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0] || '', [])
+  const todayDate = useMemo(() => new Date(), [])
+  const isFutureDate = Boolean(date && date > todayStr)
+  const isNextDayDisabled = Boolean(date && date >= todayStr)
   // Local Attendance Register state (for daily editing)
   const [localRecords, setLocalRecords] = useState<Record<number, { status: string; note: string }>>({})
 
   // Fetch filter dropdown options
-  const { data: unitResponse } = useUnits({ session_id: Number(sessionId) })
-  const { data: groupResponse } = useGroups({ academic_unit_id: Number(unitId) })
+  const { data: unitResponse } = useUnits({ session_id: Number(sessionId), per_page: 200 })
+  const { data: groupResponse } = useGroups({ academic_unit_id: Number(unitId), per_page: 200 })
 
   const units = unitResponse?.data ?? []
   const groups = groupResponse?.data ?? []
@@ -123,6 +127,10 @@ export default function StudentDailyAttendance() {
   const handleSave = () => {
     if (!sessionId || !unitId || !date) return
 
+    if (date > todayStr) {
+      toast.error(__('Cannot record attendance for future dates.', 'codeclove-school-management'))
+      return
+    }
     const recordsArray = Object.entries(localRecords).map(([studentId, data]) => ({
       student_id: Number(studentId),
       status: data.status,
@@ -168,15 +176,17 @@ export default function StudentDailyAttendance() {
   // Date steppers
   const shiftDate = (days: number) => {
     confirmDiscardIfDirty(() => {
-      const current = date ? new Date(date) : new Date()
-      current.setDate(current.getDate() + days)
-      setDate(current.toISOString().split('T')[0] || '')
+      const d = new Date((date || todayStr) + 'T12:00:00Z')
+      d.setUTCDate(d.getUTCDate() + days)
+      const targetStr = d.toISOString().slice(0, 10)
+      if (days > 0 && targetStr > todayStr) return
+      setDate(targetStr)
     })
   }
 
   const setTodayDate = () => {
     confirmDiscardIfDirty(() => {
-      setDate(new Date().toISOString().split('T')[0] || '')
+      setDate(todayStr)
     })
   }
 
@@ -273,9 +283,16 @@ export default function StudentDailyAttendance() {
               <div className="flex-1 sm:w-36 min-w-0">
                 <DatePicker
                   value={date}
+                  maxDate={todayDate}
                   clearable={false}
                   onChange={(val) => {
-                    if (val) confirmDiscardIfDirty(() => setDate(val))
+                    if (val) {
+                      if (val > todayStr) {
+                        toast.error(__('Cannot select a future date for attendance.', 'codeclove-school-management'))
+                        return
+                      }
+                      confirmDiscardIfDirty(() => setDate(val))
+                    }
                   }}
                   className="h-9 w-full text-xs"
                 />
@@ -284,7 +301,8 @@ export default function StudentDailyAttendance() {
               <button
                 type="button"
                 onClick={() => shiftDate(1)}
-                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-hover-bg text-text-subtle hover:text-text transition-colors shrink-0"
+                disabled={isNextDayDisabled}
+                className="h-9 w-8 flex items-center justify-center rounded-lg border border-border bg-bg-surface hover:bg-hover-bg text-text-subtle hover:text-text transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 title={__('Next Day', 'codeclove-school-management')}
                 aria-label={__('Next Day', 'codeclove-school-management')}
               >
@@ -426,10 +444,11 @@ export default function StudentDailyAttendance() {
                       variant="default"
                       size="sm"
                       onClick={handleSave}
-                      disabled={saveMutation.isPending}
+                      disabled={saveMutation.isPending || isFutureDate}
                       className={`h-8 flex-1 sm:flex-initial gap-1.5 px-4 text-xs font-semibold transition-all ${
                         isDirty ? 'ring-2 ring-brand ring-offset-1 shadow-sm' : ''
                       }`}
+                      title={isFutureDate ? __('Cannot record attendance for future dates.', 'codeclove-school-management') : undefined}
                     >
                       <Save size={13} />
                       <span>
@@ -586,7 +605,7 @@ export default function StudentDailyAttendance() {
             variant="default"
             size="sm"
             onClick={handleSave}
-            disabled={saveMutation.isPending}
+            disabled={saveMutation.isPending || isFutureDate}
             className="h-9 px-4 text-xs font-bold gap-1.5 shadow-sm rounded-xl shrink-0"
           >
             <Save size={13} />

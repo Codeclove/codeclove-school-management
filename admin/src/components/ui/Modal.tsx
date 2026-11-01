@@ -26,6 +26,7 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'
   className?: string
   hideHeader?: boolean
+  hideCloseButton?: boolean
   noHeaderBorder?: boolean
   container?: HTMLElement | null
   initialFocusRef?: React.RefObject<HTMLElement | null>
@@ -49,6 +50,7 @@ export function Modal({
   size = 'md',
   className,
   hideHeader = false,
+  hideCloseButton = false,
   noHeaderBorder = false,
   container,
   initialFocusRef,
@@ -175,9 +177,16 @@ export function Modal({
         >
           {/* Accessibility Title if header is hidden */}
           {hideHeader && (
-            <DialogPrimitive.Title className="sr-only">
-              {title}
-            </DialogPrimitive.Title>
+            <>
+              <DialogPrimitive.Title className="sr-only">
+                {title}
+              </DialogPrimitive.Title>
+              {description && (
+                <DialogPrimitive.Description className="sr-only">
+                  {description}
+                </DialogPrimitive.Description>
+              )}
+            </>
           )}
 
           {/* Header */}
@@ -196,15 +205,17 @@ export function Modal({
                   </DialogPrimitive.Description>
                 )}
               </div>
-              <DialogPrimitive.Close
-                aria-label={__( 'Close', 'codeclove-school-management' )}
-                className={cn(
-                  'flex-shrink-0 flex items-center justify-center text-text-muted hover:text-text hover:bg-hover-bg rounded-lg p-1.5 transition-colors',
-                  'focus-visible:ring-2 focus-visible:ring-brand-ring'
-                )}
-              >
-                <X size={15} />
-              </DialogPrimitive.Close>
+              {!hideCloseButton && (
+                <DialogPrimitive.Close
+                  aria-label={__( 'Close', 'codeclove-school-management' )}
+                  className={cn(
+                    'flex-shrink-0 flex items-center justify-center text-text-muted hover:text-text hover:bg-hover-bg rounded-lg p-1.5 transition-colors',
+                    'focus-visible:ring-2 focus-visible:ring-brand-ring'
+                  )}
+                >
+                  <X size={15} />
+                </DialogPrimitive.Close>
+              )}
             </div>
           )}
 

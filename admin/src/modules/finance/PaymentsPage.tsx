@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Search,
   RotateCcw,
   Printer,
-  X,
   SlidersHorizontal,
   QrCode,
   Sparkles,
@@ -39,10 +37,8 @@ import {
   Spinner,
   DataTable,
   type DataTableColumn,
-  Card,
+  FilterBar,
   Badge,
-  FormField,
-  Input,
   Select,
   DatePicker,
   StatCard,
@@ -339,9 +335,16 @@ export default function PaymentsPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={paymentLabelPlural}
+        badge={
+          total > 0 ? (
+            <Badge variant="neutral" className="tabular-nums font-mono text-xs font-normal">
+              {sprintf(__('%d total', 'codeclove-school-management'), total)}
+            </Badge>
+          ) : undefined
+        }
         description={__('Journal ledger records of all manual payments and receipts collected for the current session.', 'codeclove-school-management')}
         breadcrumbs={[{ label: __('Finance', 'codeclove-school-management') }, { label: paymentLabelPlural }]}
         actions={
@@ -384,127 +387,6 @@ export default function PaymentsPage() {
           compact={true}
         />
       </div>
-      {/* Filters */}
-      <Card className="p-4">
-        <div className="flex flex-col gap-4">
-          {/* Main Filters */}
-          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3">
-            <div className="flex-1">
-              <FormField label={__('Search Payments', 'codeclove-school-management')}>
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                  <Input
-                    type="text"
-                    placeholder={__('Search receipts, reference numbers, or students...', 'codeclove-school-management')}
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value)
-                      table.resetPage()
-                    }}
-                    className="pl-9"
-                  />
-                </div>
-              </FormField>
-            </div>
-            <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-              <FormField label={__('Payment Method', 'codeclove-school-management')}>
-                <Select
-                  value={method}
-                  onValueChange={(val) => {
-                    setMethod(val)
-                    table.resetPage()
-                  }}
-                  placeholder={__('All Methods', 'codeclove-school-management')}
-                  options={[
-                    { value: '', label: __('All Methods', 'codeclove-school-management') },
-                    { value: 'cash', label: __('Cash', 'codeclove-school-management') },
-                    { value: 'cheque', label: __('Cheque', 'codeclove-school-management') },
-                    { value: 'upi', label: __('UPI / QR Code', 'codeclove-school-management') },
-                    { value: 'bank_transfer', label: __('Bank Transfer', 'codeclove-school-management') },
-                    { value: 'card', label: __('Card', 'codeclove-school-management') },
-                    { value: 'other', label: __('Other', 'codeclove-school-management') },
-                  ]}
-                />
-              </FormField>
-            </div>
-            <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-              <FormField label={__('Status', 'codeclove-school-management')}>
-                <Select
-                  value={status}
-                  onValueChange={(val) => {
-                    setStatus(val)
-                    table.resetPage()
-                  }}
-                  placeholder={__('All Statuses', 'codeclove-school-management')}
-                  options={[
-                    { value: '', label: __('All Statuses', 'codeclove-school-management') },
-                    { value: 'completed', label: __('Completed', 'codeclove-school-management') },
-                    { value: 'cancelled', label: __('Cancelled / Reversed', 'codeclove-school-management') },
-                  ]}
-                />
-              </FormField>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0 h-9">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className={`text-xs gap-1.5 h-9 ${showAdvanced ? 'bg-bg-surface text-brand border border-border' : 'text-text-muted hover:text-text'}`}
-              >
-                <SlidersHorizontal size={12} />
-                {showAdvanced ? __('Hide Dates', 'codeclove-school-management') : __('Date Range', 'codeclove-school-management')}
-              </Button>
-              {(search || method || status || startDate || endDate) && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setSearch('')
-                    setMethod('')
-                    setStatus('')
-                    setStartDate('')
-                    setEndDate('')
-                    table.resetPage()
-                  }}
-                  className="text-xs text-text-muted hover:text-text gap-1"
-                >
-                  <X size={12} />
-                  {__('Clear Filters', 'codeclove-school-management')}
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Date Range Filters */}
-          {showAdvanced && (
-            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3 border-t border-border pt-3 animate-in fade-in duration-200">
-              <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-                <FormField label={__('Start Date', 'codeclove-school-management')}>
-                  <DatePicker
-                    value={startDate}
-                    onChange={(val) => {
-                      setStartDate(val)
-                      table.resetPage()
-                    }}
-                  />
-                </FormField>
-              </div>
-              <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-                <FormField label={__('End Date', 'codeclove-school-management')}>
-                  <DatePicker
-                    value={endDate}
-                    onChange={(val) => {
-                      setEndDate(val)
-                      table.resetPage()
-                    }}
-                  />
-                </FormField>
-              </div>
-
-            </div>
-          )}
-        </div>
-      </Card>
-
       {/* Contextual Pro Gateway Callout for Free Users */}
       {!isPro && (
         <div className="rounded-xl border border-brand/20 bg-gradient-to-r from-brand-dim/50 via-bg-elevated to-brand-dim/20 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
@@ -550,6 +432,102 @@ export default function PaymentsPage() {
         errorMessage={__('Error Loading Payments', 'codeclove-school-management')}
         onRetry={() => refetch()}
         keyExtractor={(row) => row.id}
+        toolbar={
+          <div className="flex flex-col">
+            <FilterBar
+              cardWrapper={false}
+              search={search}
+              onSearchChange={(val) => {
+                setSearch(val)
+                table.resetPage()
+              }}
+              searchPlaceholder={__('Search receipts, reference numbers, or students...', 'codeclove-school-management')}
+              activeFilterCount={(method ? 1 : 0) + (status ? 1 : 0) + (startDate || endDate ? 1 : 0)}
+              onClearAll={() => {
+                setSearch('')
+                setMethod('')
+                setStatus('')
+                setStartDate('')
+                setEndDate('')
+                table.resetPage()
+              }}
+              actions={
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className={`text-xs gap-1.5 h-8 ${showAdvanced ? 'bg-bg-surface text-brand border border-border' : 'text-text-muted hover:text-text'}`}
+                >
+                  <SlidersHorizontal size={12} />
+                  {showAdvanced ? __('Hide Dates', 'codeclove-school-management') : __('Date Range', 'codeclove-school-management')}
+                </Button>
+              }
+            >
+              <div className="w-full sm:w-36 lg:w-44 shrink-0">
+                <Select
+                  aria-label={__('Payment Method', 'codeclove-school-management')}
+                  value={method}
+                  onValueChange={(val) => {
+                    setMethod(val)
+                    table.resetPage()
+                  }}
+                  placeholder={__('All Methods', 'codeclove-school-management')}
+                  options={[
+                    { value: '', label: __('All Methods', 'codeclove-school-management') },
+                    { value: 'cash', label: __('Cash', 'codeclove-school-management') },
+                    { value: 'cheque', label: __('Cheque', 'codeclove-school-management') },
+                    { value: 'upi', label: __('UPI / QR Code', 'codeclove-school-management') },
+                    { value: 'bank_transfer', label: __('Bank Transfer', 'codeclove-school-management') },
+                    { value: 'card', label: __('Card', 'codeclove-school-management') },
+                    { value: 'other', label: __('Other', 'codeclove-school-management') },
+                  ]}
+                />
+              </div>
+
+              <div className="w-full sm:w-36 lg:w-44 shrink-0">
+                <Select
+                  aria-label={__('Status', 'codeclove-school-management')}
+                  value={status}
+                  onValueChange={(val) => {
+                    setStatus(val)
+                    table.resetPage()
+                  }}
+                  placeholder={__('All Statuses', 'codeclove-school-management')}
+                  options={[
+                    { value: '', label: __('All Statuses', 'codeclove-school-management') },
+                    { value: 'completed', label: __('Completed', 'codeclove-school-management') },
+                    { value: 'cancelled', label: __('Cancelled / Reversed', 'codeclove-school-management') },
+                  ]}
+                />
+              </div>
+            </FilterBar>
+
+            {/* Collapsible Date Range Bar */}
+            {showAdvanced && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 px-3 py-2.5 bg-bg-surface border-t border-border animate-in fade-in duration-150">
+                <div className="w-full sm:w-40 shrink-0">
+                  <DatePicker
+                    value={startDate}
+                    onChange={(val) => {
+                      setStartDate(val)
+                      table.resetPage()
+                    }}
+                  />
+                </div>
+                <div className="w-full sm:w-40 shrink-0">
+                  <DatePicker
+                    value={endDate}
+                    onChange={(val) => {
+                      setEndDate(val)
+                      table.resetPage()
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        }
+
         emptyState={{
           message: sprintf(__('No %s found', 'codeclove-school-management'), paymentLabelPlural),
           description: __('Payments will appear here once recorded against outstanding student invoices.', 'codeclove-school-management'),

@@ -27,10 +27,11 @@ export interface DatePickerProps {
   className?: string
   id?: string
   name?: string
-  minDate?: Date
-  maxDate?: Date
+  minDate?: Date | string
+  maxDate?: Date | string
   container?: HTMLElement | null
   modal?: boolean
+  showDayOfWeek?: boolean
   'aria-invalid'?: boolean | 'true' | 'false'
   'aria-describedby'?: string
   'aria-label'?: string
@@ -74,6 +75,7 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
       maxDate,
       container,
       modal = true,
+      showDayOfWeek = false,
       'aria-invalid': ariaInvalid,
       'aria-describedby': ariaDescribedBy,
       'aria-label': ariaLabel,
@@ -84,7 +86,7 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
     const { data: settings } = useSettings()
     const portalContainer = getPortalContainer(container)
     const dateFormat = settings?.localization?.date_format || 'd/m/Y'
-
+    const weekStartsOn = Math.max(0, Math.min(6, Number(settings?.localization?.week_start_day ?? globalThis.window?.CodeCloveConfig?.wpSettings?.startOfWeek ?? 1))) as 0 | 1 | 2 | 3 | 4 | 5 | 6
     // Map PHP date format to date-fns format strings for the text input
     const formatString = React.useMemo(() => {
       if (dateFormat.startsWith('Y')) {
@@ -122,16 +124,40 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
       const parsed = parse(value, 'yyyy-MM-dd', new Date())
       return isValid(parsed) ? parsed : undefined
     }, [value])
+    // Normalize minDate and maxDate (accepting Date or YYYY-MM-DD string)
+    const parsedMinDate = React.useMemo(() => {
+      if (!minDate) return undefined
+      if (minDate instanceof Date) return minDate
+      const parsed = parse(minDate, 'yyyy-MM-dd', new Date())
+      return isValid(parsed) ? new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0) : undefined
+    }, [minDate])
+
+    const parsedMaxDate = React.useMemo(() => {
+      if (!maxDate) return undefined
+      if (maxDate instanceof Date) {
+        return new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate(), 23, 59, 59)
+      }
+      const parsed = parse(maxDate, 'yyyy-MM-dd', new Date())
+      return isValid(parsed) ? new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 23, 59, 59) : undefined
+    }, [maxDate])
+
+    const formatDisplay = React.useCallback(
+      (d?: Date) => {
+        if (!d) return ''
+        const baseFormatted = format(d, formatString)
+        return showDayOfWeek ? `${format(d, 'EEE')}, ${baseFormatted}` : baseFormatted
+      },
+      [formatString, showDayOfWeek]
+    )
 
     // Keep local text input synchronized with incoming value prop (unless focused)
     React.useEffect(() => {
       if (selectedDate) {
-        setInputValue(format(selectedDate, formatString))
+        setInputValue(formatDisplay(selectedDate))
       } else {
         setInputValue('')
       }
-    }, [value, selectedDate, formatString])
-
+    }, [value, selectedDate, formatDisplay])
     // Handle manual typing change
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value
@@ -148,8 +174,8 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
       if (val.length === formatString.length) {
         const parsed = parse(val, formatString, new Date())
         if (isValid(parsed)) {
-          if (minDate && parsed < minDate) return
-          if (maxDate && parsed > maxDate) return
+          if (parsedMinDate && parsed < parsedMinDate) return
+          if (parsedMaxDate && parsed > parsedMaxDate) return
           onChange(format(parsed, 'yyyy-MM-dd'))
         }
       }
@@ -167,20 +193,20 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
 
       const parsed = parseFlexibleDate(inputValue, formatString)
       if (parsed) {
-        if (minDate && parsed < minDate) {
-          setInputValue(selectedDate ? format(selectedDate, formatString) : '')
+        if (parsedMinDate && parsed < parsedMinDate) {
+          setInputValue(selectedDate ? formatDisplay(selectedDate) : '')
           return
         }
-        if (maxDate && parsed > maxDate) {
-          setInputValue(selectedDate ? format(selectedDate, formatString) : '')
+        if (parsedMaxDate && parsed > parsedMaxDate) {
+          setInputValue(selectedDate ? formatDisplay(selectedDate) : '')
           return
         }
         const formattedValue = format(parsed, 'yyyy-MM-dd')
         onChange(formattedValue)
-        setInputValue(format(parsed, formatString))
+        setInputValue(formatDisplay(parsed))
       } else {
         // Revert to previously selected date or empty
-        setInputValue(selectedDate ? format(selectedDate, formatString) : '')
+        setInputValue(selectedDate ? formatDisplay(selectedDate) : '')
       }
     }
 
@@ -205,11 +231,11 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
           setInputValue('')
         } else {
           onChange(format(date, 'yyyy-MM-dd'))
-          setInputValue(format(date, formatString))
+          setInputValue(formatDisplay(date))
         }
         setOpen(false)
       },
-      [onChange, formatString]
+      [onChange, formatDisplay]
     )
 
     const handleClear = React.useCallback(
@@ -234,10 +260,10 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
     // Build disabled matcher array dynamically for react-day-picker v10
     const disabledMatchers = React.useMemo(() => {
       const matchers: Matcher[] = []
-      if (minDate) matchers.push({ before: minDate })
-      if (maxDate) matchers.push({ after: maxDate })
+      if (parsedMinDate) matchers.push({ before: parsedMinDate })
+      if (parsedMaxDate) matchers.push({ after: parsedMaxDate })
       return matchers.length > 0 ? matchers : undefined
-    }, [minDate, maxDate])
+    }, [parsedMinDate, parsedMaxDate])
 
     const defaultStartMonth = React.useMemo(() => new Date(new Date().getFullYear() - 100, 0), [])
     const defaultEndMonth = React.useMemo(() => new Date(new Date().getFullYear() + 10, 11), [])
@@ -245,10 +271,10 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
     const isTodayDisabled = React.useMemo(() => {
       const today = new Date().setHours(0, 0, 0, 0)
       return Boolean(
-        (minDate && today < new Date(minDate).setHours(0, 0, 0, 0)) ||
-        (maxDate && today > new Date(maxDate).setHours(0, 0, 0, 0))
+        (parsedMinDate && today < parsedMinDate.getTime()) ||
+        (parsedMaxDate && today > parsedMaxDate.getTime())
       )
-    }, [minDate, maxDate])
+    }, [parsedMinDate, parsedMaxDate])
 
     return (
       <PopoverPrimitive.Root modal={modal} open={open} onOpenChange={setOpen}>
@@ -306,6 +332,7 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
           >
             <DayPicker
               dir={isRtl() ? 'rtl' : 'ltr'}
+              weekStartsOn={weekStartsOn}
               mode="single"
               selected={selectedDate}
               onSelect={handleSelect}
@@ -314,8 +341,8 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
               disabled={disabledMatchers}
               captionLayout="dropdown"
               showOutsideDays={true}
-              startMonth={minDate || defaultStartMonth}
-              endMonth={maxDate || defaultEndMonth}
+              startMonth={parsedMinDate || defaultStartMonth}
+              endMonth={parsedMaxDate || defaultEndMonth}
               components={{
                 Chevron: ({ orientation, className, ...chevronProps }) => {
                   if (orientation === 'left' || orientation === 'right') {

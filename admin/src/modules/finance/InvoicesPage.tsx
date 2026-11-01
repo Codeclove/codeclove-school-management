@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Trash2, X, Printer, SlidersHorizontal, Wallet, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Plus, Trash2, Printer, SlidersHorizontal, Wallet, CheckCircle2, AlertCircle } from 'lucide-react'
 import { __, sprintf } from '@/lib/i18n'
 import { getStatusVariant } from './finance-utils'
 import {
@@ -28,7 +28,7 @@ import {
   Spinner,
   DataTable,
   type DataTableColumn,
-  Card,
+  FilterBar,
   Badge,
   FormField,
   Input,
@@ -468,9 +468,16 @@ export default function InvoicesPage() {
     [handleBulkPrintInvoices, isBulkPrintLoading, handleBulkCancel, handleBulkVoid, handleBulkSendReminders]
   )
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={invoiceLabelPlural}
+        badge={
+          total > 0 ? (
+            <Badge variant="neutral" className="tabular-nums font-mono text-xs font-normal">
+              {sprintf(__('%d total', 'codeclove-school-management'), total)}
+            </Badge>
+          ) : undefined
+        }
         description={__('Manage and track outstanding billing balances, fee invoices, and collections for the session.', 'codeclove-school-management')}
         breadcrumbs={[{ label: __('Finance', 'codeclove-school-management') }, { label: invoiceLabelPlural }]}
         actions={
@@ -480,7 +487,6 @@ export default function InvoicesPage() {
           </Button>
         }
       />
-
       {/* KPI Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
@@ -509,32 +515,57 @@ export default function InvoicesPage() {
         />
       </div>
 
-      {/* Filters */}
-      <Card className="p-4">
-        <div className="flex flex-col gap-4">
-          {/* Main Filters */}
-          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3">
-            <div className="flex-1">
-              <FormField label={sprintf(__('Search %s', 'codeclove-school-management'), invoiceLabelPlural)}>
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
-                  <Input
-                    type="text"
-                    placeholder={__('Search by invoice #, student name, or guardian...', 'codeclove-school-management')}
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value)
-                      table.resetPage()
-                      clearSelection()
-                    }}
-                    className="pl-9"
-                  />
-                </div>
-              </FormField>
-            </div>
-            <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-              <FormField label={unitLabelSingular}>
+      {/* Main List */}
+      <DataTable<Invoice>
+        data={list}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        errorMessage={__('Error Loading Invoices', 'codeclove-school-management')}
+        onRetry={() => refetch()}
+        selectable
+        bulkActions={bulkActions}
+        onRowClick={(row) => navigate(`/finance/invoices/${row.id}`)}
+        toolbar={
+          <div className="flex flex-col">
+            <FilterBar
+              cardWrapper={false}
+              search={search}
+              onSearchChange={(val) => {
+                setSearch(val)
+                table.resetPage()
+                clearSelection()
+              }}
+              searchPlaceholder={__('Search by invoice #, student name, or guardian...', 'codeclove-school-management')}
+              activeFilterCount={(unitId ? 1 : 0) + (termId ? 1 : 0) + (status ? 1 : 0) + (startDate || endDate ? 1 : 0)}
+              onClearAll={() => {
+                setSearch('')
+                setStatus('')
+                setUnitId('')
+                setTermId('')
+                setStartDate('')
+                setEndDate('')
+                setDateType('issue_date')
+                table.resetPage()
+                clearSelection()
+              }}
+              actions={
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className={`text-xs gap-1.5 h-8 ${showAdvanced ? 'bg-bg-surface text-brand border border-border' : 'text-text-muted hover:text-text'}`}
+                >
+                  <SlidersHorizontal size={12} />
+                  {showAdvanced ? __('Hide Dates', 'codeclove-school-management') : __('Date Range', 'codeclove-school-management')}
+                </Button>
+              }
+            >
+              <div className="w-full sm:w-36 lg:w-44 shrink-0">
                 <Select
+                  aria-label={unitLabelSingular}
                   value={unitId}
                   onValueChange={(val) => {
                     setUnitId(val)
@@ -547,11 +578,11 @@ export default function InvoicesPage() {
                     ...units.map(u => ({ value: String(u.id), label: u.name }))
                   ]}
                 />
-              </FormField>
-            </div>
-            <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-              <FormField label={__('Academic Term', 'codeclove-school-management')}>
+              </div>
+
+              <div className="w-full sm:w-36 lg:w-40 shrink-0">
                 <Select
+                  aria-label={__('Academic Term', 'codeclove-school-management')}
                   value={termId}
                   onValueChange={(val) => {
                     setTermId(val)
@@ -564,11 +595,11 @@ export default function InvoicesPage() {
                     ...terms.map(t => ({ value: String(t.id), label: t.name }))
                   ]}
                 />
-              </FormField>
-            </div>
-            <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-              <FormField label={__('Status', 'codeclove-school-management')}>
+              </div>
+
+              <div className="w-full sm:w-36 lg:w-40 shrink-0">
                 <Select
+                  aria-label={__('Status', 'codeclove-school-management')}
                   value={status}
                   onValueChange={(val) => {
                     setStatus(val)
@@ -586,46 +617,13 @@ export default function InvoicesPage() {
                     { value: 'void', label: __('Void', 'codeclove-school-management') },
                   ]}
                 />
-              </FormField>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0 h-9">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className={`text-xs gap-1.5 h-9 ${showAdvanced ? 'bg-bg-surface text-brand border border-border' : 'text-text-muted hover:text-text'}`}
-              >
-                <SlidersHorizontal size={12} />
-                {showAdvanced ? __('Hide Dates', 'codeclove-school-management') : __('Date Range', 'codeclove-school-management')}
-              </Button>
-              {(search || status || unitId || termId || startDate || endDate) && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setSearch('')
-                    setStatus('')
-                    setUnitId('')
-                    setTermId('')
-                    setStartDate('')
-                    setEndDate('')
-                    setDateType('issue_date')
-                    table.resetPage()
-                    clearSelection()
-                  }}
-                  className="text-xs text-text-muted hover:text-text gap-1"
-                >
-                  <X size={12} />
-                  {__('Clear Filters', 'codeclove-school-management')}
-                </Button>
-              )}
-            </div>
-          </div>
+              </div>
+            </FilterBar>
 
-          {/* Date Range Filters */}
-          {showAdvanced && (
-            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3 border-t border-border pt-3 animate-in fade-in duration-200">
-              <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-                <FormField label={__('Start Date', 'codeclove-school-management')}>
+            {/* Collapsible Date Range Bar */}
+            {showAdvanced && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 px-3 py-2.5 bg-bg-surface border-t border-border animate-in fade-in duration-150">
+                <div className="w-full sm:w-40 shrink-0">
                   <DatePicker
                     value={startDate}
                     onChange={(val) => {
@@ -634,10 +632,8 @@ export default function InvoicesPage() {
                       clearSelection()
                     }}
                   />
-                </FormField>
-              </div>
-              <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-                <FormField label={__('End Date', 'codeclove-school-management')}>
+                </div>
+                <div className="w-full sm:w-40 shrink-0">
                   <DatePicker
                     value={endDate}
                     onChange={(val) => {
@@ -646,12 +642,9 @@ export default function InvoicesPage() {
                       clearSelection()
                     }}
                   />
-                </FormField>
-              </div>
-              
-              {(startDate || endDate) && (
-                <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px] animate-in fade-in slide-in-from-top-1 duration-150">
-                  <FormField label={__('Filter Date Field', 'codeclove-school-management')}>
+                </div>
+                {(startDate || endDate) && (
+                  <div className="w-full sm:w-36 shrink-0">
                     <Select
                       value={dateType}
                       onValueChange={(val) => {
@@ -664,28 +657,12 @@ export default function InvoicesPage() {
                         { value: 'due_date', label: __('Due Date', 'codeclove-school-management') },
                       ]}
                     />
-                  </FormField>
-                </div>
-              )}
-
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Main List */}
-      <DataTable<Invoice>
-        data={list}
-        columns={columns}
-        table={table}
-        total={total}
-        isLoading={isLoading}
-        isError={isError}
-        errorMessage={__('Error Loading Invoices', 'codeclove-school-management')}
-        onRetry={() => refetch()}
-        selectable
-        bulkActions={bulkActions}
-        onRowClick={(row) => navigate(`/finance/invoices/${row.id}`)}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        }
         keyExtractor={(row) => row.id}
         emptyState={{
           message: sprintf(__('No %s found', 'codeclove-school-management'), invoiceLabelPlural),

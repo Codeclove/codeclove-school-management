@@ -97,6 +97,7 @@ type TabId = (typeof TABS)[number]['id']
 // ─── Diff Types ───────────────────────────────────────────────────────────────
 
 interface DiffItem {
+  category?: string
   label: string
   current: string
   preset: string
@@ -165,10 +166,14 @@ export default function SettingsPage() {
       await updateSettingsMutation.mutateAsync(data)
       setSaveStatus('idle')
       toast.success(__( 'Settings saved successfully!', 'codeclove-school-management' ))
+      const isRtl = Boolean(data.localization?.rtl)
+      document.documentElement.dir = isRtl ? 'rtl' : 'ltr'
+      if (globalThis.window?.CodeCloveConfig) globalThis.window.CodeCloveConfig.rtl = isRtl
       reset(data) // reset dirty state to new values
-    } catch {
+    } catch (err: unknown) {
       setSaveStatus('error')
-      toast.error(__( 'Failed to save settings.', 'codeclove-school-management' ))
+      const msg = (err as Error)?.message || __( 'Failed to save settings.', 'codeclove-school-management' )
+      toast.error(msg)
       setTimeout(() => setSaveStatus('idle'), 4000)
     }
   }
@@ -196,10 +201,10 @@ export default function SettingsPage() {
         onSuccess: () => {
           setShowPresetModal(false)
           setSelectedPreset('')
-          toast.success('Curriculum preset applied successfully!')
+          toast.success(__( 'Curriculum preset applied successfully!', 'codeclove-school-management' ))
         },
         onError: (err: unknown) => {
-          const msg = (err as { message?: string })?.message || 'Failed to apply preset.'
+          const msg = (err as { message?: string })?.message || __( 'Failed to apply preset.', 'codeclove-school-management' )
           toast.error(msg)
         },
       }
@@ -208,9 +213,6 @@ export default function SettingsPage() {
 
   const diffItems = useMemo<DiffItem[]>(() => {
     if (!previewData?.current || !previewData?.preset) return []
-    const currentLabels = previewData.current.labels ?? {}
-    const presetLabels  = previewData.preset.labels  ?? {}
-    const allKeys = new Set([...Object.keys(currentLabels), ...Object.keys(presetLabels)])
     const items: DiffItem[] = []
 
     const formatKeyName = (key: string): string => {
@@ -220,8 +222,25 @@ export default function SettingsPage() {
         .join(' ')
     }
 
-    const formatPresetValue = (val: unknown): string => {
+    const MONTH_NAMES = [
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ]
+
+    const formatPresetValue = (val: unknown, key?: string): string => {
       if (val == null) return '—'
+      if (key && (key === 'academic_year_start_month' || key === 'academic_year_end_month')) {
+        const m = Number(val)
+        if (m >= 1 && m <= 12) {
+          return `${MONTH_NAMES[m]} (${m})`
+        }
+      }
+      if (typeof val === 'boolean') {
+        return val ? __( 'Yes', 'codeclove-school-management' ) : __( 'No', 'codeclove-school-management' )
+      }
+      if (Array.isArray(val)) {
+        return val.length > 0 ? val.join(', ') : '—'
+      }
       if (typeof val === 'object' && val !== null) {
         const obj = val as Record<string, unknown>
         if ('singular' in obj && 'plural' in obj) {
@@ -232,15 +251,61 @@ export default function SettingsPage() {
       return String(val)
     }
 
-    for (const key of allKeys) {
-      const cur = (currentLabels as Record<string, unknown>)[key]
-      const pre = (presetLabels  as Record<string, unknown>)[key]
-      const curStr = formatPresetValue(cur)
-      const preStr = formatPresetValue(pre)
-      if (curStr !== preStr) {
-        items.push({ label: formatKeyName(key), current: curStr, preset: preStr })
+    const currentLabels = previewData.current.labels ?? {}
+    const presetLabels  = previewData.preset.labels  ?? {}
+    const currentLoc    = previewData.current.localization ?? {}
+    const presetLoc     = previewData.preset.localization  ?? {}
+    const currentEdu    = previewData.current.education_system ?? {}
+    const presetEdu     = previewData.preset.education_system  ?? {}
+    const currentIds    = (previewData.current as Record<string, unknown>).identifiers as Record<string, unknown> | undefined ?? {}
+    const presetIds     = (previewData.preset as Record<string, unknown>).identifiers as Record<string, unknown> | undefined ?? {}
+
+    const sections: Array<{
+      category: string
+      cur: Record<string, unknown>
+      pre: Record<string, unknown>
+      ignore?: Record<string, boolean>
+    }> = [
+      {
+        category: __( 'Terminology', 'codeclove-school-management' ),
+        cur: currentLabels as Record<string, unknown>,
+        pre: presetLabels as Record<string, unknown>,
+      },
+      {
+        category: __( 'Localization', 'codeclove-school-management' ),
+        cur: currentLoc as Record<string, unknown>,
+        pre: presetLoc as Record<string, unknown>,
+      },
+      {
+        category: __( 'Academic Cycle', 'codeclove-school-management' ),
+        cur: currentEdu as unknown as Record<string, unknown>,
+        pre: presetEdu as unknown as Record<string, unknown>,
+        ignore: { preset: true, preset_name: true, preset_version: true, customized: true },
+      },
+      {
+        category: __( 'ID Formats', 'codeclove-school-management' ),
+        cur: currentIds,
+        pre: presetIds,
+      },
+    ]
+
+    for (const section of sections) {
+      const keys = new Set([...Object.keys(section.cur), ...Object.keys(section.pre)])
+      for (const key of keys) {
+        if (section.ignore?.[key]) continue
+        const curStr = formatPresetValue(section.cur[key], key)
+        const preStr = formatPresetValue(section.pre[key], key)
+        if (curStr !== preStr) {
+          items.push({
+            category: section.category,
+            label: formatKeyName(key),
+            current: curStr,
+            preset: preStr,
+          })
+        }
       }
     }
+
     return items
   }, [previewData])
 
@@ -263,8 +328,8 @@ export default function SettingsPage() {
       <div className="flex h-64 items-center justify-center">
         <div className="text-center space-y-2">
           <AlertTriangle className="h-8 w-8 text-danger mx-auto" />
-          <p className="font-semibold text-text">Error loading settings</p>
-          <p className="text-sm text-text-muted">Failed to retrieve system settings from server.</p>
+          <p className="font-semibold text-text">{__( 'Error loading settings', 'codeclove-school-management' )}</p>
+          <p className="text-sm text-text-muted">{__( 'Failed to retrieve system settings from server.', 'codeclove-school-management' )}</p>
         </div>
       </div>
     )
@@ -501,7 +566,14 @@ function PresetModal({
             {diffItems.length > 0 ? (
               diffItems.map((item, idx) => (
                 <div key={idx} className="grid grid-cols-3 gap-4 p-3 text-xs items-center">
-                  <span className="font-semibold text-text-muted">{item.label}</span>
+                  <div>
+                    {item.category && (
+                      <span className="text-[10px] uppercase font-bold text-text-subtle tracking-wider block mb-0.5">
+                        {item.category}
+                      </span>
+                    )}
+                    <span className="font-semibold text-text-muted">{item.label}</span>
+                  </div>
                   <span className="text-danger bg-danger-dim px-2 py-1 rounded truncate line-through" title={item.current}>
                     {item.current}
                   </span>
@@ -515,7 +587,7 @@ function PresetModal({
                 <Check size={20} className="text-success mb-1.5" />
                 <p className="text-xs font-semibold text-text">{__( 'No Configuration Differences', 'codeclove-school-management' )}</p>
                 <p className="text-2xs text-text-muted mt-0.5">
-                  {__( 'The selected preset matches your current settings terminology exactly.', 'codeclove-school-management' )}
+                  {__( 'The selected preset matches your current settings exactly.', 'codeclove-school-management' )}
                 </p>
               </div>
             )}

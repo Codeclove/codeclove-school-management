@@ -8,7 +8,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { subjectSchema, type SubjectFormValues } from '@/schemas/academics'
 import {
-  Plus, Trash2, RefreshCw, AlertTriangle, Pencil, Search, X
+  Plus, Trash2, RefreshCw, AlertTriangle, Pencil
 } from 'lucide-react'
 import {
   useSubjects,
@@ -30,7 +30,7 @@ import { useDebounce } from '@/lib/useDebounce'
 import {
   DataTable,
   type DataTableColumn,
-  Button, Badge, Card,
+  Button, Badge, FilterBar,
   Modal, ModalFooter, FormField, Input, Select,
   PageHeader, Spinner,
 } from '@/components/ui'
@@ -213,9 +213,16 @@ export default function SubjectsPage() {
   }, [status, debouncedSearch, resetPage, clearSelection])
 
   return (
-    <div className="space-y-5 w-full">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={subjectLabelPlural}
+        badge={
+          total > 0 ? (
+            <Badge variant="neutral" className="tabular-nums font-mono text-xs font-normal">
+              {sprintf(__('%d total', 'codeclove-school-management'), total)}
+            </Badge>
+          ) : undefined
+        }
         breadcrumbs={[{ label: __( 'Academics', 'codeclove-school-management' ) }, { label: subjectLabelPlural }]}
         description={sprintf(
           __( 'Manage the global list of courses, %1$s, or modules taught across %2$s.', 'codeclove-school-management' ),
@@ -236,25 +243,31 @@ export default function SubjectsPage() {
 
       <AcademicsNav />
 
-      {/* Filters Toolbar */}
-      <Card className="p-4">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3">
-          <div className="flex-1">
-            <FormField label={sprintf( __( 'Search %s', 'codeclove-school-management' ), subjectLabelPlural )}>
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={__( 'Search by name, code...', 'codeclove-school-management' )}
-                  className="pl-9"
-                />
-              </div>
-            </FormField>
-          </div>
-          <div className="w-full sm:w-40 lg:w-48 min-w-[140px]">
-            <FormField label={__( 'Status', 'codeclove-school-management' )}>
+      <DataTable<Subject>
+        data={subjects}
+        columns={columns}
+        table={table}
+        total={total}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        toolbar={
+          <FilterBar
+            cardWrapper={false}
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={__( 'Search by name, code...', 'codeclove-school-management' )}
+            activeFilterCount={status ? 1 : 0}
+            onClearAll={() => {
+              setSearch('')
+              setStatus('')
+              resetPage()
+              clearSelection()
+            }}
+          >
+            <div className="w-full sm:w-40 lg:w-48 shrink-0">
               <Select
+                aria-label={__( 'Status', 'codeclove-school-management' )}
                 value={status}
                 onValueChange={setStatus}
                 placeholder={__( 'All statuses', 'codeclove-school-management' )}
@@ -265,35 +278,9 @@ export default function SubjectsPage() {
                   { value: 'archived', label: __( 'Archived', 'codeclove-school-management' ) },
                 ]}
               />
-            </FormField>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 h-9">
-            {(search || status) && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setSearch('')
-                  setStatus('')
-                  resetPage()
-                  clearSelection()
-                }}
-              >
-                <X size={12} />
-                {__( 'Clear Filters', 'codeclove-school-management' )}
-              </Button>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      <DataTable<Subject>
-        data={subjects}
-        columns={columns}
-        table={table}
-        total={total}
-        isLoading={isLoading}
-        isError={isError}
-        onRetry={() => refetch()}
+            </div>
+          </FilterBar>
+        }
         emptyState={
           isError
             ? {
@@ -474,7 +461,7 @@ function SubjectModal({
       description={
         editTarget
           ? sprintf( __( 'Update %s details.', 'codeclove-school-management' ), subjectLabelSingular.toLowerCase() )
-          : sprintf( __( 'Create a new course or %s.', 'codeclove-school-management' ), subjectLabelSingular.toLowerCase() )
+          : sprintf( __( 'Create a new %s.', 'codeclove-school-management' ), subjectLabelSingular.toLowerCase() )
       }
       size="md"
     >

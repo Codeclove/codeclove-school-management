@@ -1021,14 +1021,18 @@ final class FinanceService {
 			);
 		}
 
+		$update_data = [
+			'status'              => $new_status,
+			'cancellation_reason' => $reason ? sanitize_text_field( $reason ) : null,
+			'updated_at'          => current_time( 'mysql', true ),
+		];
+		if ( 'void' === $new_status ) {
+			$update_data['balance_minor'] = 0;
+		}
+
 		$wpdb->update(
 			Schema::invoices(),
-			[
-				'status'              => $new_status,
-				'cancellation_reason' => $reason ? sanitize_text_field( $reason ) : null,
-				'deleted_at'          => current_time( 'mysql', true ),
-				'updated_at'          => current_time( 'mysql', true ),
-			],
+			$update_data,
 			[ 'id' => $id ]
 		);
 		// phpcs:enable
@@ -1405,7 +1409,6 @@ final class FinanceService {
 				[
 					'status'              => 'cancelled',
 					'cancellation_reason' => $reason ? sanitize_text_field( $reason ) : null,
-					'deleted_at'          => current_time( 'mysql', true ),
 					'updated_at'          => current_time( 'mysql', true ),
 				],
 				[ 'id' => $id ]

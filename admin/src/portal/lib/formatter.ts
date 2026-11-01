@@ -133,6 +133,7 @@ export function formatTime(
 
   return typeof timeStr === 'string' ? timeStr : '—'
 }
+const NUMBER_LOCALES: Record<string, string> = { indian: 'en-IN', european: 'de-DE' }
 
 export function formatCurrency(
   amount: number | null | undefined,
@@ -143,7 +144,7 @@ export function formatCurrency(
 
   const loc = customLoc ?? getActiveLocalization()
   const currency = customCurrency ?? loc?.currency ?? 'USD'
-  const locale = loc?.number_format === 'indian' ? 'en-IN' : 'en-US'
+  const locale = NUMBER_LOCALES[loc?.number_format ?? ''] ?? 'en-US'
   const precision = loc?.decimal_precision ?? 2
   const position = loc?.currency_position ?? 'left'
 
@@ -170,7 +171,7 @@ export function formatNumber(
 ): string {
   if (value === null || value === undefined || isNaN(value)) return '0'
   const loc = customLoc ?? getActiveLocalization()
-  const locale = loc?.number_format === 'indian' ? 'en-IN' : 'en-US'
+  const locale = NUMBER_LOCALES[loc?.number_format ?? ''] ?? 'en-US'
   return new Intl.NumberFormat(locale).format(value)
 }
 

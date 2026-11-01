@@ -960,6 +960,24 @@ final class PortalService {
 	}
 
 	/**
+	 * Gets upcoming examinations schedule and published report cards for a student.
+	 *
+	 * @param int $student_id Student ID.
+	 * @return array<string, mixed>
+	 */
+	public function get_exams( int $student_id ): array {
+		return apply_filters(
+			'codeclove_portal_exams',
+			[
+				'upcoming_exams'  => [],
+				'published_exams' => [],
+				'admit_cards'     => [],
+			],
+			$student_id
+		);
+	}
+
+	/**
 	 * Gets admission and application documents submitted for a student.
 	 *
 	 * @param int $student_id Student ID.
@@ -974,7 +992,8 @@ final class PortalService {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Portal student documents query.
 		$student_row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT documents_json FROM ' . Schema::students() . ' WHERE id = %d AND deleted_at IS NULL',
+				'SELECT documents_json FROM %i WHERE id = %d AND deleted_at IS NULL',
+				Schema::students(),
 				$student_id
 			),
 			ARRAY_A

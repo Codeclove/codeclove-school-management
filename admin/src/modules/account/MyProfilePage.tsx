@@ -188,7 +188,7 @@ export default function MyProfilePage() {
   }
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={__('My Account', 'codeclove-school-management')}
         description={__('View and update your personal staff details, reset your password, and customize your app interface.', 'codeclove-school-management')}

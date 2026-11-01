@@ -127,10 +127,14 @@ final class AttendanceService {
 		$date       = $params['attendance_date'] ?? null;
 		$records    = $params['records'] ?? [];
 
+		$today = current_time( 'Y-m-d' );
+		if ( ! empty( $date ) && $date > $today ) {
+			return new WP_Error( 'invalid_date', __( 'Cannot record attendance for future dates.', 'codeclove-school-management' ), 400 );
+		}
+
 		$table           = Schema::attendance();
 		$now             = current_time( 'mysql', true );
 		$marked_students = [];
-
 		$result = Transaction::run( function( $wpdb ) use ( $records, $table, $now, $session_id, $unit_id, $group_id, $date, $user_id, &$marked_students ) {
 			foreach ( $records as $rec ) {
 				$student_id = isset( $rec['student_id'] ) ? (int) $rec['student_id'] : 0;
@@ -315,9 +319,13 @@ final class AttendanceService {
 		$date    = $params['attendance_date'] ?? null;
 		$records = $params['records'] ?? [];
 
+		$today = current_time( 'Y-m-d' );
+		if ( ! empty( $date ) && $date > $today ) {
+			return new WP_Error( 'invalid_date', __( 'Cannot record attendance for future dates.', 'codeclove-school-management' ), 400 );
+		}
+
 		$table   = Schema::staff_attendance();
 		$now     = current_time( 'mysql', true );
-
 		$result = Transaction::run( function( $wpdb ) use ( $records, $table, $now, $date, $user_id ) {
 			foreach ( $records as $rec ) {
 				$staff_member_id = isset( $rec['staff_member_id'] ) ? (int) $rec['staff_member_id'] : 0;

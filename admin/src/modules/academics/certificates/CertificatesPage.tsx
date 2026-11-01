@@ -549,53 +549,7 @@ export default function CertificatesPage() {
 
       {/* ─── TAB 1: Templates Library (Professional FilterBar & DataTable) ─────── */}
       {activeTab === 'templates' && (
-        <div className="space-y-4">
-          {/* Integrated FilterBar for Templates */}
-          <FilterBar
-            search={templateSearch}
-            onSearchChange={(val) => {
-              setTemplateSearch(val)
-              templatesTable.resetPage()
-            }}
-            searchPlaceholder={__('Search templates by name...', 'codeclove-school-management')}
-            activeFilterCount={activeTemplateFilterCount}
-            onClearAll={handleClearTemplateFilters}
-          >
-            <Select
-              value={templateTypeFilter}
-              onValueChange={(val) => {
-                setTemplateTypeFilter(val)
-                templatesTable.resetPage()
-              }}
-              options={[
-                { value: '', label: __('All Types', 'codeclove-school-management') },
-                { value: 'transfer', label: __('Transfer Certificate (TC)', 'codeclove-school-management') },
-                { value: 'merit', label: __('Merit / Award Certificate', 'codeclove-school-management') },
-                { value: 'character', label: __('Character Certificate', 'codeclove-school-management') },
-                { value: 'completion', label: __('Course Completion Certificate', 'codeclove-school-management') },
-                { value: 'general', label: __('General School Certificate', 'codeclove-school-management') },
-              ]}
-              placeholder={__('All Types', 'codeclove-school-management')}
-              className="w-48 text-xs"
-            />
-
-            <Select
-              value={templateOrientationFilter}
-              onValueChange={(val) => {
-                setTemplateOrientationFilter(val)
-                templatesTable.resetPage()
-              }}
-              options={[
-                { value: '', label: __('All Orientations', 'codeclove-school-management') },
-                { value: 'landscape', label: __('Landscape', 'codeclove-school-management') },
-                { value: 'portrait', label: __('Portrait', 'codeclove-school-management') },
-              ]}
-              placeholder={__('All Orientations', 'codeclove-school-management')}
-              className="w-40 text-xs"
-            />
-          </FilterBar>
-
-          {/* Full-featured Templates DataTable */}
+        <div className="w-full">
           <DataTable<CertificateTemplate>
             data={templates}
             isLoading={loadingTemplates}
@@ -603,6 +557,52 @@ export default function CertificatesPage() {
             onRetry={refetchTemplates}
             table={templatesTable}
             total={totalTemplates}
+            toolbar={
+              <FilterBar
+                cardWrapper={false}
+                search={templateSearch}
+                onSearchChange={(val) => {
+                  setTemplateSearch(val)
+                  templatesTable.resetPage()
+                }}
+                searchPlaceholder={__('Search templates by name...', 'codeclove-school-management')}
+                activeFilterCount={activeTemplateFilterCount}
+                onClearAll={handleClearTemplateFilters}
+              >
+                <Select
+                  value={templateTypeFilter}
+                  onValueChange={(val) => {
+                    setTemplateTypeFilter(val)
+                    templatesTable.resetPage()
+                  }}
+                  options={[
+                    { value: '', label: __('All Types', 'codeclove-school-management') },
+                    { value: 'transfer', label: __('Transfer Certificate (TC)', 'codeclove-school-management') },
+                    { value: 'merit', label: __('Merit / Award Certificate', 'codeclove-school-management') },
+                    { value: 'character', label: __('Character Certificate', 'codeclove-school-management') },
+                    { value: 'completion', label: __('Course Completion Certificate', 'codeclove-school-management') },
+                    { value: 'general', label: __('General School Certificate', 'codeclove-school-management') },
+                  ]}
+                  placeholder={__('All Types', 'codeclove-school-management')}
+                  className="w-48 text-xs"
+                />
+
+                <Select
+                  value={templateOrientationFilter}
+                  onValueChange={(val) => {
+                    setTemplateOrientationFilter(val)
+                    templatesTable.resetPage()
+                  }}
+                  options={[
+                    { value: '', label: __('All Orientations', 'codeclove-school-management') },
+                    { value: 'landscape', label: __('Landscape', 'codeclove-school-management') },
+                    { value: 'portrait', label: __('Portrait', 'codeclove-school-management') },
+                  ]}
+                  placeholder={__('All Orientations', 'codeclove-school-management')}
+                  className="w-40 text-xs"
+                />
+              </FilterBar>
+            }
             emptyMessage={
               hasActiveTemplateFilters
                 ? __('No certificate templates match the selected filters.', 'codeclove-school-management')
@@ -634,71 +634,71 @@ export default function CertificatesPage() {
 
       {/* ─── TAB 2: Issued Certificate Register (Streamlined DataTable) ───────── */}
       {activeTab === 'issued' && (
-        <div className="space-y-4">
-          {/* Integrated Standard FilterBar */}
-          <FilterBar
-            search={registerSearch}
-            onSearchChange={(val) => {
-              setRegisterSearch(val)
-              issuedTable.resetPage()
-            }}
-            searchPlaceholder={__('Search certificate no, student, or remarks...', 'codeclove-school-management')}
-            activeFilterCount={(templateFilter ? 1 : 0) + (unitFilter ? 1 : 0) + (groupFilter ? 1 : 0)}
-            onClearAll={handleClearFilters}
-          >
-            <Select
-              value={templateFilter}
-              onValueChange={(val) => {
-                setTemplateFilter(val)
-                issuedTable.resetPage()
-              }}
-              options={[
-                { value: '', label: __('All Templates', 'codeclove-school-management') },
-                ...allTemplates.map((tpl) => ({ value: String(tpl.id), label: tpl.title })),
-              ]}
-              placeholder={__('All Templates', 'codeclove-school-management')}
-              className="w-48 text-xs"
-            />
-
-            <Select
-              value={unitFilter}
-              onValueChange={(val) => {
-                setUnitFilter(val)
-                setGroupFilter('')
-                issuedTable.resetPage()
-              }}
-              options={[
-                { value: '', label: __('All Classes', 'codeclove-school-management') },
-                ...units.map((u) => ({ value: String(u.id), label: u.name })),
-              ]}
-              placeholder={__('All Classes', 'codeclove-school-management')}
-              className="w-40 text-xs"
-            />
-
-            {unitFilter && groups.length > 0 && (
-              <Select
-                value={groupFilter}
-                onValueChange={(val) => {
-                  setGroupFilter(val)
-                  issuedTable.resetPage()
-                }}
-                options={[
-                  { value: '', label: __('All Sections', 'codeclove-school-management') },
-                  ...groups.map((g) => ({ value: String(g.id), label: g.name })),
-                ]}
-                placeholder={__('All Sections', 'codeclove-school-management')}
-                className="w-36 text-xs"
-              />
-            )}
-          </FilterBar>
-
-          {/* Streamlined 5-Column DataTable */}
+        <div className="w-full">
           <DataTable<IssuedCertificate>
             data={issuedCertificates}
             isLoading={loadingIssued}
             table={issuedTable}
             total={totalIssued}
             selectable
+            toolbar={
+              <FilterBar
+                cardWrapper={false}
+                search={registerSearch}
+                onSearchChange={(val) => {
+                  setRegisterSearch(val)
+                  issuedTable.resetPage()
+                }}
+                searchPlaceholder={__('Search certificate no, student, or remarks...', 'codeclove-school-management')}
+                activeFilterCount={(templateFilter ? 1 : 0) + (unitFilter ? 1 : 0) + (groupFilter ? 1 : 0)}
+                onClearAll={handleClearFilters}
+              >
+                <Select
+                  value={templateFilter}
+                  onValueChange={(val) => {
+                    setTemplateFilter(val)
+                    issuedTable.resetPage()
+                  }}
+                  options={[
+                    { value: '', label: __('All Templates', 'codeclove-school-management') },
+                    ...allTemplates.map((tpl) => ({ value: String(tpl.id), label: tpl.title })),
+                  ]}
+                  placeholder={__('All Templates', 'codeclove-school-management')}
+                  className="w-48 text-xs"
+                />
+
+                <Select
+                  value={unitFilter}
+                  onValueChange={(val) => {
+                    setUnitFilter(val)
+                    setGroupFilter('')
+                    issuedTable.resetPage()
+                  }}
+                  options={[
+                    { value: '', label: __('All Classes', 'codeclove-school-management') },
+                    ...units.map((u) => ({ value: String(u.id), label: u.name })),
+                  ]}
+                  placeholder={__('All Classes', 'codeclove-school-management')}
+                  className="w-40 text-xs"
+                />
+
+                {unitFilter && groups.length > 0 && (
+                  <Select
+                    value={groupFilter}
+                    onValueChange={(val) => {
+                      setGroupFilter(val)
+                      issuedTable.resetPage()
+                    }}
+                    options={[
+                      { value: '', label: __('All Sections', 'codeclove-school-management') },
+                      ...groups.map((g) => ({ value: String(g.id), label: g.name })),
+                    ]}
+                    placeholder={__('All Sections', 'codeclove-school-management')}
+                    className="w-36 text-xs"
+                  />
+                )}
+              </FilterBar>
+            }
             emptyMessage={
               hasActiveFilters
                 ? __('No issued certificates match the selected filters.', 'codeclove-school-management')

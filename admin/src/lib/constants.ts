@@ -49,6 +49,17 @@ export const ROUTES = {
   ANNOUNCEMENTS:      '/announcements',
   ANNOUNCEMENT_NEW:   '/announcements/new',
   ANNOUNCEMENT_EDIT:  '/announcements/:id/edit',
+  // Examinations
+  EXAM_OVERVIEW:      '/exams/overview',
+  EXAMS:              '/exams',
+  EXAM_NEW:           '/exams/new',
+  EXAM_EDIT:          '/exams/:id/edit',
+  EXAM_WORKSPACE:     '/exams/:id',
+  EXAM_TIMETABLE:     '/exams/timetable',
+  EXAM_ADMIT_CARDS:   '/exams/admit-cards',
+  EXAM_MARKS:         '/exams/marks',
+  EXAM_REPORTS:       '/exams/reports',
+  EXAM_GRADING:       '/exams/grading-scales',
   // Settings
   SETTINGS:           '/settings',
   ACTIVITY_LOG:       '/settings?tab=activity_log',
@@ -71,6 +82,12 @@ export const PERMISSIONS = {
   GROUPS_VIEW:                    'academic_groups.view',
   SUBJECTS_VIEW:                  'subjects.view',
   TIMETABLE_VIEW:                 'timetable.view',
+  // Examinations
+  EXAMS_VIEW:                     'exams.view',
+  EXAMS_MANAGE:                   'exams.manage',
+  EXAMS_MARKS_ENTRY:              'exams.marks_entry',
+  EXAMS_PUBLISH:                  'exams.publish',
+  EXAMS_REPORTS:                  'exams.reports',
 
   // Admissions
   ADMISSIONS_VIEW:                'admissions.view',

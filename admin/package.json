@@ -1,7 +1,7 @@
 {
   "name": "codeclove-school-management-admin",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.18",
   "license": "GPL-2.0-or-later",
   "type": "module",
   "scripts": {
@@ -57,5 +57,9 @@
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "vitest": "^4.1.9"
+  },
+  "optionalDependencies": {
+    "@esbuild/darwin-arm64": "^0.28.2",
+    "@rollup/rollup-darwin-arm64": "^4.65.0"
   }
 }

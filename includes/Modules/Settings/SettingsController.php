@@ -18,11 +18,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use CodeClove\Api\BaseController;
+use CodeClove\Database\Schema;
 use CodeClove\Shared\AuditLogger;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
-
 /**
  * Class SettingsController
  */
@@ -131,7 +131,6 @@ final class SettingsController extends BaseController {
 				],
 			]
 		);
-
 		register_rest_route(
 			$this->namespace,
 			'/settings/health',
@@ -139,6 +138,30 @@ final class SettingsController extends BaseController {
 				[
 					'methods'             => 'GET',
 					'callback'            => [ $this, 'get_health' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'settings.manage', $request ); },
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/settings/trash-stats',
+			[
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_trash_stats' ],
+					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'settings.manage', $request ); },
+				],
+			]
+		);
+
+		register_rest_route(
+			$this->namespace,
+			'/settings/purge-trash',
+			[
+				[
+					'methods'             => 'POST',
+					'callback'            => [ $this, 'purge_trash' ],
 					'permission_callback' => function ( WP_REST_Request $request ): bool { return $this->can( 'settings.manage', $request ); },
 				],
 			]
@@ -337,8 +360,124 @@ final class SettingsController extends BaseController {
 	}
 
 	/**
-	 * Returns sanitized system diagnostics.
+	 * Returns live counts of soft-deleted records across modules.
 	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response
+	 */
+	public function get_trash_stats( WP_REST_Request $request ): WP_REST_Response {
+		global $wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery
+		$student_trash = (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NOT NULL', Schema::students() )
+		);
+		$staff_trash = (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NOT NULL', Schema::staff_members() )
+		);
+		$invoice_trash = (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NOT NULL', Schema::invoices() )
+		);
+		$app_trash = (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NOT NULL', Schema::applications() )
+		);
+		// phpcs:enable
+
+		return $this->success( [
+			'students' => $student_trash,
+			'staff'    => $staff_trash,
+			'invoices' => $invoice_trash,
+			'apps'     => $app_trash,
+			'total'    => $student_trash + $staff_trash + $invoice_trash + $app_trash,
+		] );
+	}
+
+	/**
+	 * Permanently purges all soft-deleted records and cleans related orphans.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response
+	 */
+	public function purge_trash( WP_REST_Request $request ): WP_REST_Response {
+		global $wpdb;
+
+		// 1. Purge students via StudentsService cascading force delete
+		$students_service = new \CodeClove\Modules\Students\StudentsService();
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery
+		$student_ids = $wpdb->get_col(
+			$wpdb->prepare( 'SELECT id FROM %i WHERE deleted_at IS NOT NULL', Schema::students() )
+		);
+		$purged_students = 0;
+		foreach ( $student_ids as $sid ) {
+			$res = $students_service->db_force_delete_student( (int) $sid );
+			if ( ! is_wp_error( $res ) && $res ) {
+				$purged_students++;
+			}
+		}
+
+		// 2. Purge soft-deleted staff members
+		$staff_ids = $wpdb->get_col(
+			$wpdb->prepare( 'SELECT id FROM %i WHERE deleted_at IS NOT NULL', Schema::staff_members() )
+		);
+		$purged_staff = count( $staff_ids );
+		if ( ! empty( $staff_ids ) ) {
+			$st_placeholders = implode( ',', array_fill( 0, $purged_staff, '%d' ) );
+			// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( $wpdb->prepare( "DELETE FROM " . Schema::staff_attendance() . " WHERE staff_member_id IN ($st_placeholders)", ...$staff_ids ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM " . Schema::staff_members() . " WHERE id IN ($st_placeholders)", ...$staff_ids ) );
+			// phpcs:enable
+		}
+
+		// 3. Purge soft-deleted invoices (draft/cancelled/void)
+		$invoice_ids = $wpdb->get_col(
+			$wpdb->prepare( 'SELECT id FROM %i WHERE deleted_at IS NOT NULL', Schema::invoices() )
+		);
+		$purged_invoices = 0;
+		if ( ! empty( $invoice_ids ) ) {
+			$in_placeholders = implode( ',', array_fill( 0, count( $invoice_ids ), '%d' ) );
+			// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( $wpdb->prepare( "DELETE FROM " . Schema::line_items() . " WHERE invoice_id IN ($in_placeholders)", ...$invoice_ids ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM " . Schema::payments() . " WHERE invoice_id IN ($in_placeholders)", ...$invoice_ids ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM " . Schema::invoices() . " WHERE id IN ($in_placeholders)", ...$invoice_ids ) );
+			// phpcs:enable
+			$purged_invoices = count( $invoice_ids );
+		}
+
+		// 4. Purge soft-deleted admission applications
+		$app_ids = $wpdb->get_col(
+			$wpdb->prepare( 'SELECT id FROM %i WHERE deleted_at IS NOT NULL', Schema::applications() )
+		);
+		$purged_apps = count( $app_ids );
+		if ( ! empty( $app_ids ) ) {
+			$a_placeholders = implode( ',', array_fill( 0, $purged_apps, '%d' ) );
+			// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( $wpdb->prepare( "DELETE FROM " . Schema::app_documents() . " WHERE application_id IN ($a_placeholders)", ...$app_ids ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM " . Schema::app_notes() . " WHERE application_id IN ($a_placeholders)", ...$app_ids ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM " . Schema::app_events() . " WHERE application_id IN ($a_placeholders)", ...$app_ids ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM " . Schema::applications() . " WHERE id IN ($a_placeholders)", ...$app_ids ) );
+			// phpcs:enable
+		}
+
+		$total = $purged_students + $purged_staff + $purged_invoices + $purged_apps;
+
+		AuditLogger::log( 'system.trash_purged', [ 'total_purged' => $total ] );
+
+		return $this->success( [
+			'purged_students' => $purged_students,
+			'purged_staff'    => $purged_staff,
+			'purged_invoices' => $purged_invoices,
+			'purged_apps'     => $purged_apps,
+			'total_purged'    => $total,
+			'message'         => sprintf(
+				/* translators: %d: number of records */
+				__( 'Successfully purged %d records from the database.', 'codeclove-school-management' ),
+				$total
+			),
+		] );
+	}
+
+	/**
+	 * Returns sanitized system diagnostics.
 	 * @param WP_REST_Request $request
 	 * @return WP_REST_Response
 	 */

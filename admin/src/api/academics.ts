@@ -158,10 +158,14 @@ export type CreateUnitPayload = {
   order?: number
 }
 
-export function useUnits(params?: ListParams) {
+export function useUnits(
+  params?: ListParams,
+  options?: Partial<UseQueryOptions<PaginatedResponse<AcademicUnit>>>
+) {
   return useQuery<PaginatedResponse<AcademicUnit>>({
     queryKey: queryKeys.units.list(params),
     queryFn: async () => toPaginatedResponse(await api.list<AcademicUnit[]>(`academic-units${toQueryString(params)}`)),
+    ...options,
   })
 }
 
@@ -224,10 +228,14 @@ export type CreateGroupPayload = {
 
 export type UpdateGroupPayload = Partial<CreateGroupPayload>
 
-export function useGroups(params?: ListParams) {
+export function useGroups(
+  params?: ListParams,
+  options?: Partial<UseQueryOptions<PaginatedResponse<AcademicGroup>>>
+) {
   return useQuery<PaginatedResponse<AcademicGroup>>({
     queryKey: queryKeys.groups.list(params),
     queryFn: async () => toPaginatedResponse(await api.list<AcademicGroup[]>(`academic-groups${toQueryString(params)}`)),
+    ...options,
   })
 }
 

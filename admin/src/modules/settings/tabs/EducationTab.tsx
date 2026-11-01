@@ -5,7 +5,8 @@ import type { UseFormRegister, UseFormWatch, Control, Path } from 'react-hook-fo
 import type { CodeCloveSettings } from '@/api/settings'
 import { FormGroup, FormInput, FormSelect, StringListEditor } from '../components/SettingsFormPrimitives'
 import { Badge, Button } from '@/components/ui'
-import { BookOpen, Globe, Languages, Check, Sparkles } from 'lucide-react'
+import { BookOpen, Globe, Languages, Check, Sparkles, Scale } from 'lucide-react'
+import { ROUTES } from '@/lib/constants'
 import { __, sprintf } from '@/lib/i18n'
 
 type Register = UseFormRegister<CodeCloveSettings>
@@ -266,6 +267,29 @@ export function EducationTab({
         </div>
       </FormGroup>
 
+      {/* Evaluation & Grading Scales */}
+      <FormGroup
+        title={__( 'Evaluation & Grading Scales', 'codeclove-school-management' )}
+        description={__( 'Configure institutional attainment intervals, letter grades, and GPA scales applied to examination cycles.', 'codeclove-school-management' )}
+        icon={Scale}
+      >
+        <div className="col-span-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-bg-surface border border-border">
+          <div className="space-y-1">
+            <h4 className="text-sm font-semibold text-text">
+              {__( 'Institutional Grading Scales', 'codeclove-school-management' )}
+            </h4>
+            <p className="text-xs text-text-muted">
+              {__( 'Manage standard scale intervals (CBSE 8-Point, US 10-Point GPA, UK GCSE 9-1) or create custom institutional grading tiers.', 'codeclove-school-management' )}
+            </p>
+          </div>
+          <a href={`#${ROUTES.EXAM_GRADING}`}>
+            <Button type="button" variant="secondary" size="sm" className="gap-1.5 shrink-0">
+              <Scale size={14} />
+              <span>{__( 'Manage Grading Scales', 'codeclove-school-management' )}</span>
+            </Button>
+          </a>
+        </div>
+      </FormGroup>
       {/* Dynamic Terminology Term Map */}
       <FormGroup
         title={__( 'Dynamic Terminology', 'codeclove-school-management' )}

@@ -8,8 +8,9 @@ import {
   Check,
   X,
   ExternalLink,
+  Eye,
 } from 'lucide-react'
-import { Button, Input, Spinner } from '@/components/ui'
+import { Button, Input, Spinner, DocumentPreviewModal } from '@/components/ui'
 import { api } from '@/lib/api-client'
 import { useToast } from '@/lib/toast'
 import { __, sprintf } from '@/lib/i18n'
@@ -137,6 +138,7 @@ export function DocumentManager({
   // Inline rename state
   const [editingIndex, setEditingIndex] = React.useState<number | null>(null)
   const [editName, setEditName] = React.useState('')
+  const [previewDoc, setPreviewDoc] = React.useState<ManagedDocument | null>(null)
 
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return
@@ -147,7 +149,7 @@ export function DocumentManager({
 
     for (const file of incoming) {
       const ext = file.name.split('.').pop()?.toLowerCase() || ''
-      const isAllowed = ['pdf', 'jpg', 'jpeg', 'png'].includes(ext) || file.type === 'application/pdf' || file.type.startsWith('image/')
+      const isAllowed = ['pdf', 'jpg', 'jpeg', 'png'].includes(ext) || file.type === 'application/pdf' || file.type === 'image/jpeg' || file.type === 'image/png'
       if (!isAllowed) {
         skippedCount++
         continue
@@ -291,6 +293,15 @@ export function DocumentManager({
 
       {/* ─── Dropzone & Browse ─────────────────────────────────────────────── */}
       <div
+        role="button"
+        tabIndex={disabled || isUploading ? -1 : 0}
+        aria-label={__( 'Upload documents', 'codeclove-school-management' )}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && !disabled && !isUploading) {
+            e.preventDefault()
+            fileInputRef.current?.click()
+          }
+        }}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -300,7 +311,7 @@ export function DocumentManager({
           }
         }}
         className={cn(
-          'relative border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2',
+          'relative border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-brand/40',
           isDragging
             ? 'border-brand bg-brand/5 scale-[0.995]'
             : 'border-border/80 bg-bg-surface/50 hover:border-brand/50 hover:bg-hover-bg/40',
@@ -332,7 +343,7 @@ export function DocumentManager({
             </span>{' '}
             <span className="text-text-muted">{__( 'or drag and drop multiple PDF, JPG, or PNG documents', 'codeclove-school-management' )}</span>
           </p>
-          <p className="text-[11px] text-text-muted/80">
+          <p className="text-2xs text-text-muted/80">
             {sprintf( __( 'PDF, JPG, or PNG files up to %dMB each. Attached files are uploaded upon saving.', 'codeclove-school-management' ), maxFileMb )}
           </p>
         </div>
@@ -348,7 +359,7 @@ export function DocumentManager({
 
           <div className="divide-y divide-border/60 border border-border/70 rounded-xl overflow-hidden bg-bg-surface shadow-2xs">
             {documents.map((doc, idx) => {
-              const displayName = doc.name || (doc.title ? `${doc.title}.pdf` : 'Document.pdf')
+              const displayName = doc.title || doc.name || 'Document.pdf'
               const sizeText = formatBytes(doc.file_size)
               const isPendingDoc = Boolean(doc.file instanceof File || !doc.attachment_id)
               const isEditing = editingIndex === idx
@@ -434,7 +445,7 @@ export function DocumentManager({
                             <Pencil size={11} />
                           </button>
                         </div>
-                        <div className="flex items-center gap-2 text-[11px] text-text-muted mt-0.5">
+                        <div className="flex items-center gap-2 text-2xs text-text-muted mt-0.5">
                           {doc.title && doc.name && doc.title !== doc.name && (
                             <span className="text-text-muted/70 truncate max-w-[180px]">{doc.name}</span>
                           )}
@@ -457,16 +468,26 @@ export function DocumentManager({
                   <div className="flex items-center gap-1.5 shrink-0">
                     {/* View Button */}
                     {doc.url && (/^https?:\/\//i.test(doc.url) || doc.url.startsWith('/')) ? (
-                      <a
-                        href={doc.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium text-brand hover:bg-brand/10 transition-colors"
-                        title={__( 'View secured document', 'codeclove-school-management' )}
-                      >
-                        <ExternalLink size={12} />
-                        <span>{__( 'View', 'codeclove-school-management' )}</span>
-                      </a>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewDoc(doc)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium text-brand hover:bg-brand/10 transition-colors cursor-pointer"
+                          title={__( 'View secured document', 'codeclove-school-management' )}
+                        >
+                          <Eye size={12} />
+                          <span>{__( 'View', 'codeclove-school-management' )}</span>
+                        </button>
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center h-7 w-7 rounded text-text-muted hover:text-text hover:bg-hover-bg transition-colors"
+                          title={__( 'Open in new tab', 'codeclove-school-management' )}
+                        >
+                          <ExternalLink size={12} />
+                        </a>
+                      </>
                     ) : null}
                     {/* Remove Button */}
                     <button
@@ -485,6 +506,12 @@ export function DocumentManager({
           </div>
         </div>
       ) : null}
+      {/* ─── In-App Document Preview Modal ───────────────────────────────────── */}
+      <DocumentPreviewModal
+        open={Boolean(previewDoc)}
+        onOpenChange={(open) => !open && setPreviewDoc(null)}
+        document={previewDoc}
+      />
     </div>
   )
 }

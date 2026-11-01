@@ -9,6 +9,7 @@ export interface BreadcrumbItem {
 
 interface PageHeaderProps {
   title: string
+  badge?: React.ReactNode
   description?: string
   icon?: LucideIcon
   actions?: React.ReactNode
@@ -17,9 +18,9 @@ interface PageHeaderProps {
   breadcrumbs?: BreadcrumbItem[]
 }
 
-export function PageHeader({ title, description, icon: Icon, actions, className, onBack, breadcrumbs }: PageHeaderProps) {
+export function PageHeader({ title, badge, description, icon: Icon, actions, className, onBack, breadcrumbs }: PageHeaderProps) {
   return (
-    <div className={cn('flex flex-col gap-2.5 mb-6 w-full', className)}>
+    <div className={cn('flex flex-col gap-2 mb-4 sm:mb-5 w-full', className)}>
       {/* Breadcrumbs Row */}
       {breadcrumbs && breadcrumbs.length > 0 && (
         <nav className="flex items-center gap-1.5 text-xs text-text-muted flex-wrap">
@@ -42,28 +43,33 @@ export function PageHeader({ title, description, icon: Icon, actions, className,
       )}
 
       {/* Main Title & Action Row */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 w-full">
-        <div className="space-y-1 flex-1">
-          <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 w-full">
+        <div className="space-y-0.5 flex-1 min-w-0">
+          <div className="flex items-center gap-2.5 flex-wrap">
             {onBack && (
               <Button
                 variant="ghost"
                 onClick={onBack}
                 size="sm"
-                className="h-9 w-9 p-0 flex-shrink-0 hover:bg-hover-bg rounded-lg text-text-muted hover:text-text transition-colors"
+                className="h-8 w-8 p-0 flex-shrink-0 hover:bg-hover-bg rounded-lg text-text-muted hover:text-text transition-colors"
               >
                 <ArrowLeft size={16} className="rtl:rotate-180" />
               </Button>
             )}
             {Icon && (
-              <div className="w-9 h-9 rounded-lg bg-brand-dim flex items-center justify-center flex-shrink-0">
-                <Icon size={18} className="text-brand" />
+              <div className="w-8 h-8 rounded-lg bg-brand-dim flex items-center justify-center flex-shrink-0">
+                <Icon size={16} className="text-brand" />
               </div>
             )}
-            <h1 className="text-2xl font-bold tracking-tight text-text leading-tight">{title}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text leading-tight">{title}</h1>
+            {badge && (
+              <div className="inline-flex items-center flex-shrink-0">
+                {badge}
+              </div>
+            )}
           </div>
           {description && (
-            <p className={cn("text-sm text-text-muted mt-1 leading-normal", onBack || Icon ? "ps-11" : "")}>
+            <p className={cn("text-xs sm:text-sm text-text-muted mt-0.5 leading-normal", onBack || Icon ? "ps-10.5" : "")}>
               {description}
             </p>
           )}

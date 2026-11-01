@@ -39,6 +39,8 @@ export { Select, type SelectOption, type SelectGroup } from './Select'
 export { Combobox, type ComboboxProps, type ComboboxOption, type ComboboxGroup } from './Combobox'
 export { FormField }                    from './FormField'
 export { DatePicker, type DatePickerProps } from './DatePicker'
+export { TimePicker, type TimePickerProps, type TimePickerPreset, formatTimeDisplay, parseTimeInput } from './TimePicker'
+export { TimeRangePicker, type TimeRangePickerProps, type TimeSlotPreset, calculateDurationText, DEFAULT_EXAM_PRESETS } from './TimeRangePicker'
 export {
   FormGroup,
   FormGroupHeader,
@@ -48,6 +50,7 @@ export { FormActionFooter, type FormActionFooterProps } from './FormActionFooter
 
 // ── Overlays ──────────────────────────────────────────────────────────────────
 export { Modal, ModalFooter }           from './Modal'
+export { DocumentPreviewModal, type DocumentPreviewModalProps, type PreviewableDocument } from './DocumentPreviewModal'
 export { ConfirmDialog, type ConfirmDialogProps, type ConfirmDialogVariant } from './ConfirmDialog'
 export {
   Sheet,
@@ -66,7 +69,10 @@ export {
   DropdownRoot,
   DropdownTrigger,
 }                                       from './Dropdown'
-
+export {
+  Popover,
+  type PopoverProps,
+}                                       from './Popover'
 // ── Feedback ──────────────────────────────────────────────────────────────────
 export {
   Tooltip,

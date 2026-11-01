@@ -112,7 +112,7 @@ export function DropdownItem({
     >
       {children ? children : (
         <>
-          {Icon && <Icon size={14} className="flex-shrink-0" />}
+          {Icon && <Icon size={14} strokeWidth={1.75} className="flex-shrink-0" />}
           {label && <span className="flex-1 truncate min-w-0">{label}</span>}
           {shortcut && (
             <kbd className="text-xs font-mono text-text-subtle opacity-60">

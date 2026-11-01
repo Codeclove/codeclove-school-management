@@ -215,7 +215,7 @@ export default function FeeTypePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={isEdit ? sprintf(__('Edit %s', 'codeclove-school-management'), feeTypeLabel) : sprintf(__('New %s', 'codeclove-school-management'), feeTypeLabel)}
         description={

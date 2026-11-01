@@ -585,14 +585,13 @@ final class NotificationsService {
 			return;
 		}
 
-		$currency = $payment['currency'] ?? $invoice['currency'] ?? 'USD';
-		$amount   = $currency . ' ' . number_format( ( $payment['amount_minor'] ?? 0 ) / 100, 2 );
-		$balance  = $invoice['currency'] . ' ' . number_format( ( $invoice['balance_minor'] ?? 0 ) / 100, 2 );
+		$amount   = codeclove_format_currency( (int) ( $payment['amount_minor'] ?? 0 ), $payment['currency'] ?? $invoice['currency'] ?? null );
+		$balance  = codeclove_format_currency( (int) ( $invoice['balance_minor'] ?? 0 ), $invoice['currency'] ?? null );
 
 		$placeholders = [
 			'{invoice_number}'    => $invoice['invoice_number'] ?? '',
 			'{amount}'            => $amount,
-			'{payment_date}'      => $payment['paid_on'] ?? '',
+			'{payment_date}'      => $this->format_date( $payment['paid_on'] ?? '' ),
 			'{payment_method}'    => ucfirst( str_replace( '_', ' ', $payment['method'] ?? 'manual' ) ),
 			'{payment_reference}' => $payment['reference'] ?? '—',
 			'{balance}'           => $balance,
@@ -640,7 +639,7 @@ final class NotificationsService {
 			'{student_name}'  => $info['student_name'],
 			'{guardian_name}' => $info['guardian_name'],
 			'{status}'        => $status,
-			'{date}'          => date_i18n( get_option( 'date_format' ), strtotime( $date ) ),
+			'{date}'          => $this->format_date( $date ),
 		];
 
 		// Guardian email
@@ -660,7 +659,7 @@ final class NotificationsService {
 				$student_id,
 				__( 'Attendance Alert', 'codeclove-school-management' ),
 				// translators: 1: attendance status, 2: formatted date.
-				sprintf( __( 'You were marked %1$s on %2$s.', 'codeclove-school-management' ), ucfirst( $status ), date_i18n( get_option( 'date_format' ), strtotime( $date ) ) ),
+				sprintf( __( 'You were marked %1$s on %2$s.', 'codeclove-school-management' ), ucfirst( $status ), $this->format_date( $date ) ),
 				'attendance_alert',
 				'/attendance'
 			);
@@ -677,13 +676,13 @@ final class NotificationsService {
 			return false;
 		}
 
-		$amount  = $invoice['currency'] . ' ' . number_format( ( $invoice['total_minor'] ?? 0 ) / 100, 2 );
-		$balance = $invoice['currency'] . ' ' . number_format( ( $invoice['balance_minor'] ?? 0 ) / 100, 2 );
+		$amount  = codeclove_format_currency( (int) ( $invoice['total_minor'] ?? 0 ), $invoice['currency'] ?? null );
+		$balance = codeclove_format_currency( (int) ( $invoice['balance_minor'] ?? 0 ), $invoice['currency'] ?? null );
 
 		$placeholders = [
 			'{invoice_number}' => $invoice['invoice_number'] ?? '',
 			'{amount}'         => $amount,
-			'{due_date}'       => date_i18n( get_option( 'date_format' ), strtotime( $invoice['due_date'] ?? '' ) ),
+			'{due_date}'       => $this->format_date( $invoice['due_date'] ?? '' ),
 			'{balance}'        => $balance,
 			'{guardian_name}'  => $invoice['guardian_name'] ?? '',
 		];
@@ -810,12 +809,12 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 			return;
 		}
 
-		$amount = $invoice['currency'] . ' ' . number_format( ( $invoice['total_minor'] ?? 0 ) / 100, 2 );
+		$amount = codeclove_format_currency( (int) ( $invoice['total_minor'] ?? 0 ), $invoice['currency'] ?? null );
 
 		$placeholders = [
 			'{invoice_number}' => $invoice['invoice_number'] ?? '',
 			'{amount}'         => $amount,
-			'{due_date}'       => date_i18n( get_option( 'date_format' ), strtotime( $invoice['due_date'] ?? '' ) ),
+			'{due_date}'       => $this->format_date( $invoice['due_date'] ?? '' ),
 			'{guardian_name}'  => $invoice['guardian_name'] ?? '',
 		];
 
@@ -855,12 +854,12 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 			return;
 		}
 
-		$balance = $invoice['currency'] . ' ' . number_format( ( $invoice['balance_minor'] ?? 0 ) / 100, 2 );
+		$balance = codeclove_format_currency( (int) ( $invoice['balance_minor'] ?? 0 ), $invoice['currency'] ?? null );
 
 		$placeholders = [
 			'{invoice_number}' => $invoice['invoice_number'] ?? '',
 			'{balance}'        => $balance,
-			'{due_date}'       => date_i18n( get_option( 'date_format' ), strtotime( $invoice['due_date'] ?? '' ) ),
+			'{due_date}'       => $this->format_date( $invoice['due_date'] ?? '' ),
 			'{guardian_name}'  => $invoice['guardian_name'] ?? '',
 		];
 
@@ -909,7 +908,7 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 			return;
 		}
 
-		$amount = $payment['currency'] . ' ' . number_format( ( $payment['amount_minor'] ?? 0 ) / 100, 2 );
+		$amount = codeclove_format_currency( (int) ( $payment['amount_minor'] ?? 0 ), $payment['currency'] ?? null );
 
 		$placeholders = [
 			'{payment_number}' => $payment['payment_number'] ?? '',
@@ -950,6 +949,9 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 	 * Creates a notification record for a specific user.
 	 */
 	public function create_notification( int $user_id, string $title, string $content, string $event_type, ?string $url = null ): void {
+		if ( ! $this->table_exists( Schema::notifications() ) ) {
+			return;
+		}
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->insert(
@@ -970,6 +972,9 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 
 	// ponytail: direct insert for student in-app portal notice
 	public function create_portal_notification( int $student_id, string $title, string $content, string $event_type, ?string $url = null ): void {
+		if ( ! $this->table_exists( Schema::notifications() ) ) {
+			return;
+		}
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->insert(
@@ -1053,6 +1058,13 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 	 * @return array{items: array, unread_count: int, total: int}
 	 */
 	public function get_user_notifications( int $user_id, array $params ): array {
+		if ( ! $this->table_exists( Schema::notifications() ) ) {
+			return [
+				'items'        => [],
+				'unread_count' => 0,
+				'total'        => 0,
+			];
+		}
 		global $wpdb;
 
 		$page     = isset( $params['page'] ) ? max( 1, (int) $params['page'] ) : 1;
@@ -1109,8 +1121,10 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 	 * Marks a single notification as read if it belongs to the user.
 	 */
 	public function mark_as_read( int $user_id, int $id ): bool {
+		if ( ! $this->table_exists( Schema::notifications() ) ) {
+			return false;
+		}
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$updated = $wpdb->update(
 			Schema::notifications(),
 			[
@@ -1126,11 +1140,13 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 		);
 		return $updated !== false;
 	}
-
 	/**
 	 * Marks all notifications for a user as read.
 	 */
 	public function mark_all_read( int $user_id ): bool {
+		if ( ! $this->table_exists( Schema::notifications() ) ) {
+			return false;
+		}
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$updated = $wpdb->update(
@@ -1180,7 +1196,7 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 		$inv = (array) $invoice;
 		$student_name = $inv['student_name'] ?? 'Student';
 		$inv_no = $inv['invoice_number'] ?? '';
-		$amount = ($inv['currency'] ?? 'USD') . ' ' . number_format( ( $inv['total_minor'] ?? 0 ) / 100, 2 );
+		$amount = codeclove_format_currency( (int) ( $inv['total_minor'] ?? 0 ), $inv['currency'] ?? null );
 
 		$this->notify_permission(
 			'finance.view',
@@ -1222,7 +1238,7 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 			}
 		}
 
-		$amount     = ( $pay['currency'] ?? 'USD' ) . ' ' . number_format( ( $pay['amount_minor'] ?? 0 ) / 100, 2 );
+		$amount     = codeclove_format_currency( (int) ( $pay['amount_minor'] ?? 0 ), $pay['currency'] ?? null );
 		$inv_suffix = ! empty( $inv_no )
 			? sprintf( /* translators: %s: invoice number */ __( ' against Invoice %s', 'codeclove-school-management' ), $inv_no )
 			: '';
@@ -1266,7 +1282,7 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 		}
 
 		$inv_no = $inv['invoice_number'];
-		$amount = $inv['currency'] . ' ' . number_format( ( $inv['balance_minor'] ?? 0 ) / 100, 2 );
+		$amount = codeclove_format_currency( (int) ( $inv['balance_minor'] ?? 0 ), $inv['currency'] ?? null );
 
 		$this->notify_permission(
 			'finance.view',
@@ -1322,8 +1338,14 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 	 * @return array
 	 */
 	public function get_announcements( array $params = [] ): array {
-		global $wpdb;
 		$table = Schema::notifications();
+		if ( ! $this->table_exists( $table ) ) {
+			return [
+				'items' => [],
+				'total' => 0,
+			];
+		}
+		global $wpdb;
 
 		$page       = max( 1, (int) ( $params['page'] ?? 1 ) );
 		$per_page   = min( 10000, max( 1, (int) ( $params['per_page'] ?? 20 ) ) );
@@ -1407,8 +1429,11 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 	 * @return array|null Announcement data or null.
 	 */
 	public function get_announcement( int $id ): ?array {
-		global $wpdb;
 		$table = Schema::notifications();
+		if ( ! $this->table_exists( $table ) ) {
+			return null;
+		}
+		global $wpdb;
 		$sql = 'SELECT n.id, n.user_id, n.audience, n.title, n.content, n.event_type, n.notice_date, n.expires_at, n.is_pinned, n.accent_color, n.icon, n.url, n.created_at, n.is_read
 		        FROM %i n
 		        WHERE n.id = %d AND n.student_id IS NULL';
@@ -1500,6 +1525,9 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 
 		if ( ! empty( $expires_at ) && ! empty( $raw_notice_date ) && substr( $expires_at, 0, 10 ) < $raw_notice_date ) {
 			return new WP_Error( 'invalid_expiry', __( 'Expiry date cannot be earlier than notice date.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+		if ( ! $this->table_exists( Schema::notifications() ) ) {
+			return new WP_Error( 'db_error', __( 'Notifications table not found.', 'codeclove-school-management' ), [ 'status' => 500 ] );
 		}
 
 		$inserted = $wpdb->insert( Schema::notifications(), [
@@ -1627,8 +1655,10 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 	 * @return bool True if deleted.
 	 */
 	public function delete_announcement( int $id ): bool {
+		if ( ! $this->table_exists( Schema::notifications() ) ) {
+			return false;
+		}
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$deleted = $wpdb->query(
 			$wpdb->prepare(
 				'DELETE FROM %i WHERE id = %d AND student_id IS NULL',
@@ -1637,6 +1667,33 @@ $wa_tpl  = $notifications['whatsapp_templates']['fee_reminder'] ?? [];
 			)
 		);
 		return (bool) $deleted;
+	}
+
+	/**
+	 * Formats a date string using configured CodeClove localization date_format.
+	 *
+	 * @param string|null $date Date string (e.g. Y-m-d).
+	 * @return string Formatted date string.
+	 */
+	private function format_date( ?string $date ): string {
+		if ( empty( $date ) ) {
+			return '—';
+		}
+		$ts = strtotime( $date );
+		return $ts ? date_i18n( get_option( 'date_format', 'd/m/Y' ), $ts ) : $date;
+	}
+
+	/**
+	 * Checks if a database table physically exists.
+	 *
+	 * @param string $table Fully qualified database table name.
+	 * @return bool
+	 */
+	private function table_exists( string $table ): bool {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return (string) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table;
 	}
 }
 

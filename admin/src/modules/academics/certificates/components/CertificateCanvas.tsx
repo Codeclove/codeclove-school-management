@@ -344,7 +344,10 @@ export function CertificateCanvas({
                 zIndex: isSelected ? 20 : 10,
               }}
               className={cn(
-                'whitespace-nowrap transition-shadow duration-75 select-none',
+                el.type === 'line' || el.type === 'image' || el.token === 'serial_barcode' || el.token === 'verification_qr'
+                  ? 'whitespace-nowrap'
+                  : 'whitespace-normal max-w-[85cqw]',
+                'transition-shadow duration-75 select-none',
                 isEditing && 'cursor-grab active:cursor-grabbing hover:ring-1 hover:ring-blue-400/60 rounded px-1 -mx-1',
                 isSelected && 'ring-2 ring-blue-500 shadow-sm bg-blue-50/30',
                 isLinkedPartner && 'ring-1 ring-blue-400/70 ring-dashed bg-blue-50/15'

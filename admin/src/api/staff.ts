@@ -387,3 +387,68 @@ export function useBulkStaffApplicationsAction() {
     },
   })
 }
+// ─── Staff WordPress User Management ─────────────────────────────────────────
+
+export interface StaffWpUserSearchResult {
+  id: number
+  username: string
+  display_name: string
+  email: string
+  roles: string[]
+  linked_staff?: {
+    id: number
+    staff_number: string
+    name: string
+  } | null
+}
+
+export async function searchStaffWpUsers(
+  search: string = '',
+  email: string = ''
+): Promise<StaffWpUserSearchResult[]> {
+  const params = new URLSearchParams()
+  if (search) params.set('search', search)
+  if (email) params.set('email', email)
+  const res = await api.get<StaffWpUserSearchResult[]>(`staff/wp-users?${params.toString()}`)
+  return res.data
+}
+
+export function useSearchStaffWpUsers(search: string = '', email: string = '', enabled: boolean = true) {
+  return useQuery({
+    queryKey: ['staff', 'wp-users-search', search, email],
+    queryFn: () => searchStaffWpUsers(search, email),
+    enabled: enabled && (search.trim().length >= 1 || Boolean(email.trim())),
+    staleTime: 5_000,
+  })
+}
+
+export async function unlinkStaffWpUser(staffId: number): Promise<{ unlinked: boolean }> {
+  const res = await api.delete<{ unlinked: boolean }>(`staff/${staffId}/wp-user`)
+  return res.data
+}
+
+export function useUnlinkStaffWpUser() {
+  const queryClient = useQueryClient()
+  return useMutation<{ unlinked: boolean }, Error, number>({
+    mutationFn: async (staffId) => {
+      return unlinkStaffWpUser(staffId)
+    },
+    onSuccess: (_, staffId) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.detail(staffId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.all })
+    },
+  })
+}
+
+export async function resetStaffWpPassword(staffId: number): Promise<{ sent: boolean; message: string }> {
+  const res = await api.post<{ sent: boolean; message: string }>(`staff/${staffId}/wp-user/reset-password`)
+  return res.data
+}
+
+export function useResetStaffWpPassword() {
+  return useMutation<{ sent: boolean; message: string }, Error, number>({
+    mutationFn: async (staffId) => {
+      return resetStaffWpPassword(staffId)
+    },
+  })
+}

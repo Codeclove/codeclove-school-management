@@ -44,8 +44,7 @@ final class SettingsRepository {
 		$settings = $this->deep_merge( $defaults, $stored );
 		$settings = $this->filter_known_settings( $settings, $defaults );
 
-		// Normalize values written by earlier settings implementations.
-		if ( ! in_array( $settings['localization']['time_format'], [ 'H:i', 'h:i A' ], true ) ) {
+		if ( empty( $settings['localization']['time_format'] ) ) {
 			$settings['localization']['time_format'] = $defaults['localization']['time_format'];
 		}
 		if ( '' === trim( (string) $settings['localization']['timezone'] ) ) {
@@ -117,6 +116,10 @@ final class SettingsRepository {
 	 * @return array
 	 */
 	public function get_defaults(): array {
+		$stored          = get_option( self::OPTION_NAME, [] );
+		$preset          = is_array( $stored ) ? ( $stored['education_system']['preset'] ?? null ) : null;
+		$default_weekend = ( 'IN' === $preset ) ? 'sunday_only' : 'saturday_sunday';
+
 		$defaults = [
 			'schema_version'   => CODECLOVE_DB_VERSION,
 			'plugin_version'   => CODECLOVE_VERSION,
@@ -194,6 +197,7 @@ final class SettingsRepository {
 				'date_format'       => 'd/m/Y',
 				'time_format'       => 'H:i',
 				'week_start_day'    => (int) get_option( 'start_of_week', 1 ),
+				'weekend_days'      => $default_weekend,
 				'timezone'          => function_exists( 'wp_timezone_string' ) ? wp_timezone_string() : 'UTC',
 				'currency'          => 'USD',
 				'currency_position' => 'left',
@@ -397,6 +401,7 @@ final class SettingsRepository {
 				'next_number'      => 1,
 				'reset_rule'       => 'none',
 				'separator'        => '',
+				'scope'            => 'global',
 			],
 			'invoice_number'        => [
 				'prefix'           => 'INV',
@@ -611,6 +616,14 @@ final class SettingsRepository {
 			if ( $start_of_week >= 0 && $start_of_week <= 6 ) {
 				update_option( 'start_of_week', $start_of_week );
 			}
+		}
+
+		if ( ! empty( $localization['date_format'] ) ) {
+			update_option( 'date_format', sanitize_text_field( (string) $localization['date_format'] ) );
+		}
+
+		if ( ! empty( $localization['time_format'] ) ) {
+			update_option( 'time_format', sanitize_text_field( (string) $localization['time_format'] ) );
 		}
 
 		if ( ! empty( $localization['language'] ) && 'site_default' !== $localization['language'] ) {

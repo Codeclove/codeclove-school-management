@@ -77,4 +77,17 @@ describe('FormActionFooter Component', () => {
     expect(html).toContain('custom-footer-class')
     expect(html).toContain('Custom Header')
   })
+
+  it('renders extra action buttons when extraActions prop is provided', () => {
+    const html = renderToString(
+      <FormActionFooter
+        title="Create Exam"
+        submitText="Save & Set Schedule"
+        extraActions={<button type="button">Save as Draft</button>}
+      />
+    )
+
+    expect(html).toContain('Save as Draft')
+    expect(html).toContain('Save &amp; Set Schedule')
+  })
 })

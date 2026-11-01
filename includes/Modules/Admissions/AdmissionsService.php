@@ -132,11 +132,16 @@ final class AdmissionsService {
 			$guardian_email = $other_email;
 			$guardian_phone = $other_phone;
 			$relationship   = $other_rel;
-		} else {
-			$guardian_name  = ! empty( $payload['guardian_name'] ) ? sanitize_text_field( $payload['guardian_name'] ) : 'Guardian';
+		} elseif ( ! empty( $payload['guardian_name'] ) ) {
+			$guardian_name  = sanitize_text_field( $payload['guardian_name'] );
 			$guardian_email = ! empty( $payload['guardian_email'] ) ? sanitize_email( $payload['guardian_email'] ) : '';
 			$guardian_phone = ! empty( $payload['guardian_phone'] ) ? sanitize_text_field( $payload['guardian_phone'] ) : '';
 			$relationship   = ! empty( $payload['guardian_relationship'] ) ? sanitize_text_field( $payload['guardian_relationship'] ) : 'Guardian';
+		} else {
+			$guardian_name  = '';
+			$guardian_email = '';
+			$guardian_phone = '';
+			$relationship   = 'Guardian';
 		}
 
 		if ( empty( $guardian_name ) ) {
@@ -601,8 +606,9 @@ final class AdmissionsService {
 			$app_docs = $wpdb->get_results(
 				$wpdb->prepare(
 					'SELECT attachment_id, label, document_type, created_at
-					 FROM ' . Schema::app_documents() . '
+					 FROM %i
 					 WHERE application_id = %d AND attachment_id IS NOT NULL',
+					Schema::app_documents(),
 					$id
 				),
 				ARRAY_A
@@ -642,7 +648,7 @@ final class AdmissionsService {
 				if ( empty( $full ) ) return [ '', '' ];
 				$parts = explode( ' ', $full );
 				$first = $parts[0];
-				$last  = count( $parts ) > 1 ? implode( ' ', array_slice( $parts, 1 ) ) : 'Parent';
+				$last  = count( $parts ) > 1 ? implode( ' ', array_slice( $parts, 1 ) ) : '';
 				return [ $first, $last ];
 			};
 
@@ -687,10 +693,13 @@ final class AdmissionsService {
 				'academic_session_id' => $session_id,
 				'academic_unit_id'    => $unit_id,
 			] );
-			$roll_number = ( ! is_wp_error( $r = IdentifierService::generate( 'roll_number' ) ) && '' !== $r )
+			$roll_number = ( ! is_wp_error( $r = IdentifierService::generate( 'roll_number', [
+				'academic_session_id' => $session_id,
+				'academic_unit_id'    => $unit_id,
+				'academic_group_id'   => $group_id,
+			] ) ) && '' !== $r )
 				? $r
 				: 'R' . str_pad( (string) ( $total_enrolled + 1 ), 2, '0', STR_PAD_LEFT );
-
 			$enrollment_id = $students_service->db_create_enrollment( [
 				'student_id'          => $student_id,
 				'academic_session_id' => $session_id,

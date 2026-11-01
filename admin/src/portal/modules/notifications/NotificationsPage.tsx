@@ -5,7 +5,7 @@
  * instant search, category dropdown filter, and responsive noticeboard feed.
  */
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -38,6 +38,7 @@ import {
   Select,
   type SelectOption,
   Spinner,
+  TablePagination,
 } from '@/components/ui'
 import { __ } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -49,16 +50,22 @@ export const NotificationsPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedIds, setExpandedIds] = useState<Record<number, boolean>>({})
-  const page = 1
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState<number | 'all'>(5)
+
+  // Reset to first page when filtering or changing students
+  useEffect(() => {
+    setPage(1)
+  }, [currentStudent?.id, filter, selectedCategory, searchQuery, perPage])
 
   const toggleExpand = (id: number) => {
     setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
-  const { data: notifData, isLoading } = useNotifications(currentStudent?.id, page, 30)
+  const { data: notifData, isLoading } = useNotifications(currentStudent?.id, page, perPage)
   const markReadMutation = useMarkNotificationRead(currentStudent?.id)
   const unreadCount = notifData?.unread_count ?? 0
-
+  const total = notifData?.total ?? 0
   const categoryOptions: SelectOption[] = useMemo(
     () => [
       {
@@ -403,6 +410,23 @@ export const NotificationsPage: React.FC = () => {
                 )
               })}
             </div>
+          )}
+          {total > 0 && (
+            <TablePagination
+              page={page}
+              perPage={perPage}
+              total={total}
+              onPageChange={(p) => {
+                const newPage = typeof p === 'function' ? p(page) : p
+                setPage(newPage)
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              onPerPageChange={(p) => {
+                setPerPage(p)
+                setPage(1)
+              }}
+              perPageOptions={[5, 10, 20, 50]}
+            />
           )}
         </Card>
       )}

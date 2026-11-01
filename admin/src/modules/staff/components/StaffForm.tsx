@@ -15,6 +15,7 @@ import {
 import { __, sprintf } from '@/lib/i18n'
 import { AvatarUpload, AddressFields, DocumentManager, uploadPendingDocuments, type ManagedDocument } from '@/components/ui/form'
 import { onFormError } from '@/lib/form-errors'
+import StaffAccountSection from './StaffAccountSection'
 
 interface StaffDoc {
   label: string
@@ -194,6 +195,7 @@ export default function StaffForm({
     handleSubmit,
     reset,
     setValue,
+    watch,
     control,
     formState: { errors },
   } = useForm<StaffFormValues>({
@@ -688,29 +690,15 @@ export default function StaffForm({
         </div>
 
         {/* WordPress User Account Credentials */}
-        <div className="border-t border-border pt-3 space-y-3">
-          <h4 className="text-xs font-bold text-text">{__( 'WordPress User Account', 'codeclove-school-management' )}</h4>
-
-          {initialData?.user_id ? (
-            <div className="p-3 rounded-lg border border-border bg-bg-surface space-y-2">
-              <div>
-                <span className="text-xs font-semibold text-text">
-                  {__( 'Linked WordPress Account:', 'codeclove-school-management' )}{' '}
-                  <span className="font-mono text-brand font-medium">{initialData.username || `ID #${initialData.user_id}`}</span>
-                </span>
-                <p className="text-2xs text-text-muted mt-0.5">
-                  {__( 'This staff member is linked to a WordPress user account. Password changes and user credentials are securely managed through native WordPress user administration.', 'codeclove-school-management' )}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="p-3 rounded-lg border border-border bg-bg-surface space-y-1">
-              <p className="text-xs text-text-muted leading-relaxed">
-                {__( 'Staff members are matched to WordPress user accounts automatically by email address, or can be linked to an existing account. To grant WordPress dashboard access, create an account in WordPress Users > Add New.', 'codeclove-school-management' )}
-              </p>
-            </div>
-          )}
-        </div>
+        <StaffAccountSection
+          control={control}
+          setValue={setValue}
+          watch={watch}
+          errors={errors}
+          initialData={initialData}
+          mode={mode}
+          disabled={isPending}
+        />
       </Card>
 
       {/* ─── CARD 6: Documents & Verification ────────────────────────────── */}

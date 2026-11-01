@@ -230,12 +230,14 @@ final class StaffService {
 			? $this->sanitize_documents_payload( $body['documents'] )
 			: '[]';
 
-		// Role hierarchy check: only an Owner or WP Administrator can assign the Owner role.
-		if ( ! empty( $data['role_id'] ) && $this->is_owner_role( (int) $data['role_id'] ) ) {
-			if ( ! $this->current_user_can_manage_owner() ) {
-				return new WP_Error( 'codeclove_forbidden', __( 'Only an existing Owner or WordPress Administrator can assign the Owner role.', 'codeclove-school-management' ), [ 'status' => 403 ] );
+		// Role hierarchy check: only an Administrator or WP Administrator can assign the Administrator role.
+		if ( ! empty( $data['role_id'] ) && $this->is_administrator_role( (int) $data['role_id'] ) ) {
+			if ( ! $this->current_user_can_manage_admin() ) {
+				return new WP_Error( 'codeclove_forbidden', __( 'Only an existing Administrator or WordPress Administrator can assign the Administrator role.', 'codeclove-school-management' ), [ 'status' => 403 ] );
 			}
 		}
+
+		$created_user_account = null;
 
 		// If user_id is passed, validate that the WordPress user exists.
 		if ( ! empty( $body['user_id'] ) ) {
@@ -244,6 +246,13 @@ final class StaffService {
 				return new WP_Error( 'codeclove_validation_failed', __( 'The specified WordPress user does not exist.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 			$data['user_id'] = (int) $body['user_id'];
+		} elseif ( ! empty( $body['create_user'] ) ) {
+			$user_res = $this->provision_wp_user( $body, $data['first_name'], $data['last_name'], $data['email'] );
+			if ( is_wp_error( $user_res ) ) {
+				return $user_res;
+			}
+			$data['user_id']      = $user_res['user_id'];
+			$created_user_account = $user_res;
 		}
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
@@ -274,7 +283,12 @@ final class StaffService {
 			return new WP_Error( 'codeclove_not_found', __( 'Failed to retrieve newly created staff member.', 'codeclove-school-management' ), 500 );
 		}
 
-		return $this->format_staff_member( $fresh );
+		$formatted = $this->format_staff_member( $fresh );
+		if ( ! empty( $created_user_account ) ) {
+			$formatted['created_user_account'] = $created_user_account;
+		}
+
+		return $formatted;
 	}
 
 	/**
@@ -286,6 +300,7 @@ final class StaffService {
 	 */
 	public function update_staff_member( int $id, array $body ): array|WP_Error {
 		global $wpdb;
+		$created_user_account = null;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Get staff member for update.
 		$exists_row = $wpdb->get_row(
@@ -300,25 +315,25 @@ final class StaffService {
 			return new WP_Error( 'codeclove_not_found', __( 'Staff member not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
 		}
 
-		// Prevent lockout: check if this is the last Owner user
-		if ( ! empty( $exists_row['user_id'] ) && $this->is_last_owner( (int) $exists_row['user_id'] ) ) {
+		// Prevent lockout: check if this is the last Administrator user
+		if ( ! empty( $exists_row['user_id'] ) && $this->is_last_administrator( (int) $exists_row['user_id'] ) ) {
 			if ( isset( $body['role_id'] ) ) {
 				$new_role_id = empty( $body['role_id'] ) ? null : (int) $body['role_id'];
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Owner role ID query.
-				$owner_role_id = (int) $wpdb->get_var(
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Admin role ID query.
+				$admin_role_id = (int) $wpdb->get_var(
 					$wpdb->prepare(
 						'SELECT id FROM %i WHERE slug = %s',
 						Schema::roles(),
-						'owner'
+						'administrator'
 					)
 				);
-				if ( $new_role_id !== $owner_role_id ) {
-					return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot remove the Owner role from the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+				if ( $new_role_id !== $admin_role_id ) {
+					return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot remove the Administrator role from the last remaining Administrator user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 				}
 			}
 
 			if ( isset( $body['status'] ) && in_array( $body['status'], [ 'inactive', 'suspended' ], true ) ) {
-				return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot deactivate or suspend the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+				return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot deactivate or suspend the last remaining Administrator user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 			}
 		}
 
@@ -343,16 +358,86 @@ final class StaffService {
 			$data['photo_id'] = empty( $body['photo_id'] ) ? null : (int) $body['photo_id'];
 		}
 
-		if ( isset( $body['user_id'] ) ) {
-			if ( ! empty( $body['user_id'] ) ) {
-				$linked_user = get_userdata( (int) $body['user_id'] );
-				if ( ! $linked_user ) {
-					return new WP_Error( 'codeclove_validation_failed', __( 'The specified WordPress user does not exist.', 'codeclove-school-management' ), [ 'status' => 400 ] );
-				}
-				$data['user_id'] = (int) $body['user_id'];
-			} else {
-				$data['user_id'] = null;
+		if ( ! empty( $body['user_id'] ) || ! empty( $body['create_user'] ) ) {
+			$acting_user_id   = get_current_user_id();
+			$can_manage_roles = current_user_can( 'manage_options' )
+				|| current_user_can( 'promote_users' )
+				|| \CodeClove\Core\Permissions::check( $acting_user_id, 'roles_permissions.manage' )
+				|| \CodeClove\Core\Permissions::check( $acting_user_id, 'roles.manage' );
+
+			if ( ! $can_manage_roles ) {
+				$msg = ! empty( $body['user_id'] )
+					? __( 'You do not have permission to link WordPress accounts.', 'codeclove-school-management' )
+					: __( 'You do not have permission to create and link WordPress accounts for staff members.', 'codeclove-school-management' );
+				return new WP_Error( 'codeclove_forbidden', $msg, [ 'status' => 403 ] );
 			}
+
+			// Role hierarchy check: prevent non-admins/lower roles from linking to Admin staff profiles.
+			$target_role_id = ! empty( $exists_row['role_id'] ) ? (int) $exists_row['role_id'] : 0;
+			if ( $target_role_id > 0 ) {
+				if ( $this->is_administrator_role( $target_role_id ) && ! $this->current_user_can_manage_admin() ) {
+					return new WP_Error(
+						'codeclove_forbidden',
+						__( 'Only an existing Administrator or WordPress Administrator can link WordPress accounts to an Administrator staff record.', 'codeclove-school-management' ),
+						[ 'status' => 403 ]
+					);
+				}
+			}
+		}
+
+		if ( ! empty( $body['user_id'] ) ) {
+			$linked_user = get_userdata( (int) $body['user_id'] );
+			if ( ! $linked_user ) {
+				return new WP_Error( 'codeclove_validation_failed', __( 'The specified WordPress user does not exist.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+			}
+			// Prevent linking a user that is already linked to another staff member
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Check existing staff link.
+			$already_linked = $wpdb->get_row(
+				$wpdb->prepare(
+					'SELECT id, first_name, last_name, staff_number FROM %i WHERE user_id = %d AND id != %d AND deleted_at IS NULL LIMIT 1',
+					Schema::staff_members(),
+					(int) $body['user_id'],
+					$id
+				),
+				ARRAY_A
+			);
+			if ( $already_linked ) {
+				return new WP_Error(
+					'codeclove_user_already_linked',
+					sprintf(
+						/* translators: 1: WordPress username, 2: Staff full name, 3: Staff identifier */
+						__( 'WordPress user @%1$s is already linked to staff member %2$s (%3$s).', 'codeclove-school-management' ),
+						$linked_user->user_login,
+						trim( $already_linked['first_name'] . ' ' . $already_linked['last_name'] ),
+						$already_linked['staff_number']
+					),
+					[ 'status' => 400 ]
+				);
+			}
+			$data['user_id'] = (int) $body['user_id'];
+		} elseif ( ! empty( $body['create_user'] ) ) {
+			if ( ! empty( $exists_row['user_id'] ) ) {
+				$existing = get_userdata( (int) $exists_row['user_id'] );
+				return new WP_Error(
+					/* translators: %s: WordPress username */
+					sprintf( __( 'A WordPress account (@%s) is already linked to this staff member.', 'codeclove-school-management' ), $existing ? $existing->user_login : $exists_row['user_id'] ),
+					[ 'status' => 400 ]
+				);
+			}
+			$first_name = $data['first_name'] ?? $exists_row['first_name'];
+			$last_name  = $data['last_name'] ?? $exists_row['last_name'];
+			$email      = $data['email'] ?? $exists_row['email'];
+			$user_res   = $this->provision_wp_user( $body, $first_name, $last_name, $email );
+			if ( is_wp_error( $user_res ) ) {
+				return $user_res;
+			}
+			$data['user_id']      = $user_res['user_id'];
+			$created_user_account = $user_res;
+		} elseif ( array_key_exists( 'user_id', $body ) ) {
+			if ( ! empty( $exists_row['user_id'] ) && $this->is_last_administrator( (int) $exists_row['user_id'] ) ) {
+				return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot unlink WordPress account from the last remaining Administrator user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+			}
+			$data['user_id'] = null;
 		}
 
 		if ( isset( $body['role_id'] ) ) {
@@ -364,10 +449,10 @@ final class StaffService {
 				if ( ! $has_role_cap ) {
 					return new WP_Error( 'codeclove_forbidden', __( 'You do not have permission to change staff roles.', 'codeclove-school-management' ), [ 'status' => 403 ] );
 				}
-				$is_target_owner = $curr_role_id && $this->is_owner_role( $curr_role_id );
-				$is_new_owner    = $new_role_id && $this->is_owner_role( $new_role_id );
-				if ( ( $is_target_owner || $is_new_owner ) && ! $this->current_user_can_manage_owner() ) {
-					return new WP_Error( 'codeclove_forbidden', __( 'Only an existing Owner or WordPress Administrator can assign or modify the Owner role.', 'codeclove-school-management' ), [ 'status' => 403 ] );
+				$is_target_admin = $curr_role_id && $this->is_administrator_role( $curr_role_id );
+				$is_new_admin    = $new_role_id && $this->is_administrator_role( $new_role_id );
+				if ( ( $is_target_admin || $is_new_admin ) && ! $this->current_user_can_manage_admin() ) {
+					return new WP_Error( 'codeclove_forbidden', __( 'Only an existing Administrator or WordPress Administrator can assign or modify the Administrator role.', 'codeclove-school-management' ), [ 'status' => 403 ] );
 				}
 			}
 			$data['role_id'] = $new_role_id;
@@ -493,9 +578,16 @@ final class StaffService {
 		// Synchronize WP user role if mapping exists
 		if ( ! empty( $updated['user_id'] ) && ! empty( $updated['role_id'] ) ) {
 			$this->sync_user_role( (int) $updated['user_id'], (int) $updated['role_id'] );
+		} elseif ( array_key_exists( 'user_id', $data ) && is_null( $data['user_id'] ) && ! empty( $exists_row['user_id'] ) ) {
+			\CodeClove\Core\Permissions::flush_cache( (int) $exists_row['user_id'] );
 		}
 
-		return $this->format_staff_member( $updated );
+		$formatted = $this->format_staff_member( $updated );
+		if ( ! empty( $created_user_account ) ) {
+			$formatted['created_user_account'] = $created_user_account;
+		}
+
+		return $formatted;
 	}
 
 	public function delete_staff_member( int $id ): bool|WP_Error {
@@ -514,8 +606,8 @@ final class StaffService {
 			return new WP_Error( 'codeclove_not_found', __( 'Staff member not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
 		}
 
-		if ( ! empty( $exists['user_id'] ) && $this->is_last_owner( (int) $exists['user_id'] ) ) {
-			return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot delete the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		if ( ! empty( $exists['user_id'] ) && $this->is_last_administrator( (int) $exists['user_id'] ) ) {
+			return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot delete the last remaining Administrator user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Soft delete staff member.
@@ -565,8 +657,8 @@ final class StaffService {
 						),
 						ARRAY_A
 					);
-					if ( $staff && ! empty( $staff['user_id'] ) && $this->is_last_owner( (int) $staff['user_id'] ) ) {
-						return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot deactivate or suspend the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+					if ( $staff && ! empty( $staff['user_id'] ) && $this->is_last_administrator( (int) $staff['user_id'] ) ) {
+						return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot deactivate or suspend the last remaining Administrator user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 					}
 				}
 			}
@@ -601,8 +693,8 @@ final class StaffService {
 					),
 					ARRAY_A
 				);
-				if ( $staff && ! empty( $staff['user_id'] ) && $this->is_last_owner( (int) $staff['user_id'] ) ) {
-					return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot delete the last remaining Owner user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+				if ( $staff && ! empty( $staff['user_id'] ) && $this->is_last_administrator( (int) $staff['user_id'] ) ) {
+					return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot delete the last remaining Administrator user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 				}
 			}
 
@@ -744,6 +836,239 @@ final class StaffService {
 		// Flush permissions cache for the user
 		\CodeClove\Core\Permissions::flush_cache( $user_id );
 	}
+	/**
+	 * Provisions a new WordPress user account for a staff member.
+	 *
+	 * @param array  $params     Payload options (username, password, send_email, link_if_exists).
+	 * @param string $first_name Staff first name.
+	 * @param string $last_name  Staff last name.
+	 * @param string $email      Staff email.
+	 * @return array{user_id: int, username: string, password: string, email: string}|WP_Error
+	 */
+	public function provision_wp_user( array $params, string $first_name = '', string $last_name = '', string $email = '' ): array|WP_Error {
+		$email = sanitize_email( (string) ( $params['email'] ?? $email ) );
+		if ( empty( $email ) || ! is_email( $email ) ) {
+			return new WP_Error( 'codeclove_invalid_email', __( 'A valid email address is required to create a WordPress user account.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+
+		$existing_user_id = email_exists( $email );
+		if ( $existing_user_id ) {
+			if ( ! empty( $params['link_if_exists'] ) ) {
+				$existing_user = get_userdata( (int) $existing_user_id );
+				return [
+					'user_id'  => (int) $existing_user_id,
+					'username' => $existing_user ? $existing_user->user_login : '',
+					'password' => '',
+					'email'    => $email,
+					'existing' => true,
+				];
+			}
+			return new WP_Error(
+				/* translators: %s: User email address */
+				sprintf( __( 'A WordPress user with email %s already exists. You can link this existing account instead.', 'codeclove-school-management' ), $email ),
+				[ 'status' => 400, 'existing_user_id' => (int) $existing_user_id ]
+			);
+		}
+
+		if ( ! empty( $params['username'] ) ) {
+			$username = sanitize_user( (string) $params['username'], true );
+			if ( ! validate_username( $username ) ) {
+				return new WP_Error( 'codeclove_invalid_username', __( 'The username contains invalid characters.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+			}
+			if ( username_exists( $username ) ) {
+				/* translators: %s: Username */
+				return new WP_Error( 'codeclove_username_exists', sprintf( __( 'Username "%s" is already taken. Please choose another username.', 'codeclove-school-management' ), $username ), [ 'status' => 400 ] );
+			}
+		} else {
+			$base = strtolower( trim( $first_name . '.' . $last_name ) );
+			$base = preg_replace( '/[^a-z0-9._-]/', '', $base );
+			if ( empty( $base ) || '.' === $base ) {
+				$base = sanitize_user( current( explode( '@', $email ) ), true );
+			}
+			if ( empty( $base ) ) {
+				$base = 'staff';
+			}
+			$username = $base;
+			$suffix   = 1;
+			while ( username_exists( $username ) ) {
+				$username = $base . $suffix;
+				$suffix++;
+			}
+		}
+
+		$password = ! empty( $params['password'] ) ? (string) $params['password'] : wp_generate_password( 16, true, true );
+
+		$user_id = wp_insert_user( [
+			'user_login'   => $username,
+			'user_pass'    => $password,
+			'user_email'   => $email,
+			'first_name'   => $first_name,
+			'last_name'    => $last_name,
+			'display_name' => trim( "$first_name $last_name" ) ?: $username,
+			'role'         => 'codeclove_staff',
+		] );
+
+		if ( is_wp_error( $user_id ) ) {
+			return $user_id;
+		}
+
+		if ( ! empty( $params['send_email'] ) && function_exists( 'wp_new_user_notification' ) ) {
+			wp_new_user_notification( $user_id, null, 'user' );
+		}
+
+		return [
+			'user_id'  => (int) $user_id,
+			'username' => $username,
+			'password' => $password,
+			'email'    => $email,
+		];
+	}
+
+	/**
+	 * Searches WordPress users for staff account linking.
+	 *
+	 * @param string $search Search query (username, name, email).
+	 * @param string $email  Exact email match.
+	 * @return array
+	 */
+	public function search_wp_users( string $search = '', string $email = '' ): array {
+		global $wpdb;
+
+		$term = trim( $search ?: $email );
+		$query_args = [
+			'number'  => 20,
+			'orderby' => 'display_name',
+			'order'   => 'ASC',
+		];
+
+		if ( ! empty( $term ) ) {
+			$query_args['search']         = '*' . $term . '*';
+			$query_args['search_columns'] = [ 'user_login', 'user_email', 'user_nicename', 'display_name' ];
+		} else {
+			$query_args['number']  = 15;
+			$query_args['orderby'] = 'registered';
+			$query_args['order']   = 'DESC';
+		}
+
+		$user_query = new \WP_User_Query( $query_args );
+		$users      = $user_query->get_results();
+		if ( empty( $users ) ) {
+			return [];
+		}
+
+		// Find existing staff member links for these users
+		$uids = array_filter( array_map( 'intval', wp_list_pluck( $users, 'ID' ) ) );
+		if ( empty( $uids ) ) {
+			$staff_links = [];
+		} else {
+			$placeholders = implode( ',', array_fill( 0, count( $uids ), '%d' ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$staff_links = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT id, user_id, first_name, last_name, staff_number FROM %i WHERE user_id IN ({$placeholders}) AND deleted_at IS NULL",
+					Schema::staff_members(),
+					...$uids
+				),
+				ARRAY_A
+			) ?: [];
+		}
+
+		$staff_map = [];
+		foreach ( $staff_links as $s ) {
+			$staff_map[ (int) $s['user_id'] ] = [
+				'id'           => (int) $s['id'],
+				'staff_number' => $s['staff_number'],
+				'name'         => trim( $s['first_name'] . ' ' . $s['last_name'] ),
+			];
+		}
+
+		return array_map( function( \WP_User $u ) use ( $staff_map ) {
+			$uid = (int) $u->ID;
+			return [
+				'id'           => $uid,
+				'username'     => $u->user_login,
+				'display_name' => $u->display_name ?: $u->user_login,
+				'email'        => $u->user_email,
+				'roles'        => (array) $u->roles,
+				'linked_staff' => $staff_map[ $uid ] ?? null,
+			];
+		}, $users );
+	}
+
+	/**
+	 * Creates a new WordPress user and links it to an existing staff member.
+	 */
+	public function create_staff_wp_user( int $staff_id, array $params = [] ): array|WP_Error {
+		$params['create_user'] = true;
+		$updated = $this->update_staff_member( $staff_id, $params );
+		return is_wp_error( $updated ) ? $updated : ( $updated['created_user_account'] ?? [ 'user_id' => $updated['user_id'] ] );
+	}
+
+	/**
+	 * Links an existing WordPress user to a staff member.
+	 */
+	public function link_staff_wp_user( int $staff_id, int $user_id ): array|WP_Error {
+		$updated = $this->update_staff_member( $staff_id, [ 'user_id' => $user_id ] );
+		if ( is_wp_error( $updated ) ) {
+			return $updated;
+		}
+		$wp_user = get_userdata( $user_id );
+		return [
+			'user_id'      => $user_id,
+			'username'     => $wp_user ? $wp_user->user_login : '',
+			'email'        => $wp_user ? $wp_user->user_email : '',
+			'display_name' => $wp_user ? ( $wp_user->display_name ?: $wp_user->user_login ) : '',
+		];
+	}
+
+	/**
+	 * Unlinks a WordPress user from a staff member.
+	 */
+	public function unlink_staff_wp_user( int $staff_id ): bool|WP_Error {
+		$res = $this->update_staff_member( $staff_id, [ 'user_id' => null ] );
+		return is_wp_error( $res ) ? $res : true;
+	}
+
+	/**
+	 * Sends a WordPress password reset email to the staff member's linked user account.
+	 *
+	 * @param int $staff_id Staff member ID.
+	 * @return array|WP_Error
+	 */
+	public function send_staff_wp_password_reset( int $staff_id ): array|WP_Error {
+		$staff = $this->get_staff_member( $staff_id );
+		if ( is_wp_error( $staff ) ) {
+			return $staff;
+		}
+
+		$user_id = ! empty( $staff['user_id'] ) ? (int) $staff['user_id'] : 0;
+		if ( ! $user_id ) {
+			return new WP_Error( 'codeclove_no_account', __( 'No WordPress user account is linked to this staff member.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+
+		$wp_user = get_userdata( $user_id );
+		if ( ! $wp_user ) {
+			return new WP_Error( 'codeclove_user_not_found', __( 'The linked WordPress user was not found.', 'codeclove-school-management' ), [ 'status' => 404 ] );
+		}
+
+		if ( empty( $wp_user->user_email ) || ! is_email( $wp_user->user_email ) ) {
+			return new WP_Error( 'codeclove_missing_email', __( 'This user does not have a valid email address on file to send a password reset.', 'codeclove-school-management' ), [ 'status' => 400 ] );
+		}
+
+		$reset_res = retrieve_password( $wp_user->user_login );
+		if ( is_wp_error( $reset_res ) ) {
+			return $reset_res;
+		}
+
+		return [
+			'sent'    => true,
+			'message' => sprintf(
+				/* translators: %s: user email */
+				__( 'Password reset instructions have been emailed to %s.', 'codeclove-school-management' ),
+				$wp_user->user_email
+			),
+		];
+	}
 
 	/**
 	 * Bulk imports staff members from an array of parsed row payloads.
@@ -843,75 +1168,95 @@ final class StaffService {
 	}
 
 	/**
-	 * Checks if a WordPress user is the last active Owner in CodeClove.
+	 * Checks if a user is the last remaining user with Administrator role.
+	 *
+	 * @param int $user_id WordPress user ID.
+	 * @return bool
+	 */
+	private function is_last_administrator( int $user_id ): bool {
+		global $wpdb;
+
+		// 1. Check if the user currently has the Administrator role assigned.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Administrator role ID query.
+		$admin_role_id = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT id FROM %i WHERE slug = %s',
+				Schema::roles(),
+				'administrator'
+			)
+		);
+		if ( ! $admin_role_id ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- User has admin role query.
+		$user_has_admin = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE user_id = %d AND role_id = %d',
+				Schema::user_roles(),
+				$user_id,
+				$admin_role_id
+			)
+		) > 0;
+
+		if ( ! $user_has_admin ) {
+			return false;
+		}
+
+		// 2. Count how many total users have the Administrator role.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Total administrators count query.
+		$admin_count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE role_id = %d',
+				Schema::user_roles(),
+				$admin_role_id
+			)
+		);
+
+		return $admin_count <= 1;
+	}
+
+	/**
+	 * Legacy alias for is_last_administrator.
 	 *
 	 * @param int $user_id WordPress user ID.
 	 * @return bool
 	 */
 	private function is_last_owner( int $user_id ): bool {
-		global $wpdb;
-
-		// 1. Check if the user currently has the Owner role assigned.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Owner role ID query.
-		$owner_role_id = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT id FROM %i WHERE slug = %s',
-				Schema::roles(),
-				'owner'
-			)
-		);
-		if ( ! $owner_role_id ) {
-			return false;
-		}
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- User has owner role query.
-		$user_has_owner = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE user_id = %d AND role_id = %d',
-				Schema::user_roles(),
-				$user_id,
-				$owner_role_id
-			)
-		) > 0;
-
-		if ( ! $user_has_owner ) {
-			return false;
-		}
-
-		// 2. Count how many total users have the Owner role.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Total owners count query.
-		$owner_count = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE role_id = %d',
-				Schema::user_roles(),
-				$owner_role_id
-			)
-		);
-
-		return $owner_count <= 1;
+		return $this->is_last_administrator( $user_id );
 	}
 
 	/**
-	 * Checks if a role ID corresponds to the CodeClove Owner role.
+	 * Checks if a role ID corresponds to the CodeClove Administrator role.
+	 *
+	 * @param int $role_id Role ID.
+	 * @return bool
+	 */
+	private function is_administrator_role( int $role_id ): bool {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Admin role lookup.
+		$admin_id = (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT id FROM %i WHERE slug = %s', Schema::roles(), 'administrator' )
+		);
+		return $admin_id > 0 && $admin_id === $role_id;
+	}
+
+	/**
+	 * Legacy alias for is_administrator_role.
 	 *
 	 * @param int $role_id Role ID.
 	 * @return bool
 	 */
 	private function is_owner_role( int $role_id ): bool {
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Owner role lookup.
-		$owner_id = (int) $wpdb->get_var(
-			$wpdb->prepare( 'SELECT id FROM %i WHERE slug = %s', Schema::roles(), 'owner' )
-		);
-		return $owner_id > 0 && $owner_id === $role_id;
+		return $this->is_administrator_role( $role_id );
 	}
 
 	/**
-	 * Checks if the current executing user is an Owner or WordPress Administrator.
+	 * Checks if the current executing user can manage Administrator-level staff records.
 	 *
 	 * @return bool
 	 */
-	private function current_user_can_manage_owner(): bool {
+	private function current_user_can_manage_admin(): bool {
 		$current_user_id = get_current_user_id();
 		if ( ! $current_user_id ) {
 			return false;
@@ -919,7 +1264,18 @@ final class StaffService {
 		if ( current_user_can( 'manage_options' ) ) {
 			return true;
 		}
-		return \CodeClove\Core\Permissions::check( $current_user_id, '*' );
+		return \CodeClove\Core\Permissions::check( $current_user_id, '*' )
+			|| \CodeClove\Core\Permissions::check( $current_user_id, 'roles_permissions.manage' )
+			|| \CodeClove\Core\Permissions::check( $current_user_id, 'roles.manage' );
+	}
+
+	/**
+	 * Legacy alias for current_user_can_manage_admin.
+	 *
+	 * @return bool
+	 */
+	private function current_user_can_manage_owner(): bool {
+		return $this->current_user_can_manage_admin();
 	}
 
 	/**
@@ -1211,11 +1567,10 @@ final class StaffService {
 
 		$where_sql = implode( ' AND ', $where );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$count_query = "SELECT COUNT(*) FROM %i WHERE {$where_sql}";
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$total       = (int) ( empty( $binds )
-			? $wpdb->get_var( $wpdb->prepare( $count_query, $table ) )
-			: $wpdb->get_var( $wpdb->prepare( $count_query, $table, ...$binds ) ) );
+			? $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE {$where_sql}", $table ) ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			: $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE {$where_sql}", $table, ...$binds ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$whitelist = [
 			'created_at'       => 'created_at',
@@ -1393,6 +1748,7 @@ final class StaffService {
 				'from_status'          => $app['status'],
 				'to_status'            => $status,
 				'reason'               => sanitize_text_field( $reason ?: 'Status updated' ),
+				/* translators: %s: New application status */
 				'message'              => sanitize_textarea_field( $message ?: sprintf( __( 'Application status updated to %s.', 'codeclove-school-management' ), $status ) ),
 				'visibility'           => 'internal',
 				'changed_by'           => get_current_user_id() ?: null,
@@ -1488,6 +1844,7 @@ Best regards,
 								$app['first_name'],
 								$reset_url
 							);
+							/* translators: %s: School name */
 							wp_mail( $app['email'], sprintf( __( 'Your %s Staff Account Has Been Created', 'codeclove-school-management' ), $school_name ), $msg );
 						}
 					}
@@ -1554,7 +1911,8 @@ Best regards,
 					'from_status'          => $app['status'],
 					'to_status'            => 'hired',
 					'reason'               => 'Hired & Converted to Staff',
-					'message'              => sprintf( __( 'Candidate hired as %s and converted into staff member record #%d.', 'codeclove-school-management' ), $staff_member['designation'], $staff_id ),
+					/* translators: 1: Designation name, 2: Staff member record ID */
+					'message'              => sprintf( __( 'Candidate hired as %1$s and converted into staff member record #%2$d.', 'codeclove-school-management' ), $staff_member['designation'], $staff_id ),
 					'visibility'           => 'internal',
 					'changed_by'           => get_current_user_id() ?: null,
 					'changed_at'           => $now,
@@ -1621,7 +1979,8 @@ Best regards,
 			foreach ( $sanitized_ids as $app_id ) {
 				$res = $this->update_staff_application_status( $app_id, $new_status, 'Bulk Status Update' );
 				if ( is_wp_error( $res ) ) {
-					$errors[] = sprintf( __( 'Application #%d: %s', 'codeclove-school-management' ), $app_id, $res->get_error_message() );
+					/* translators: 1: Application ID, 2: Error message */
+					$errors[] = sprintf( __( 'Application #%1$d: %2$s', 'codeclove-school-management' ), $app_id, $res->get_error_message() );
 				} else {
 					$count++;
 				}

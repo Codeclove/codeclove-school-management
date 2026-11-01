@@ -27,13 +27,6 @@ final class RolesSeeder implements SeederInterface {
 	 */
 	private const ROLES = [
 		[
-			'slug'        => 'owner',
-			'name'        => 'Owner',
-			'description' => 'Full administrative access and system ownership configuration.',
-			'is_system'   => 1,
-			'is_locked'   => 1,
-		],
-		[
 			'slug'        => 'administrator',
 			'name'        => 'Administrator',
 			'description' => 'Full operational access to school databases and workflows.',
@@ -95,7 +88,6 @@ final class RolesSeeder implements SeederInterface {
 	 * Default role-to-permission mappings.
 	 */
 	private const ROLE_PERMISSIONS = [
-		'owner'              => [ '*' ],
 		'administrator'      => [
 			'academic_sessions.view', 'academic_sessions.add', 'academic_sessions.edit', 'academic_sessions.manage', 'academic_sessions.view_archived', 'academic_sessions.plan_future',
 			'academic_terms.view', 'academic_terms.add', 'academic_terms.edit', 'academic_terms.delete',
@@ -108,13 +100,15 @@ final class RolesSeeder implements SeederInterface {
 			'admission_documents.view', 'admission_documents.edit',
 			'attendance.view', 'attendance.add', 'attendance.edit', 'attendance.delete',
 			'staff_attendance.view', 'staff_attendance.add', 'staff_attendance.edit', 'staff_attendance.delete',
-			'staff.view', 'staff.add', 'staff.edit',
+			'staff.view', 'staff.add', 'staff.edit', 'staff.delete',
 			'staff_onboarding.view', 'staff_onboarding.add', 'staff_onboarding.edit',
 			'staff_applications.view', 'staff_applications.add', 'staff_applications.edit', 'staff_applications.approve', 'staff_applications.convert', 'staff_applications.delete',
 			'leave_requests.view', 'leave_requests.add', 'leave_requests.edit', 'leave_requests.delete', 'leave_requests.approve',
 			'fee_types.view', 'fee_types.add', 'fee_types.edit', 'fee_types.delete',
 			'invoices.view', 'invoices.add', 'invoices.edit', 'invoices.delete',
 			'payments.view', 'payments.add', 'payments.edit', 'payments.delete',
+			'timetable.view', 'timetable.add', 'timetable.edit', 'timetable.delete', 'timetable.substitute',
+			'students.promote', 'activity.view',
 			'settings.manage', 'roles_permissions.manage', 'notifications.manage',
 			'imports.manage', 'exports.manage', 'system.manage',
 			'finance.view', 'dashboard.view',
@@ -233,23 +227,23 @@ final class RolesSeeder implements SeederInterface {
 		}
 
 		if ( $current_user_id > 0 ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Owner role lookup.
-			$owner_role_id = $wpdb->get_var(
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Administrator role lookup.
+			$admin_role_id = $wpdb->get_var(
 				$wpdb->prepare(
 					'SELECT id FROM %i WHERE slug = %s',
 					Schema::roles(),
-					'owner'
+					'administrator'
 				)
 			);
 
-			if ( $owner_role_id ) {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Assign owner role to activating user.
+			if ( $admin_role_id ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Assign administrator role to activating user.
 				$wpdb->query(
 					$wpdb->prepare(
 						'INSERT IGNORE INTO %i (user_id, role_id) VALUES (%d, %d)',
 						Schema::user_roles(),
 						$current_user_id,
-						$owner_role_id
+						$admin_role_id
 					)
 				);
 			}

@@ -446,9 +446,13 @@ final class SettingsValidator {
 			if ( ! is_array( $config ) ) {
 				return $this->invalid( "identifiers.{$identifier}", 'must be an object.' );
 			}
+			$allowed_keys = [ 'prefix', 'year_token', 'sequence_padding', 'next_number', 'reset_rule', 'separator' ];
+			if ( 'roll_number' === $identifier ) {
+				$allowed_keys[] = 'scope';
+			}
 			$error = $this->reject_unknown_keys(
 				$config,
-				[ 'prefix', 'year_token', 'sequence_padding', 'next_number', 'reset_rule', 'separator' ],
+				$allowed_keys,
 				"identifiers.{$identifier}"
 			);
 			if ( $error ) {
@@ -481,6 +485,11 @@ final class SettingsValidator {
 						return $this->invalid( "identifiers.{$identifier}.separator", 'must be one of: "", "-", "/", "_", ".".' );
 					}
 					$result[ $identifier ][ $key ] = $value;
+				} elseif ( 'scope' === $key ) {
+					if ( ! in_array( $value, [ 'global', 'class', 'section', 'unit', 'group' ], true ) ) {
+						return $this->invalid( "identifiers.{$identifier}.scope", 'must be one of: "global", "class", "section", "unit", "group".' );
+					}
+					$result[ $identifier ][ $key ] = $value;
 				}
 			}
 		}
@@ -500,6 +509,7 @@ final class SettingsValidator {
 				'date_format',
 				'time_format',
 				'week_start_day',
+				'weekend_days',
 				'timezone',
 				'currency',
 				'currency_position',
@@ -538,6 +548,12 @@ final class SettingsValidator {
 					}
 					$result[ $key ] = $day;
 					break;
+				case 'weekend_days':
+					if ( ! in_array( $value, [ 'saturday_sunday', 'sunday_only', 'friday_saturday', 'friday_only' ], true ) ) {
+						return $this->invalid( 'localization.weekend_days', 'contains an unsupported weekend schedule.' );
+					}
+					$result[ $key ] = $value;
+					break;
 				case 'timezone':
 					$timezone = sanitize_text_field( (string) $value );
 					try {
@@ -568,7 +584,7 @@ final class SettingsValidator {
 					$result[ $key ] = $precision;
 					break;
 				case 'number_format':
-					if ( ! in_array( $value, [ 'standard', 'indian' ], true ) ) {
+					if ( ! in_array( $value, [ 'standard', 'indian', 'european' ], true ) ) {
 						return $this->invalid( 'localization.number_format', 'contains an unsupported format.' );
 					}
 					$result[ $key ] = $value;

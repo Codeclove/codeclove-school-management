@@ -69,6 +69,14 @@ final class RolesController extends BaseController {
 			'admissions.convert' => 'Convert Applicant to Student',
 			'admission_documents.view' => 'View Admission Documents',
 			'admission_documents.edit' => 'Edit Admission Documents',
+			'students.promote' => 'Promote & Rollover Students',
+		],
+		'Timetable' => [
+			'timetable.view' => 'View Timetable',
+			'timetable.add' => 'Add Timetable',
+			'timetable.edit' => 'Edit Timetable',
+			'timetable.delete' => 'Delete Timetable',
+			'timetable.substitute' => 'Manage Timetable Substitutes',
 		],
 		'Attendance' => [
 			'attendance.view' => 'View Attendance',
@@ -123,6 +131,7 @@ final class RolesController extends BaseController {
 			'imports.manage' => 'Manage Imports',
 			'exports.manage' => 'Manage Exports',
 			'system.manage' => 'Manage System Settings',
+			'activity.view' => 'View Activity & Audit Logs',
 		],
 	];
 

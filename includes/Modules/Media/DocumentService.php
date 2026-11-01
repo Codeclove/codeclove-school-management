@@ -202,13 +202,15 @@ final class DocumentService {
 
 		global $wpdb;
 
-		// 3. Check students table.
+		// 3. Check students table with exact JSON key pattern.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$in_students = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE documents_json LIKE %s LIMIT 1',
+				'SELECT COUNT(*) FROM %i WHERE (documents_json LIKE %s OR documents_json LIKE %s OR documents_json LIKE %s) LIMIT 1',
 				Schema::students(),
-				'%' . $attachment_id . '%'
+				'%"attachment_id":' . $attachment_id . '%',
+				'%"attachment_id": ' . $attachment_id . '%',
+				'%"attachment_id":"' . $attachment_id . '"%'
 			)
 		);
 		if ( $in_students > 0 ) {
@@ -228,13 +230,15 @@ final class DocumentService {
 			return true;
 		}
 
-		// 5. Check staff members table.
+		// 5. Check staff members table with exact JSON key pattern.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$in_staff = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE documents_json LIKE %s LIMIT 1',
+				'SELECT COUNT(*) FROM %i WHERE (documents_json LIKE %s OR documents_json LIKE %s OR documents_json LIKE %s) LIMIT 1',
 				Schema::staff_members(),
-				'%' . $attachment_id . '%'
+				'%"attachment_id":' . $attachment_id . '%',
+				'%"attachment_id": ' . $attachment_id . '%',
+				'%"attachment_id":"' . $attachment_id . '"%'
 			)
 		);
 		if ( $in_staff > 0 ) {
@@ -293,21 +297,31 @@ final class DocumentService {
 		$is_student_doc        = false;
 		$student_id            = 0;
 		$student_owner_user_id = 0;
+		$is_applicant_owner    = false;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$student_row = $wpdb->get_row(
+		$student_rows = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT id, user_id, documents_json FROM %i WHERE documents_json LIKE %s AND deleted_at IS NULL LIMIT 1',
+				'SELECT id, user_id, documents_json FROM %i 
+				 WHERE (documents_json LIKE %s OR documents_json LIKE %s OR documents_json LIKE %s) 
+				   AND deleted_at IS NULL',
 				Schema::students(),
-				'%' . $attachment_id . '%'
+				'%"attachment_id":' . $attachment_id . '%',
+				'%"attachment_id": ' . $attachment_id . '%',
+				'%"attachment_id":"' . $attachment_id . '"%'
 			),
 			ARRAY_A
 		);
 
-		if ( $student_row && self::has_attachment_in_docs_payload( $student_row['documents_json'] ?? '', $attachment_id ) ) {
-			$is_student_doc        = true;
-			$student_id            = (int) $student_row['id'];
-			$student_owner_user_id = (int) ( $student_row['user_id'] ?? 0 );
+		if ( ! empty( $student_rows ) ) {
+			foreach ( $student_rows as $row ) {
+				if ( self::has_attachment_in_docs_payload( $row['documents_json'] ?? '', $attachment_id ) ) {
+					$is_student_doc        = true;
+					$student_id            = (int) $row['id'];
+					$student_owner_user_id = (int) ( $row['user_id'] ?? 0 );
+					break;
+				}
+			}
 		}
 
 		if ( ! $is_student_doc ) {
@@ -315,7 +329,7 @@ final class DocumentService {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$adm_row = $wpdb->get_row(
 				$wpdb->prepare(
-					'SELECT d.id, a.converted_student_id, s.user_id as student_user_id
+					'SELECT d.id, a.converted_student_id, a.created_by, a.guardian_email, s.user_id as student_user_id
 					 FROM %i d
 					 INNER JOIN %i a ON a.id = d.application_id
 					 LEFT JOIN %i s ON s.id = a.converted_student_id
@@ -332,11 +346,26 @@ final class DocumentService {
 				$is_student_doc        = true;
 				$student_id            = (int) ( $adm_row['converted_student_id'] ?? 0 );
 				$student_owner_user_id = (int) ( $adm_row['student_user_id'] ?? 0 );
+
+				// Check if the current user is the submitting applicant or guardian
+				$created_by = (int) ( $adm_row['created_by'] ?? 0 );
+				if ( $created_by > 0 && $user_id === $created_by ) {
+					$is_applicant_owner = true;
+				} elseif ( ! empty( $adm_row['guardian_email'] ) ) {
+					$user = get_userdata( $user_id );
+					if ( $user && strcasecmp( (string) $user->user_email, (string) $adm_row['guardian_email'] ) === 0 ) {
+						$is_applicant_owner = true;
+					}
+				}
 			}
 		}
 
 		if ( $is_student_doc ) {
-			// A. Owning student themselves.
+			// A. Owning student themselves or submitting applicant.
+			if ( $is_applicant_owner ) {
+				return true;
+			}
+
 			if ( $student_owner_user_id > 0 && $user_id === $student_owner_user_id ) {
 				return true;
 			}
@@ -378,22 +407,33 @@ final class DocumentService {
 		}
 
 		// 4. Check if attachment belongs to a Staff Member.
-		$is_staff_doc        = false;
-		$staff_owner_user_id = 0;
+		$is_staff_doc             = false;
+		$staff_owner_user_id      = 0;
+		$is_staff_applicant_owner = false;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$staff_row = $wpdb->get_row(
+		// Check staff members table including soft-deleted records to preserve protection
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$staff_rows = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT id, user_id, documents_json FROM %i WHERE documents_json LIKE %s AND deleted_at IS NULL LIMIT 1',
+				'SELECT id, user_id, documents_json, deleted_at FROM %i 
+				 WHERE (documents_json LIKE %s OR documents_json LIKE %s OR documents_json LIKE %s)',
 				Schema::staff_members(),
-				'%' . $attachment_id . '%'
+				'%"attachment_id":' . $attachment_id . '%',
+				'%"attachment_id": ' . $attachment_id . '%',
+				'%"attachment_id":"' . $attachment_id . '"%'
 			),
 			ARRAY_A
 		);
 
-		if ( $staff_row && self::has_attachment_in_docs_payload( $staff_row['documents_json'] ?? '', $attachment_id ) ) {
-			$is_staff_doc        = true;
-			$staff_owner_user_id = (int) ( $staff_row['user_id'] ?? 0 );
+		if ( ! empty( $staff_rows ) ) {
+			foreach ( $staff_rows as $row ) {
+				if ( self::has_attachment_in_docs_payload( $row['documents_json'] ?? '', $attachment_id ) ) {
+					$is_staff_doc        = true;
+					$staff_owner_user_id = (int) ( $row['user_id'] ?? 0 );
+					break;
+				}
+			}
 		}
 
 		if ( ! $is_staff_doc ) {
@@ -401,7 +441,7 @@ final class DocumentService {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$staff_app_row = $wpdb->get_row(
 				$wpdb->prepare(
-					'SELECT d.id, COALESCE(sa.converted_user_id, sm.user_id) as staff_user_id
+					'SELECT d.id, sa.created_by, sa.email, COALESCE(sa.converted_user_id, sm.user_id) as staff_user_id
 					 FROM %i d
 					 INNER JOIN %i sa ON sa.id = d.staff_application_id
 					 LEFT JOIN %i sm ON sm.id = sa.converted_staff_member_id
@@ -416,11 +456,26 @@ final class DocumentService {
 			if ( $staff_app_row ) {
 				$is_staff_doc        = true;
 				$staff_owner_user_id = (int) ( $staff_app_row['staff_user_id'] ?? 0 );
+
+				// Check if the current user is the applicant who submitted the application
+				$created_by = (int) ( $staff_app_row['created_by'] ?? 0 );
+				if ( $created_by > 0 && $user_id === $created_by ) {
+					$is_staff_applicant_owner = true;
+				} elseif ( ! empty( $staff_app_row['email'] ) ) {
+					$user = get_userdata( $user_id );
+					if ( $user && strcasecmp( (string) $user->user_email, (string) $staff_app_row['email'] ) === 0 ) {
+						$is_staff_applicant_owner = true;
+					}
+				}
 			}
 		}
 
 		if ( $is_staff_doc ) {
-			// A. Owning staff member themselves.
+			// A. Owning staff member or submitting staff applicant themselves.
+			if ( $is_staff_applicant_owner ) {
+				return true;
+			}
+
 			if ( $staff_owner_user_id > 0 && $user_id === $staff_owner_user_id ) {
 				return true;
 			}
@@ -446,10 +501,6 @@ final class DocumentService {
 			return true;
 		}
 
-		if ( self::is_active_staff_user( $user_id ) || current_user_can( 'codeclove_staff' ) ) {
-			return true;
-		}
-
 		if ( function_exists( 'codeclove_user_can' ) ) {
 			if (
 				codeclove_user_can( $user_id, 'students.view' )
@@ -458,9 +509,20 @@ final class DocumentService {
 				|| codeclove_user_can( $user_id, 'staff.view' )
 				|| codeclove_user_can( $user_id, 'staff.edit' )
 				|| codeclove_user_can( $user_id, 'staff.add' )
+				|| codeclove_user_can( $user_id, 'admissions.view' )
+				|| codeclove_user_can( $user_id, 'admissions.edit' )
+				|| codeclove_user_can( $user_id, 'admission_documents.view' )
+				|| codeclove_user_can( $user_id, 'admission_documents.edit' )
+				|| codeclove_user_can( $user_id, 'staff_applications.view' )
+				|| codeclove_user_can( $user_id, 'staff_applications.edit' )
 			) {
 				return true;
 			}
+		}
+
+		// Verified active staff educator or advisor fallback
+		if ( self::is_active_staff_user( $user_id ) ) {
+			return true;
 		}
 
 		return false;
@@ -551,6 +613,7 @@ final class DocumentService {
 			$secure_name  = self::generate_secure_filename( $raw_filename );
 			$target_file  = $vault_dir . '/' . $secure_name;
 
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename, WordPress.WP.AlternativeFunctions.unlink_unlink
 			if ( @rename( $attached_file, $target_file ) || ( @copy( $attached_file, $target_file ) && @unlink( $attached_file ) ) ) {
 				update_attached_file( $attachment_id, $target_file );
 				update_post_meta( $attachment_id, self::META_PROTECTED, 1 );
@@ -570,10 +633,11 @@ final class DocumentService {
 	 * to prevent output corruption. In automated test environments (Pest/PHPUnit),
 	 * returns a WP_REST_Response instead of terminating script execution.
 	 *
-	 * @param int $attachment_id Attachment ID.
+	 * @param int  $attachment_id Attachment ID.
+	 * @param bool $download      Whether to force file download as attachment.
 	 * @return WP_REST_Response|WP_Error|void
 	 */
-	public static function stream( int $attachment_id ) {
+	public static function stream( int $attachment_id, bool $download = false ) {
 		$attached_file = self::migrate_legacy_file( $attachment_id );
 		if ( ! $attached_file || ! file_exists( $attached_file ) ) {
 			if ( defined( 'WP_RUNNING_TESTS' ) && WP_RUNNING_TESTS ) {
@@ -604,9 +668,9 @@ final class DocumentService {
 				'content_type' => $mime_type,
 				'filename'     => $display_name,
 				'file_size'    => filesize( $attached_file ),
+				'disposition'  => $download ? 'attachment' : 'inline',
 			] );
 		}
-
 		// Clear any existing output buffers for clean binary streaming.
 		while ( ob_get_level() > 0 ) {
 			ob_end_clean();
@@ -614,10 +678,13 @@ final class DocumentService {
 
 		nocache_headers();
 		header( 'Content-Type: ' . $mime_type );
-		header( 'Content-Disposition: inline; filename="' . esc_attr( $display_name ) . '"' );
+		$safe_filename = str_replace( [ '"', "\r", "\n" ], '', $display_name );
+		$disposition   = $download ? 'attachment' : 'inline';
+		header( 'Content-Disposition: ' . $disposition . '; filename="' . $safe_filename . '"' );
 		header( 'Content-Length: ' . filesize( $attached_file ) );
 		header( 'X-Content-Type-Options: nosniff' );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
 		readfile( $attached_file );
 		exit;
 	}
@@ -636,30 +703,79 @@ final class DocumentService {
 			return false;
 		}
 
+		// SAFETY GUARD: NEVER delete arbitrary WordPress media attachments!
+		// Only delete attachments created as CodeClove protected documents or stored in the vault.
+		$is_protected = (bool) get_post_meta( $attachment_id, self::META_PROTECTED, true );
+		if ( ! $is_protected ) {
+			$attached_file = (string) get_attached_file( $attachment_id );
+			if ( empty( $attached_file ) || ! str_contains( wp_normalize_path( $attached_file ), 'codeclove/documents' ) ) {
+				return false;
+			}
+		}
+
 		global $wpdb;
 
+		// 1. Check admission documents and staff application documents tables.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$in_use = (int) $wpdb->get_var(
+		$app_doc_count = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT (
-					(SELECT COUNT(*) FROM %i WHERE documents_json LIKE %s AND deleted_at IS NULL) +
-					(SELECT COUNT(*) FROM %i WHERE documents_json LIKE %s AND deleted_at IS NULL) +
-					(SELECT COUNT(*) FROM %i WHERE attachment_id = %d) +
-					(SELECT COUNT(*) FROM %i WHERE attachment_id = %d)
-				)',
-				Schema::students(),
-				'%' . $attachment_id . '%',
-				Schema::staff_members(),
-				'%' . $attachment_id . '%',
+				'SELECT COUNT(*) FROM %i WHERE attachment_id = %d',
 				Schema::app_documents(),
-				$attachment_id,
+				$attachment_id
+			)
+		);
+		if ( $app_doc_count > 0 ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$staff_app_doc_count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE attachment_id = %d',
 				Schema::staff_app_docs(),
 				$attachment_id
 			)
 		);
-
-		if ( $in_use > 0 ) {
+		if ( $staff_app_doc_count > 0 ) {
 			return false;
+		}
+
+		// 2. Check students table with exact JSON key pattern.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$students_json_list = $wpdb->get_col(
+			$wpdb->prepare(
+				'SELECT documents_json FROM %i 
+				 WHERE (documents_json LIKE %s OR documents_json LIKE %s OR documents_json LIKE %s) 
+				   AND deleted_at IS NULL',
+				Schema::students(),
+				'%"attachment_id":' . $attachment_id . '%',
+				'%"attachment_id": ' . $attachment_id . '%',
+				'%"attachment_id":"' . $attachment_id . '"%'
+			)
+		);
+		foreach ( $students_json_list as $json ) {
+			if ( self::has_attachment_in_docs_payload( $json, $attachment_id ) ) {
+				return false;
+			}
+		}
+
+		// 3. Check staff members table with exact JSON key pattern.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$staff_json_list = $wpdb->get_col(
+			$wpdb->prepare(
+				'SELECT documents_json FROM %i 
+				 WHERE (documents_json LIKE %s OR documents_json LIKE %s OR documents_json LIKE %s) 
+				   AND deleted_at IS NULL',
+				Schema::staff_members(),
+				'%"attachment_id":' . $attachment_id . '%',
+				'%"attachment_id": ' . $attachment_id . '%',
+				'%"attachment_id":"' . $attachment_id . '"%'
+			)
+		);
+		foreach ( $staff_json_list as $json ) {
+			if ( self::has_attachment_in_docs_payload( $json, $attachment_id ) ) {
+				return false;
+			}
 		}
 
 		// Attachment is unreferenced: delete post and physical file from disk.
@@ -895,8 +1011,9 @@ final class DocumentService {
 			);
 		}
 
+		$download = isset( $_GET['download'] ) && filter_var( wp_unslash( $_GET['download'] ), FILTER_VALIDATE_BOOLEAN );
 		// User is authorized! Stream the file.
-		self::stream( $attachment_id );
+		self::stream( $attachment_id, $download );
 		exit;
 	}
 }

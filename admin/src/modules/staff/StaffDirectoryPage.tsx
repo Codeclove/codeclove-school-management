@@ -229,14 +229,12 @@ export default function StaffDirectoryPage() {
   // Handle delete
   const handleDelete = useCallback(
     async (staff: Staff) => {
+      const fullName = `${staff.first_name} ${staff.last_name || ''}`.trim()
       const isConfirmed = await confirm({
-        title: sprintf(__('Delete %s Record', 'codeclove-school-management'), staffLabelSingular),
-        message: sprintf(
-          __('Are you absolutely sure you want to remove %1$s %2$s (%3$s)? This will hide them from active view.', 'codeclove-school-management'),
-          staff.first_name,
-          staff.last_name,
-          staff.staff_number
-        ),
+        title: sprintf(__('Delete %s record?', 'codeclove-school-management'), fullName || staffLabelSingular),
+        message: __('This will hide the staff profile from active directories and deactivate their staff portal privileges.', 'codeclove-school-management'),
+        variant: 'danger',
+        confirmText: __('Delete Staff Record', 'codeclove-school-management'),
       })
       if (!isConfirmed) return
 
@@ -365,10 +363,17 @@ export default function StaffDirectoryPage() {
     [staffLabelSingular, navigate, handleDelete]
   )
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={sprintf(__('%s Directory', 'codeclove-school-management'), staffLabelSingular)}
         breadcrumbs={[{ label: __('Staff & HR', 'codeclove-school-management') }, { label: sprintf(__('%s Directory', 'codeclove-school-management'), staffLabelSingular) }]}
+        badge={
+          total > 0 ? (
+            <Badge variant="neutral" className="tabular-nums font-mono text-xs font-normal">
+              {sprintf(__('%d total', 'codeclove-school-management'), total)}
+            </Badge>
+          ) : undefined
+        }
         description={__('Manage faculty details, departments, and roles in one dashboard.', 'codeclove-school-management')}
         actions={
           <div className="flex items-center gap-2">
@@ -397,48 +402,6 @@ export default function StaffDirectoryPage() {
         }
       />
 
-      {/* ── Filter Bar ───────────────────────────────────────────────────────── */}
-      <FilterBar
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder={__('Search by name, email, designation...', 'codeclove-school-management')}
-        activeFilterCount={(status ? 1 : 0) + (roleId ? 1 : 0)}
-        onClearAll={() => {
-          setStatus('')
-          setRoleId('')
-          setSearch('')
-          table.clearSelection()
-        }}
-      >
-        <div className="w-full sm:w-40 lg:w-48 shrink-0">
-          <Select
-            aria-label={__('Filter by status', 'codeclove-school-management')}
-            value={status}
-            onValueChange={(val) => setStatus(val)}
-            placeholder={__('All Statuses', 'codeclove-school-management')}
-            options={[
-              { value: '', label: __('All Statuses', 'codeclove-school-management') },
-              { value: 'active', label: __('Active', 'codeclove-school-management') },
-              { value: 'inactive', label: __('Inactive', 'codeclove-school-management') },
-              { value: 'suspended', label: __('Suspended', 'codeclove-school-management') },
-            ]}
-          />
-        </div>
-
-        <div className="w-full sm:w-40 lg:w-48 shrink-0">
-          <Select
-            aria-label={__('Filter by system role', 'codeclove-school-management')}
-            value={roleId}
-            onValueChange={(val) => setRoleId(val)}
-            placeholder={__('All System Roles', 'codeclove-school-management')}
-            options={[
-              { value: '', label: __('All System Roles', 'codeclove-school-management') },
-              ...roles.map((r) => ({ value: String(r.id), label: r.name })),
-            ]}
-          />
-        </div>
-      </FilterBar>
-
       {/* ── Data Grid ────────────────────────────────────────────────────────── */}
       <DataTable<StaffMember>
         data={staffList}
@@ -451,6 +414,49 @@ export default function StaffDirectoryPage() {
         onRetry={() => refetch()}
         selectable
         onRowClick={(staff) => navigate(`/staff/${staff.id}`)}
+        toolbar={
+          <FilterBar
+            cardWrapper={false}
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={__('Search by name, email, designation...', 'codeclove-school-management')}
+            activeFilterCount={(status ? 1 : 0) + (roleId ? 1 : 0)}
+            onClearAll={() => {
+              setStatus('')
+              setRoleId('')
+              setSearch('')
+              table.clearSelection()
+            }}
+          >
+            <div className="w-full sm:w-40 lg:w-48 shrink-0">
+              <Select
+                aria-label={__('Filter by status', 'codeclove-school-management')}
+                value={status}
+                onValueChange={(val) => setStatus(val)}
+                placeholder={__('All Statuses', 'codeclove-school-management')}
+                options={[
+                  { value: '', label: __('All Statuses', 'codeclove-school-management') },
+                  { value: 'active', label: __('Active', 'codeclove-school-management') },
+                  { value: 'inactive', label: __('Inactive', 'codeclove-school-management') },
+                  { value: 'suspended', label: __('Suspended', 'codeclove-school-management') },
+                ]}
+              />
+            </div>
+
+            <div className="w-full sm:w-40 lg:w-48 shrink-0">
+              <Select
+                aria-label={__('Filter by system role', 'codeclove-school-management')}
+                value={roleId}
+                onValueChange={(val) => setRoleId(val)}
+                placeholder={__('All System Roles', 'codeclove-school-management')}
+                options={[
+                  { value: '', label: __('All System Roles', 'codeclove-school-management') },
+                  ...roles.map((r) => ({ value: String(r.id), label: r.name })),
+                ]}
+              />
+            </div>
+          </FilterBar>
+        }
         bulkActions={
           <>
             <Button

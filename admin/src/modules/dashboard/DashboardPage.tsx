@@ -141,8 +141,7 @@ export default function DashboardPage() {
   const hasCharts = !!(stats?.admissions_trend?.length || stats?.finance_trend?.length)
 
   return (
-    <div className="space-y-5 w-full">
-
+    <div className="space-y-4 w-full">
       {/* ── Page Header ─────────────────────────────────────────────────────── */}
       <DashboardGreetingHeader
         user={user}

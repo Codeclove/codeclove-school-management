@@ -7,6 +7,7 @@ import {
 import { useSession } from '@/lib/session-context'
 import { useUnits, useGroups } from '@/api/academics'
 import { useMonthlyAttendance } from '@/api/attendance'
+import { useSettings } from '@/api/settings'
 import { useLabels } from '@/lib/labels'
 import { __, sprintf } from '@/lib/i18n'
 import {
@@ -34,13 +35,24 @@ const STATUS_BADGE_CONFIG: Record<string, { label: string; className: string }> 
   holiday: { label: 'Hl', className: 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold' },
 }
 
+const WEEKDAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+const DEFAULT_WEEKEND = [0, 6]
+const WEEKEND_SETS: Record<string, number[]> = {
+  sunday_only: [0],
+  friday_saturday: [5, 6],
+  friday_only: [5],
+  saturday_sunday: DEFAULT_WEEKEND,
+}
 export default function StudentMonthlyAttendance() {
   const { session } = useSession()
   const sessionId = session ? String(session.id) : ''
   const { getLabel } = useLabels()
-
+  const { data: settings } = useSettings()
+  const weekStartDay = Number(settings?.localization?.week_start_day ?? globalThis.window?.CodeCloveConfig?.wpSettings?.startOfWeek ?? 1)
+  const isIndianSchool = settings?.education_system?.preset === 'IN'
+  const weekendDays = settings?.localization?.weekend_days ?? (isIndianSchool ? 'sunday_only' : 'saturday_sunday')
+  const weekendSet = (weekendDays && WEEKEND_SETS[weekendDays]) || DEFAULT_WEEKEND
   const unitLabelSingular = getLabel('academic_unit', false, __('Class', 'codeclove-school-management'))
-
   // Filter States
   const [unitId, setUnitId] = useState<string>('')
   const [groupId, setGroupId] = useState<string>('')
@@ -55,8 +67,8 @@ export default function StudentMonthlyAttendance() {
   }, [sessionId])
 
   // Fetch filter dropdown options
-  const { data: unitResponse } = useUnits({ session_id: Number(sessionId) })
-  const { data: groupResponse } = useGroups({ academic_unit_id: Number(unitId) })
+  const { data: unitResponse } = useUnits({ session_id: Number(sessionId), per_page: 200 })
+  const { data: groupResponse } = useGroups({ academic_unit_id: Number(unitId), per_page: 200 })
 
   const units = unitResponse?.data ?? []
   const groups = groupResponse?.data ?? []
@@ -86,12 +98,12 @@ export default function StudentMonthlyAttendance() {
       return {
         day: d,
         dateStr: `${y}-${mPad}-${String(d).padStart(2, '0')}`,
-        isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
-        isMonday: dayOfWeek === 1 && d > 1,
-        weekdayLetter: dateObj.toLocaleDateString('en-US', { weekday: 'narrow' }),
+        isWeekend: weekendSet.includes(dayOfWeek),
+        isWeekStart: dayOfWeek === weekStartDay && d > 1,
+        weekdayLetter: WEEKDAY_NAMES[dayOfWeek],
       }
     })
-  }, [monthlyDaysCount, year, month])
+  }, [monthlyDaysCount, year, month, weekStartDay, weekendDays])
 
   // Instant client-side filtered students list
   const filteredStudentsList = useMemo(() => {
@@ -409,7 +421,7 @@ export default function StudentMonthlyAttendance() {
                           <th
                             key={info.day}
                             className={`p-0.5 sm:p-1 text-center text-2xs font-mono w-[28px] sm:w-[32px] min-w-[28px] sm:min-w-[32px] max-w-[28px] sm:max-w-[32px] ${
-                              info.isMonday ? 'border-l border-border/80' : ''
+                              info.isWeekStart ? 'border-l border-border/80' : ''
                             } ${info.isWeekend ? 'bg-black/[0.03] dark:bg-white/[0.04] text-text-subtle/60' : 'text-text'}`}
                           >
                             <div className="flex flex-col items-center">
@@ -517,7 +529,7 @@ export default function StudentMonthlyAttendance() {
                                   <td
                                     key={info.day}
                                     className={`p-0.5 sm:p-1 text-center w-[28px] sm:w-[32px] min-w-[28px] sm:min-w-[32px] max-w-[28px] sm:max-w-[32px] ${
-                                      info.isMonday ? 'border-l border-border/80' : ''
+                                      info.isWeekStart ? 'border-l border-border/80' : ''
                                     } ${info.isWeekend ? 'bg-black/[0.03] dark:bg-white/[0.04]' : ''}`}
                                     title={cellTitle}
                                   >

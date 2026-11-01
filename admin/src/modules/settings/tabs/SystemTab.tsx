@@ -4,7 +4,7 @@ import { Server, Sliders, RefreshCw, AlertTriangle, LifeBuoy, FileText, Sparkles
 import { useFeedbackModal } from '@/lib/feedback-context'
 import type { Control, UseFormRegister } from 'react-hook-form'
 import type { CodeCloveSettings } from '@/api/settings'
-import { clearSettingsCache, resetAndSeedDatabase, useApiHealth } from '@/api/settings'
+import { clearSettingsCache, resetAndSeedDatabase, useApiHealth, useTrashStats, usePurgeTrash } from '@/api/settings'
 import { importDemoData, clearDemoData, useDemoDataStatus } from '@/api/demo-data'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/lib/toast'
@@ -12,7 +12,7 @@ import { Button, Card, Spinner } from '@/components/ui'
 import { FormGroupHeader, FormCheckbox } from '../components/SettingsFormPrimitives'
 import { cn } from '@/lib/utils'
 import { useConfirm } from '@/lib/confirm'
-import { __ } from '@/lib/i18n'
+import { __, sprintf } from '@/lib/i18n'
 interface SystemTabProps {
   settings: CodeCloveSettings
   control: Control<CodeCloveSettings>
@@ -28,6 +28,8 @@ export function SystemTab({ settings, control, register }: SystemTabProps) {
   const queryClient = useQueryClient()
   const toast = useToast()
   const { data: demoStatus } = useDemoDataStatus()
+  const { data: trashStats } = useTrashStats()
+  const purgeTrashMutation = usePurgeTrash()
   const [clearing, setClearing] = useState(false)
   const [seeding,  setSeeding]  = useState(false)
   const [msg,      setMsg]      = useState('')
@@ -59,10 +61,10 @@ export function SystemTab({ settings, control, register }: SystemTabProps) {
 
   async function handleClearDemoData() {
     const isConfirmed = await confirm({
-      title: __( 'Clear Demo Data', 'codeclove-school-management' ),
-      message: __( 'Are you sure you want to clear all sample demo data? This will remove all generated demo records.', 'codeclove-school-management' ),
+      title: __( 'Clear demo data?', 'codeclove-school-management' ),
+      message: __( 'This will remove all generated demonstration records, students, and invoices while keeping your school configuration intact.', 'codeclove-school-management' ),
       variant: 'danger',
-      confirmText: __( 'Clear Data', 'codeclove-school-management' ),
+      confirmText: __( 'Clear Demo Data', 'codeclove-school-management' ),
     })
     if (!isConfirmed) return
 
@@ -100,13 +102,35 @@ export function SystemTab({ settings, control, register }: SystemTabProps) {
     }
   }
 
+  async function handlePurgeTrash() {
+    const count = trashStats?.total || 0
+    const isConfirmed = await confirm({
+      title: __( 'Purge trashed records?', 'codeclove-school-management' ),
+      message: sprintf(
+        __( 'Are you sure you want to permanently erase %d trashed records from MySQL? This action is irreversible.', 'codeclove-school-management' ),
+        count
+      ),
+      variant: 'danger',
+      confirmText: __( 'Purge Records', 'codeclove-school-management' ),
+    })
+    if (!isConfirmed) return
+
+    purgeTrashMutation.mutate(undefined, {
+      onSuccess: (res) => {
+        toast.success(res.message || __( 'Successfully purged trashed records from database.', 'codeclove-school-management' ))
+      },
+      onError: (err) => {
+        toast.error(err.message || __( 'Failed to purge database records.', 'codeclove-school-management' ))
+      }
+    })
+  }
 
   async function handleResetAndSeed() {
     const isConfirmed = await confirm({
-      title: __( 'Reset and Seed Database', 'codeclove-school-management' ),
-      message: __( 'WARNING: This will delete ALL school data, sessions, classes, students, staff, and financial records from the database and seed fresh dummy test data. This action is irreversible. Do you want to proceed?', 'codeclove-school-management' ),
+      title: __( 'Reset and seed database?', 'codeclove-school-management' ),
+      message: __( 'This will delete all live school records and populate the database with fresh demonstration data. This action cannot be undone.', 'codeclove-school-management' ),
       variant: 'danger',
-      confirmText: __( 'Reset & Seed', 'codeclove-school-management' )
+      confirmText: __( 'Reset & Seed', 'codeclove-school-management' ),
     })
     if (!isConfirmed) return
 
@@ -173,6 +197,43 @@ export function SystemTab({ settings, control, register }: SystemTabProps) {
           {msg && (
             <span className="text-xs font-semibold text-brand">{msg}</span>
           )}
+        </div>
+      </Card>
+
+      {/* Database Cleanup & Trash Purge */}
+      <Card className="p-6 space-y-4">
+        <FormGroupHeader
+          title={__( 'Database Cleanup & Trash Purge', 'codeclove-school-management' )}
+          description={__( 'Permanently delete soft-deleted students, staff, and old invoices to free database storage and keep records clean.', 'codeclove-school-management' )}
+          icon={Trash2}
+        />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 bg-bg-surface-hover/50 rounded-lg border border-border">
+          <div className="space-y-1">
+            <div className="text-sm font-medium text-text">
+              {trashStats?.total && trashStats.total > 0
+                ? sprintf( __( '%d trashed records pending permanent cleanup', 'codeclove-school-management' ), trashStats.total )
+                : __( 'No trashed records in database', 'codeclove-school-management' )
+              }
+            </div>
+            <div className="text-xs text-text-muted flex items-center gap-3">
+              <span>{sprintf( __( 'Students: %d', 'codeclove-school-management' ), trashStats?.students || 0 )}</span>
+              <span>•</span>
+              <span>{sprintf( __( 'Staff: %d', 'codeclove-school-management' ), trashStats?.staff || 0 )}</span>
+              <span>•</span>
+              <span>{sprintf( __( 'Invoices: %d', 'codeclove-school-management' ), trashStats?.invoices || 0 )}</span>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            onClick={() => void handlePurgeTrash()}
+            disabled={!trashStats?.total || trashStats.total === 0 || purgeTrashMutation.isPending}
+            className="gap-1.5 flex-shrink-0"
+          >
+            {purgeTrashMutation.isPending ? <Spinner size="xs" /> : <Trash2 size={13} />}
+            {purgeTrashMutation.isPending ? __( 'Purging…', 'codeclove-school-management' ) : __( 'Purge Trashed Records', 'codeclove-school-management' )}
+          </Button>
         </div>
       </Card>
 

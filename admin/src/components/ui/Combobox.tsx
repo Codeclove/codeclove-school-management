@@ -51,6 +51,7 @@ export interface ComboboxProps {
   clearable?: boolean
   className?: string
   container?: HTMLElement | null
+  modal?: boolean
   'aria-invalid'?: boolean | 'true' | 'false'
   'aria-describedby'?: string
   'aria-label'?: string
@@ -71,6 +72,7 @@ export function Combobox({
   clearable = false,
   className,
   container,
+  modal = true,
   'aria-invalid': ariaInvalid,
   'aria-describedby': ariaDescribedBy,
   'aria-label': ariaLabel,
@@ -281,7 +283,7 @@ export function Combobox({
   let optionCounter = 0
 
   return (
-    <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+    <PopoverPrimitive.Root modal={modal} open={open} onOpenChange={setOpen}>
       {name && <input type="hidden" name={name} value={value ?? ''} />}
 
       <PopoverPrimitive.Trigger asChild disabled={disabled}>
@@ -300,12 +302,12 @@ export function Combobox({
           title={triggerDisplay}
           className={cn(
             'flex h-8 w-full items-center justify-between gap-2 rounded px-3 text-sm min-w-0 [&>span]:truncate [&>span]:inline-flex [&>span]:items-center [&>span]:gap-2 [&>span]:text-start whitespace-nowrap',
-            'bg-bg-surface border transition-all duration-100 text-text outline-none focus:outline-none focus:ring-offset-0 focus-visible:ring-offset-0',
+            'bg-bg-surface border border-border shadow-xs transition-all duration-100 text-text outline-none focus:outline-none focus:ring-offset-0 focus-visible:ring-offset-0',
             open
               ? 'border-brand ring-2 ring-brand-dim'
               : isError
                 ? 'border-danger focus:ring-danger focus-visible:ring-1 focus-visible:ring-danger'
-                : 'border-border hover:border-border-strong focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand-dim',
+                : 'hover:border-border-strong focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand-dim',
             'disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
             !selectedOption?.label && 'text-text-subtle',
             className

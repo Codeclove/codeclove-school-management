@@ -493,7 +493,7 @@ export default function StudentForm({
   const handleFormSubmit = async (values: StudentFormValues) => {
     setIsUploadingDoc(true)
     try {
-      const resolvedDocs = await uploadPendingDocuments(documents, 'pdf')
+      const resolvedDocs = await uploadPendingDocuments(documents, 'document')
       setDocuments(resolvedDocs)
       onSubmit({
         ...values,

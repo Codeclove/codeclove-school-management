@@ -162,20 +162,23 @@ export function PortalProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Apply appearance theme color, UI display scale, and dark mode to portal root element
+  // Apply appearance theme color, UI display scale, dark mode, and RTL layout to portal root element
   useEffect(() => {
     const root = document.getElementById('codeclove-portal-root')
     if (!root) return
 
     const themeColor = settings?.appearance?.theme_color || 'classic_indigo'
     const uiScale = settings?.appearance?.ui_scale || '100%'
+    const isRtl = Boolean(localization?.rtl ?? window.CodeClovePortalConfig?.rtl)
 
     root.setAttribute('data-theme-color', themeColor)
+    root.setAttribute('dir', isRtl ? 'rtl' : 'ltr')
     root.style.setProperty('--codeclove-view-scale', uiScale)
     root.classList.toggle('dark', resolvedTheme === 'dark')
   }, [
     settings?.appearance?.theme_color,
     settings?.appearance?.ui_scale,
+    localization?.rtl,
     resolvedTheme,
   ])
   const value: PortalContextValue = {

@@ -4,9 +4,8 @@
  */
 export function printElement(element: HTMLElement) {
   const iframe = document.createElement('iframe')
-  // Keep off-screen without expanding viewport to desktop width so browser renders print at 100% scale.
-  // ponytail: standard iframe printing with A4 portrait constraints and async asset resolution.
-  iframe.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;'
+  // Keep off-screen at physical A4 proportions so browser layout engine evaluates full desktop/document media rules.
+  iframe.style.cssText = 'position:fixed;top:0;left:0;width:210mm;height:297mm;opacity:0;pointer-events:none;border:0;'
   document.body.appendChild(iframe)
 
   const doc = iframe.contentWindow?.document
@@ -30,15 +29,35 @@ export function printElement(element: HTMLElement) {
     htmlContent.includes('size: landscape') ||
     (htmlContent.includes('landscape') && htmlContent.includes('@page')) ||
     htmlContent.includes('data-orientation="landscape"') ||
-    element.getAttribute?.('data-orientation') === 'landscape'
+    element.getAttribute?.('data-orientation') === 'landscape' ||
+    element.getAttribute?.('data-tabulation-print') === 'true' ||
+    htmlContent.includes('data-tabulation-print="true"')
   )
+  const isLetter = Boolean(
+    htmlContent.includes('data-paper-size="letter"') ||
+    element.getAttribute?.('data-paper-size') === 'letter' ||
+    htmlContent.includes('size: letter')
+  )
+  const isAdmitCard = Boolean(
+    htmlContent.includes('data-admit-card') ||
+    element.getAttribute?.('data-admit-card') ||
+    element.querySelector?.('[data-admit-card]')
+  )
+  const pageSize = isLandscape
+    ? (isLetter ? 'letter landscape' : 'A4 landscape')
+    : (isLetter ? 'letter portrait' : 'A4 portrait')
+  const pageMargin = isLandscape
+    ? (isLetter ? '0.25in 0.35in' : '6mm 8mm')
+    : isAdmitCard
+    ? '8mm'
+    : (isLetter ? '3mm 4mm' : '3mm 4mm')
+
   const defaultPageStyle = `
     @page {
-      size: ${isLandscape ? 'A4 landscape' : 'A4 portrait'};
-      margin: ${isLandscape ? '8mm 10mm' : '14mm'};
+      size: ${pageSize};
+      margin: ${pageMargin};
     }
   `
-
   doc.write(`
     <style>
       *, *::before, *::after {
@@ -59,14 +78,33 @@ export function printElement(element: HTMLElement) {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
-      [data-print-area] {
+      [data-print-area],
+      [data-report-card-document],
+      [data-tabulation-print] {
         box-sizing: border-box !important;
         width: 100% !important;
         max-width: 100% !important;
-        margin: 0 !important;
+        margin: 0 auto !important;
         padding: 0 !important;
       }
-      [data-certificate-document] {
+      [data-report-card-document] {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+        height: ${isLetter ? '268mm' : '286mm'} !important;
+        max-height: ${isLetter ? '268mm' : '286mm'} !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+      }
+      [data-tabulation-print] {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+      }
+      [data-certificate-document]:not([data-report-card-document]) {
         box-sizing: border-box !important;
         width: ${isLandscape ? '297mm' : '210mm'} !important;
         height: ${isLandscape ? '209.5mm' : '296.5mm'} !important;
@@ -76,6 +114,31 @@ export function printElement(element: HTMLElement) {
         break-inside: avoid !important;
         margin: 0 !important;
         padding: 0 !important;
+      }
+      [data-admit-card-sheet="1-up"] {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        max-width: 194mm !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      [data-admit-card-sheet="1-up"]:last-child {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+      }
+      [data-admit-card="true"] {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        max-width: 194mm !important;
+        margin: 0 auto !important;
+        padding: 12px 14px !important;
+        box-shadow: none !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
       .print-page-break {
         page-break-after: always !important;
@@ -97,7 +160,13 @@ export function printElement(element: HTMLElement) {
   const wrapperOpen = isPortal ? '<div id="codeclove-portal-root">' : ''
   const wrapperClose = isPortal ? '</div>' : ''
 
-  const printBody = element.getAttribute?.('data-certificate-document')
+  const isDocumentRoot = Boolean(
+    element.getAttribute?.('data-certificate-document') ||
+    element.getAttribute?.('data-report-card-document') ||
+    element.getAttribute?.('data-print-area') ||
+    element.getAttribute?.('data-tabulation-print')
+  )
+  const printBody = isDocumentRoot
     ? element.outerHTML
     : element.innerHTML
   doc.write(`</head><body>${wrapperOpen}`)

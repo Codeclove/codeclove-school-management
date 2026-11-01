@@ -16,6 +16,7 @@ export {
 
 export { default as PrintInvoiceSheet } from '@/modules/finance/PrintInvoiceSheet'
 export { default as PrintPaymentReceipt } from '@/modules/finance/PrintPaymentReceipt'
+export { default as ReportCardDocument, type ReportCardDocumentProps, type ReportCardPrintOptions } from '@/modules/exams/components/ReportCardDocument'
 export { StudentIdCard, type StudentIdCardProps } from '@/modules/students/components/StudentIdCard'
 export { StaffIdCard, type StaffIdCardProps } from '@/modules/staff/components/StaffIdCard'
 export { StudentIdCardSection, type StudentIdCardSectionProps } from '@/components/id-card/StudentIdCardSection'

@@ -78,6 +78,19 @@ describe('DataTable<T> Component', () => {
       expect(html).toContain('cursor-pointer')
       expect(html).toContain('tabindex="0"')
     })
+
+    it('renders integrated toolbar when provided', () => {
+      const html = renderToString(
+        <DataTable
+          data={sampleData}
+          columns={sampleColumns}
+          toolbar={<div data-testid="custom-toolbar">Search Toolbar</div>}
+        />
+      )
+
+      expect(html).toContain('Search Toolbar')
+      expect(html).toContain('border-b border-border bg-bg-surface')
+    })
   })
 
   describe('Column Alignment & Styling', () => {

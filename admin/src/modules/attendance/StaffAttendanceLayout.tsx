@@ -8,7 +8,7 @@ export default function StaffAttendanceLayout() {
   const staffLabelSingular = getLabel('staff_member', false, __('Staff', 'codeclove-school-management'))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 w-full">
       <PageHeader
         title={sprintf(__('%s Attendance', 'codeclove-school-management'), staffLabelSingular)}
         description={sprintf(__('Record and manage daily or monthly %s attendance.', 'codeclove-school-management'), staffLabelSingular.toLowerCase())}

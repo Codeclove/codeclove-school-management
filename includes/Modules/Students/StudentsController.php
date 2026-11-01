@@ -69,7 +69,7 @@ final class StudentsController extends BaseController {
 					'callback'            => [ $this, 'bulk_students_action' ],
 					'permission_callback' => function ( WP_REST_Request $request ): bool {
 						$action = $request->get_json_params()['action'] ?? '';
-						$cap    = ( 'delete' === $action ) ? 'students.delete' : 'students.edit';
+						$cap    = ( 'delete' === $action || 'force_delete' === $action ) ? 'students.delete' : 'students.edit';
 						return $this->can( $cap, $request );
 					},
 				],
@@ -275,10 +275,10 @@ final class StudentsController extends BaseController {
 			$result['students'],
 			$result['total'],
 			$pagination['page'],
-			$pagination['per_page']
+			$pagination['per_page'],
+			[ 'trash_count' => $result['trash_count'] ]
 		);
 	}
-
 	/**
 	 * Gets a single student directory record.
 	 *

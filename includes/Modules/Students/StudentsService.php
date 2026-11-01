@@ -34,7 +34,7 @@ final class StudentsService {
 	 * Gets students with filters and pagination.
 	 *
 	 * @param array $args
-	 * @return array{students: array, total: int}
+	 * @return array{students: array, total: int, trash_count: int}
 	 */
 	public function get_students( array $args = [] ): array {
 		$students = $this->db_get_students( $args );
@@ -43,9 +43,21 @@ final class StudentsService {
 		$mapped = array_map( [ $this, 'map_student' ], $students );
 
 		return [
-			'students' => $mapped,
-			'total'    => $total,
+			'students'    => $mapped,
+			'total'       => $total,
+			'trash_count' => $this->get_trash_count(),
 		];
+	}
+
+	/**
+	 * Returns total count of soft-deleted students in trash.
+	 */
+	public function get_trash_count(): int {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NOT NULL', Schema::students() )
+		);
 	}
 
 	/**
@@ -125,10 +137,13 @@ final class StudentsService {
 			] );
 			$roll_number = ! empty( $validated['roll_number'] )
 				? $validated['roll_number']
-				: ( ( ! is_wp_error( $r = IdentifierService::generate( 'roll_number' ) ) && '' !== $r )
+				: ( ( ! is_wp_error( $r = IdentifierService::generate( 'roll_number', [
+					'academic_session_id' => $validated['academic_session_id'],
+					'academic_unit_id'    => $validated['academic_unit_id'],
+					'academic_group_id'   => $validated['academic_group_id'] ?? null,
+				] ) ) && '' !== $r )
 					? $r
 					: 'R' . str_pad( (string) ( $total_enrolled + 1 ), 2, '0', STR_PAD_LEFT ) );
-
 			$enrollment_id = $this->db_create_enrollment( [
 				'student_id'          => $student_id,
 				'academic_session_id' => $validated['academic_session_id'],
@@ -649,37 +664,40 @@ final class StudentsService {
 		}
 
 		// Enrich users with linked student / guardian information
-		$ids_in = implode( ',', array_map( 'intval', $found_ids ) );
+		$clean_ids = array_filter( array_map( 'intval', $found_ids ) );
+		if ( empty( $clean_ids ) ) {
+			$student_links  = [];
+			$guardian_links = [];
+		} else {
+			$placeholders = implode( ',', array_fill( 0, count( $clean_ids ), '%d' ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$student_links = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT s.id, s.first_name, s.last_name, s.admission_number, s.user_id
+					 FROM %i s
+					 WHERE s.user_id IN ({$placeholders}) AND s.deleted_at IS NULL",
+					Schema::students(),
+					...$clean_ids
+				),
+				ARRAY_A
+			) ?: [];
 
-		// Check student links
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$student_links = $wpdb->get_results(
-			"SELECT s.id, s.first_name, s.last_name, s.admission_number, s.user_id
-			 FROM " . Schema::students() . " s
-			 WHERE s.user_id IN ({$ids_in}) AND s.deleted_at IS NULL",
-			ARRAY_A
-		) ?: [];
-
-		$students_by_user = [];
-		foreach ( $student_links as $sl ) {
-			$students_by_user[ (int) $sl['user_id'] ][] = [
-				'id'               => (int) $sl['id'],
-				'name'             => trim( $sl['first_name'] . ' ' . $sl['last_name'] ),
-				'admission_number' => $sl['admission_number'],
-				'type'             => 'student',
-			];
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$guardian_links = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT g.user_id, s.id as student_id, s.first_name, s.last_name, s.admission_number, sg.relationship
+					 FROM %i g
+					 INNER JOIN %i sg ON sg.guardian_id = g.id
+					 INNER JOIN %i s ON s.id = sg.student_id
+					 WHERE g.user_id IN ({$placeholders}) AND g.deleted_at IS NULL AND s.deleted_at IS NULL",
+					Schema::guardians(),
+					Schema::student_guardians(),
+					Schema::students(),
+					...$clean_ids
+				),
+				ARRAY_A
+			) ?: [];
 		}
-
-		// Check guardian links
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$guardian_links = $wpdb->get_results(
-			"SELECT g.user_id, s.id as student_id, s.first_name, s.last_name, s.admission_number, sg.relationship
-			 FROM " . Schema::guardians() . " g
-			 INNER JOIN " . Schema::student_guardians() . " sg ON sg.guardian_id = g.id
-			 INNER JOIN " . Schema::students() . " s ON s.id = sg.student_id
-			 WHERE g.user_id IN ({$ids_in}) AND g.deleted_at IS NULL AND s.deleted_at IS NULL",
-			ARRAY_A
-		) ?: [];
 
 		foreach ( $guardian_links as $gl ) {
 			$students_by_user[ (int) $gl['user_id'] ][] = [
@@ -819,6 +837,7 @@ final class StudentsService {
 			'email'            => $row['email'] ?? '',
 			'phone'            => $row['phone'] ?? '',
 			'address_json'     => $row['address_json'] ?? null,
+			'deleted_at'       => $row['deleted_at'] ?? null,
 		];
 
 		// Decode address
@@ -1314,7 +1333,7 @@ final class StudentsService {
 			$errors = [];
 			$deleted_count = 0;
 			foreach ( $ids as $id ) {
-				$res = $this->db_delete_student( $id );
+				$res = $this->db_delete_student( (int) $id );
 				if ( ! $res ) {
 					$errors[] = "ID {$id}: Failed to delete student.";
 				} else {
@@ -1323,6 +1342,50 @@ final class StudentsService {
 			}
 			if ( ! empty( $errors ) && 0 === $deleted_count ) {
 				return new WP_Error( 'codeclove_bulk_delete_failed', implode( '; ', $errors ), 400 );
+			}
+			return [
+				'success'       => true,
+				'deleted_count' => $deleted_count,
+				'errors'        => $errors,
+			];
+		}
+
+		if ( 'restore' === $action ) {
+			$errors = [];
+			$restored_count = 0;
+			foreach ( $ids as $id ) {
+				$res = $this->db_restore_student( (int) $id );
+				if ( ! $res ) {
+					$errors[] = "ID {$id}: Failed to restore student.";
+				} else {
+					$restored_count++;
+				}
+			}
+			if ( ! empty( $errors ) && 0 === $restored_count ) {
+				return new WP_Error( 'codeclove_bulk_restore_failed', implode( '; ', $errors ), 400 );
+			}
+			return [
+				'success'        => true,
+				'restored_count' => $restored_count,
+				'errors'         => $errors,
+			];
+		}
+
+		if ( 'force_delete' === $action ) {
+			$errors = [];
+			$deleted_count = 0;
+			foreach ( $ids as $id ) {
+				$res = $this->db_force_delete_student( (int) $id );
+				if ( is_wp_error( $res ) ) {
+					$errors[] = "ID {$id}: " . $res->get_error_message();
+				} elseif ( ! $res ) {
+					$errors[] = "ID {$id}: Failed to permanently delete student.";
+				} else {
+					$deleted_count++;
+				}
+			}
+			if ( ! empty( $errors ) && 0 === $deleted_count ) {
+				return new WP_Error( 'codeclove_bulk_force_delete_failed', implode( '; ', $errors ), 400 );
 			}
 			return [
 				'success'       => true,
@@ -1565,9 +1628,10 @@ final class StudentsService {
 			'order'               => '',
 		];
 		$params = array_merge( $defaults, $args );
-
+		$is_trash           = ( 'trash' === ( $params['status'] ?? '' ) );
+		$where_deleted      = $is_trash ? 'WHERE s.deleted_at IS NOT NULL' : 'WHERE s.deleted_at IS NULL';
 		$has_session_filter = ! empty( $params['academic_session_id'] );
-		$enrollment_join = $has_session_filter
+		$enrollment_join    = $has_session_filter
 			? $wpdb->prepare( 'INNER JOIN %i se ON se.student_id = s.id AND se.academic_session_id = %d', Schema::enrollments(), (int) $params['academic_session_id'] )
 			: $wpdb->prepare( 'LEFT JOIN %i se ON se.student_id = s.id AND se.status = %s', Schema::enrollments(), 'active' );
 		$query = 'SELECT s.*, 
@@ -1582,7 +1646,7 @@ final class StudentsService {
 			LEFT JOIN %i grp ON grp.id = se.academic_group_id
 			LEFT JOIN %i sg ON sg.student_id = s.id AND sg.is_primary = 1
 			LEFT JOIN %i g ON g.id = sg.guardian_id AND g.deleted_at IS NULL
-			WHERE s.deleted_at IS NULL';
+			' . $where_deleted;
 		$binds = [ Schema::students(), Schema::units(), Schema::groups(), Schema::student_guardians(), Schema::guardians() ];
 
 		// Note: session_id already baked into $enrollment_join via pre-prepare; do not re-add to $binds.
@@ -1597,11 +1661,10 @@ final class StudentsService {
 			$binds[] = (int) $params['academic_group_id'];
 		}
 
-		if ( '' !== $params['status'] ) {
+		if ( '' !== $params['status'] && 'trash' !== $params['status'] ) {
 			$query   .= ' AND s.status = %s';
 			$binds[] = $params['status'];
 		}
-
 		if ( '' !== $params['search'] ) {
 			$query   .= ' AND (s.first_name LIKE %s OR s.last_name LIKE %s OR s.student_number LIKE %s OR se.roll_number LIKE %s OR g.first_name LIKE %s OR g.last_name LIKE %s)';
 			$like    = '%' . $wpdb->esc_like( $params['search'] ) . '%';
@@ -1643,15 +1706,17 @@ final class StudentsService {
 	public function db_count_students( array $args = [] ): int {
 		global $wpdb;
 
+		$is_trash           = ( 'trash' === ( $args['status'] ?? '' ) );
+		$where_deleted      = $is_trash ? 'WHERE s.deleted_at IS NOT NULL' : 'WHERE s.deleted_at IS NULL';
 		$has_session_filter = ! empty( $args['academic_session_id'] );
-		$enrollment_join = $has_session_filter
+		$enrollment_join    = $has_session_filter
 			? $wpdb->prepare( 'INNER JOIN %i se ON se.student_id = s.id AND se.academic_session_id = %d', Schema::enrollments(), (int) $args['academic_session_id'] )
 			: $wpdb->prepare( 'LEFT JOIN %i se ON se.student_id = s.id AND se.status = %s', Schema::enrollments(), 'active' );
 		$query = 'SELECT COUNT(*) FROM %i s
 			' . $enrollment_join . '
 			LEFT JOIN %i sg ON sg.student_id = s.id AND sg.is_primary = 1
 			LEFT JOIN %i g ON g.id = sg.guardian_id AND g.deleted_at IS NULL
-			WHERE s.deleted_at IS NULL';
+			' . $where_deleted;
 		$binds = [ Schema::students(), Schema::student_guardians(), Schema::guardians() ];
 
 		if ( ! empty( $args['academic_unit_id'] ) ) {
@@ -1664,7 +1729,7 @@ final class StudentsService {
 			$binds[] = (int) $args['academic_group_id'];
 		}
 
-		if ( ! empty( $args['status'] ) ) {
+		if ( ! empty( $args['status'] ) && 'trash' !== $args['status'] ) {
 			$query   .= ' AND s.status = %s';
 			$binds[] = $args['status'];
 		}
@@ -2034,9 +2099,9 @@ final class StudentsService {
 	}
 
 	/**
-	 * Soft deletes a student.
+	 * Soft deletes a student and marks active enrollments as suspended.
 	 */
-	private function db_delete_student( int $id ): bool {
+	public function db_delete_student( int $id ): bool {
 		global $wpdb;
 		$table = Schema::students();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery
@@ -2045,8 +2110,132 @@ final class StudentsService {
 			[ 'deleted_at' => gmdate( 'Y-m-d H:i:s' ) ],
 			[ 'id' => $id ]
 		);
+		if ( false !== $result ) {
+			$wpdb->update(
+				Schema::enrollments(),
+				[ 'status' => 'suspended' ],
+				[ 'student_id' => $id, 'status' => 'active' ]
+			);
+		}
 		// phpcs:enable
 		return false !== $result;
+	}
+
+	/**
+	 * Restores a soft-deleted student and reactivates suspended enrollments.
+	 */
+	public function db_restore_student( int $id ): bool {
+		global $wpdb;
+		$table = Schema::students();
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery
+		$result = $wpdb->update(
+			$table,
+			[ 'deleted_at' => null ],
+			[ 'id' => $id ]
+		);
+		if ( false !== $result ) {
+			$wpdb->update(
+				Schema::enrollments(),
+				[ 'status' => 'active' ],
+				[ 'student_id' => $id, 'status' => 'suspended' ]
+			);
+		}
+		// phpcs:enable
+		return false !== $result;
+	}
+
+	/**
+	 * Permanently deletes a student and cascades across all related child records.
+	 *
+	 * @param int $id Student ID.
+	 * @return bool|WP_Error True on success, WP_Error on error.
+	 */
+	public function db_force_delete_student( int $id ): bool|WP_Error {
+		global $wpdb;
+
+		// 1. Fetch student
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery
+		$student = $wpdb->get_row(
+			$wpdb->prepare( 'SELECT id, user_id, documents_json FROM %i WHERE id = %d LIMIT 1', Schema::students(), $id ),
+			ARRAY_A
+		);
+		if ( ! $student ) {
+			return new WP_Error( 'not_found', __( 'Student not found.', 'codeclove-school-management' ), 404 );
+		}
+
+		// 2. Safety check: prevent deleting if there are completed financial payments
+		$has_completed_invoices = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM %i WHERE student_id = %d AND status = 'completed' AND deleted_at IS NULL",
+				Schema::invoices(),
+				$id
+			)
+		);
+		if ( $has_completed_invoices > 0 ) {
+			return new WP_Error(
+				'codeclove_student_has_financials',
+				__( 'Cannot permanently delete student with paid financial invoices. Void or archive financial records first.', 'codeclove-school-management' ),
+				400
+			);
+		}
+
+		// 3. Clean invoices, line items, and payments
+		$invoice_ids = $wpdb->get_col(
+			$wpdb->prepare( 'SELECT id FROM %i WHERE student_id = %d', Schema::invoices(), $id )
+		);
+		if ( ! empty( $invoice_ids ) ) {
+			$in_placeholders = implode( ',', array_fill( 0, count( $invoice_ids ), '%d' ) );
+			// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( $wpdb->prepare( "DELETE FROM " . Schema::line_items() . " WHERE invoice_id IN ($in_placeholders)", ...$invoice_ids ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM " . Schema::payments() . " WHERE invoice_id IN ($in_placeholders)", ...$invoice_ids ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM " . Schema::invoices() . " WHERE id IN ($in_placeholders)", ...$invoice_ids ) );
+			// phpcs:enable
+		}
+		$wpdb->delete( Schema::payments(), [ 'student_id' => $id ] );
+
+		// 4. Cascade delete across student child tables
+		$wpdb->delete( Schema::enrollments(), [ 'student_id' => $id ] );
+		$wpdb->delete( Schema::student_guardians(), [ 'student_id' => $id ] );
+		$wpdb->delete( Schema::student_subjects(), [ 'student_id' => $id ] );
+		$wpdb->delete( Schema::attendance(), [ 'student_id' => $id ] );
+
+		// Optional / module tables
+		$registered_tables = Schema::all();
+		$opt_tables        = [
+			Schema::t( 'exam_marks' ),
+			Schema::t( 'student_marks' ),
+			Schema::t( 'student_skills' ),
+			Schema::t( 'student_term_grades' ),
+			Schema::t( 'student_session_grades' ),
+			Schema::t( 'issued_certificates' ),
+			Schema::t( 'notifications' ),
+		];
+		foreach ( $opt_tables as $ot ) {
+			if ( in_array( $ot, $registered_tables, true ) ) {
+				$wpdb->delete( $ot, [ 'student_id' => $id ] );
+			}
+		}
+
+		// 5. Clean up uploaded attachments
+		if ( ! empty( $student['documents_json'] ) ) {
+			$docs = json_decode( (string) $student['documents_json'], true );
+			if ( is_array( $docs ) ) {
+				foreach ( $docs as $d ) {
+					$att_id = (int) ( $d['attachment_id'] ?? 0 );
+					if ( $att_id > 0 ) {
+						DocumentService::delete_attachment_if_unreferenced( $att_id );
+					}
+				}
+			}
+		}
+
+		// 6. Delete from students table
+		$res = $wpdb->delete( Schema::students(), [ 'id' => $id ] );
+		// phpcs:enable
+
+		AuditLogger::log( 'student.permanently_deleted', [ 'student_id' => $id ] );
+
+		return false !== $res;
 	}
 
 	/**
@@ -2456,7 +2645,7 @@ final class StudentsService {
 
 		$sanitized = json_decode( $this->sanitize_documents_payload( [ $document_data ] ), true );
 		if ( empty( $sanitized[0] ) ) {
-			return new WP_Error( 'codeclove_invalid_file_type', __( 'Only PDF documents are allowed.', 'codeclove-school-management' ), 400 );
+			return new WP_Error( 'codeclove_invalid_file_type', __( 'Only PDF, JPG, and PNG documents are allowed.', 'codeclove-school-management' ), 400 );
 		}
 		$new_doc = $sanitized[0];
 

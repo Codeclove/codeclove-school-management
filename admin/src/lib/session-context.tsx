@@ -30,7 +30,14 @@ const SessionContext = createContext<SessionContextValue | null>(null)
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSessionState] = useState<SessionInfo | null>(null)
+  const [session, setSessionState] = useState<SessionInfo | null>(() => {
+    try {
+      const stored = localStorage.getItem('codeclove_selected_session')
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  })
 
   const setSession = useCallback((next: SessionInfo) => {
     try {

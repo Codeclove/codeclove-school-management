@@ -103,9 +103,10 @@ final class Assets {
 
 		$build_dir = self::get_build_dir();
 		$build_url = self::get_build_url();
-		$version   = defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0';
-
-		$js_path  = $build_dir . 'index.js';
+		$js_path   = $build_dir . 'index.js';
+		$version   = ( defined( 'WP_DEBUG' ) && WP_DEBUG && file_exists( $js_path ) )
+			? (string) filemtime( $js_path )
+			: ( defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0' );
 		$css_path = $build_dir . 'index.css';
 
 		if ( ! file_exists( $js_path ) ) {
@@ -160,7 +161,10 @@ final class Assets {
 	 * @param string $body_scripts Dev-only raw HTML before </body> (Vite app entry).
 	 */
 	private function render_html( string $head_extras = '', string $body_scripts = '' ): void {
-		$plugin_url = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
+		$plugin_url  = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
+		$settings    = get_option( 'codeclove_settings', [] );
+		$school_name = ! empty( $settings['school']['name'] ) ? (string) $settings['school']['name'] : __( 'School Management', 'codeclove-school-management' );
+		$logo_url    = ! empty( $settings['school']['logo'] ) ? (string) $settings['school']['logo'] : ( $plugin_url . 'assets/defaults/logo.svg' );
 
 		// WordPress 6.4+ deprecated print_emoji_styles() on wp_print_styles/admin_print_styles.
 		// Core unhooks it inside wp_enqueue_emoji_styles() during standard enqueue actions.
@@ -174,9 +178,9 @@ final class Assets {
 		<head>
 			<meta charset="<?php bloginfo( 'charset' ); ?>">
 			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<title><?php esc_html_e( 'School Management', 'codeclove-school-management' ); ?></title>
-			<link rel="icon" type="image/svg+xml" href="<?php echo esc_url( $plugin_url . 'assets/defaults/logo.svg' ); ?>">
-			<link rel="shortcut icon" href="<?php echo esc_url( $plugin_url . 'assets/defaults/logo.svg' ); ?>">
+			<title><?php echo esc_html( $school_name ); ?></title>
+			<link rel="icon" href="<?php echo esc_url( $logo_url ); ?>">
+			<link rel="shortcut icon" href="<?php echo esc_url( $logo_url ); ?>">
 			<?php wp_print_styles(); wp_print_head_scripts(); ?>
 			<?php if ( $head_extras ) : ?>
 				<?php echo $head_extras; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dev-only Vite preamble ?>
@@ -245,6 +249,8 @@ final class Assets {
 			'isPro'       => (bool) $is_pro,
 			'isPaid'      => codeclove_is_paid(),
 			'isDemo'      => codeclove_is_demo(),
+			'preset'      => strtoupper( (string) ( $settings['education_system']['preset'] ?? 'IN' ) ),
+			'presetName'  => (string) ( $settings['education_system']['preset_name'] ?? 'India' ),
 			'license'     => \CodeClove\Modules\Settings\SystemReportService::get_sanitized_license_info(),
 			'proUrl'      => $pro_url,
 			'permissions' => $permissions,
@@ -259,6 +265,12 @@ final class Assets {
 				'avatar'   => get_avatar_url( $user_id, [ 'size' => 64 ] ),
 				'isAdmin'  => $is_admin,
 			],
+			'school'      => [
+				'name' => ! empty( $settings['school']['name'] ) ? (string) $settings['school']['name'] : '',
+				'code' => ! empty( $settings['school']['code'] ) ? (string) $settings['school']['code'] : '',
+				'logo' => ! empty( $settings['school']['logo'] ) ? (string) $settings['school']['logo'] : '',
+			],
+			'localization' => $settings['localization'] ?? [],
 			'reviewPrompt' => \CodeClove\Modules\Settings\ReviewPromptService::get_status(),
 			'wpSettings'  => [
 				'timezone'           => function_exists( 'wp_timezone_string' ) ? wp_timezone_string() : 'UTC',

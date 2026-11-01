@@ -150,6 +150,25 @@ final class PortalController extends BaseController {
 				],
 			]
 		);
+		// Examinations & Report Cards View
+		register_rest_route(
+			$this->namespace,
+			'/portal/exams',
+			[
+				[
+					'methods'             => 'GET',
+					'callback'            => [ $this, 'get_exams' ],
+					'permission_callback' => [ $this, 'check_auth' ],
+					'args'                => [
+						'student_id' => [
+							'required'          => false,
+							'validate_callback' => static fn( $param ) => is_numeric( $param ),
+							'sanitize_callback' => 'absint',
+						],
+					],
+				],
+			]
+		);
 
 		// Notifications View
 		register_rest_route(
@@ -375,6 +394,19 @@ final class PortalController extends BaseController {
 		}
 
 		$data = $this->service->get_academics( $student_id );
+		return $this->success( $data );
+	}
+
+	/**
+	 * GET /portal/exams
+	 */
+	public function get_exams( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$student_id = $this->resolve_student_id( $request );
+		if ( is_wp_error( $student_id ) ) {
+			return $student_id;
+		}
+
+		$data = $this->service->get_exams( $student_id );
 		return $this->success( $data );
 	}
 

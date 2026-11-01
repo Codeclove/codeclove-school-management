@@ -1,14 +1,17 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, FileText, Search, X, Lock, CheckCircle2, TrendingUp, Clock, Calendar, Users, Sparkles, ArrowRight } from 'lucide-react'
+import { Eye, FileText, Search, X, Lock, CheckCircle2, TrendingUp, Clock, Calendar, Users, Sparkles, ArrowRight, Download, Bell, Loader2 } from 'lucide-react'
 import { __, _n, sprintf } from '@/lib/i18n'
-import { useDefaultersReport, type DefaulterRow } from '@/api/finance'
+import { useDefaultersReport, useSendInvoiceReminder, type DefaulterRow } from '@/api/finance'
 import { useUnits } from '@/api/academics'
 import { useFormatter } from '@/lib/formatter'
 import { useSession } from '@/lib/session-context'
 import { useLabels } from '@/lib/labels'
 import { useDebounce } from '@/lib/useDebounce'
 import { useTableState } from '@/lib/useTableState'
+import { useToast } from '@/lib/toast'
+import { exportToCSV } from '@/lib/csv'
+import { cn } from '@/lib/utils'
 import {
   Button,
   PageHeader,
@@ -20,6 +23,12 @@ import {
   type DataTableColumn,
 } from '@/components/ui'
 
+const AGING_TABS = [
+  { id: 'all', label: __('All', 'codeclove-school-management'),      minDays: '' },
+  { id: '30',  label: __('30+ Days', 'codeclove-school-management'), minDays: '30' },
+  { id: '60',  label: __('60+ Days', 'codeclove-school-management'), minDays: '60' },
+  { id: '90',  label: __('90+ Days', 'codeclove-school-management'), minDays: '90' },
+] as const
 export default function DefaultersReportPage() {
   const isPro = window.CodeCloveConfig?.isPro ?? false
   const navigate = useNavigate()
@@ -37,7 +46,67 @@ export default function DefaultersReportPage() {
   const [daysOverdueMin, setDaysOverdueMin] = useState('')
   const table = useTableState({ defaultPerPage: 10 })
   const { resetPage } = table
+  const toast = useToast()
+  const sendReminderMutation = useSendInvoiceReminder()
+  const [remindingId, setRemindingId] = useState<number | null>(null)
 
+  const handleSendReminder = (row: DefaulterRow) => {
+    setRemindingId(row.invoice_id)
+    sendReminderMutation.mutate(
+      { id: row.invoice_id },
+      {
+        onSuccess: () => {
+          toast.success(
+            sprintf(
+              __('Payment reminder sent for invoice %s (%s %s).', 'codeclove-school-management'),
+              row.invoice_number,
+              row.student_first_name,
+              row.student_last_name
+            )
+          )
+        },
+        onError: (err) => {
+          toast.error(err.message || __('Failed to send payment reminder.', 'codeclove-school-management'))
+        },
+        onSettled: () => {
+          setRemindingId(null)
+        },
+      }
+    )
+  }
+
+  const handleExportCsv = () => {
+    if (!defaulters.length) {
+      toast.error(__('No defaulters data to export.', 'codeclove-school-management'))
+      return
+    }
+
+    const headers = [
+      __('Student Name', 'codeclove-school-management'),
+      __('Student ID', 'codeclove-school-management'),
+      unitLabelSingular,
+      __('Invoice #', 'codeclove-school-management'),
+      __('Due Date', 'codeclove-school-management'),
+      __('Days Overdue', 'codeclove-school-management'),
+      __('Total Billed', 'codeclove-school-management'),
+      __('Outstanding Balance', 'codeclove-school-management'),
+    ]
+
+    const rows = defaulters.map((row) => [
+      `${row.student_first_name} ${row.student_last_name}`,
+      row.student_number || '',
+      row.academic_unit_name || 'N/A',
+      row.invoice_number,
+      formatDate(row.due_date),
+      row.days_overdue,
+      formatCurrency(row.total_minor),
+      formatCurrency(row.balance_minor),
+    ])
+
+    const dateStr = new Date().toISOString().split('T')[0]
+    exportToCSV(`fee_defaulters_${dateStr}`, headers, rows)
+    toast.success(__('Defaulters report exported to CSV.', 'codeclove-school-management'))
+  }
   // Fetch Class Levels
   const { data: unitsData } = useUnits({
     session_id: session?.id,
@@ -136,6 +205,23 @@ export default function DefaultersReportPage() {
             <Button
               variant="ghost"
               size="icon"
+              disabled={remindingId === row.invoice_id}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleSendReminder(row)
+              }}
+              className="h-8 w-8 text-text-subtle hover:text-brand"
+              title={__('Send Payment Reminder', 'codeclove-school-management')}
+            >
+              {remindingId === row.invoice_id ? (
+                <Loader2 size={14} className="animate-spin text-brand" />
+              ) : (
+                <Bell size={14} />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => navigate('/finance/invoices/' + row.invoice_id)}
               className="h-8 w-8 text-text-subtle hover:text-brand"
               title={__('View Invoice Details', 'codeclove-school-management')}
@@ -146,7 +232,7 @@ export default function DefaultersReportPage() {
         ),
       },
     ],
-    [unitLabelSingular, formatDate, formatCurrency, navigate]
+    [unitLabelSingular, formatDate, formatCurrency, navigate, remindingId, sendReminderMutation]
   )
 
   if (!isPro) {
@@ -284,80 +370,114 @@ export default function DefaultersReportPage() {
           { label: pageBreadcrumb },
         ]}
         onBack={() => navigate('/finance')}
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={isLoading || defaulters.length === 0}
+            className="gap-1.5"
+          >
+            <Download size={14} />
+            {__('Export CSV', 'codeclove-school-management')}
+          </Button>
+        }
       />
 
-      {/* Filters Card */}
+      {/* Filters Toolbar */}
       <Card className="p-4">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-end gap-3">
-            <div className="flex-1">
-              <FormField label={__('Search Students', 'codeclove-school-management')}>
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                  <Input
-                    type="text"
-                    placeholder={__('Search by student name, number, or invoice #...', 'codeclove-school-management')}
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value)
-                      table.resetPage()
-                    }}
-                    className="pl-9"
-                  />
-                </div>
-              </FormField>
-            </div>
-
-            <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-              <FormField label={unitLabelSingular}>
-                <Select
-                  value={unitId}
-                  onValueChange={(val) => {
-                    setUnitId(val)
-                    table.resetPage()
-                  }}
-                  placeholder={sprintf(__('All %s', 'codeclove-school-management'), unitLabelPlural.toLowerCase())}
-                  options={[
-                    { value: 'all', label: sprintf(__('All %s', 'codeclove-school-management'), unitLabelPlural.toLowerCase()) },
-                    ...units.map((u) => ({ value: String(u.id), label: u.name })),
-                  ]}
-                />
-              </FormField>
-            </div>
-            <div className="w-full sm:w-40 lg:flex-1 lg:max-w-xs min-w-[140px]">
-              <FormField label={__('Minimum Days Overdue', 'codeclove-school-management')}>
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+          {/* 1. Search Field */}
+          <div className="w-full sm:w-80 lg:w-96 shrink-0">
+            <FormField label={__('Search Students', 'codeclove-school-management')}>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none select-none" />
                 <Input
-                  type="number"
-                  min="0"
-                  value={daysOverdueMin}
+                  type="text"
+                  placeholder={__('Search by student name, number, or invoice #...', 'codeclove-school-management')}
+                  value={search}
                   onChange={(e) => {
-                    setDaysOverdueMin(e.target.value)
+                    setSearch(e.target.value)
                     table.resetPage()
                   }}
-                  placeholder={__('e.g. 30', 'codeclove-school-management')}
-                  className="font-mono text-sm"
+                  className="pl-9"
                 />
-              </FormField>
-            </div>
-
-            <div className="flex items-center gap-2 h-9">
-              {(Boolean(search) || (unitId && unitId !== 'all') || Boolean(daysOverdueMin)) && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setSearch('')
-                    setUnitId('all')
-                    setDaysOverdueMin('')
-                    table.resetPage()
-                  }}
-                  className="text-xs text-text-muted hover:text-text gap-1"
-                >
-                  <X size={12} />
-                  {__('Clear Filters', 'codeclove-school-management')}
-                </Button>
-              )}
-            </div>
+              </div>
+            </FormField>
           </div>
+
+          {/* 2. Class Level Selector */}
+          <div className="w-full sm:w-44 lg:w-48 shrink-0">
+            <FormField label={unitLabelSingular}>
+              <Select
+                value={unitId}
+                onValueChange={(val) => {
+                  setUnitId(val)
+                  table.resetPage()
+                }}
+                placeholder={sprintf(__('All %s', 'codeclove-school-management'), unitLabelPlural.toLowerCase())}
+                options={[
+                  { value: 'all', label: sprintf(__('All %s', 'codeclove-school-management'), unitLabelPlural.toLowerCase()) },
+                  ...units.map((u) => ({ value: String(u.id), label: u.name })),
+                ]}
+              />
+            </FormField>
+          </div>
+
+          {/* 3. Aging / Days Overdue Quick Filter */}
+          <div className="shrink-0">
+            <FormField label={__('Days Overdue', 'codeclove-school-management')}>
+              <div
+                role="tablist"
+                aria-label={__('Days Overdue', 'codeclove-school-management')}
+                className="inline-flex items-center h-8 p-1 bg-hover-bg rounded-lg border border-border/80 gap-1 select-none"
+              >
+                {AGING_TABS.map((tab) => {
+                  const isActive = (tab.minDays === '' && !daysOverdueMin) || (tab.minDays !== '' && daysOverdueMin === tab.minDays)
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => {
+                        setDaysOverdueMin(tab.minDays)
+                        table.resetPage()
+                      }}
+                      className={cn(
+                        'h-6 px-2.5 text-xs font-semibold rounded-md transition-colors cursor-pointer select-none whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring',
+                        isActive
+                          ? 'bg-brand text-text-inverted shadow-xs'
+                          : 'text-text-muted hover:text-text hover:bg-bg-surface'
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </FormField>
+          </div>
+          {/* 4. Clear Filters Action */}
+          {(Boolean(search) || (unitId && unitId !== 'all') || Boolean(daysOverdueMin)) && (
+            <div className="flex items-center h-8 shrink-0">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearch('')
+                  setUnitId('all')
+                  setDaysOverdueMin('')
+                  table.resetPage()
+                }}
+                className="h-8 text-xs text-text-muted hover:text-text gap-1 px-2.5"
+              >
+                <X size={12} />
+                {__('Clear Filters', 'codeclove-school-management')}
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -367,9 +487,7 @@ export default function DefaultersReportPage() {
         data={defaulters}
         table={table}
         total={total}
-        loading={isLoading}
         isLoading={isLoading}
-        error={isError}
         isError={isError}
         errorMessage={__('Error Loading Report', 'codeclove-school-management')}
         onRetry={() => refetch()}

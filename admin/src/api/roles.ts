@@ -14,6 +14,7 @@ export interface Role {
   is_system: boolean
   is_locked: boolean
   permission_count?: number
+  staff_count?: number
   permissions?: string[]
 }
 

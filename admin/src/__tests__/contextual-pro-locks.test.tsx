@@ -137,13 +137,13 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
     })
   })
 
-  describe('1. Fee Defaulters Sidebar Navigation & PRO Badge', () => {
-    it('renders Defaulters Report in sidebar for Free users with an amber PRO badge pill', () => {
+  describe('1. Clean Freemium Navigation & Dedicated Bottom Pro Upgrade Anchor', () => {
+    it('omits locked submenu items in sidebar for Free users to keep operational navigation clean and 100% functional', () => {
       // @ts-expect-error test mock override
       window.CodeCloveConfig.isPro = false
 
       const html = renderToString(
-        <MemoryRouter>
+        <MemoryRouter initialEntries={['/academics/classes']}>
           <FeedbackProvider>
             <TooltipProvider>
               <Sidebar />
@@ -152,21 +152,29 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
         </MemoryRouter>
       )
 
-      expect(html).toContain('Defaulters')
-      expect(html).toContain('/finance/reports/defaulters')
-      // PRO badge styling check
-      expect(html).toContain('bg-amber-500/15')
-      expect(html).toContain('text-amber-500')
-      expect(html).toContain('border-amber-500/25')
-      expect(html).toContain('PRO')
+      // Submenu pro links are removed in Free to avoid dead-end traps
+      expect(html).not.toContain('/finance/reports/defaulters')
+      expect(html).not.toContain('/pro-upgrade?feature=timetable')
+      expect(html).not.toContain('/pro-upgrade?feature=certificates')
+      expect(html).not.toContain('/pro-upgrade?feature=examinations')
+
+      // Core free modules are present and clean
+      expect(html).toContain('Dashboard')
+      expect(html).toContain('Academics')
+      expect(html).toContain('Students')
+      expect(html).toContain('Finance')
+
+      // Dedicated bottom upgrade anchor is preserved and prominent
+      expect(html).toContain('Upgrade to Pro')
+      expect(html).toContain('/pro-upgrade')
     })
 
-    it('does not render PRO badge for Pro users in sidebar Defaulters Report item', () => {
+    it('renders Pro modules in sidebar for Pro users without PRO badge clutter', () => {
       // @ts-expect-error test mock override
       window.CodeCloveConfig.isPro = true
 
       const html = renderToString(
-        <MemoryRouter>
+        <MemoryRouter initialEntries={['/finance/reports/defaulters']}>
           <FeedbackProvider>
             <TooltipProvider>
               <Sidebar />
@@ -177,84 +185,7 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
 
       expect(html).toContain('Defaulters')
       expect(html).toContain('/finance/reports/defaulters')
-      // Should not contain the amber PRO tag next to Defaulters
       expect(html).not.toMatch(/Defaulters[\s\S]*?bg-amber-500\/15 text-amber-500 border border-amber-500\/25[\s\S]*?PRO/)
-    })
-
-    it('renders Timetable in sidebar for Free users with PRO badge redirecting to upgrade page', () => {
-      // @ts-expect-error test mock override
-      window.CodeCloveConfig.isPro = false
-
-      const html = renderToString(
-        <MemoryRouter>
-          <FeedbackProvider>
-            <TooltipProvider>
-              <Sidebar />
-            </TooltipProvider>
-          </FeedbackProvider>
-        </MemoryRouter>
-      )
-
-      expect(html).toContain('Timetable')
-      expect(html).toContain('/pro-upgrade?feature=timetable')
-      expect(html).toMatch(/Timetable[\s\S]*?bg-amber-500\/15 text-amber-500 border border-amber-500\/25[\s\S]*?PRO/)
-    })
-
-    it('renders Timetable in sidebar for Pro users navigating to /academics/timetable without PRO badge', () => {
-      // @ts-expect-error test mock override
-      window.CodeCloveConfig.isPro = true
-
-      const html = renderToString(
-        <MemoryRouter>
-          <FeedbackProvider>
-            <TooltipProvider>
-              <Sidebar />
-            </TooltipProvider>
-          </FeedbackProvider>
-        </MemoryRouter>
-      )
-
-      expect(html).toContain('Timetable')
-      expect(html).toContain('/academics/timetable')
-      expect(html).not.toMatch(/Timetable[\s\S]*?bg-amber-500\/15 text-amber-500 border border-amber-500\/25[\s\S]*?PRO/)
-    })
-
-    it('renders Certificates in sidebar for Free users with PRO badge redirecting to upgrade page', () => {
-      // @ts-expect-error test mock override
-      window.CodeCloveConfig.isPro = false
-
-      const html = renderToString(
-        <MemoryRouter>
-          <FeedbackProvider>
-            <TooltipProvider>
-              <Sidebar />
-            </TooltipProvider>
-          </FeedbackProvider>
-        </MemoryRouter>
-      )
-
-      expect(html).toContain('Certificates')
-      expect(html).toContain('/pro-upgrade?feature=certificates')
-      expect(html).toMatch(/Certificates[\s\S]*?bg-amber-500\/15 text-amber-500 border border-amber-500\/25[\s\S]*?PRO/)
-    })
-
-    it('renders Certificates in sidebar for Pro users navigating to /academics/certificates without PRO badge', () => {
-      // @ts-expect-error test mock override
-      window.CodeCloveConfig.isPro = true
-
-      const html = renderToString(
-        <MemoryRouter>
-          <FeedbackProvider>
-            <TooltipProvider>
-              <Sidebar />
-            </TooltipProvider>
-          </FeedbackProvider>
-        </MemoryRouter>
-      )
-
-      expect(html).toContain('Certificates')
-      expect(html).toContain('/academics/certificates')
-      expect(html).not.toMatch(/Certificates[\s\S]*?bg-amber-500\/15 text-amber-500 border border-amber-500\/25[\s\S]*?PRO/)
     })
   })
 
@@ -296,6 +227,55 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
       // 5. Action CTA buttons
       expect(html).toContain('Upgrade to CodeClove Pro')
       expect(html).toContain('View Invoices')
+    })
+
+    it('renders DefaultersReportPage with clean single-row filter toolbar and accessible high-contrast quick filters when isPro is true', () => {
+      // @ts-expect-error test mock override
+      window.CodeCloveConfig.isPro = true
+
+      const html = renderToString(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <SessionProvider>
+              <DefaultersReportPage />
+            </SessionProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+
+      // 1. Single-row responsive toolbar layout with stabilized search input
+      expect(html).toContain('flex-col sm:flex-row sm:items-end gap-3')
+      expect(html).toContain('sm:w-80 lg:w-96 shrink-0')
+
+      // 2. Search Students field
+      expect(html).toContain('Search Students')
+      expect(html).toContain('Search by student name, number, or invoice #...')
+
+      // 3. Aging / Days Overdue quick filter tablist
+      expect(html).toContain('role="tablist"')
+      expect(html).toContain('aria-label="Days Overdue"')
+
+      // 4. Quick filter tabs and accessibility
+      expect(html).toContain('>All<')
+      expect(html).toContain('>30+ Days<')
+      expect(html).toContain('>60+ Days<')
+      expect(html).toContain('>90+ Days<')
+      expect(html).toContain('role="tab"')
+
+      // 5. Light mode contrast tokens & accessible text tokens
+      expect(html).toContain('bg-hover-bg rounded-lg border border-border/80')
+      expect(html).toContain('bg-brand text-text-inverted')
+      expect(html).toContain('text-text-muted hover:text-text hover:bg-bg-surface')
+
+      // 6. Must NOT contain unregistered/broken Tailwind class
+      expect(html).not.toContain('text-brand-foreground')
+
+      // 7. Clunky Custom Days / Minimum Days Overdue input removed completely for clean professional aesthetics
+      expect(html).not.toContain('Custom Days')
+      expect(html).not.toContain('Minimum Days Overdue')
+
+      // 8. CSV export action button
+      expect(html).toContain('Export CSV')
     })
   })
 

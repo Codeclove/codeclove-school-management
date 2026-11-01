@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
+// @ts-expect-error node built-in without @types/node
+import fs from 'node:fs'
 import { renderToString } from 'react-dom/server'
 import { useForm } from 'react-hook-form'
 import { Select, AUTO_SEARCH_THRESHOLD } from '../components/ui/Select'
 import { Combobox } from '../components/ui/Combobox'
 import { Form, FormSelect } from '../components/ui/form'
-
 describe('Dropdown Search & Combobox Integration', () => {
   const shortOptions = [
     { value: '1', label: 'Class 1' },
@@ -253,6 +254,39 @@ describe('Dropdown Search & Combobox Integration', () => {
       expect(html).toContain('border-danger')
       expect(html).toContain('focus:ring-danger')
       expect(html).toContain('aria-invalid="true"')
+    })
+  })
+
+  describe('Modal Integration & Focus Scope Coordination', () => {
+    const comboboxSource = fs.readFileSync(new URL('../components/ui/Combobox.tsx', import.meta.url), 'utf-8') as string
+
+    it('Combobox passes modal={modal} and defaults modal=true to PopoverPrimitive.Root', () => {
+      // Must pass modal={modal} with default modal=true so when rendered inside a Radix Dialog/Modal,
+      // Radix UI properly coordinates nested modal layers without dialog pointer interceptors blocking item clicks.
+      expect(comboboxSource).toMatch(/<PopoverPrimitive\.Root[^>]*modal=\{modal\}/i)
+      expect(comboboxSource).toMatch(/modal\s*=\s*true/i)
+    })
+
+    it('renders Combobox cleanly with explicit modal prop', () => {
+      const htmlModal = renderToString(
+        <Combobox
+          id="modal-combobox"
+          value="1"
+          options={shortOptions}
+          modal={true}
+        />
+      )
+      expect(htmlModal).toContain('modal-combobox')
+
+      const htmlNonModal = renderToString(
+        <Combobox
+          id="non-modal-combobox"
+          value="1"
+          options={shortOptions}
+          modal={false}
+        />
+      )
+      expect(htmlNonModal).toContain('non-modal-combobox')
     })
   })
 })

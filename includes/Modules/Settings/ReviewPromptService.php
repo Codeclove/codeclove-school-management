@@ -59,11 +59,15 @@ final class ReviewPromptService {
 		global $wpdb;
 		$students_count = 0;
 		if ( class_exists( Schema::class ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Review milestone active students count.
-			$count = $wpdb->get_var(
-				$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NULL', Schema::students() )
-			);
-			$students_count = null !== $count ? (int) $count : 0;
+			$table = Schema::students();
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			if ( (string) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Review milestone active students count.
+				$count = $wpdb->get_var(
+					$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE deleted_at IS NULL', $table )
+				);
+				$students_count = null !== $count ? (int) $count : 0;
+			}
 		}
 
 		// Dismissed permanently.

@@ -122,14 +122,14 @@ final class MeController extends BaseController {
 
 		// Auto-provision staff record for WP administrators
 		if ( current_user_can( 'manage_options' ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Query owner role.
-			$owner_role_id = (int) $wpdb->get_var(
-				$wpdb->prepare( 'SELECT id FROM %i WHERE slug = %s', Schema::roles(), 'owner' )
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Query administrator role.
+			$admin_role_id = (int) $wpdb->get_var(
+				$wpdb->prepare( 'SELECT id FROM %i WHERE slug = %s', Schema::roles(), 'administrator' )
 			);
 
 			$created = $this->service->create_staff_member( [
 				'user_id'     => $user_id,
-				'role_id'     => $owner_role_id ?: null,
+				'role_id'     => $admin_role_id ?: null,
 				'first_name'  => $wp_user->first_name ?: ( $wp_user->display_name ?: 'Admin' ),
 				'last_name'   => $wp_user->last_name ?: 'User',
 				'email'       => $wp_user->user_email,
@@ -178,26 +178,31 @@ final class MeController extends BaseController {
 		unset( $body['role_id'], $body['status'], $body['user_id'], $body['staff_number'] );
 
 		// Password update requires current password check
+		$current_user_id  = get_current_user_id();
+		$has_new_password = false;
 		if ( ! empty( $body['new_password'] ) ) {
 			if ( empty( $body['current_password'] ) ) {
 				return $this->error( 'validation_failed', __( 'Current password is required to set a new password.', 'codeclove-school-management' ), 400 );
 			}
-			$wp_user = get_userdata( get_current_user_id() );
-			if ( ! $wp_user || ! wp_check_password( $body['current_password'], $wp_user->user_pass, get_current_user_id() ) ) {
+			$wp_user = get_userdata( $current_user_id );
+			if ( ! $wp_user || ! wp_check_password( $body['current_password'], $wp_user->user_pass, $current_user_id ) ) {
 				return $this->error( 'validation_failed', __( 'Incorrect current password.', 'codeclove-school-management' ), 400 );
 			}
 			if ( strlen( $body['new_password'] ) < 6 ) {
 				return $this->error( 'validation_failed', __( 'New password must be at least 6 characters.', 'codeclove-school-management' ), 400 );
 			}
 
-			// Map it to 'password' for StaffService update flow
-			$body['password'] = $body['new_password'];
+			$has_new_password = true;
 		}
 
 		// Perform update
 		$result = $this->service->update_staff_member( (int) $staff_id, $body );
 		if ( is_wp_error( $result ) ) {
 			return $result;
+		}
+
+		if ( $has_new_password ) {
+			wp_set_password( (string) $body['new_password'], $current_user_id );
 		}
 
 		return $this->success( $result );

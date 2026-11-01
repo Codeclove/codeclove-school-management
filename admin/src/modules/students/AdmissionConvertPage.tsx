@@ -60,10 +60,10 @@ export default function AdmissionConvertPage() {
     }
   }, [application])
 
-  const { data: unitData } = useUnits({ session_id: Number(sessionVal || 1) })
+  const { data: unitData } = useUnits({ session_id: Number(sessionVal || 1), per_page: 200 })
   const units = unitData?.data ?? []
 
-  const { data: groupData } = useGroups({ academic_unit_id: Number(unitVal || 1) })
+  const { data: groupData } = useGroups({ academic_unit_id: Number(unitVal || 1), per_page: 200 })
   const groups = groupData?.data ?? []
 
   const convertMutation = useConvertAdmission()

@@ -85,6 +85,9 @@ final class RestApi {
 			// Finance
 			'\CodeClove\Modules\Finance\FinanceController',
 
+			// Notifications & Announcements
+			'\CodeClove\Modules\Notifications\NotificationsController',
+
 			// Student & Guardian Portal Module
 			'\CodeClove\Modules\Portal\PortalController',
 

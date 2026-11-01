@@ -63,6 +63,7 @@ export interface DataTableProps<T> {
   selectable?: boolean
   onRowClick?: (row: T) => void
   bulkActions?: ReactNode
+  toolbar?: ReactNode
   total?: number
   skeletonRows?: number
   cardWrapper?: boolean
@@ -112,6 +113,7 @@ export function DataTable<T>({
   selectable = false,
   onRowClick,
   bulkActions,
+  toolbar,
   total,
   skeletonRows = 5,
   cardWrapper = true,
@@ -252,6 +254,12 @@ export function DataTable<T>({
   // ─── Table Content ─────────────────────────────────────────────────────────
   const content = (
     <>
+      {/* Integrated Toolbar Slot */}
+      {toolbar && (
+        <div className="border-b border-border bg-bg-surface">
+          {toolbar}
+        </div>
+      )}
       {/* Bulk Action Bar */}
       {selectedIds.length > 0 && (
         <div

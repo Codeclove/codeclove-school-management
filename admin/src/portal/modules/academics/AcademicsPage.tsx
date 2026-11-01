@@ -6,12 +6,15 @@
  */
 
 import React from 'react'
+import { Link } from 'react-router-dom'
 import {
+  ArrowRight,
   BookMarked,
   BookOpen,
+  FileCheck2,
   GraduationCap,
 } from 'lucide-react'
-import { __, _n, sprintf } from '@/lib/i18n'
+import { __, sprintf } from '@/lib/i18n'
 import { usePortal } from '../../lib/portal-context'
 import { usePortalLabels } from '../../lib/labels'
 import { useAcademics } from '../../api/portal'
@@ -21,7 +24,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  EmptyState,
   PageHeader,
   Spinner,
 } from '@/components/ui'
@@ -30,6 +32,7 @@ export const AcademicsPage: React.FC = () => {
   const { currentStudent } = usePortal()
   const { getLabel } = usePortalLabels()
   const { data: academicsData, isLoading } = useAcademics(currentStudent?.id)
+  const isPro = window.CodeClovePortalConfig?.isPro ?? false
 
   const sessionLabel = getLabel('academic_session', false, __( 'Academic Session', 'codeclove-school-management' ))
   const unitLabel = getLabel('academic_unit', false, __( 'Class', 'codeclove-school-management' ))
@@ -100,52 +103,49 @@ export const AcademicsPage: React.FC = () => {
                   {sprintf( __( 'Enrolled %s', 'codeclove-school-management' ), subjectPlural )}
                 </h3>
               </div>
-              <Badge variant="default" size="sm">
-                {sprintf(
-                  _n( '%d Subject', '%d Subjects', subjects.length, 'codeclove-school-management' ),
-                  subjects.length
-                )}
-              </Badge>
+              <span className="text-2xs font-semibold text-text-muted">
+                {sprintf( __( '%d %s', 'codeclove-school-management' ), subjects.length, subjectPlural )}
+              </span>
             </CardHeader>
-
             <CardContent>
               {subjects.length === 0 ? (
-                <EmptyState
-                  icon={BookOpen}
-                  title={__( 'No subjects assigned', 'codeclove-school-management' )}
-                  description={__( 'No subject curriculum records found for this class division.', 'codeclove-school-management' )}
-                  className="py-12"
-                />
+                <div className="text-center py-8 text-text-muted text-xs">
+                  <BookMarked className="w-8 h-8 mx-auto text-text-subtle mb-2 opacity-50" />
+                  <p>{sprintf( __( 'No %s enrolled for this student yet.', 'codeclove-school-management' ), subjectPlural.toLowerCase() )}</p>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {subjects.map((sub, idx) => {
-                    const isCore = !sub.type || sub.type.toLowerCase() === 'core'
+                    const isCore = (sub.type ?? 'core').toLowerCase() === 'core'
+                    const isActivity = (sub.type ?? '').toLowerCase() === 'activity'
 
                     return (
                       <div
-                        key={`${sub.name}-${idx}`}
-                        className="flex items-center justify-between rounded-xl border border-border bg-bg-surface p-3.5 hover:border-border-strong hover:bg-hover-bg hover:shadow-card transition-all"
+                        key={sub.id ?? idx}
+                        className="flex items-center justify-between p-3.5 rounded-xl border border-border bg-bg-surface hover:border-border-strong hover:shadow-card transition-all"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div
-                            className={`flex h-9 w-9 items-center justify-center rounded-lg border border-border flex-shrink-0 ${
-                              isCore ? 'bg-brand-dim text-brand' : 'bg-warning-dim text-warning'
-                            }`}
-                          >
-                            <BookMarked className="w-4 h-4" />
+                          <div className={`flex h-9 w-9 items-center justify-center rounded-lg shrink-0 ${
+                            isCore
+                              ? 'bg-brand-dim text-brand'
+                              : isActivity
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                          }`}>
+                            <BookOpen className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
-                            <h4 className="text-xs font-bold text-text leading-snug">
+                            <h4 className="text-xs font-bold text-text truncate">
                               {sub.name}
                             </h4>
                             <p className="text-2xs font-medium text-text-muted mt-0.5">
-                              {sub.code ? sprintf( __( 'Code: %s', 'codeclove-school-management' ), sub.code ) : __( 'Curriculum Subject', 'codeclove-school-management' )}
+                              {sub.code ? `${__( 'Code', 'codeclove-school-management' )}: ${sub.code}` : (isCore ? __( 'Core Subject', 'codeclove-school-management' ) : __( 'Elective', 'codeclove-school-management' ))}
                             </p>
                           </div>
                         </div>
 
                         <Badge
-                          variant={isCore ? 'brand' : 'warning'}
+                          variant={isCore ? 'brand' : isActivity ? 'neutral' : 'warning'}
                           size="sm"
                           className="flex-shrink-0"
                         >
@@ -158,6 +158,33 @@ export const AcademicsPage: React.FC = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Quick link to Examinations */}
+          {isPro && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-bg-surface hover:border-border-strong transition-all">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-dim text-brand shrink-0">
+                  <FileCheck2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-text">
+                    {__( 'Examinations, Admit Cards & Report Cards', 'codeclove-school-management' )}
+                  </h4>
+                  <p className="text-2xs text-text-muted mt-0.5">
+                    {__( 'Access your official candidate hall tickets and published term report cards.', 'codeclove-school-management' )}
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                to="/examinations"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline shrink-0 self-start sm:self-auto"
+              >
+                <span>{__( 'Go to Examinations', 'codeclove-school-management' )}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          )}
         </>
       )}
     </div>
