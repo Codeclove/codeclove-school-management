@@ -1,5 +1,6 @@
 === CodeClove School Management System ===
 Contributors: codeclove
+Donate link: https://codeclove.com/donate/
 Tags: school management, student management, attendance, school, education
 Requires at least: 6.5
 Tested up to: 7.1
