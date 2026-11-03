@@ -5,7 +5,7 @@ Tags: school management, student management, attendance, school, education
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.11
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Business Model: freemium
@@ -180,10 +180,10 @@ Third-party libraries included in the compiled output:
 All bundled libraries are open-source and GPL-compatible.
 
 == Upgrade Notice ==
+= 1.1.0 =
+Major milestone: student trash lifecycle and database cleanup, student portal user account management and dark mode, noticeboard announcement scheduling, WordPress login customizer, query security hardening, and performance polish. Recommended for all users.
 
 = 1.0.10 =
-WordPress login customizer, student portal user account linking, portal dark mode toggle, noticeboard scheduling, and UI refinements. Recommended for all users.
-
 = 1.0.9 =
 Public admissions shortcode session association fix, staff recruitment applications portal, and general stability improvements. Recommended for all users.
 
@@ -217,8 +217,22 @@ For full details see: https://codeclove.com/privacy-policy/
 
 == Changelog ==
 
+= 1.1.0 =
+* Feature: Soft-delete trash state, restore capability, and permanent database cleanup tool for student records.
+* Feature: Student and parent portal user account linking with self-service login and password reset.
+* Feature: Student portal theme mode toggle with dedicated dark mode tokens and unread notification bell.
+* Feature: Noticeboard announcement scheduling, pinning, and portal feed display.
+* Feature: Custom WordPress login screen branding with school logo and custom styling presets.
+* Feature: Automatically bootstrap active academic session into global frontend configuration.
+* Feature: Public staff application shortcode and status tracking review workflow.
+* Feature: Secure student documents vault with in-app preview and disposition stream controls.
+* Feature: Full internationalization (i18n) with RTL layout support and localized weekend preferences.
+* Security: Hardened database queries with native placeholder parameterization for full WordPress Plugin Check compliance.
+* Fix: Combobox focus management and overlay interaction inside nested modals.
+* Fix: Scoped bulk CSV student import classes to the active academic session.
+* Performance: Streamlined table queries, print layouts, and asset bundle sizes.
+
 = 1.0.11 =
-* Fix: Student cascade deletion safely validates table existence before cleanup.
 * Tweak: Streamlined navigation menu by removing locked submenu links for a clean, 100% operational interface.
 * Security: Hardened database queries with strict placeholder parameterization.
 * I18n: Added translation descriptors and ordered placeholders across string formatting.
