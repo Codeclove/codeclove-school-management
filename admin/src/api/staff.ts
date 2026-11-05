@@ -415,7 +415,7 @@ export async function searchStaffWpUsers(
 
 export function useSearchStaffWpUsers(search: string = '', email: string = '', enabled: boolean = true) {
   return useQuery({
-    queryKey: ['staff', 'wp-users-search', search, email],
+    queryKey: queryKeys.staff.wpUsersSearch(search, email),
     queryFn: () => searchStaffWpUsers(search, email),
     enabled: enabled && (search.trim().length >= 1 || Boolean(email.trim())),
     staleTime: 5_000,

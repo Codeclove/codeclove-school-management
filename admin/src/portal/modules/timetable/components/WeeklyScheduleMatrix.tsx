@@ -129,7 +129,7 @@ export const WeeklyScheduleMatrix: React.FC<WeeklyScheduleMatrixProps> = ({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Horizontally scrollable matrix container */}
-      <div className="w-full overflow-x-auto rounded-2xl border border-border bg-bg-elevated shadow-card">
+      <div className="w-full overflow-x-auto rounded-xl border border-border bg-bg-elevated shadow-card">
         <div className="min-w-[860px]">
           <table className="w-full border-collapse text-left">
             <thead>
@@ -244,7 +244,7 @@ export const WeeklyScheduleMatrix: React.FC<WeeklyScheduleMatrixProps> = ({
 
                                 {/* Subject Name */}
                                 <h4
-                                  className="text-xs font-bold text-text line-clamp-2 leading-snug tracking-tight"
+                                  className="text-xs font-bold text-text break-words leading-snug tracking-tight"
                                   title={slot.subject_name}
                                 >
                                   {slot.subject_name}
@@ -255,20 +255,20 @@ export const WeeklyScheduleMatrix: React.FC<WeeklyScheduleMatrixProps> = ({
                               <div className="mt-2.5 pt-1.5 border-t border-border space-y-1 text-3xs text-text-muted">
                                 {teacher && (
                                   <div
-                                    className="flex items-center gap-1 font-medium text-text truncate"
+                                    className="flex items-start gap-1 font-medium text-text"
                                     title={teacher}
                                   >
-                                    <User className="w-3 h-3 text-text-subtle shrink-0" />
-                                    <span className="truncate">{teacher}</span>
+                                    <User className="w-3 h-3 text-text-subtle shrink-0 mt-0.5" />
+                                    <span className="break-words leading-tight">{teacher}</span>
                                   </div>
                                 )}
                                 {roomClean && (
                                   <div
-                                    className="flex items-center gap-1 text-text-muted truncate"
+                                    className="flex items-start gap-1 text-text-muted"
                                     title={roomClean}
                                   >
-                                    <DoorClosed className="w-3 h-3 text-text-subtle shrink-0" />
-                                    <span className="truncate">{roomClean}</span>
+                                    <DoorClosed className="w-3 h-3 text-text-subtle shrink-0 mt-0.5" />
+                                    <span className="break-words leading-tight">{roomClean}</span>
                                   </div>
                                 )}
                               </div>

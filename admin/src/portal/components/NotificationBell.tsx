@@ -97,7 +97,7 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 sm:max-w-none sm:w-[380px] rounded-2xl bg-bg-overlay shadow-modal border border-border z-50 overflow-hidden divide-y divide-border/60 animate-in fade-in-50 zoom-in-95 duration-150">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 sm:max-w-none sm:w-[380px] rounded-xl bg-bg-overlay shadow-modal border border-border z-50 overflow-hidden divide-y divide-border/60 animate-in fade-in-50 zoom-in-95 duration-150">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-2.5 bg-bg-overlay border-b border-border/70">
             <div className="flex items-center gap-2">

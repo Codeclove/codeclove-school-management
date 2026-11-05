@@ -254,7 +254,7 @@ export const ReceiptSlipView: React.FC<ReceiptSlipViewProps> = ({
       </div>
 
       {/* ─── 2. Official Receipt Presentation Card ────────────────────────── */}
-      <Card className="rounded-2xl overflow-hidden">
+      <Card className="rounded-xl overflow-hidden">
         <div className="p-6 sm:p-8 space-y-7">
           {/* Header & Letterhead Section */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-border">

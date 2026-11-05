@@ -337,7 +337,7 @@ function ComingSoon({
   return (
     <div className="flex h-full items-center justify-center min-h-[400px]">
       <div className="text-center space-y-4 max-w-sm">
-        <div className={`w-14 h-14 rounded-2xl ${bg} flex items-center justify-center mx-auto`}>
+        <div className={`w-14 h-14 rounded-xl ${bg} flex items-center justify-center mx-auto`}>
           <Icon size={24} className={color} />
         </div>
         <div className="space-y-1.5">

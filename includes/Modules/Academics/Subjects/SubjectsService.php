@@ -264,6 +264,38 @@ final class SubjectsService {
 	// ─── Database Operations ─────────────────────────────────────────────────
 
 	/**
+	 * Builds shared WHERE conditions and binds for subject queries.
+	 *
+	 * @param array $params Query arguments.
+	 * @return array{where_sql: string, extra_binds: array}
+	 */
+	private function build_subjects_where_and_binds( array $params ): array {
+		global $wpdb;
+
+		$where_clauses = [];
+		$extra_binds   = [];
+
+		if ( isset( $params['status'] ) && '' !== $params['status'] ) {
+			$where_clauses[] = 's.status = %s';
+			$extra_binds[]   = $params['status'];
+		}
+
+		if ( isset( $params['search'] ) && '' !== $params['search'] ) {
+			$where_clauses[] = '(s.name LIKE %s OR s.code LIKE %s)';
+			$like            = '%' . $wpdb->esc_like( $params['search'] ) . '%';
+			$extra_binds[]   = $like;
+			$extra_binds[]   = $like;
+		}
+
+		$where_sql = ! empty( $where_clauses ) ? ' AND ' . implode( ' AND ', $where_clauses ) : '';
+
+		return [
+			'where_sql'   => $where_sql,
+			'extra_binds' => $extra_binds,
+		];
+	}
+
+	/**
 	 * Gets subjects matching arguments.
 	 */
 	private function db_get_subjects( array $args = [] ): array {
@@ -278,7 +310,8 @@ final class SubjectsService {
 			'orderby'    => '',
 			'order'      => '',
 		];
-		$params = array_merge( $defaults, $args );
+		$params  = array_merge( $defaults, $args );
+		$clauses = $this->build_subjects_where_and_binds( $params );
 
 		$session_id = (int) $params['session_id'];
 		$binds      = [];
@@ -288,25 +321,19 @@ final class SubjectsService {
 				(SELECT COUNT(*) FROM %i us
 				 JOIN %i u ON us.academic_unit_id = u.id
 				 WHERE us.subject_id = s.id AND u.academic_session_id = %d) as units_count
-				FROM %i s WHERE 1=1';
-			$binds = [ Schema::unit_subjects(), Schema::units(), $session_id, Schema::subjects() ];
+				FROM %i s WHERE 1=1' . $clauses['where_sql'];
+			$binds = array_merge(
+				[ Schema::unit_subjects(), Schema::units(), $session_id, Schema::subjects() ],
+				$clauses['extra_binds']
+			);
 		} else {
 			$query = 'SELECT s.*,
 				(SELECT COUNT(*) FROM %i WHERE subject_id = s.id) as units_count
-				FROM %i s WHERE 1=1';
-			$binds = [ Schema::unit_subjects(), Schema::subjects() ];
-		}
-
-		if ( '' !== $params['status'] ) {
-			$query   .= ' AND s.status = %s';
-			$binds[] = $params['status'];
-		}
-
-		if ( '' !== $params['search'] ) {
-			$query   .= ' AND (s.name LIKE %s OR s.code LIKE %s)';
-			$like    = '%' . $wpdb->esc_like( $params['search'] ) . '%';
-			$binds[] = $like;
-			$binds[] = $like;
+				FROM %i s WHERE 1=1' . $clauses['where_sql'];
+			$binds = array_merge(
+				[ Schema::unit_subjects(), Schema::subjects() ],
+				$clauses['extra_binds']
+			);
 		}
 
 		$orderby = ! empty( $params['orderby'] ) ? sanitize_text_field( $params['orderby'] ) : 'name';
@@ -339,20 +366,13 @@ final class SubjectsService {
 	private function db_count_subjects( array $args = [] ): int {
 		global $wpdb;
 
-		$query = 'SELECT COUNT(*) FROM %i s WHERE 1=1';
-		$binds = [ Schema::subjects() ];
+		$clauses = $this->build_subjects_where_and_binds( $args );
 
-		if ( ! empty( $args['status'] ) ) {
-			$query   .= ' AND s.status = %s';
-			$binds[] = $args['status'];
-		}
-
-		if ( ! empty( $args['search'] ) ) {
-			$query   .= ' AND (s.name LIKE %s OR s.code LIKE %s)';
-			$like    = '%' . $wpdb->esc_like( $args['search'] ) . '%';
-			$binds[] = $like;
-			$binds[] = $like;
-		}
+		$query = 'SELECT COUNT(*) FROM %i s WHERE 1=1' . $clauses['where_sql'];
+		$binds = array_merge(
+			[ Schema::subjects() ],
+			$clauses['extra_binds']
+		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom academic subjects count query with dynamic clauses.
 		return (int) $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );

@@ -3,7 +3,7 @@
  */
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
-
+import { queryKeys } from '@/api/query-keys'
 export interface GatewayClientConfig {
   id: string
   name: string
@@ -49,7 +49,7 @@ export function useGatewaysConfig(options?: { enabled?: boolean }) {
   const isEnabled = options?.enabled !== undefined ? options.enabled : isPro
 
   return useQuery<GatewaysConfigResponse, Error>({
-    queryKey: ['gateways-config'],
+    queryKey: queryKeys.finance.gatewaysConfig(),
     queryFn: async () => {
       const res = await api.get<GatewaysConfigResponse>('finance/gateways/config')
       return res.data

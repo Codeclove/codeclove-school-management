@@ -537,7 +537,7 @@ export default function StaffDailyAttendance() {
 
       {/* ── Mobile Floating Quick-Save Dock (shows only when changes pending) ── */}
       {isDirty && (
-        <div className="fixed bottom-4 left-4 right-4 z-40 sm:hidden flex items-center justify-between p-3 px-4 bg-bg-surface border border-border shadow-lg rounded-2xl animate-slide-up">
+        <div className="fixed bottom-4 left-4 right-4 z-40 sm:hidden flex items-center justify-between p-3 px-4 bg-bg-surface border border-border shadow-lg rounded-xl animate-slide-up">
           <div className="flex items-center gap-2 min-w-0">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
             <span className="text-xs font-semibold text-text truncate">{__('Unsaved changes', 'codeclove-school-management')}</span>

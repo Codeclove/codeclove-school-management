@@ -22,7 +22,23 @@ if ( ! current_user_can( 'activate_plugins' ) ) {
 }
 
 // If Pro is active or installed, preserve all shared database tables and settings.
-if ( ( defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO ) || in_array( 'codeclove-school-management-pro/codeclove-school-management-pro.php', (array) get_option( 'active_plugins', [] ), true ) ) {
+$codeclove_is_pro = false;
+if ( defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO ) {
+	$codeclove_is_pro = true;
+} else {
+	$codeclove_active_plugins = (array) get_option( 'active_plugins', [] );
+	if ( is_multisite() ) {
+		$codeclove_active_plugins = array_merge( $codeclove_active_plugins, array_keys( (array) get_site_option( 'active_sitewide_plugins', [] ) ) );
+	}
+	foreach ( $codeclove_active_plugins as $codeclove_plugin ) {
+		if ( str_starts_with( (string) $codeclove_plugin, 'codeclove-school-management-pro/' ) ) {
+			$codeclove_is_pro = true;
+			break;
+		}
+	}
+}
+
+if ( $codeclove_is_pro ) {
 	return;
 }
 

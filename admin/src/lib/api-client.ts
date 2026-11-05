@@ -26,6 +26,7 @@ export interface ApiPaginatedResponse<T = unknown> extends ApiSuccessResponse<T>
     current_page: number
     total_pages: number
   }
+  meta?: Record<string, unknown>
 }
 
 export interface ApiErrorResponse {

@@ -11,6 +11,10 @@ export const studentDocumentSchema = z.object({
   uploaded_at:   z.string().optional(),
 })
 
+export type StudentDocument = z.infer<typeof studentDocumentSchema> & {
+  file?: File
+}
+
 export const studentSchema = z.object({
   first_name:          z.string().min(2, 'First name must be at least 2 characters'),
   middle_name:         z.string().optional(),

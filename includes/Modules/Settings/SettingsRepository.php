@@ -99,8 +99,8 @@ final class SettingsRepository {
 		$merged['education_system']['customized'] = $this->detect_customizations( $merged );
 
 		// Always update the stored schema and plugin versions just in case.
-		$merged['schema_version'] = CODECLOVE_DB_VERSION;
-		$merged['plugin_version'] = CODECLOVE_VERSION;
+		$merged['schema_version'] = defined( 'CODECLOVE_DB_VERSION' ) ? CODECLOVE_DB_VERSION : '1.0.0';
+		$merged['plugin_version'] = defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0';
 
 		update_option( self::OPTION_NAME, $merged, false );
 
@@ -120,14 +120,18 @@ final class SettingsRepository {
 		$preset          = is_array( $stored ) ? ( $stored['education_system']['preset'] ?? null ) : null;
 		$default_weekend = ( 'IN' === $preset ) ? 'sunday_only' : 'saturday_sunday';
 
+		$default_url     = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
+		$default_db_ver  = defined( 'CODECLOVE_DB_VERSION' ) ? CODECLOVE_DB_VERSION : '1.0.0';
+		$default_ver     = defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0';
+
 		$defaults = [
-			'schema_version'   => CODECLOVE_DB_VERSION,
-			'plugin_version'   => CODECLOVE_VERSION,
+			'schema_version'   => $default_db_ver,
+			'plugin_version'   => $default_ver,
 			'school'           => [
 				'name'      => get_bloginfo( 'name' ),
 				'code'      => '',
-				'logo'      => CODECLOVE_URL . 'assets/defaults/logo.svg',
-				'signature' => CODECLOVE_URL . 'assets/defaults/signature.svg',
+				'logo'      => $default_url . 'assets/defaults/logo.svg',
+				'signature' => $default_url . 'assets/defaults/signature.svg',
 				'email'     => get_bloginfo( 'admin_email' ),
 				'phone'     => '',
 				'website'   => get_bloginfo( 'url' ),

@@ -66,6 +66,8 @@ export const queryKeys = {
     details: () => [...queryKeys.students.all, 'detail'] as const,
     detail: (id: number) => [...queryKeys.students.details(), id] as const,
     enrollmentCounts: () => [...queryKeys.students.all, 'enrollment-counts'] as const,
+    portalUsersSearch: (search: string, email: string = '') =>
+      [...queryKeys.students.all, 'portal-users-search', search, email] as const,
   },
   guardians: {
     all: ['codeclove', 'guardians'] as const,
@@ -117,6 +119,7 @@ export const queryKeys = {
       [...queryKeys.finance.all, 'resolve-fee-amount', params] as const,
     defaulters: (filters?: unknown) =>
       [...queryKeys.finance.all, 'reports', 'defaulters', filters] as const,
+    gatewaysConfig: () => [...queryKeys.finance.all, 'gateways-config'] as const,
   },
   invoices: ['invoices'] as const,
 
@@ -151,6 +154,8 @@ export const queryKeys = {
       details: () => [...queryKeys.staff.applications.all, 'detail'] as const,
       detail: (id: number) => [...queryKeys.staff.applications.details(), id] as const,
     },
+    wpUsersSearch: (search: string = '', email: string = '') =>
+      [...queryKeys.staff.all, 'wp-users-search', search, email] as const,
   },
 
   // ─── Roles & Permissions ───────────────────────────────────────────────────
@@ -192,6 +197,7 @@ export const queryKeys = {
     detail: () => [...queryKeys.settings.all] as const,
     presets: () => [...queryKeys.settings.all, 'presets'] as const,
     health: () => [...queryKeys.settings.all, 'health'] as const,
+    trashStats: () => [...queryKeys.settings.all, 'trash-stats'] as const,
   },
   presets: {
     all: ['codeclove', 'settings', 'presets'] as const,

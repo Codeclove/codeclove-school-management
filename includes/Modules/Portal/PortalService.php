@@ -191,7 +191,7 @@ final class PortalService {
 				( ! empty( $st['middle_name'] ) ? ' ' . $st['middle_name'] : '' ) .
 				' ' . (string) $st['last_name']
 			);
-			$photo_url = ( ! empty( $st['photo_id'] ) ? wp_get_attachment_image_url( (int) $st['photo_id'], 'medium' ) : null ) ?: CODECLOVE_URL . 'assets/defaults/avatar.svg';
+			$photo_url = ( ! empty( $st['photo_id'] ) ? wp_get_attachment_image_url( (int) $st['photo_id'], 'medium' ) : null ) ?: ( ( defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '' ) . 'assets/defaults/avatar.svg' );
 
 			$formatted_students[] = [
 				'id'               => (int) $st['id'],
@@ -1221,7 +1221,7 @@ final class PortalService {
 			$emergency_contact = $formatted_guardians[0];
 		}
 
-		$photo_url = ( ! empty( $student['photo_id'] ) ? wp_get_attachment_image_url( (int) $student['photo_id'], 'medium' ) : null ) ?: CODECLOVE_URL . 'assets/defaults/avatar.svg';
+		$photo_url = ( ! empty( $student['photo_id'] ) ? wp_get_attachment_image_url( (int) $student['photo_id'], 'medium' ) : null ) ?: ( ( defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '' ) . 'assets/defaults/avatar.svg' );
 
 		$st_addr = null;
 		if ( ! empty( $student['address_json'] ) ) {

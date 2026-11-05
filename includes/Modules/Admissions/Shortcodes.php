@@ -144,11 +144,14 @@ final class Shortcodes {
 		}
 		$enqueued = true;
 
+		$plugin_url = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
+		$version    = defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0';
+
 		wp_enqueue_style(
 			'codeclove-public-admissions',
-			CODECLOVE_URL . 'assets/css/public-admissions.css',
+			$plugin_url . 'assets/css/public-admissions.css',
 			[],
-			CODECLOVE_VERSION
+			$version
 		);
 
 		$colors = [
@@ -171,9 +174,9 @@ final class Shortcodes {
 
 		wp_enqueue_script(
 			'codeclove-public-admissions',
-			CODECLOVE_URL . 'assets/js/public-admissions.js',
+			$plugin_url . 'assets/js/public-admissions.js',
 			[],
-			CODECLOVE_VERSION,
+			$version,
 			true
 		);
 	}

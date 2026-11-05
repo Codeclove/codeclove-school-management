@@ -43,7 +43,10 @@ final class DashboardService {
 		global $wpdb;
 
 		$is_admin   = user_can( $user_id, 'manage_options' );
-		$session_id = $session_id ?: $this->current_session_id();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Validate session id.
+		$session_id = ( $session_id && $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE id = %d LIMIT 1', Schema::sessions(), $session_id ) ) )
+			? $session_id
+			: $this->current_session_id();
 
 		// Resolve date bounds for chart queries.
 		[ $date_from, $date_to, $current_term ] = $this->resolve_range( $session_id, $range );

@@ -65,17 +65,8 @@ export interface AdmissionApplication {
   student_photo_url?: string
 }
 
-export interface StudentDocument {
-  id: string
-  name: string
-  title: string
-  attachment_id: number
-  url: string
-  file_size?: number | null
-  mime_type?: string
-  uploaded_at?: string
-  file?: File
-}
+import type { StudentDocument } from '@/schemas/students'
+export type { StudentDocument }
 export interface Student {
   id: number
   user_id?: number | null
@@ -636,7 +627,7 @@ export async function resetPortalPassword(
 
 export function useSearchPortalUsers(search: string, email: string = '', enabled: boolean = true) {
   return useQuery({
-    queryKey: ['students', 'portal-users-search', search, email],
+    queryKey: queryKeys.students.portalUsersSearch(search, email),
     queryFn: () => searchPortalUsers(search, email),
     enabled: enabled && (search.trim().length >= 1 || Boolean(email.trim())),
     staleTime: 5_000,

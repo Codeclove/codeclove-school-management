@@ -78,7 +78,7 @@ export const PortalShell: React.FC = () => {
   if (isLoading) {
     return (
       <div
-        className={`flex w-full items-center justify-center bg-bg-base rounded-2xl border border-border ${
+        className={`flex w-full items-center justify-center bg-bg-base rounded-xl border border-border ${
           isMaximized ? 'h-screen' : 'min-h-[500px] h-[calc(100vh-6rem)]'
         }`}
       >
@@ -95,7 +95,7 @@ export const PortalShell: React.FC = () => {
       className={`font-sans text-text antialiased selection:bg-brand selection:text-white flex flex-col ${
         isMaximized
           ? 'w-full h-full min-h-screen overflow-hidden bg-bg-base'
-          : 'w-full rounded-2xl border border-border bg-bg-surface shadow-card-md overflow-hidden min-h-[640px]'
+          : 'w-full rounded-xl border border-border bg-bg-surface shadow-card-md overflow-hidden min-h-[640px]'
       }`}
     >
       {/* Header */}
@@ -111,7 +111,6 @@ export const PortalShell: React.FC = () => {
         <PortalSidebar
           isMobileOpen={isMobileOpen}
           onCloseMobile={() => setIsMobileOpen(false)}
-          isMaximized={isMaximized}
         />
 
         <main

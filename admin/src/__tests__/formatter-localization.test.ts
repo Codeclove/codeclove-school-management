@@ -128,6 +128,17 @@ describe('Formatter & Localization Hook', () => {
       },
     }
     expect(getFormatter().formatCurrency(50000)).toBe('$500')
+
+    // Malagasy Ariary (MGA) with Ar symbol and 0 precision
+    mockSettingsData = {
+      localization: {
+        currency: 'MGA',
+        currency_position: 'left',
+        decimal_precision: 0,
+        number_format: 'standard',
+      },
+    }
+    expect(getFormatter().formatCurrency(125000)).toBe('Ar 1,250')
   })
 
   it('uses bootstrapped localization when settings query is not yet loaded', () => {

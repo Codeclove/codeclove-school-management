@@ -53,6 +53,12 @@ export interface CodeCloveConfigType {
   }
   /** Upgrade to Pro target URL */
   proUrl?: string
+  /** Server-resolved current active academic session */
+  currentSession?: {
+    id: number
+    label: string
+    status: 'active' | 'archived' | 'future'
+  } | null
   /** RBAC permissions list for the current user */
   permissions: string[]
   /** Current locale code, e.g. en_US, ar */

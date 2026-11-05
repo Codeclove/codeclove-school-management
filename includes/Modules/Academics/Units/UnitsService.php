@@ -294,6 +294,44 @@ final class UnitsService {
 	// ─── Database Operations ─────────────────────────────────────────────────
 
 	/**
+	 * Builds shared WHERE conditions and binds for unit queries.
+	 *
+	 * @param array $params Query arguments.
+	 * @param string $prefix Table prefix (e.g. 'u.' or '').
+	 * @return array{where_sql: string, extra_binds: array}
+	 */
+	private function build_units_where_and_binds( array $params, string $prefix = '' ): array {
+		global $wpdb;
+
+		$where_clauses = [];
+		$extra_binds   = [];
+
+		if ( ! empty( $params['session_id'] ) ) {
+			$where_clauses[] = "{$prefix}academic_session_id = %d";
+			$extra_binds[]   = (int) $params['session_id'];
+		}
+
+		if ( isset( $params['status'] ) && '' !== $params['status'] ) {
+			$where_clauses[] = "{$prefix}status = %s";
+			$extra_binds[]   = $params['status'];
+		}
+
+		if ( isset( $params['search'] ) && '' !== $params['search'] ) {
+			$where_clauses[] = "({$prefix}name LIKE %s OR {$prefix}code LIKE %s)";
+			$like            = '%' . $wpdb->esc_like( $params['search'] ) . '%';
+			$extra_binds[]   = $like;
+			$extra_binds[]   = $like;
+		}
+
+		$where_sql = ! empty( $where_clauses ) ? ' AND ' . implode( ' AND ', $where_clauses ) : '';
+
+		return [
+			'where_sql'   => $where_sql,
+			'extra_binds' => $extra_binds,
+		];
+	}
+
+	/**
 	 * Gets academic units matching arguments.
 	 */
 	private function db_get_units( array $args = [] ): array {
@@ -308,30 +346,18 @@ final class UnitsService {
 			'orderby'    => '',
 			'order'      => '',
 		];
-		$params = array_merge( $defaults, $args );
+		$params  = array_merge( $defaults, $args );
+		$clauses = $this->build_units_where_and_binds( $params, 'u.' );
 
 		$query = 'SELECT u.*, 
 			(SELECT COUNT(*) FROM %i WHERE academic_unit_id = u.id) as groups_count,
 			(SELECT COUNT(*) FROM %i WHERE academic_unit_id = u.id AND status != %s) as students_count
-			FROM %i u WHERE 1=1';
-		$binds = [ Schema::groups(), Schema::enrollments(), 'withdrawn', Schema::units() ];
+			FROM %i u WHERE 1=1' . $clauses['where_sql'];
 
-		if ( $params['session_id'] > 0 ) {
-			$query   .= ' AND u.academic_session_id = %d';
-			$binds[] = $params['session_id'];
-		}
-
-		if ( '' !== $params['status'] ) {
-			$query   .= ' AND u.status = %s';
-			$binds[] = $params['status'];
-		}
-
-		if ( '' !== $params['search'] ) {
-			$query   .= ' AND (u.name LIKE %s OR u.code LIKE %s)';
-			$like    = '%' . $wpdb->esc_like( $params['search'] ) . '%';
-			$binds[] = $like;
-			$binds[] = $like;
-		}
+		$binds = array_merge(
+			[ Schema::groups(), Schema::enrollments(), 'withdrawn', Schema::units() ],
+			$clauses['extra_binds']
+		);
 
 		$orderby = ! empty( $params['orderby'] ) ? sanitize_text_field( $params['orderby'] ) : 'level_order';
 		$order   = ! empty( $params['order'] ) && in_array( strtolower( $params['order'] ), [ 'asc', 'desc' ], true ) ? strtoupper( $params['order'] ) : 'ASC';
@@ -362,25 +388,13 @@ final class UnitsService {
 	private function db_count_units( array $args = [] ): int {
 		global $wpdb;
 
-		$query = 'SELECT COUNT(*) FROM %i WHERE 1=1';
-		$binds = [ Schema::units() ];
+		$clauses = $this->build_units_where_and_binds( $args, '' );
 
-		if ( ! empty( $args['session_id'] ) ) {
-			$query   .= ' AND academic_session_id = %d';
-			$binds[] = $args['session_id'];
-		}
-
-		if ( ! empty( $args['status'] ) ) {
-			$query   .= ' AND status = %s';
-			$binds[] = $args['status'];
-		}
-
-		if ( ! empty( $args['search'] ) ) {
-			$query   .= ' AND (name LIKE %s OR code LIKE %s)';
-			$like    = '%' . $wpdb->esc_like( $args['search'] ) . '%';
-			$binds[] = $like;
-			$binds[] = $like;
-		}
+		$query = 'SELECT COUNT(*) FROM %i WHERE 1=1' . $clauses['where_sql'];
+		$binds = array_merge(
+			[ Schema::units() ],
+			$clauses['extra_binds']
+		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom academic units count query with dynamic clauses.
 		return (int) $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );

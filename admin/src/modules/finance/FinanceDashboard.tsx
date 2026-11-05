@@ -153,10 +153,10 @@ export default function FinanceDashboard() {
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <Skeleton className="lg:col-span-2 h-80 rounded-2xl" />
-          <Skeleton className="h-80 rounded-2xl" />
+          <Skeleton className="lg:col-span-2 h-80 rounded-xl" />
+          <Skeleton className="h-80 rounded-xl" />
         </div>
-        <Skeleton className="h-96 rounded-2xl" />
+        <Skeleton className="h-96 rounded-xl" />
       </div>
     )
   }
@@ -571,7 +571,7 @@ export default function FinanceDashboard() {
       </div>
 
       {/* ── 4. High-Density Activity Ledger (Stripe Style) ─────────── */}
-      <div className="rounded-2xl border border-border bg-bg-elevated shadow-xs overflow-hidden">
+      <div className="rounded-xl border border-border bg-bg-elevated shadow-xs overflow-hidden">
         {/* Ledger Header & Tab Switcher */}
         <div className="p-4 sm:p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>

@@ -105,7 +105,7 @@ export function StudentIdCardSection({
       </div>
 
       {/* Card Preview Container */}
-      <div className="bg-bg-base/60 border border-border/80 rounded-2xl p-6 sm:p-10 flex flex-col items-center justify-center overflow-x-auto shadow-inner">
+      <div className="bg-bg-base/60 border border-border/80 rounded-xl p-6 sm:p-10 flex flex-col items-center justify-center overflow-x-auto shadow-inner">
         <div ref={printRef} className="bg-white text-black font-sans shadow-md rounded-xl p-4">
           <StudentIdCard
             student={student}

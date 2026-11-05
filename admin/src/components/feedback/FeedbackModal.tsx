@@ -539,7 +539,7 @@ export function FeedbackModal() {
           </div>
 
           {/* Upgraded Pro Card */}
-          <div className="relative overflow-hidden rounded-2xl border border-brand/25 bg-gradient-to-br from-brand/10 via-brand/5 to-transparent p-4 sm:p-5 space-y-3.5 shadow-xs">
+          <div className="relative overflow-hidden rounded-xl border border-brand/25 bg-gradient-to-br from-brand/10 via-brand/5 to-transparent p-4 sm:p-5 space-y-3.5 shadow-xs">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-xl bg-brand text-white flex items-center justify-center shadow-xs shrink-0 mt-0.5">

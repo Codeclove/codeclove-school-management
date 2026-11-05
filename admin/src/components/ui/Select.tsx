@@ -123,7 +123,7 @@ export function Select(props: SelectProps) {
           position="popper"
           sideOffset={4}
           className={cn(
-            'z-[100050] overflow-hidden rounded-lg outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
+            'z-[100050] overflow-hidden rounded-lg outline-none focus-visible:ring-0 focus-visible:ring-offset-0 pointer-events-auto',
             'bg-bg-overlay border border-border shadow-modal',
             'animate-slide-down',
             'min-w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] w-auto',

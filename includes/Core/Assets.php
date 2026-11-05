@@ -227,7 +227,19 @@ final class Assets {
 			);
 			$staff_id = $staff_id ? (int) $staff_id : null;
 		}
-
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Resolving current active session for frontend bootstrap.
+		$session_row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT id, name, status FROM %i ORDER BY is_current DESC, (status = "active") DESC, id DESC LIMIT 1',
+				\CodeClove\Database\Schema::sessions()
+			),
+			ARRAY_A
+		);
+		$current_session = $session_row ? [
+			'id'     => (int) $session_row['id'],
+			'label'  => trim( (string) preg_replace( '/\s*academic\s*year/i', '', (string) $session_row['name'] ) ) ?: (string) $session_row['name'],
+			'status' => 'draft' === $session_row['status'] ? 'future' : (string) $session_row['status'],
+		] : null;
 		$is_dev_mode = ( defined( 'CODECLOVE_DEV_TOOLS' ) && CODECLOVE_DEV_TOOLS ) || ( defined( 'CODECLOVE_DEV' ) && CODECLOVE_DEV ) || ( defined( 'WP_RUNNING_TESTS' ) && WP_RUNNING_TESTS );
  		$is_pro      = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
  		$pro_url     = 'https://codeclove.com/plugins/codeclove-school-management-pro/?utm_source=wp_plugin&utm_medium=pro_page&utm_campaign=upgrade';
@@ -252,7 +264,8 @@ final class Assets {
 			'preset'      => strtoupper( (string) ( $settings['education_system']['preset'] ?? 'IN' ) ),
 			'presetName'  => (string) ( $settings['education_system']['preset_name'] ?? 'India' ),
 			'license'     => \CodeClove\Modules\Settings\SystemReportService::get_sanitized_license_info(),
-			'proUrl'      => $pro_url,
+			'proUrl'         => $pro_url,
+			'currentSession' => $current_session,
 			'permissions' => $permissions,
 			'locale'      => str_replace( '_', '-', determine_locale() ),
 			'rtl'         => (bool) $is_rtl,

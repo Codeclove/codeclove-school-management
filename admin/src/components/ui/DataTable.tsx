@@ -506,7 +506,7 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn('overflow-hidden rounded-lg border border-border bg-bg-elevated', className)}>
+    <div className={cn('overflow-hidden rounded-xl border border-border bg-bg-elevated', className)}>
       {content}
     </div>
   )

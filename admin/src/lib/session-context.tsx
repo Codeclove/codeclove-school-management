@@ -31,14 +31,25 @@ const SessionContext = createContext<SessionContextValue | null>(null)
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSessionState] = useState<SessionInfo | null>(() => {
+    const configSession = window.CodeCloveConfig?.currentSession ?? null
     try {
       const stored = localStorage.getItem('codeclove_selected_session')
-      return stored ? JSON.parse(stored) : null
+      if (stored) {
+        const parsed = JSON.parse(stored) as SessionInfo
+        if (parsed && typeof parsed.id === 'number') {
+          // In demo showcase, if active session changed due to recurring cron resets, auto-sync
+          if (window.CodeCloveConfig?.isDemo && configSession && parsed.status === 'active' && parsed.id !== configSession.id) {
+            localStorage.setItem('codeclove_selected_session', JSON.stringify(configSession))
+            return configSession
+          }
+          return parsed
+        }
+      }
     } catch {
-      return null
+      // ignore error
     }
+    return configSession
   })
-
   const setSession = useCallback((next: SessionInfo) => {
     try {
       localStorage.setItem('codeclove_selected_session', JSON.stringify(next))

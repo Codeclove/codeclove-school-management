@@ -70,7 +70,7 @@ final class Migrations {
 
 		// Store the new schema version.
 		$settings                   = get_option( 'codeclove_settings', [] );
-		$settings['schema_version'] = CODECLOVE_DB_VERSION;
+		$settings['schema_version'] = defined( 'CODECLOVE_DB_VERSION' ) ? CODECLOVE_DB_VERSION : '1.0.0';
 		update_option( 'codeclove_settings', $settings, false );
 	}
 

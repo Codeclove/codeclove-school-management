@@ -271,7 +271,7 @@ describe('DataTable<T> Component', () => {
         <DataTable data={sampleData} columns={sampleColumns} cardWrapper={false} />
       )
 
-      expect(html).toContain('overflow-hidden rounded-lg')
+      expect(html).toContain('overflow-hidden rounded-xl')
     })
   })
 })

@@ -22,12 +22,18 @@ if ( ! defined( 'CODECLOVE_FILE' ) ) {
 	define( 'CODECLOVE_FILE', $codeclove_file );
 }
 
-define( 'CODECLOVE_DIR', plugin_dir_path( CODECLOVE_FILE ) );
+if ( ! defined( 'CODECLOVE_DIR' ) ) {
+	define( 'CODECLOVE_DIR', plugin_dir_path( CODECLOVE_FILE ) );
+}
 if ( ! defined( 'CODECLOVE_PLUGIN_DIR' ) ) {
 	define( 'CODECLOVE_PLUGIN_DIR', CODECLOVE_DIR );
 }
-define( 'CODECLOVE_URL', plugin_dir_url( CODECLOVE_FILE ) );
-define( 'CODECLOVE_BASENAME', plugin_basename( CODECLOVE_FILE ) );
+if ( ! defined( 'CODECLOVE_URL' ) ) {
+	define( 'CODECLOVE_URL', plugin_dir_url( CODECLOVE_FILE ) );
+}
+if ( ! defined( 'CODECLOVE_BASENAME' ) ) {
+	define( 'CODECLOVE_BASENAME', plugin_basename( CODECLOVE_FILE ) );
+}
 
 if ( ! defined( 'CODECLOVE_DEV_TOOLS' ) ) {
 	define( 'CODECLOVE_DEV_TOOLS', false );
@@ -193,44 +199,77 @@ if ( ! function_exists( 'codeclove_is_paid' ) ) {
 	}
 }
 
+if ( ! function_exists( 'codeclove_get_currency_symbol' ) ) {
+	/**
+	 * Resolves the display symbol for any 3-letter currency code.
+	 */
+	function codeclove_get_currency_symbol( string $currency_code ): string {
+		// ponytail: static lookup table initialized once per request — zero allocation on repeat calls
+		static $symbols = null;
+		if ( null === $symbols ) {
+			$symbols = [
+				'AED' => 'د.إ', 'AFN' => '؋', 'ALL' => 'L', 'AMD' => '֏', 'ANG' => 'ƒ',
+				'AOA' => 'Kz', 'ARS' => '$', 'AUD' => '$', 'AWG' => 'Afl.', 'AZN' => '₼',
+				'BAM' => 'KM', 'BBD' => 'Bds$', 'BDT' => '৳', 'BGN' => 'лв', 'BHD' => 'BD',
+				'BIF' => 'FBu', 'BMD' => 'BD$', 'BND' => 'B$', 'BOB' => 'Bs.', 'BRL' => 'R$',
+				'BSD' => 'B$', 'BTN' => 'Nu.', 'BWP' => 'P', 'BYN' => 'Br', 'BZD' => 'BZ$',
+				'CAD' => '$', 'CDF' => 'FC', 'CHF' => 'CHF', 'CLP' => '$', 'CNY' => '¥',
+				'COP' => '$', 'CRC' => '₡', 'CUP' => '$', 'CVE' => 'Esc', 'CZK' => 'Kč',
+				'DJF' => 'Fdj', 'DKK' => 'kr', 'DOP' => 'RD$', 'DZD' => 'DA', 'EGP' => 'E£',
+				'ERN' => 'Nfk', 'ETB' => 'Br', 'EUR' => '€', 'FJD' => '$', 'FKP' => '£',
+				'GBP' => '£', 'GEL' => '₾', 'GHS' => 'GH₵', 'GIP' => '£', 'GMD' => 'D',
+				'GNF' => 'FG', 'GTQ' => 'Q', 'GYD' => '$', 'HKD' => 'HK$', 'HNL' => 'L',
+				'HRK' => 'kn', 'HTG' => 'G', 'HUF' => 'Ft', 'IDR' => 'Rp', 'ILS' => '₪',
+				'INR' => '₹', 'IQD' => 'IQD', 'IRR' => '﷼', 'ISK' => 'kr', 'JMD' => '$',
+				'JOD' => 'JD', 'JPY' => '¥', 'KES' => 'KSh', 'KGS' => 'som', 'KHR' => '៛',
+				'KMF' => 'CF', 'KRW' => '₩', 'KWD' => 'KD', 'KYD' => '$', 'KZT' => '₸',
+				'LAK' => '₭', 'LBP' => 'L£', 'LKR' => 'Rs', 'LRD' => '$', 'LSL' => 'L',
+				'LYD' => 'LD', 'MAD' => 'DH', 'MDL' => 'L', 'MGA' => 'Ar', 'MKD' => 'ден',
+				'MMK' => 'K', 'MNT' => '₮', 'MOP' => 'MOP$', 'MRU' => 'UM', 'MUR' => '₨',
+				'MVR' => 'Rf', 'MWK' => 'MK', 'MXN' => '$', 'MYR' => 'RM', 'MZN' => 'MT',
+				'NAD' => '$', 'NGN' => '₦', 'NIO' => 'C$', 'NOK' => 'kr', 'NPR' => 'Rs',
+				'NZD' => '$', 'OMR' => 'RO', 'PAB' => 'B/.', 'PEN' => 'S/.', 'PGK' => 'K',
+				'PHP' => '₱', 'PKR' => '₨', 'PLN' => 'zł', 'PYG' => '₲', 'QAR' => 'QR',
+				'RON' => 'lei', 'RSD' => 'дин.', 'RUB' => '₽', 'RWF' => 'FRw', 'SAR' => '﷼',
+				'SBD' => '$', 'SCR' => 'SR', 'SDG' => 'SDG', 'SEK' => 'kr', 'SGD' => '$',
+				'SHP' => '£', 'SLE' => 'Le', 'SOS' => 'Sh.So.', 'SRD' => '$', 'SSP' => 'SS£',
+				'STN' => 'Db', 'SVC' => '₡', 'SYP' => '£S', 'SZL' => 'E', 'THB' => '฿',
+				'TJS' => 'SM', 'TMT' => 'T', 'TND' => 'DT', 'TOP' => 'T$', 'TRY' => '₺',
+				'TTD' => 'TT$', 'TWD' => 'NT$', 'TZS' => 'TSh', 'UAH' => '₴', 'UGX' => 'USh',
+				'USD' => '$', 'UYU' => '$U', 'UZS' => 'soʻm', 'VES' => 'Bs.S', 'VND' => '₫',
+				'VUV' => 'VT', 'WST' => 'WS$', 'XAF' => 'FCFA', 'XCD' => 'EC$', 'XOF' => 'CFA',
+				'XPF' => '₣', 'YER' => '﷼', 'ZAR' => 'R', 'ZMW' => 'ZK', 'ZWL' => 'Z$',
+			];
+			$symbols = apply_filters( 'codeclove_currency_symbols', $symbols );
+		}
+		$clean = strtoupper( trim( $currency_code ) );
+		return $symbols[ $clean ] ?? $clean;
+	}
+}
+
 if ( ! function_exists( 'codeclove_format_currency' ) ) {
 	/**
 	 * Formats minor currency units according to school localization settings.
 	 */
 	function codeclove_format_currency( int $minor, ?string $currency_code = null ): string {
-		$settings = get_option( 'codeclove_settings', [] );
-		$loc      = $settings['localization'] ?? [];
-		$code     = strtoupper( (string) ( $currency_code ?: ( $loc['currency'] ?? 'USD' ) ) );
-		$symbol   = match ( $code ) {
-			'INR'   => '₹',
-			'USD'   => '$',
-			'GBP'   => '£',
-			'EUR'   => '€',
-			'CAD'   => '$',
-			'AUD'   => '$',
-			'NGN'   => '₦',
-			'KES'   => 'KSh',
-			'GHS'   => 'GH₵',
-			'ZAR'   => 'R',
-			'PKR'   => '₨',
-			'BDT'   => '৳',
-			'AED'   => 'AED ',
-			'SAR'   => 'SAR ',
-			default => $code . ' ',
-		};
-
-		$position  = $loc['currency_position'] ?? 'left';
-		$precision = isset( $loc['decimal_precision'] ) ? (int) $loc['decimal_precision'] : 2;
-		$num_fmt   = $loc['number_format'] ?? 'standard';
-		$dec_point = ( 'european' === $num_fmt ) ? ',' : '.';
-		$thousands = ( 'european' === $num_fmt ) ? '.' : ',';
-		$amount    = number_format( $minor / 100, $precision, $dec_point, $thousands );
+		$settings    = get_option( 'codeclove_settings', [] );
+		$loc         = $settings['localization'] ?? [];
+		$code        = strtoupper( (string) ( $currency_code ?: ( $loc['currency'] ?? 'USD' ) ) );
+		$symbol      = codeclove_get_currency_symbol( $code );
+		$position    = $loc['currency_position'] ?? 'left';
+		$precision   = isset( $loc['decimal_precision'] ) ? (int) $loc['decimal_precision'] : 2;
+		$num_fmt     = $loc['number_format'] ?? 'standard';
+		$dec_point   = ( 'european' === $num_fmt ) ? ',' : '.';
+		$thousands   = ( 'european' === $num_fmt ) ? '.' : ',';
+		$amount      = number_format( $minor / 100, $precision, $dec_point, $thousands );
+		$is_compound = mb_strlen( $symbol ) > 1 || (bool) preg_match( '/[a-zA-Z]/', $symbol );
+		$sep         = str_contains( $position, 'space' ) || ( $is_compound && ! str_ends_with( $symbol, ' ' ) ) ? ' ' : '';
 
 		return match ( $position ) {
-			'right'       => $amount . $symbol,
+			'right'       => $is_compound ? $amount . ' ' . $symbol : $amount . $symbol,
 			'right_space' => $amount . ' ' . $symbol,
 			'left_space'  => $symbol . ' ' . $amount,
-			default       => $symbol . $amount,
+			default       => $symbol . $sep . $amount,
 		};
 	}
 }

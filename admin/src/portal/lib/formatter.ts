@@ -8,7 +8,7 @@
 import type { PortalLocalization } from '../types'
 import { initials } from '@/lib/utils'
 import { formatPHPDateTime, formatGender, calculateAge, formatCountry } from '@/lib/formatter'
-
+import { getCurrencySymbol } from '@/lib/currencies'
 export { formatPHPDateTime, formatGender, calculateAge, formatCountry }
 
 function getActiveLocalization(): PortalLocalization | undefined {
@@ -154,14 +154,17 @@ export function formatCurrency(
       maximumFractionDigits: precision,
     }).format(amount)
 
-    const symbol = new Intl.NumberFormat(locale, { style: 'currency', currency })
+    const rawSymbol = new Intl.NumberFormat(locale, { style: 'currency', currency })
       .formatToParts(1)
-      .find((p) => p.type === 'currency')?.value || '$'
+      .find((p) => p.type === 'currency')?.value
+    const symbol = (rawSymbol && rawSymbol !== currency) ? rawSymbol : (getCurrencySymbol(currency) || rawSymbol || currency)
 
-    const sep = position.includes('space') ? ' ' : ''
+    const isCompound = symbol.length > 1 || /[a-zA-Z]/.test(symbol)
+    const sep = position.includes('space') || (isCompound && !symbol.endsWith(' ')) ? ' ' : ''
     return position.startsWith('right') ? `${formatted}${sep}${symbol}` : `${symbol}${sep}${formatted}`
   } catch {
-    return `$${amount.toFixed(2)}`
+    const sym = getCurrencySymbol(currency) || '$'
+    return `${sym} ${amount.toFixed(2)}`
   }
 }
 

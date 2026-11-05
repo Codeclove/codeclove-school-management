@@ -645,6 +645,59 @@ final class FinanceService {
 		return (int) $wpdb->get_var( $wpdb->prepare( $query, $invoices_table, $students_table, $enrollments_table, ...$binds ) );
 		// phpcs:enable
 	}
+	/**
+	 * Gets aggregate totals (total invoiced, collected, overdue) matching query.
+	 *
+	 * @param array $args Query parameters matching get_invoices.
+	 * @return array{total_invoiced_minor: int, total_collected_minor: int, total_overdue_minor: int}
+	 */
+	public function get_invoices_aggregates( array $args = [] ): array {
+		global $wpdb;
+
+		$params = array_merge(
+			[
+				'student_id'          => 0,
+				'academic_session_id' => 0,
+				'academic_term_id'    => 0,
+				'academic_unit_id'    => 0,
+				'start_date'          => '',
+				'end_date'            => '',
+				'date_type'           => 'issue_date',
+				'status'              => '',
+				'search'              => '',
+			],
+			$args
+		);
+
+		$invoices_table    = Schema::invoices();
+		$students_table    = Schema::students();
+		$enrollments_table = Schema::enrollments();
+		$today             = current_time( 'Y-m-d' );
+
+		[ $where, $binds ] = $this->build_invoice_where( $params );
+
+		$query = 'SELECT
+				COALESCE(SUM(CASE WHEN i.status NOT IN (\'cancelled\', \'void\') THEN i.total_minor ELSE 0 END), 0) AS total_invoiced_minor,
+				COALESCE(SUM(CASE WHEN i.status NOT IN (\'cancelled\', \'void\') THEN i.paid_minor ELSE 0 END), 0) AS total_collected_minor,
+				COALESCE(SUM(CASE WHEN i.status NOT IN (\'cancelled\', \'void\') AND (i.status = \'overdue\' OR (i.due_date IS NOT NULL AND i.due_date < %s AND i.balance_minor > 0)) THEN i.balance_minor ELSE 0 END), 0) AS total_overdue_minor
+			FROM %i i
+			LEFT JOIN %i s ON s.id = i.student_id
+			LEFT JOIN %i e ON e.student_id = i.student_id AND e.academic_session_id = i.academic_session_id
+			WHERE ' . $where;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$row = $wpdb->get_row(
+			$wpdb->prepare( $query, $today, $invoices_table, $students_table, $enrollments_table, ...$binds ),
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		return [
+			'total_invoiced_minor'  => (int) ( $row['total_invoiced_minor'] ?? 0 ),
+			'total_collected_minor' => (int) ( $row['total_collected_minor'] ?? 0 ),
+			'total_overdue_minor'   => (int) ( $row['total_overdue_minor'] ?? 0 ),
+		];
+	}
 
 	/**
 	 * Gets a single invoice with line items and manual payments.

@@ -140,7 +140,7 @@ export default function ProUpgradePage() {
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8 animate-fade-in">
       {/* ─── Hero Header: Clean & Professional Card with Fun Background ─────────── */}
       <div
-        className="relative overflow-hidden rounded-2xl text-white border border-white/20 p-6 sm:p-8 md:p-10 shadow-2xl space-y-7"
+        className="relative overflow-hidden rounded-xl text-white border border-white/20 p-6 sm:p-8 md:p-10 shadow-2xl space-y-7"
         style={{
           background: `
             radial-gradient(ellipse 70% 60% at 8% 10%, rgba(255, 42, 133, 0.45) 0%, transparent 65%),
@@ -437,7 +437,7 @@ export default function ProUpgradePage() {
       </div>
 
       {/* ─── Upgrade Call to Action ───────────────────────────────────────────── */}
-      <div className="bg-bg-elevated border border-border rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+      <div className="bg-bg-elevated border border-border rounded-xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
         <div className="space-y-2 text-center md:text-left">
           <div className="flex items-center justify-center md:justify-start gap-2">
             <Award className="text-amber-500" size={20} />

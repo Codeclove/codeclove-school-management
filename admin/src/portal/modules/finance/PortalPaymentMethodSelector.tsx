@@ -365,7 +365,7 @@ export function PortalPaymentMethodSelector({
       <Card className={cn('overflow-hidden border-border shadow-sm transition-all', className)}>
         <CardContent className="p-6 sm:p-8 space-y-6">
           <div className="flex flex-col items-center text-center space-y-3">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+            <div className="w-14 h-14 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="w-7 h-7" />
             </div>
 

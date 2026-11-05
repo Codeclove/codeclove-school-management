@@ -464,7 +464,7 @@ final class AdmissionsService {
 			'address_json'            => $app['address_json'] ?: '',
 			'custom_fields_json'      => $app['custom_fields_json'] ?: '',
 			'student_photo_id'        => $app['student_photo_id'] !== null ? (int) $app['student_photo_id'] : null,
-			'student_photo_url'       => ( $app['student_photo_id'] !== null ? wp_get_attachment_image_url( (int) $app['student_photo_id'], 'medium' ) : null ) ?: CODECLOVE_URL . 'assets/defaults/avatar.svg',
+			'student_photo_url'       => ( $app['student_photo_id'] !== null ? wp_get_attachment_image_url( (int) $app['student_photo_id'], 'medium' ) : null ) ?: ( ( defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '' ) . 'assets/defaults/avatar.svg' ),
 			'submitted_at'            => $app['submitted_at'] ?: $app['created_at'], // ponytail: fallback to creation timestamp if unpopulated
 			'reviewed_at'             => $app['reviewed_at'] ?: '',
 			'decision_at'             => $app['decision_at'] ?: '',

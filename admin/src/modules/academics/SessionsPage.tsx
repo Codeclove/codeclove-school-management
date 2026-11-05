@@ -6,6 +6,7 @@
  * manage terms within a session.
  */
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { sessionSchema, type SessionFormValues } from '@/schemas/academics'
@@ -40,7 +41,7 @@ import {
   TableRoot, Thead, Tbody, Tr, Th, Td, TableSkeleton,
   PageHeader, Spinner, Alert,
 } from '@/components/ui'
-import { SESSION_STATUSES } from '@/lib/constants'
+import { SESSION_STATUSES, ROUTES } from '@/lib/constants'
 import { AcademicsNav } from './components/AcademicsNav'
 import { useTableState } from '@/lib/useTableState'
 import { useDebounce } from '@/lib/useDebounce'
@@ -443,7 +444,20 @@ function SessionModal({
     >
       <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-4">
         {errorMsg && (
-          <Alert variant="danger">{errorMsg}</Alert>
+          <Alert variant="danger">
+            <div className="space-y-1.5">
+              <div>{errorMsg}</div>
+              <div className="text-xs">
+                <Link
+                  to={`${ROUTES.SETTINGS}?tab=education`}
+                  onClick={handleClose}
+                  className="font-medium underline hover:opacity-80 inline-flex items-center gap-1"
+                >
+                  {__( 'Review default academic session settings →', 'codeclove-school-management' )}
+                </Link>
+              </div>
+            </div>
+          </Alert>
         )}
         <FormField label={sprintf( __( '%s Name', 'codeclove-school-management' ), sessionLabelSingular )} error={errors.name?.message} required>
           <Input

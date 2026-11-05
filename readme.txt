@@ -5,7 +5,7 @@ Tags: school management, student management, attendance, school, education
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Business Model: freemium
@@ -216,7 +216,13 @@ The voluntary deactivation survey (shown only when an administrator deactivates 
 For full details see: https://codeclove.com/privacy-policy/
 
 == Changelog ==
-
+= 1.1.2 =
+* Performance: Batched student and staff bulk operations into single database statements, eliminating N+1 loops.
+* Performance: Unified list and count query builders across Students and Academics to optimize filter pagination.
+* Improvement: Decomposed student profile view with dedicated finance ledger tab for invoice and receipt printing.
+* Improvement: Support for 150+ global currencies with automated formatting and symbol spacing.
+* UI: Harmonized corner radii and visual card hierarchy across dashboard widgets and data tables.
+* Fix: Invoice stat card aggregations and dashboard fee metric computations.
 = 1.1.0 =
 * Feature: Soft-delete trash state, restore capability, and permanent database cleanup tool for student records.
 * Feature: Student and parent portal user account linking with self-service login and password reset.

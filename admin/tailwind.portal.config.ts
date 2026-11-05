@@ -105,8 +105,8 @@ const config: Config = {
         DEFAULT: '6px',
         md:      '8px',
         lg:      '10px',
-        xl:      '14px',
-        '2xl':   '18px',
+        xl:      '12px',
+        '2xl':   '14px',
       },
 
       // ── Animation ──────────────────────────────────────────────────────────

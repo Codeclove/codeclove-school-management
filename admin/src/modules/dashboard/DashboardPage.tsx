@@ -129,7 +129,7 @@ export default function DashboardPage() {
   const hasZeroStudentsOrSessions =
     !isLoading &&
     !isError &&
-    ( (stats?.total_students !== undefined && stats.total_students === 0) || !session || stats?.setup_checklist?.session === false )
+    ( (stats?.total_students !== undefined && stats.total_students === 0) || stats?.setup_checklist?.session === false )
   const termLabel    = getLabel('academic_term', false, 'Term')
   const sessionLabel = getLabel('academic_session', false, 'Session')
   const RANGES: { key: DashboardRange; label: string }[] = [
@@ -333,12 +333,18 @@ function DashboardGreetingHeader({
         <p className="text-sm text-text-muted mt-1">{dateStr}</p>
       </div>
 
-      {termName && (
-        <div className="hidden sm:flex items-center gap-1.5 bg-bg-elevated border border-border rounded-lg px-3 py-1.5 text-sm text-text-muted shadow-sm">
-          <BookOpen size={14} className="text-brand flex-shrink-0" />
-          <span className="font-medium text-text">{termName}</span>
+      <div className="hidden sm:flex items-center gap-2">
+        <div className="flex items-center gap-1.5 bg-bg-elevated border border-border rounded-lg px-2.5 py-1 text-xs font-medium text-text shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>{__( 'Live Operations', 'codeclove-school-management' )}</span>
         </div>
-      )}
+        {termName && (
+          <div className="flex items-center gap-1.5 bg-bg-elevated border border-border rounded-lg px-3 py-1.5 text-sm text-text-muted shadow-sm">
+            <BookOpen size={14} className="text-brand flex-shrink-0" />
+            <span className="font-medium text-text">{termName}</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -452,8 +458,8 @@ function TodayStrip({ stats, isLoading }: { stats?: DashboardStats; isLoading: b
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Skeleton className="h-[76px] rounded-2xl" />
-        <Skeleton className="h-[76px] rounded-2xl" />
+        <Skeleton className="h-[76px] rounded-xl" />
+        <Skeleton className="h-[76px] rounded-xl" />
       </div>
     )
   }
@@ -472,13 +478,13 @@ function TodayStrip({ stats, isLoading }: { stats?: DashboardStats; isLoading: b
       {/* ── Today's Attendance ────────────────────────────────────────────── */}
       <div
         onClick={() => navigate(ROUTES.ATTENDANCE)}
-        className="rounded-2xl bg-bg-elevated border border-border p-4 sm:p-5 flex items-center gap-4 transition-all duration-150 hover:border-border-strong hover:shadow-card cursor-pointer group"
+        className="rounded-xl bg-bg-elevated border border-border p-4 sm:p-5 flex items-center gap-4 transition-all duration-150 hover:border-border-strong hover:shadow-card cursor-pointer group"
       >
         <div className="w-11 h-11 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
           <CalendarCheck size={19} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-text-muted tracking-wider uppercase">
+          <p className="text-xs sm:text-sm font-medium text-text-muted">
             {__( "Today's Attendance", 'codeclove-school-management' )}
           </p>
           <p className="flex flex-wrap items-center gap-x-2 text-xs sm:text-sm text-text-muted mt-0.5 font-normal">
@@ -492,13 +498,13 @@ function TodayStrip({ stats, isLoading }: { stats?: DashboardStats; isLoading: b
       {/* ── Action Items Pending ─────────────────────────────────────────── */}
       <div
         onClick={() => navigate(ROUTES.ADMISSIONS)}
-        className="rounded-2xl bg-bg-elevated border border-border p-4 sm:p-5 flex items-center gap-4 transition-all duration-150 hover:border-border-strong hover:shadow-card cursor-pointer group"
+        className="rounded-xl bg-bg-elevated border border-border p-4 sm:p-5 flex items-center gap-4 transition-all duration-150 hover:border-border-strong hover:shadow-card cursor-pointer group"
       >
         <div className="w-11 h-11 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
           <Bell size={19} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-text-muted tracking-wider uppercase">
+          <p className="text-xs sm:text-sm font-medium text-text-muted">
             {__( 'Action Items Pending', 'codeclove-school-management' )}
           </p>
           <p className="flex flex-wrap items-center gap-x-2 text-xs sm:text-sm text-text-muted mt-0.5 font-normal">
@@ -523,6 +529,7 @@ const pill = (text: string, color: string) => (
 function StatsRow({ stats, isLoading }: { stats?: DashboardStats; isLoading: boolean }) {
   const navigate = useNavigate()
   const { formatCurrency, formatNumber } = useFormatter()
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
@@ -531,6 +538,18 @@ function StatsRow({ stats, isLoading }: { stats?: DashboardStats; isLoading: boo
         ))}
       </div>
     )
+  }
+
+  // Calculate fee collection rate if available
+  const financeTrend = stats?.finance_trend
+  let collectionRateStr: string | undefined
+  if (financeTrend && financeTrend.length > 0) {
+    const totalBilled = financeTrend.reduce((s, d) => s + (d.billed ?? 0), 0)
+    const totalCollected = financeTrend.reduce((s, d) => s + (d.collected ?? 0), 0)
+    if (totalBilled > 0) {
+      const rate = (totalCollected / totalBilled) * 100
+      collectionRateStr = `${rate % 1 === 0 ? rate.toFixed(0) : rate.toFixed(1)}%`
+    }
   }
 
   return (
@@ -578,7 +597,13 @@ function StatsRow({ stats, isLoading }: { stats?: DashboardStats; isLoading: boo
         icon={Wallet}
         iconColor="text-emerald-600 dark:text-emerald-400"
         iconBg="bg-emerald-50 dark:bg-emerald-950/50"
-        badge={stats?.fees_delta_minor && stats.fees_delta_minor > 0 ? pill(`+${formatCurrency(stats.fees_delta_minor)}`, 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300') : undefined}
+        badge={
+          collectionRateStr
+            ? pill(collectionRateStr, 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300')
+            : stats?.fees_delta_minor && stats.fees_delta_minor > 0
+            ? pill(`+${formatCurrency(stats.fees_delta_minor)}`, 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300')
+            : undefined
+        }
         clickable
         onClick={() => navigate(ROUTES.INVOICES)}
       />

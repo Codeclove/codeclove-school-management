@@ -52,7 +52,8 @@ final class PresetsService {
 	 */
 	public function get_preset_data( string $code ): ?array {
 		$code = strtoupper( sanitize_key( $code ) );
-		$file = CODECLOVE_DIR . "includes/Presets/{$code}.json";
+		$dir  = defined( 'CODECLOVE_DIR' ) ? CODECLOVE_DIR : dirname( __DIR__, 2 ) . '/';
+		$file = $dir . "includes/Presets/{$code}.json";
 
 		if ( ! file_exists( $file ) ) {
 			return null;

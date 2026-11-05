@@ -247,6 +247,11 @@
     outline: none !important;
   }
 
+  /* Ensure portalled Radix poppers (comboboxes, dropdowns, selects) maintain active pointer-events even when body has pointer-events: none inside modals */
+  [data-radix-popper-content-wrapper] {
+    pointer-events: auto !important;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     color: var(--text);
     font-weight: 600;

@@ -503,10 +503,11 @@ final class FinanceController extends BaseController {
 			'offset'              => $offset,
 		];
 
-		$invoices = $this->service->get_invoices( $args );
-		$total    = $this->service->count_invoices( $args );
+		$invoices   = $this->service->get_invoices( $args );
+		$total      = $this->service->count_invoices( $args );
+		$aggregates = $this->service->get_invoices_aggregates( $args );
 
-		return $this->paginated( $invoices, $total, $page, $per_page );
+		return $this->paginated( $invoices, $total, $page, $per_page, [ 'aggregates' => $aggregates ] );
 	}
 
 	/**

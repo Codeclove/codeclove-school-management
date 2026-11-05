@@ -31,6 +31,11 @@ final class Plugin {
 	 */
 	private static ?self $instance = null;
 
+
+	/**
+	 * Whether the plugin has already booted.
+	 */
+	private bool $booted = false;
 	/**
 	 * Private constructor to enforce singleton pattern.
 	 */
@@ -114,6 +119,11 @@ final class Plugin {
 	// ─── Bootstrap ───────────────────────────────────────────────────────────
 
 	public function run(): void {
+		if ( $this->booted ) {
+			return;
+		}
+		$this->booted = true;
+
 		$rest = new RestApi();
 
 		add_action( 'init', [ $this, 'init' ] );
@@ -121,6 +131,10 @@ final class Plugin {
 		add_action( 'admin_menu', [ $this, 'register_admin_menu' ] );
 		add_action( 'admin_notices', static fn() => do_action( 'codeclove_admin_notices' ) );
 		add_action( 'admin_notices', [ $this, 'maybe_render_review_notice' ] );
+		$is_pro = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
+		if ( $is_pro ) {
+			add_action( 'admin_notices', [ $this, 'maybe_show_pro_welcome_notice' ] );
+		}
 		add_action( 'rest_api_init', [ $rest, 'register_routes' ] );
 
 		// Run migrations when the plugin's DB version is outdated.
@@ -164,6 +178,7 @@ final class Plugin {
 		$basename = defined( 'CODECLOVE_BASENAME' ) ? CODECLOVE_BASENAME : plugin_basename( defined( 'CODECLOVE_FILE' ) ? CODECLOVE_FILE : __DIR__ . '/../../codeclove-school-management.php' );
 		add_filter( 'plugin_action_links_' . $basename, [ $this, 'add_plugin_action_links' ] );
 		add_filter( 'network_admin_plugin_action_links_' . $basename, [ $this, 'add_plugin_action_links' ] );
+		add_filter( 'plugin_row_meta', [ $this, 'add_plugin_row_meta' ], 10, 2 );
 
 		// Voluntary deactivation feedback survey on plugins.php (Free edition only).
 		$is_pro = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
@@ -287,7 +302,24 @@ final class Plugin {
 	 * Shows a reassuring welcome notice when Pro is active alongside Free.
 	 */
 	public function maybe_show_pro_welcome_notice(): void {
-		if ( ! current_user_can( 'activate_plugins' ) || ! in_array( 'codeclove-school-management/codeclove-school-management.php', (array) get_option( 'active_plugins', [] ), true ) ) {
+		if ( ! current_user_can( 'activate_plugins' ) ) {
+			return;
+		}
+
+		$active_plugins = (array) get_option( 'active_plugins', [] );
+		if ( is_multisite() ) {
+			$active_plugins = array_merge( $active_plugins, array_keys( (array) get_site_option( 'active_sitewide_plugins', [] ) ) );
+		}
+
+		$free_active = false;
+		foreach ( $active_plugins as $plugin ) {
+			if ( str_starts_with( (string) $plugin, 'codeclove-school-management/' ) ) {
+				$free_active = true;
+				break;
+			}
+		}
+
+		if ( ! $free_active ) {
 			return;
 		}
 
@@ -296,6 +328,31 @@ final class Plugin {
 			esc_html__( 'School Management Pro Activated', 'codeclove-school-management' ),
 			esc_html__( 'All your existing school data, students, and settings are active in Pro. You may safely deactivate and remove the Free version at your convenience.', 'codeclove-school-management' )
 		);
+	}
+
+	/**
+	 * Adds row metadata links on plugins.php.
+	 *
+	 * @param array<string> $meta Existing row meta links.
+	 * @param string        $file Plugin basename file.
+	 * @return array<string> Modified row meta links.
+	 */
+	public function add_plugin_row_meta( array $meta, string $file ): array {
+		$basename = defined( 'CODECLOVE_BASENAME' ) ? CODECLOVE_BASENAME : plugin_basename( defined( 'CODECLOVE_FILE' ) ? CODECLOVE_FILE : __DIR__ . '/../../codeclove-school-management.php' );
+		if ( $file !== $basename ) {
+			return $meta;
+		}
+
+		$is_pro = defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO;
+		if ( ! $is_pro ) {
+			$meta[] = sprintf(
+				'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+				esc_url( 'https://codeclove.com/donate/' ),
+				esc_html__( 'Donate', 'codeclove-school-management' )
+			);
+		}
+
+		return $meta;
 	}
 
 	/**

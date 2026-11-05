@@ -309,8 +309,8 @@ final class SettingsController extends BaseController {
 		return $this->success(
 			[
 				'generated_at'       => gmdate( 'c' ),
-				'plugin_version'     => CODECLOVE_VERSION,
-				'schema_version'     => CODECLOVE_DB_VERSION,
+				'plugin_version'     => defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0',
+				'schema_version'     => defined( 'CODECLOVE_DB_VERSION' ) ? CODECLOVE_DB_VERSION : '1.0.0',
 				'wordpress_version'  => $wp_version,
 				'php_version'        => PHP_VERSION,
 				'site_url'           => site_url(),

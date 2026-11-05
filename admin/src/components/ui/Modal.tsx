@@ -9,12 +9,11 @@
  *     </ModalFooter>
  *   </Modal>
  */
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import { cn, getPortalContainer } from '@/lib/utils'
 import { __ } from '@/lib/i18n'
-
 // ─── Modal Root ───────────────────────────────────────────────────────────────
 
 interface ModalProps {
@@ -59,6 +58,42 @@ export function Modal({
 }: ModalProps) {
   const contentRef = useRef<HTMLDivElement>(null)
   const portalContainer = getPortalContainer(container)
+
+  // Radix DismissableLayer can leave pointer-events: none on body when closing modals with nested popovers.
+  // Safety cleanup guarantees the page remains fully interactive (slots clickable) after modal closure or unmount.
+  useEffect(() => {
+    return () => {
+      setTimeout(() => {
+        if (typeof document !== 'undefined' && !document.querySelector('[data-state="open"][role="dialog"]')) {
+          if (document.body.style.pointerEvents === 'none') {
+            document.body.style.pointerEvents = ''
+          }
+        }
+      }, 0)
+    }
+  }, [open])
+  // Guard: prevent Dialog's FocusScope from stealing focus when user interacts with portalled overlays (popovers, comboboxes)
+  useEffect(() => {
+    if (!open) return
+
+    const handleFocusCapture = (e: FocusEvent) => {
+      const target = (e.type === 'focusout' ? e.relatedTarget : e.target) as HTMLElement | null
+      if (
+        target?.closest?.(
+          '[data-radix-popper-content-wrapper], [data-radix-popover-content], [role="combobox"], [data-radix-select-viewport]'
+        )
+      ) {
+        e.stopImmediatePropagation()
+      }
+    }
+
+    document.addEventListener('focusin', handleFocusCapture, true)
+    document.addEventListener('focusout', handleFocusCapture, true)
+    return () => {
+      document.removeEventListener('focusin', handleFocusCapture, true)
+      document.removeEventListener('focusout', handleFocusCapture, true)
+    }
+  }, [open])
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>

@@ -275,7 +275,7 @@ export default function DefaultersReportPage() {
         </div>
 
         {/* Blurred Sample Table with In-Flow Glassmorphism Lock Card */}
-        <div className="relative rounded-2xl border border-border bg-bg-elevated overflow-hidden shadow-xs p-4 sm:p-8 flex items-center justify-center min-h-[520px]">
+        <div className="relative rounded-xl border border-border bg-bg-elevated overflow-hidden shadow-xs p-4 sm:p-8 flex items-center justify-center min-h-[520px]">
           {/* Blurred Background Table Mockup */}
           <div className="absolute inset-0 p-5 sm:p-6 filter blur-[6px] opacity-30 select-none pointer-events-none space-y-3" aria-hidden="true" tabIndex={-1}>
             <div className="flex items-center justify-between pb-4 border-b border-border/80">
@@ -301,7 +301,7 @@ export default function DefaultersReportPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-bg-base/30 via-bg-base/50 to-bg-base/70 backdrop-blur-[1px] pointer-events-none" />
 
           {/* In-Flow Active Lock Card (Never Clipped) */}
-          <div className="relative z-10 max-w-xl w-full p-6 sm:p-8 rounded-2xl bg-bg-elevated/95 border border-border shadow-2xl text-center backdrop-blur-md my-2">
+          <div className="relative z-10 max-w-xl w-full p-6 sm:p-8 rounded-xl bg-bg-elevated/95 border border-border shadow-2xl text-center backdrop-blur-md my-2">
             <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center mx-auto mb-4 text-amber-500 shadow-xs">
               <Lock className="w-6 h-6" />
             </div>

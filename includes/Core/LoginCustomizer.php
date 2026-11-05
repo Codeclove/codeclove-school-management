@@ -58,7 +58,8 @@ final class LoginCustomizer {
 	public static function enqueue_school_logo(): void {
 		$settings_repo = new SettingsRepository();
 		$settings      = $settings_repo->get_settings();
-		$logo_url      = ! empty( $settings['school']['logo'] ) ? $settings['school']['logo'] : ( CODECLOVE_URL . 'assets/defaults/logo.svg' );
+		$plugin_url    = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
+		$logo_url      = ! empty( $settings['school']['logo'] ) ? $settings['school']['logo'] : ( $plugin_url . 'assets/defaults/logo.svg' );
 		?>
 		<style type="text/css">
 			#login h1 a, .login h1 a {

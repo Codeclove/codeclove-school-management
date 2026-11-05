@@ -518,7 +518,7 @@ export interface PurgeTrashResult {
 
 export function useTrashStats() {
   return useQuery<TrashStats, Error>({
-    queryKey: ['settings', 'trash-stats'],
+    queryKey: queryKeys.settings.trashStats(),
     queryFn: async () => {
       const res = await api.get<TrashStats>('settings/trash-stats')
       return res.data
@@ -534,7 +534,7 @@ export function usePurgeTrash() {
       return res.data
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['settings', 'trash-stats'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings.trashStats() })
       queryClient.invalidateQueries({ queryKey: queryKeys.students.all })
     },
   })

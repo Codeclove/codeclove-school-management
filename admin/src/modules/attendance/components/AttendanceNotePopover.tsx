@@ -71,7 +71,7 @@ export function AttendanceNotePopover({
         <PopoverPrimitive.Content
           align="end"
           sideOffset={8}
-          className="z-[100050] w-72 p-3.5 bg-bg-overlay border border-border/80 rounded-2xl shadow-2xl space-y-3 animate-slide-down outline-none"
+          className="z-[100050] w-72 p-3.5 bg-bg-overlay border border-border/80 rounded-xl shadow-2xl space-y-3 animate-slide-down outline-none"
         >
           <div className="flex items-center justify-between border-b border-border/40 pb-2">
             <span className="text-xs font-bold text-text flex items-center gap-1.5">

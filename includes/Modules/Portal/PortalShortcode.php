@@ -117,7 +117,7 @@ final class PortalShortcode {
 		$settings_repo = new SettingsRepository();
 		$settings      = $settings_repo->get_settings();
 		$site_name     = ! empty( $settings['school']['name'] ) ? $settings['school']['name'] : get_bloginfo( 'name' );
-		$logo_url      = ! empty( $settings['school']['logo'] ) ? $settings['school']['logo'] : ( CODECLOVE_URL . 'assets/defaults/logo.svg' );
+		$logo_url      = ! empty( $settings['school']['logo'] ) ? $settings['school']['logo'] : ( ( defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '' ) . 'assets/defaults/logo.svg' );
 
 		// Resolve student service context
 		$portal_service = new PortalService();
@@ -142,7 +142,7 @@ final class PortalShortcode {
 			'logoutUrl'   => wp_logout_url( get_permalink() ?: home_url() ),
 			'siteName'    => $site_name,
 			'logoUrl'     => esc_url( $logo_url ),
-			'version'     => CODECLOVE_VERSION,
+			'version'     => defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0',
 			'isPro'       => (bool) ( ( defined( 'CODECLOVE_IS_PRO' ) && CODECLOVE_IS_PRO ) || ( defined( 'CODECLOVE_PRO_ACTIVE' ) && CODECLOVE_PRO_ACTIVE ) ),
 			'settings'    => [
 				'school'       => $settings['school'] ?? [],
@@ -180,14 +180,15 @@ final class PortalShortcode {
 			return $dev_html;
 		}
 
-		$build_dir = CODECLOVE_DIR . 'assets/build/portal/';
-		$build_url = CODECLOVE_URL . 'assets/build/portal/';
+		$build_dir = ( defined( 'CODECLOVE_DIR' ) ? CODECLOVE_DIR : '' ) . 'assets/build/portal/';
+		$build_url = ( defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '' ) . 'assets/build/portal/';
+		$version   = defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0';
 
 		if ( file_exists( $build_dir . 'index.css' ) ) {
-			wp_enqueue_style( 'codeclove-portal-css', $build_url . 'index.css', [], CODECLOVE_VERSION );
+			wp_enqueue_style( 'codeclove-portal-css', $build_url . 'index.css', [], $version );
 		}
 		if ( file_exists( $build_dir . 'index.js' ) ) {
-			wp_enqueue_script( 'codeclove-portal-js', $build_url . 'index.js', [], CODECLOVE_VERSION, true );
+			wp_enqueue_script( 'codeclove-portal-js', $build_url . 'index.js', [], $version, true );
 			$guard_snippet = "(function(){if(typeof document==='undefined'||!document.querySelector)return;var o=document.querySelector.bind(document);document.querySelector=function(s){try{return o(s);}catch(e){if(typeof s==='string'&&s.indexOf('#/')===0)return null;throw e;}};if(document.querySelectorAll){var a=document.querySelectorAll.bind(document);document.querySelectorAll=function(s){try{return a(s);}catch(e){if(typeof s==='string'&&s.indexOf('#/')===0)return document.createDocumentFragment().childNodes;throw e;}};}})();\n";
 			wp_add_inline_script(
 				'codeclove-portal-js',
@@ -212,7 +213,7 @@ final class PortalShortcode {
 		$settings_repo = new SettingsRepository();
 		$settings      = $settings_repo->get_settings();
 		$school_name   = ! empty( $settings['school']['name'] ) ? $settings['school']['name'] : get_bloginfo( 'name' );
-		$logo_url      = ! empty( $settings['school']['logo'] ) ? $settings['school']['logo'] : ( CODECLOVE_URL . 'assets/defaults/logo.svg' );
+		$logo_url      = ! empty( $settings['school']['logo'] ) ? $settings['school']['logo'] : ( ( defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '' ) . 'assets/defaults/logo.svg' );
 
 		// Resolve brand color for login card styling
 		$theme_color   = $settings['appearance']['theme_color'] ?? 'classic_indigo';
@@ -230,11 +231,14 @@ final class PortalShortcode {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$login_error = isset( $_GET['login'] ) && 'failed' === sanitize_key( wp_unslash( $_GET['login'] ) );
 
+		$plugin_url = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
+		$version    = defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0';
+
 		wp_enqueue_style(
 			'codeclove-portal-login',
-			CODECLOVE_URL . 'assets/css/portal-login.css',
+			$plugin_url . 'assets/css/portal-login.css',
 			[],
-			CODECLOVE_VERSION
+			$version
 		);
 		$custom_css = sprintf(
 			':root { --codeclove-brand: %s; --codeclove-brand-hover: %s; --codeclove-brand-light: %s; }',

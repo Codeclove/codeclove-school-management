@@ -419,6 +419,7 @@ final class StaffService {
 			if ( ! empty( $exists_row['user_id'] ) ) {
 				$existing = get_userdata( (int) $exists_row['user_id'] );
 				return new WP_Error(
+					'codeclove_user_already_linked',
 					/* translators: %s: WordPress username */
 					sprintf( __( 'A WordPress account (@%s) is already linked to this staff member.', 'codeclove-school-management' ), $existing ? $existing->user_login : $exists_row['user_id'] ),
 					[ 'status' => 400 ]
@@ -639,6 +640,8 @@ final class StaffService {
 
 		$ids = array_map( 'intval', $ids );
 
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+
 		if ( 'status' === $action ) {
 			$status = $params['status'] ?? '';
 			if ( ! in_array( $status, [ 'active', 'inactive', 'suspended' ], true ) ) {
@@ -647,74 +650,64 @@ final class StaffService {
 
 			// Prevent lockout in bulk status update
 			if ( in_array( $status, [ 'inactive', 'suspended' ], true ) ) {
-				foreach ( $ids as $id ) {
-					// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Staff user_id lookup.
-					$staff = $wpdb->get_row(
-						$wpdb->prepare(
-							'SELECT user_id FROM %i WHERE id = %d',
-							Schema::staff_members(),
-							$id
-						),
-						ARRAY_A
-					);
-					if ( $staff && ! empty( $staff['user_id'] ) && $this->is_last_administrator( (int) $staff['user_id'] ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+				$staff_rows = $wpdb->get_results(
+					$wpdb->prepare(
+						"SELECT user_id FROM %i WHERE id IN ({$placeholders})",
+						Schema::staff_members(),
+						...$ids
+					),
+					ARRAY_A
+				);
+				foreach ( $staff_rows as $staff ) {
+					if ( ! empty( $staff['user_id'] ) && $this->is_last_administrator( (int) $staff['user_id'] ) ) {
 						return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot deactivate or suspend the last remaining Administrator user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 					}
 				}
 			}
 
-			$table   = Schema::staff_members();
-			$updated = 0;
-			foreach ( $ids as $id ) {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database table update.
-				$result = $wpdb->update(
+			$table = Schema::staff_members();
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+			$updated = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET status = %s WHERE id IN ({$placeholders})",
 					$table,
-					[ 'status' => $status ],
-					[ 'id' => (int) $id ],
-					[ '%s' ],
-					[ '%d' ]
-				);
-				if ( false !== $result ) {
-					$updated++;
-				}
-			}
-			return [ 'success' => true, 'updated_count' => $updated ];
+					$status,
+					...$ids
+				)
+			);
+			return [ 'success' => true, 'updated_count' => false !== $updated ? count( $ids ) : 0 ];
 		}
 
 		if ( 'delete' === $action ) {
 			// Prevent lockout in bulk delete
-			foreach ( $ids as $id ) {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database table query.
-				$staff = $wpdb->get_row(
-					$wpdb->prepare(
-						'SELECT user_id FROM %i WHERE id = %d',
-						Schema::staff_members(),
-						$id
-					),
-					ARRAY_A
-				);
-				if ( $staff && ! empty( $staff['user_id'] ) && $this->is_last_administrator( (int) $staff['user_id'] ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+			$staff_rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT user_id FROM %i WHERE id IN ({$placeholders})",
+					Schema::staff_members(),
+					...$ids
+				),
+				ARRAY_A
+			);
+			foreach ( $staff_rows as $staff ) {
+				if ( ! empty( $staff['user_id'] ) && $this->is_last_administrator( (int) $staff['user_id'] ) ) {
 					return new WP_Error( 'codeclove_lockout_prevented', __( 'Cannot delete the last remaining Administrator user.', 'codeclove-school-management' ), [ 'status' => 400 ] );
 				}
 			}
 
 			$table   = Schema::staff_members();
 			$now     = current_time( 'mysql', true );
-			$deleted = 0;
-			foreach ( $ids as $id ) {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database table update.
-				$result = $wpdb->update(
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+			$deleted = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET deleted_at = %s WHERE id IN ({$placeholders})",
 					$table,
-					[ 'deleted_at' => $now ],
-					[ 'id' => (int) $id ],
-					[ '%s' ],
-					[ '%d' ]
-				);
-				if ( false !== $result ) {
-					$deleted++;
-				}
-			}
-			return [ 'success' => true, 'deleted_count' => $deleted ];
+					$now,
+					...$ids
+				)
+			);
+			return [ 'success' => true, 'deleted_count' => false !== $deleted ? count( $ids ) : 0 ];
 		}
 
 		return new WP_Error( 'codeclove_invalid_action', __( 'Invalid bulk action.', 'codeclove-school-management' ), [ 'status' => 400 ] );
@@ -747,7 +740,7 @@ final class StaffService {
 			}
 		}
 
-		$item['photo_url'] = ( ! empty( $item['photo_id'] ) ? wp_get_attachment_image_url( (int) $item['photo_id'], 'medium' ) : null ) ?: CODECLOVE_URL . 'assets/defaults/avatar.svg';
+		$item['photo_url'] = ( ! empty( $item['photo_id'] ) ? wp_get_attachment_image_url( (int) $item['photo_id'], 'medium' ) : null ) ?: ( ( defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '' ) . 'assets/defaults/avatar.svg' );
 
 		$item['documents'] = ! empty( $item['documents_json'] ) ? json_decode( $item['documents_json'], true ) : [];
 		if ( ! is_array( $item['documents'] ) ) {
@@ -864,6 +857,7 @@ final class StaffService {
 				];
 			}
 			return new WP_Error(
+				'codeclove_email_exists',
 				/* translators: %s: User email address */
 				sprintf( __( 'A WordPress user with email %s already exists. You can link this existing account instead.', 'codeclove-school-management' ), $email ),
 				[ 'status' => 400, 'existing_user_id' => (int) $existing_user_id ]

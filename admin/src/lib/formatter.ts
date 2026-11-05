@@ -3,7 +3,7 @@
  */
 import { useSettings, type LocalizationSettings } from '@/api/settings'
 import { format } from 'date-fns'
-
+import { getCurrencySymbol } from './currencies'
 export { formatGender } from './constants'
 const PHP_TO_DATE_FNS: Record<string, string> = {
   d: 'dd', j: 'd', m: 'MM', n: 'M', F: 'MMMM', M: 'MMM',
@@ -119,13 +119,18 @@ export function useFormatter() {
 
     const amount = amountMinor / 100
 
-    // Resolve the currency symbol dynamically using formatToParts
+    // Resolve the currency symbol dynamically using formatToParts or lookup
     let symbol = '$'
     try {
       const parts = new Intl.NumberFormat(locale, { style: 'currency', currency }).formatToParts(1)
-      symbol = parts.find((p) => p.type === 'currency')?.value || symbol
+      const found = parts.find((p) => p.type === 'currency')?.value
+      if (found && found !== currency) {
+        symbol = found
+      } else {
+        symbol = getCurrencySymbol(currency) || found || currency
+      }
     } catch {
-      // fallback
+      symbol = getCurrencySymbol(currency) || currency
     }
 
     // Format the number value itself
@@ -134,20 +139,22 @@ export function useFormatter() {
       maximumFractionDigits: precision,
     }).format(amount)
 
+    const isCompound = symbol.length > 1 || /[a-zA-Z]/.test(symbol)
+    const sep = position.includes('space') || (isCompound && !symbol.endsWith(' ')) ? ' ' : ''
+
     // Apply the configured currency position layout
     switch (position) {
-      case 'left_space':
-        return `${symbol} ${formattedNumber}`
       case 'right':
-        return `${formattedNumber}${symbol}`
+        return isCompound ? `${formattedNumber} ${symbol}` : `${formattedNumber}${symbol}`
       case 'right_space':
         return `${formattedNumber} ${symbol}`
+      case 'left_space':
+        return `${symbol} ${formattedNumber}`
       case 'left':
       default:
-        return `${symbol}${formattedNumber}`
+        return `${symbol}${sep}${formattedNumber}`
     }
   }
-
   return {
     formatDate,
     formatDateTime,

@@ -150,8 +150,6 @@ export function Combobox({
       setHighlightedIndex(-1)
     }
   }, [open]) // Note: intentionally depends ONLY on open state to prevent keystroke lag
-
-  // Bounded container scrolling (prevents parent window jitter)
   useEffect(() => {
     if (open && highlightedIndex >= 0 && listRef.current) {
       const containerEl = listRef.current
@@ -346,8 +344,16 @@ export function Combobox({
         <PopoverPrimitive.Content
           align="start"
           sideOffset={4}
+          onOpenAutoFocus={(e) => {
+            e.preventDefault()
+            searchInputRef.current?.focus()
+          }}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault()
+            triggerRef.current?.focus()
+          }}
           className={cn(
-            'z-[100050] overflow-hidden rounded-xl outline-none',
+            'z-[100050] overflow-hidden rounded-xl outline-none pointer-events-auto',
             'bg-bg-overlay border border-border shadow-modal',
             'animate-slide-down',
             'w-[var(--radix-popover-trigger-width)] min-w-[min(100vw-2rem,220px)] max-w-[calc(100vw-2rem)]',
@@ -355,7 +361,14 @@ export function Combobox({
           )}
         >
           {/* Integrated Accessible Search Input Header */}
-          <div className="flex items-center gap-2.5 px-3 py-2 border-b border-border shrink-0 bg-bg-surface">
+          <div
+            className="flex items-center gap-2.5 px-3 py-2 border-b border-border shrink-0 bg-bg-surface cursor-text"
+            onClick={(e) => {
+              e.stopPropagation()
+              searchInputRef.current?.focus()
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             <Search size={13} className="text-text-subtle shrink-0" aria-hidden="true" />
             <input
               ref={searchInputRef}
@@ -375,7 +388,11 @@ export function Combobox({
                 setSearchQuery(e.target.value)
                 setHighlightedIndex(0)
               }}
-              onKeyDown={handleInputKeyDown}
+              onPointerDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                handleInputKeyDown(e)
+              }}
               placeholder={searchPlaceholder}
               style={{
                 border: 'none',

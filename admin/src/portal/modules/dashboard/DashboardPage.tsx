@@ -410,14 +410,14 @@ export const DashboardPage: React.FC = () => {
 
                           {/* Subject & Instructor/Room Meta */}
                           <div className="min-w-0 flex-1">
-                            <h4 className={`text-sm font-bold truncate leading-snug ${status === 'current' ? 'text-brand' : 'text-text'}`}>
+                            <h4 className={`text-sm font-bold break-words leading-snug ${status === 'current' ? 'text-brand' : 'text-text'}`}>
                               {slot.subject_name}
                             </h4>
                             <div className="flex items-center gap-3 text-xs text-text-muted mt-0.5 flex-wrap">
                               {teacher && (
                                 <span className="inline-flex items-center gap-1">
                                   <User className="w-3 h-3 text-text-subtle shrink-0" />
-                                  <span className="truncate">{teacher}</span>
+                                  <span className="break-words">{teacher}</span>
                                 </span>
                               )}
                               {roomClean && (

@@ -830,7 +830,7 @@ final class StudentsService {
 			'admission_date'   => $row['admission_date'] ?: '',
 			'graduation_year'  => $row['graduation_year'] !== null ? (int) $row['graduation_year'] : null,
 			'photo_id'         => $row['photo_id'] !== null ? (int) $row['photo_id'] : null,
-			'photo_url'        => ( $row['photo_id'] !== null ? wp_get_attachment_image_url( (int) $row['photo_id'], 'medium' ) : null ) ?: CODECLOVE_URL . 'assets/defaults/avatar.svg',
+			'photo_url'        => ( $row['photo_id'] !== null ? wp_get_attachment_image_url( (int) $row['photo_id'], 'medium' ) : null ) ?: ( ( defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '' ) . 'assets/defaults/avatar.svg' ),
 			'status'           => $row['status'],
 			'created_at'       => $row['created_at'],
 			'updated_at'       => $row['updated_at'],
@@ -1251,22 +1251,21 @@ final class StudentsService {
 			if ( ! in_array( $status, [ 'active', 'inactive', 'graduated', 'withdrawn' ], true ) ) {
 				return new WP_Error( 'codeclove_invalid_status', __( 'Invalid status provided.', 'codeclove-school-management' ), 400 );
 			}
-			$table   = Schema::students();
-			$updated = 0;
-			foreach ( $ids as $id ) {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Custom database table update.
-				$result = $wpdb->update(
+			$table        = Schema::students();
+			$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+			$result = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET status = %s WHERE id IN ({$placeholders})",
 					$table,
-					[ 'status' => $status ],
-					[ 'id' => (int) $id ],
-					[ '%s' ],
-					[ '%d' ]
-				);
-				if ( false !== $result ) {
-					$updated++;
-				}
-			}
-			return [ 'success' => true, 'updated_count' => $updated ];
+					$status,
+					...$ids
+				)
+			);
+			return [
+				'success'       => true,
+				'updated_count' => false !== $result ? count( $ids ) : 0,
+			];
 		}
 
 		if ( 'assign_section' === $action ) {
@@ -1611,6 +1610,58 @@ final class StudentsService {
 	// ─── Database Operations ─────────────────────────────────────────────────
 
 	/**
+	 * Builds shared WHERE conditions, JOINs, and binds for student queries.
+	 *
+	 * @param array $args Query arguments.
+	 * @return array{where_sql: string, extra_binds: array, enrollment_join: string, where_deleted: string}
+	 */
+	private function build_students_query_clauses( array $args = [] ): array {
+		global $wpdb;
+
+		$is_trash           = ( 'trash' === ( $args['status'] ?? '' ) );
+		$where_deleted      = $is_trash ? 'WHERE s.deleted_at IS NOT NULL' : 'WHERE s.deleted_at IS NULL';
+		$has_session_filter = ! empty( $args['academic_session_id'] );
+		$enrollment_join    = $has_session_filter
+			? $wpdb->prepare( 'INNER JOIN %i se ON se.student_id = s.id AND se.academic_session_id = %d', Schema::enrollments(), (int) $args['academic_session_id'] )
+			: $wpdb->prepare( 'LEFT JOIN %i se ON se.student_id = s.id AND se.status = %s', Schema::enrollments(), 'active' );
+
+		$where_clauses = [];
+		$extra_binds   = [];
+
+		if ( ! empty( $args['academic_unit_id'] ) ) {
+			$where_clauses[] = 'se.academic_unit_id = %d';
+			$extra_binds[]   = (int) $args['academic_unit_id'];
+		}
+
+		if ( ! empty( $args['academic_group_id'] ) ) {
+			$where_clauses[] = 'se.academic_group_id = %d';
+			$extra_binds[]   = (int) $args['academic_group_id'];
+		}
+
+		if ( isset( $args['status'] ) && '' !== $args['status'] && 'trash' !== $args['status'] ) {
+			$where_clauses[] = 's.status = %s';
+			$extra_binds[]   = $args['status'];
+		}
+
+		if ( isset( $args['search'] ) && '' !== $args['search'] ) {
+			$where_clauses[] = '(s.first_name LIKE %s OR s.last_name LIKE %s OR s.student_number LIKE %s OR se.roll_number LIKE %s OR g.first_name LIKE %s OR g.last_name LIKE %s)';
+			$like            = '%' . $wpdb->esc_like( $args['search'] ) . '%';
+			for ( $i = 0; $i < 6; $i++ ) {
+				$extra_binds[] = $like;
+			}
+		}
+
+		$where_sql = ! empty( $where_clauses ) ? ' AND ' . implode( ' AND ', $where_clauses ) : '';
+
+		return [
+			'where_sql'       => $where_sql,
+			'extra_binds'     => $extra_binds,
+			'enrollment_join' => $enrollment_join,
+			'where_deleted'   => $where_deleted,
+		];
+	}
+
+	/**
 	 * Gets students matching arguments.
 	 */
 	private function db_get_students( array $args = [] ): array {
@@ -1627,13 +1678,9 @@ final class StudentsService {
 			'orderby'             => '',
 			'order'               => '',
 		];
-		$params = array_merge( $defaults, $args );
-		$is_trash           = ( 'trash' === ( $params['status'] ?? '' ) );
-		$where_deleted      = $is_trash ? 'WHERE s.deleted_at IS NOT NULL' : 'WHERE s.deleted_at IS NULL';
-		$has_session_filter = ! empty( $params['academic_session_id'] );
-		$enrollment_join    = $has_session_filter
-			? $wpdb->prepare( 'INNER JOIN %i se ON se.student_id = s.id AND se.academic_session_id = %d', Schema::enrollments(), (int) $params['academic_session_id'] )
-			: $wpdb->prepare( 'LEFT JOIN %i se ON se.student_id = s.id AND se.status = %s', Schema::enrollments(), 'active' );
+		$params  = array_merge( $defaults, $args );
+		$clauses = $this->build_students_query_clauses( $params );
+
 		$query = 'SELECT s.*, 
 			se.id as enrollment_id, se.academic_session_id, se.academic_unit_id, se.academic_group_id, se.roll_number, se.starts_on, se.status as enrollment_status,
 			u.name as unit_name,
@@ -1641,40 +1688,17 @@ final class StudentsService {
 			g.id as guardian_id, g.first_name as guardian_first_name, g.last_name as guardian_last_name, g.email as guardian_email, g.phone as guardian_phone,
 			sg.relationship as guardian_relationship
 			FROM %i s
-			' . $enrollment_join . '
+			' . $clauses['enrollment_join'] . '
 			LEFT JOIN %i u ON u.id = se.academic_unit_id
 			LEFT JOIN %i grp ON grp.id = se.academic_group_id
 			LEFT JOIN %i sg ON sg.student_id = s.id AND sg.is_primary = 1
 			LEFT JOIN %i g ON g.id = sg.guardian_id AND g.deleted_at IS NULL
-			' . $where_deleted;
-		$binds = [ Schema::students(), Schema::units(), Schema::groups(), Schema::student_guardians(), Schema::guardians() ];
+			' . $clauses['where_deleted'] . $clauses['where_sql'];
 
-		// Note: session_id already baked into $enrollment_join via pre-prepare; do not re-add to $binds.
-
-		if ( null !== $params['academic_unit_id'] && 0 !== $params['academic_unit_id'] ) {
-			$query   .= ' AND se.academic_unit_id = %d';
-			$binds[] = (int) $params['academic_unit_id'];
-		}
-
-		if ( null !== $params['academic_group_id'] && 0 !== $params['academic_group_id'] ) {
-			$query   .= ' AND se.academic_group_id = %d';
-			$binds[] = (int) $params['academic_group_id'];
-		}
-
-		if ( '' !== $params['status'] && 'trash' !== $params['status'] ) {
-			$query   .= ' AND s.status = %s';
-			$binds[] = $params['status'];
-		}
-		if ( '' !== $params['search'] ) {
-			$query   .= ' AND (s.first_name LIKE %s OR s.last_name LIKE %s OR s.student_number LIKE %s OR se.roll_number LIKE %s OR g.first_name LIKE %s OR g.last_name LIKE %s)';
-			$like    = '%' . $wpdb->esc_like( $params['search'] ) . '%';
-			$binds[] = $like;
-			$binds[] = $like;
-			$binds[] = $like;
-			$binds[] = $like;
-			$binds[] = $like;
-			$binds[] = $like;
-		}
+		$binds = array_merge(
+			[ Schema::students(), Schema::units(), Schema::groups(), Schema::student_guardians(), Schema::guardians() ],
+			$clauses['extra_binds']
+		);
 
 		$orderby = ! empty( $params['orderby'] ) ? sanitize_text_field( $params['orderby'] ) : 'created_at';
 		$order   = ! empty( $params['order'] ) && in_array( strtolower( $params['order'] ), [ 'asc', 'desc' ], true ) ? strtoupper( $params['order'] ) : 'DESC';
@@ -1706,51 +1730,24 @@ final class StudentsService {
 	public function db_count_students( array $args = [] ): int {
 		global $wpdb;
 
-		$is_trash           = ( 'trash' === ( $args['status'] ?? '' ) );
-		$where_deleted      = $is_trash ? 'WHERE s.deleted_at IS NOT NULL' : 'WHERE s.deleted_at IS NULL';
-		$has_session_filter = ! empty( $args['academic_session_id'] );
-		$enrollment_join    = $has_session_filter
-			? $wpdb->prepare( 'INNER JOIN %i se ON se.student_id = s.id AND se.academic_session_id = %d', Schema::enrollments(), (int) $args['academic_session_id'] )
-			: $wpdb->prepare( 'LEFT JOIN %i se ON se.student_id = s.id AND se.status = %s', Schema::enrollments(), 'active' );
+		$clauses = $this->build_students_query_clauses( $args );
+
 		$query = 'SELECT COUNT(*) FROM %i s
-			' . $enrollment_join . '
+			' . $clauses['enrollment_join'] . '
 			LEFT JOIN %i sg ON sg.student_id = s.id AND sg.is_primary = 1
 			LEFT JOIN %i g ON g.id = sg.guardian_id AND g.deleted_at IS NULL
-			' . $where_deleted;
-		$binds = [ Schema::students(), Schema::student_guardians(), Schema::guardians() ];
+			' . $clauses['where_deleted'] . $clauses['where_sql'];
 
-		if ( ! empty( $args['academic_unit_id'] ) ) {
-			$query   .= ' AND se.academic_unit_id = %d';
-			$binds[] = (int) $args['academic_unit_id'];
-		}
-
-		if ( ! empty( $args['academic_group_id'] ) ) {
-			$query   .= ' AND se.academic_group_id = %d';
-			$binds[] = (int) $args['academic_group_id'];
-		}
-
-		if ( ! empty( $args['status'] ) && 'trash' !== $args['status'] ) {
-			$query   .= ' AND s.status = %s';
-			$binds[] = $args['status'];
-		}
-
-		if ( ! empty( $args['search'] ) ) {
-			$query   .= ' AND (s.first_name LIKE %s OR s.last_name LIKE %s OR s.student_number LIKE %s OR se.roll_number LIKE %s OR g.first_name LIKE %s OR g.last_name LIKE %s)';
-			$like    = '%' . $wpdb->esc_like( $args['search'] ) . '%';
-			$binds[] = $like;
-			$binds[] = $like;
-			$binds[] = $like;
-			$binds[] = $like;
-			$binds[] = $like;
-			$binds[] = $like;
-		}
+		$binds = array_merge(
+			[ Schema::students(), Schema::student_guardians(), Schema::guardians() ],
+			$clauses['extra_binds']
+		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Students count query with dynamic clauses.
 		$count = $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );
 
 		return (int) $count;
 	}
-
 	/**
 	 * Gets a single student by ID.
 	 */

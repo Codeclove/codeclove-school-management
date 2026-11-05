@@ -110,6 +110,13 @@ describe('Portal Formatter Utilities', () => {
         decimal_precision: 0,
       })
       expect(formattedRight).toBe('500 €')
+
+      const formattedMGA = formatCurrency(1250, 'MGA', {
+        currency: 'MGA',
+        currency_position: 'left',
+        decimal_precision: 0,
+      })
+      expect(formattedMGA).toBe('Ar 1,250')
     })
   })
 

@@ -452,7 +452,7 @@ export default function SettingsPage() {
             })()
           )}
           {!isPro && TABS.find((t) => t.id === activeTab)?.pro && (
-            <div className="flex flex-col items-center justify-center text-center py-16 px-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 space-y-4">
+            <div className="flex flex-col items-center justify-center text-center py-16 px-6 rounded-xl border border-amber-500/20 bg-amber-500/5 space-y-4">
               <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-500">
                 <Lock size={22} />
               </div>
@@ -479,7 +479,7 @@ export default function SettingsPage() {
 
       {/* ── Sticky Floating Save Bar ───────────────────────────────── */}
       {(isDirty || saveStatus === 'saving') && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 md:right-10 z-[120] flex items-center justify-between gap-4 p-2.5 px-4 sm:px-5 w-auto max-w-[calc(100vw-2rem)] sm:max-w-none bg-bg-overlay/95 backdrop-blur-md border border-border rounded-2xl shadow-modal animate-slide-up">
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 md:right-10 z-[120] flex items-center justify-between gap-4 p-2.5 px-4 sm:px-5 w-auto max-w-[calc(100vw-2rem)] sm:max-w-none bg-bg-overlay/95 backdrop-blur-md border border-border rounded-xl shadow-modal animate-slide-up">
           <div className="flex items-center gap-2.5 shrink-0">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
             <span className="text-xs font-semibold text-text whitespace-nowrap">

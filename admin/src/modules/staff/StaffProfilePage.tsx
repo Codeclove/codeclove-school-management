@@ -535,7 +535,7 @@ export default function StaffProfilePage() {
                   </div>
                 </div>
 
-                <div className="bg-bg-surface border border-border rounded-2xl p-8 flex flex-col items-center justify-center overflow-x-auto shadow-inner">
+                <div className="bg-bg-surface border border-border rounded-xl p-8 flex flex-col items-center justify-center overflow-x-auto shadow-inner">
                   <StaffIdCard
                     staff={staff}
                     school={settingsData?.school}

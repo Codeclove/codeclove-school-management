@@ -106,7 +106,7 @@ export const TimetablePage: React.FC = () => {
           getLabel('academic_unit', false, __( 'Class', 'codeclove-school-management' ))
         )}
         description={
-          [enrollment?.unit_name, enrollment?.group_name].filter(Boolean).join(' • ') ||
+          [enrollment?.unit_name, enrollment?.group_name, enrollment?.term_name].filter(Boolean).join(' • ') ||
           [currentStudent?.unit_name, currentStudent?.group_name].filter(Boolean).join(' • ') ||
           sprintf(
             __( 'Enrolled %s Schedule', 'codeclove-school-management' ),

@@ -214,7 +214,7 @@ export default function CertificateDesignerPage() {
       />
 
       {/* Studio Workstation Container */}
-      <div className="bg-bg-elevated border border-border rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-bg-elevated border border-border rounded-xl shadow-xs overflow-hidden">
         {/* Studio Meta Strip: Template Title, Type, and Quick Status */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 py-2.5 bg-bg-surface/50 border-b border-border">
           <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">

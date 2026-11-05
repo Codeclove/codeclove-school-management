@@ -205,6 +205,7 @@ export interface TimetableData {
   enrollment?: {
     unit_name?: string
     group_name?: string
+    term_name?: string
   }
   days: Record<number | string, TimetableSlot[]>
 }

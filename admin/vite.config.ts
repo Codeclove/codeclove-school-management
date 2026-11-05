@@ -10,8 +10,20 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    dedupe: [
+      '@radix-ui/react-focus-scope',
+      '@radix-ui/react-dismissable-layer',
+    ],
   },
 
+  optimizeDeps: {
+    include: [
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-focus-scope',
+      '@radix-ui/react-dismissable-layer',
+    ],
+  },
   build: {
     // Output to plugin's assets/build/admin/ directory.
     outDir: path.resolve(__dirname, '../assets/build/admin'),

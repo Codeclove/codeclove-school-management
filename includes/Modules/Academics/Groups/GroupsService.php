@@ -199,6 +199,48 @@ final class GroupsService {
 	// ─── Database Operations ─────────────────────────────────────────────────
 
 	/**
+	 * Builds shared WHERE conditions and binds for group queries.
+	 *
+	 * @param array $params Query arguments.
+	 * @return array{where_sql: string, extra_binds: array}
+	 */
+	private function build_groups_where_and_binds( array $params ): array {
+		global $wpdb;
+
+		$where_clauses = [];
+		$extra_binds   = [];
+
+		if ( ! empty( $params['session_id'] ) ) {
+			$where_clauses[] = 'u.academic_session_id = %d';
+			$extra_binds[]   = (int) $params['session_id'];
+		}
+
+		if ( ! empty( $params['unit_id'] ) ) {
+			$where_clauses[] = 'g.academic_unit_id = %d';
+			$extra_binds[]   = (int) $params['unit_id'];
+		}
+
+		if ( isset( $params['status'] ) && '' !== $params['status'] ) {
+			$where_clauses[] = 'g.status = %s';
+			$extra_binds[]   = $params['status'];
+		}
+
+		if ( isset( $params['search'] ) && '' !== $params['search'] ) {
+			$where_clauses[] = '(g.name LIKE %s OR g.code LIKE %s)';
+			$like            = '%' . $wpdb->esc_like( $params['search'] ) . '%';
+			$extra_binds[]   = $like;
+			$extra_binds[]   = $like;
+		}
+
+		$where_sql = ! empty( $where_clauses ) ? ' AND ' . implode( ' AND ', $where_clauses ) : '';
+
+		return [
+			'where_sql'   => $where_sql,
+			'extra_binds' => $extra_binds,
+		];
+	}
+
+	/**
 	 * Gets academic groups matching arguments.
 	 */
 	private function db_get_groups( array $args = [] ): array {
@@ -214,36 +256,19 @@ final class GroupsService {
 			'orderby'    => '',
 			'order'      => '',
 		];
-		$params = array_merge( $defaults, $args );
+		$params  = array_merge( $defaults, $args );
+		$clauses = $this->build_groups_where_and_binds( $params );
 
 		$query = 'SELECT g.*, u.academic_session_id as session_id,
 			(SELECT COUNT(*) FROM %i WHERE academic_group_id = g.id AND status != %s) as students_count
 			FROM %i g
 			INNER JOIN %i u ON g.academic_unit_id = u.id
-			WHERE 1=1';
-		$binds = [ Schema::enrollments(), 'withdrawn', Schema::groups(), Schema::units() ];
+			WHERE 1=1' . $clauses['where_sql'];
 
-		if ( $params['session_id'] > 0 ) {
-			$query   .= ' AND u.academic_session_id = %d';
-			$binds[] = $params['session_id'];
-		}
-
-		if ( $params['unit_id'] > 0 ) {
-			$query   .= ' AND g.academic_unit_id = %d';
-			$binds[] = $params['unit_id'];
-		}
-
-		if ( '' !== $params['status'] ) {
-			$query   .= ' AND g.status = %s';
-			$binds[] = $params['status'];
-		}
-
-		if ( '' !== $params['search'] ) {
-			$query   .= ' AND (g.name LIKE %s OR g.code LIKE %s)';
-			$like    = '%' . $wpdb->esc_like( $params['search'] ) . '%';
-			$binds[] = $like;
-			$binds[] = $like;
-		}
+		$binds = array_merge(
+			[ Schema::enrollments(), 'withdrawn', Schema::groups(), Schema::units() ],
+			$clauses['extra_binds']
+		);
 
 		$orderby = ! empty( $params['orderby'] ) ? sanitize_text_field( $params['orderby'] ) : 'id';
 		$order   = ! empty( $params['order'] ) && in_array( strtolower( $params['order'] ), [ 'asc', 'desc' ], true ) ? strtoupper( $params['order'] ) : 'ASC';
@@ -274,32 +299,16 @@ final class GroupsService {
 	private function db_count_groups( array $args = [] ): int {
 		global $wpdb;
 
+		$clauses = $this->build_groups_where_and_binds( $args );
+
 		$query = 'SELECT COUNT(*) FROM %i g
 			INNER JOIN %i u ON g.academic_unit_id = u.id
-			WHERE 1=1';
-		$binds = [ Schema::groups(), Schema::units() ];
+			WHERE 1=1' . $clauses['where_sql'];
 
-		if ( ! empty( $args['session_id'] ) ) {
-			$query   .= ' AND u.academic_session_id = %d';
-			$binds[] = $args['session_id'];
-		}
-
-		if ( ! empty( $args['unit_id'] ) ) {
-			$query   .= ' AND g.academic_unit_id = %d';
-			$binds[] = $args['unit_id'];
-		}
-
-		if ( ! empty( $args['status'] ) ) {
-			$query   .= ' AND g.status = %s';
-			$binds[] = $args['status'];
-		}
-
-		if ( ! empty( $args['search'] ) ) {
-			$query   .= ' AND (g.name LIKE %s OR g.code LIKE %s)';
-			$like    = '%' . $wpdb->esc_like( $args['search'] ) . '%';
-			$binds[] = $like;
-			$binds[] = $like;
-		}
+		$binds = array_merge(
+			[ Schema::groups(), Schema::units() ],
+			$clauses['extra_binds']
+		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom academic groups count query with dynamic clauses.
 		return (int) $wpdb->get_var( $wpdb->prepare( $query, ...$binds ) );

@@ -57,6 +57,7 @@ export const Dropdown = React.forwardRef<
         <DropdownMenuPrimitive.Content
           align={align}
           sideOffset={sideOffset}
+          collisionPadding={8}
           className={cn(
             'z-[100050] min-w-[160px] overflow-hidden rounded-lg p-1',
             'bg-bg-overlay border border-border shadow-modal outline-none focus-visible:ring-0 focus-visible:ring-offset-0',
@@ -113,7 +114,7 @@ export function DropdownItem({
       {children ? children : (
         <>
           {Icon && <Icon size={14} strokeWidth={1.75} className="flex-shrink-0" />}
-          {label && <span className="flex-1 truncate min-w-0">{label}</span>}
+          {label && <span className="flex-1 whitespace-nowrap">{label}</span>}
           {shortcut && (
             <kbd className="text-xs font-mono text-text-subtle opacity-60">
               {shortcut}

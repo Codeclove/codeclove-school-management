@@ -3,25 +3,6 @@
  * ponytail: simple iframe printing instead of installing react-to-print.
  */
 export function printElement(element: HTMLElement) {
-  const iframe = document.createElement('iframe')
-  // Keep off-screen at physical A4 proportions so browser layout engine evaluates full desktop/document media rules.
-  iframe.style.cssText = 'position:fixed;top:0;left:0;width:210mm;height:297mm;opacity:0;pointer-events:none;border:0;'
-  document.body.appendChild(iframe)
-
-  const doc = iframe.contentWindow?.document
-  if (!doc) return
-
-  const dir = document.documentElement?.dir || 'ltr'
-  const lang = document.documentElement?.lang || 'en'
-
-  doc.open()
-  doc.write(`<!DOCTYPE html><html dir="${dir}" lang="${lang}"><head>`)
-
-  // Copy stylesheets so component styles and Tailwind classes render correctly
-  document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
-    doc.write(node.outerHTML)
-  })
-
   const htmlContent = (element.outerHTML || '') + (element.innerHTML || '')
   const isLandscape = Boolean(
     htmlContent.includes('A4 landscape') ||
@@ -43,6 +24,27 @@ export function printElement(element: HTMLElement) {
     element.getAttribute?.('data-admit-card') ||
     element.querySelector?.('[data-admit-card]')
   )
+
+  const iframe = document.createElement('iframe')
+  // Keep off-screen at physical sheet proportions matching orientation
+  const iframeW = isLandscape ? (isLetter ? '11in' : '297mm') : (isLetter ? '8.5in' : '210mm')
+  const iframeH = isLandscape ? (isLetter ? '8.5in' : '210mm') : (isLetter ? '11in' : '297mm')
+  iframe.style.cssText = `position:fixed;top:0;left:0;width:${iframeW};height:${iframeH};opacity:0;pointer-events:none;border:0;`
+  document.body.appendChild(iframe)
+
+  const doc = iframe.contentWindow?.document
+  if (!doc) return
+
+  const dir = document.documentElement?.dir || 'ltr'
+  const lang = document.documentElement?.lang || 'en'
+
+  doc.open()
+  doc.write(`<!DOCTYPE html><html dir="${dir}" lang="${lang}"><head>`)
+
+  // Copy stylesheets so component styles and Tailwind classes render correctly
+  document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
+    doc.write(node.outerHTML)
+  })
   const pageSize = isLandscape
     ? (isLetter ? 'letter landscape' : 'A4 landscape')
     : (isLetter ? 'letter portrait' : 'A4 portrait')

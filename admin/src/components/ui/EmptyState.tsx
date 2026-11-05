@@ -27,7 +27,7 @@ export function EmptyState({
         className={cn(
           'rounded-xl flex items-center justify-center mb-4',
           isDashed
-            ? 'w-14 h-14 rounded-2xl bg-brand-dim text-brand shadow-inner'
+            ? 'w-14 h-14 rounded-xl bg-brand-dim text-brand shadow-inner'
             : 'w-12 h-12 bg-bg-elevated border border-border text-text-subtle'
         )}
       >

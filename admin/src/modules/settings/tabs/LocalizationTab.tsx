@@ -10,6 +10,7 @@ import {
   FormCheckbox,
 } from '../components/SettingsFormPrimitives'
 import { __ } from '@/lib/i18n'
+import { CURRENCIES } from '@/lib/currencies'
 
 type Register = UseFormRegister<CodeCloveSettings>
 
@@ -17,24 +18,6 @@ interface LocalizationTabProps {
   register: Register
   control: Control<CodeCloveSettings>
 }
-
-// ponytail: static options declared once at module scope — no hooks needed
-const CURRENCIES = [
-  { value: 'USD', label: 'USD — United States Dollar ($)' },
-  { value: 'EUR', label: 'EUR — Euro (€)' },
-  { value: 'GBP', label: 'GBP — British Pound (£)' },
-  { value: 'INR', label: 'INR — Indian Rupee (₹)' },
-  { value: 'CAD', label: 'CAD — Canadian Dollar ($)' },
-  { value: 'AUD', label: 'AUD — Australian Dollar ($)' },
-  { value: 'NGN', label: 'NGN — Nigerian Naira (₦)' },
-  { value: 'KES', label: 'KES — Kenyan Shilling (KSh)' },
-  { value: 'GHS', label: 'GHS — Ghanaian Cedi (GH₵)' },
-  { value: 'ZAR', label: 'ZAR — South African Rand (R)' },
-  { value: 'PKR', label: 'PKR — Pakistani Rupee (₨)' },
-  { value: 'BDT', label: 'BDT — Bangladeshi Taka (৳)' },
-  { value: 'AED', label: 'AED — UAE Dirham (د.إ)' },
-  { value: 'SAR', label: 'SAR — Saudi Riyal (﷼)' },
-]
 
 const CURRENCY_POSITIONS = [
   { value: 'left', label: 'Left ($100)' },

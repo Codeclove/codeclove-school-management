@@ -255,11 +255,17 @@ export function useDeleteFeeType() {
 
 // ─── Invoice Hooks ────────────────────────────────────────────────────────────
 
+export interface InvoiceAggregates {
+  total_invoiced_minor: number
+  total_collected_minor: number
+  total_overdue_minor: number
+}
+
 /**
  * Hook to retrieve paginated student invoices.
  */
 export function useInvoices(filters?: InvoiceFilters) {
-  return useQuery<{ data: Invoice[]; pagination: any }>({
+  return useQuery<{ data: Invoice[]; pagination: { total: number; per_page: number; current_page: number; total_pages: number }; meta?: { aggregates?: InvoiceAggregates } }>({
     queryKey: queryKeys.finance.invoices.list(filters),
     queryFn: async () => api.list<Invoice[]>(`invoices${toQueryString(filters)}`),
   })

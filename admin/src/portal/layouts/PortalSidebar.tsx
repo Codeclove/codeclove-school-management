@@ -27,7 +27,6 @@ import { usePortalExams } from '../api/portal'
 interface PortalSidebarProps {
   isMobileOpen: boolean
   onCloseMobile: () => void
-  isMaximized?: boolean
 }
 
 interface NavItem {
@@ -42,7 +41,6 @@ interface NavItem {
 export const PortalSidebar: React.FC<PortalSidebarProps> = ({
   isMobileOpen,
   onCloseMobile,
-  isMaximized,
 }) => {
   const { currentStudent, unreadCount } = usePortal()
   const isPro = window.CodeClovePortalConfig?.isPro ?? false
@@ -170,9 +168,7 @@ export const PortalSidebar: React.FC<PortalSidebarProps> = ({
       {/* Desktop Persistent Sidebar */}
       <aside
         aria-label={__( 'Sidebar Navigation', 'codeclove-school-management' )}
-        className={`hidden lg:flex flex-col flex-shrink-0 w-60 border-r border-border bg-bg-surface select-none z-20 transition-all duration-300 ease-in-out ${
-          isMaximized ? 'opacity-0 -ml-60 pointer-events-none' : 'opacity-100 ml-0'
-        }`}
+        className="hidden lg:flex flex-col flex-shrink-0 w-60 border-r border-border bg-bg-surface select-none z-20 overflow-y-auto"
       >
         {navContent}
       </aside>

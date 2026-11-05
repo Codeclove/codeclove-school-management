@@ -48,12 +48,13 @@ export function FormField({
   let modifiedChildren = children
 
   if (isElement) {
+    const isDomElement = typeof children.type === 'string'
     const combinedDescribedBy =
       [children.props['aria-describedby'], errorId].filter(Boolean).join(' ') || undefined
 
     modifiedChildren = React.cloneElement(children, {
       id: inputId,
-      error: Boolean(error || children.props.error),
+      ...(isDomElement ? {} : { error: Boolean(error || children.props.error) }),
       'aria-invalid': Boolean(error || children.props['aria-invalid']),
       'aria-describedby': combinedDescribedBy,
     })

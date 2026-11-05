@@ -289,23 +289,28 @@ export default function InvoicesPage() {
   }, [invoicesData, clearSelection])
 
   const metrics = useMemo(() => {
-    let totalInvoiced = 0
-    let totalCollected = 0
-    let totalOverdue = 0
-
-    list.forEach((inv) => {
-      const net = (inv.total_minor ?? 0) / 100
-      const paid = (inv.paid_minor ?? 0) / 100
-      const bal = (inv.balance_minor ?? (inv.total_minor - inv.paid_minor)) / 100
-      totalInvoiced += net
-      totalCollected += paid
-      if (inv.status === 'overdue' || (inv.status === 'issued' && inv.due_date && new Date(inv.due_date) < new Date())) {
-        totalOverdue += bal
+    const agg = invoicesData?.meta?.aggregates
+    if (agg) {
+      return {
+        totalInvoiced: Number(agg.total_invoiced_minor || 0),
+        totalCollected: Number(agg.total_collected_minor || 0),
+        totalOverdue: Number(agg.total_overdue_minor || 0),
       }
-    })
-
-    return { totalInvoiced, totalCollected, totalOverdue }
-  }, [list])
+    }
+    const today = new Date().toISOString().slice(0, 10)
+    return list.reduce(
+      (acc, inv) => {
+        const bal = inv.balance_minor ?? Math.max(0, (inv.total_minor ?? 0) - (inv.paid_minor ?? 0))
+        acc.totalInvoiced += inv.total_minor ?? 0
+        acc.totalCollected += inv.paid_minor ?? 0
+        if (inv.status === 'overdue' || (inv.due_date && inv.due_date < today && bal > 0)) {
+          acc.totalOverdue += bal
+        }
+        return acc
+      },
+      { totalInvoiced: 0, totalCollected: 0, totalOverdue: 0 }
+    )
+  }, [invoicesData?.meta?.aggregates, list])
 
   const handleOpenAdd = () => navigate('/finance/invoices/new')
 

@@ -327,7 +327,7 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
           <PopoverPrimitive.Content
             align="start"
             sideOffset={4}
-            className="z-[100050] p-3 rounded-xl border border-border bg-bg-overlay shadow-modal outline-none w-auto select-none"
+            className="z-[100050] p-3 rounded-xl border border-border bg-bg-overlay shadow-modal outline-none w-auto select-none pointer-events-auto"
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
             <DayPicker
