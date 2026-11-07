@@ -252,7 +252,7 @@ For full details see: https://codeclove.com/privacy-policy/
 * Added: Dynamic Print Iframe Orientation: Sized off-screen print iframe to match physical document orientation (portrait vs. landscape) prior to layout rendering.
 * Added: Version Parity Alignment: Synchronized CodeClove Free and Pro releases into lockstep `1.1.0` milestone.
 * Fixed: Print Perimeter & Skia Clipping: Fixed missing right-hand border on Saturday lesson rows during browser print preview by pulling table width to `calc(100% - 2px)` to prevent Chromium canvas margin clipping.
-* Fixed: Column Width Consistency: Locked uniform percentage column widths in fixed table layout across `<thead>` and `<tbody>`.
+* Fixed: Column Width Consistency: Locked uniform percentage column widths in fixed table layout across header and body rows.
 
 = 1.0.18 =
 * Added: Examinations Workspace Module: Complete examination management with theory & practical exams, flight board grading progress, class broadsheet tabulation ledger, and printable institutional admit cards.
