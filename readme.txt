@@ -7,7 +7,6 @@ Requires PHP: 8.1
 Stable tag: 1.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
-Business Model: freemium
 
 School management for WordPress. Students, staff, admissions, attendance, fee invoicing, and parent portal. Unlimited records, no monthly fees.
 
@@ -179,10 +178,16 @@ Third-party libraries included in the compiled output:
 All bundled libraries are open-source and GPL-compatible.
 
 == Upgrade Notice ==
+
+= 1.1.3 =
+Routine maintenance update. Streamlined plugin action links and metadata. Recommended for all users.
+
 = 1.1.0 =
 Major milestone: student trash lifecycle and database cleanup, student portal user account management and dark mode, noticeboard announcement scheduling, WordPress login customizer, query security hardening, and performance polish. Recommended for all users.
 
 = 1.0.10 =
+WordPress login customizer, student portal user account linking, and noticeboard scheduling. Recommended for all users.
+
 = 1.0.9 =
 Public admissions shortcode session association fix, staff recruitment applications portal, and general stability improvements. Recommended for all users.
 
