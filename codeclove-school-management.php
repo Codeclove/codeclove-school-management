@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       CodeClove School Management System
  * Description:       Modern, country-aware school management system for WordPress. Manage student admissions, classes, staff, and daily attendance.
- * Version:           1.1.2
+ * Version:           1.1.3
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            CodeClove
@@ -47,7 +47,7 @@ if ( ! defined( 'CODECLOVE_IS_PRO' ) ) {
 	define( 'CODECLOVE_IS_PRO', false );
 }
 if ( ! defined( 'CODECLOVE_VERSION' ) ) {
-	define( 'CODECLOVE_VERSION', '1.1.2' );
+	define( 'CODECLOVE_VERSION', '1.1.3' );
 }
 if ( ! defined( 'CODECLOVE_DB_VERSION' ) ) {
 	define( 'CODECLOVE_DB_VERSION', '1.0.29' );

@@ -1,11 +1,10 @@
 === CodeClove School Management System ===
 Contributors: codeclove
-Donate link: https://codeclove.com/donate/
 Tags: school management, student management, attendance, school, education
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Business Model: freemium
@@ -216,85 +215,136 @@ The voluntary deactivation survey (shown only when an administrator deactivates 
 For full details see: https://codeclove.com/privacy-policy/
 
 == Changelog ==
+
+= 1.1.3 =
+* Improved: Plugin Information: Completely removed donation links across the plugin.
+
 = 1.1.2 =
-* Performance: Batched student and staff bulk operations into single database statements, eliminating N+1 loops.
-* Performance: Unified list and count query builders across Students and Academics to optimize filter pagination.
-* Improvement: Decomposed student profile view with dedicated finance ledger tab for invoice and receipt printing.
-* Improvement: Support for 150+ global currencies with automated formatting and symbol spacing.
-* UI: Harmonized corner radii and visual card hierarchy across dashboard widgets and data tables.
-* Fix: Invoice stat card aggregations and dashboard fee metric computations.
+* Improved: Student Management: Faster bulk updates and deletions when managing large lists of students and staff.
+* Improved: Student Profiles: Faster loading times and cleaner receipt printing on student finance tabs.
+* Improved: Search Performance: More responsive search results across admin screens and the student portal.
+* Improved: Timetable Duplication: Schedule copy tool now automatically matches the school's configured teaching days.
+* Fixed: Finance Dashboard: Corrected outstanding fee totals and collection percentage numbers on fee cards.
+* Fixed: System Stability: Resolved warning notices during plugin activation in mixed server environments.
+
+= 1.1.1 =
+* Added: 150+ Global Currencies: Full support for world currencies with automated zero-decimal rules.
+* Added: Payment Gateway Intelligence: In-settings currency compatibility badge and checks for PayPal.
+* Added: Timetable Slot Quick Clone: Instant slot clone mode with modifier hold (`Ctrl` / `Cmd`) support for rapid multi-cell placement across weekly schedules.
+* Added: Live Operations Indicator: Added dynamic live operations status indicator badge to the admin dashboard header.
+* Fixed: Card Content Hierarchy & Text Truncation: Restructured KPI stat cards with icon top-left, badge top-right, numeric value centered, and full-width non-truncated labels positioned below the value to eliminate ellipsis clipping.
+* Fixed: Corner Radius Consistency: Harmonized border radii across all dashboard cards, stat cards, data tables, and modal dialogs to a balanced, professional 12px (`rounded-xl`), eliminating mismatched and overly-rounded bubble corners.
+* Fixed: Operational Typography: Fixed uppercase tracked eyebrows on today's attendance and action items strips, restoring clean title case.
+* Improved: Currency Typography: Polished symbol spacing and zero-decimal formatting across receipts, invoices, and the portal.
+* Improved: Fees Progress Badge: Resolved fee collection rate badge display on the dashboard Outstanding Fees card.
+
 = 1.1.0 =
-* Feature: Soft-delete trash state, restore capability, and permanent database cleanup tool for student records.
-* Feature: Student and parent portal user account linking with self-service login and password reset.
-* Feature: Student portal theme mode toggle with dedicated dark mode tokens and unread notification bell.
-* Feature: Noticeboard announcement scheduling, pinning, and portal feed display.
-* Feature: Custom WordPress login screen branding with school logo and custom styling presets.
-* Feature: Automatically bootstrap active academic session into global frontend configuration.
-* Feature: Public staff application shortcode and status tracking review workflow.
-* Feature: Secure student documents vault with in-app preview and disposition stream controls.
-* Feature: Full internationalization (i18n) with RTL layout support and localized weekend preferences.
-* Security: Hardened database queries with native placeholder parameterization for full WordPress Plugin Check compliance.
-* Fix: Combobox focus management and overlay interaction inside nested modals.
-* Fix: Scoped bulk CSV student import classes to the active academic session.
-* Performance: Streamlined table queries, print layouts, and asset bundle sizes.
+* Added: Teacher Fatigue Protection: Automatic streak limit and rest break tracking across timetable periods; prevents assigning teachers to more than 3 consecutive periods without a rest break.
+* Added: Smart Timetable Duplication: Added `Copy Subjects Only` mode for secondary schools to duplicate the weekly subject structure without cross-class teacher clashes.
+* Added: Live Clash Simulation: Added real-time conflict pre-check simulation for day and term duplication to preview clash counts before modifying the database.
+* Added: Assisted Teacher Picker: In-cell teacher dropdown dynamically prioritizes available staff and disables double-booked staff with contextual clash labels.
+* Added: Timetable Health & Telemetry: Integrated live clash counts, workload balance badges, and progress capacity pills directly into the timetable card header.
+* Added: Dynamic Print Iframe Orientation: Sized off-screen print iframe to match physical document orientation (portrait vs. landscape) prior to layout rendering.
+* Added: Version Parity Alignment: Synchronized CodeClove Free and Pro releases into lockstep `1.1.0` milestone.
+* Fixed: Print Perimeter & Skia Clipping: Fixed missing right-hand border on Saturday lesson rows during browser print preview by pulling table width to `calc(100% - 2px)` to prevent Chromium canvas margin clipping.
+* Fixed: Column Width Consistency: Locked uniform percentage column widths in fixed table layout across `<thead>` and `<tbody>`.
+
+= 1.0.18 =
+* Added: Examinations Workspace Module: Complete examination management with theory & practical exams, flight board grading progress, class broadsheet tabulation ledger, and printable institutional admit cards.
+* Added: Dual Broadsheet Tabulation Views: Detailed and summary ledger views with printable tabulation broadsheet documents.
+* Added: Student Portal Examinations Hub: Students and guardians can view scheduled examinations, download admit cards, and access printable report cards.
+* Added: Active Academic Session Bootstrap: Automatically inject active academic session into global frontend configuration (`CodeCloveConfig`).
+* Added: Student Portal Account Linking: Link WordPress user accounts to student profiles with portal authentication and password reset capabilities.
+* Added: WordPress Login Screen Customizer: School branding, custom logos, and custom color presets for the standard WordPress login page.
+* Fixed: Database Query Hardening: Converted dynamic table queries to native `%i` placeholders with strict parameter binding for WordPress Plugin Check compliance.
+* Fixed: Combobox Focus Trapping: Resolved focus trapping and backdrop pointer-events lock on nested modal dialogs.
+* Fixed: Staff WP_Error Codes: Provided explicit, machine-readable error codes in `WP_Error` constructors for account linking endpoints.
+
+= 1.0.17 =
+* Added: Student Trash & Cleanup Lifecycle: Added soft-delete trash state, restore capability, and permanent database purge tool with orphaned record cleanup.
+* Added: Roles & Permissions Matrix UI Overhaul: Redesigned role capability management grid with consolidated administrator hierarchy.
+* Added: Institutional Admit Cards Density Engine: Optimized whitespace density to comfortably fit up to 18 exam subjects on a single A4 page.
+* Added: Per-Exam Report Card Configuration: Country-aware report card display presets with customizable grading scales.
+* Fixed: Student Import Unit Scoping: Scoped bulk CSV import classes to the active academic session and lifted dropdown pagination caps.
+* Fixed: Weekend Days Synchronization: Added weekend days configuration and synchronized locale date formatting settings.
+
+= 1.0.16 =
+* Added: Student Documents Vault: Secure document uploads with plugin vault storage, preventing attachment collisions and unauthorized file access.
+* Added: In-App Document Preview: Integrated modal preview for student documents with stream disposition controls.
+* Added: Noticeboard Announcement Scheduling: Rich composer with announcement pinning, schedule date windows, and student portal feed integration.
+* Added: Student Portal Theme Toggle: Added light/dark mode switch with dedicated dark tokens and unread notification bell.
+* Added: Visual Certificate Designer: 3-zone visual studio for designing institutional certificates, clearance issuance, and portal integration.
+* Added: Multi-Class Batch Certificate Issuance: Bulk certificate issuance with cohort exclusions and class-wise printing.
+* Added: WhatsApp Business API Notifications: Meta WhatsApp Business integration with message templates and local test simulator.
+* Added: Multi-Gateway Checkout: Stripe and PayPal payment gateways with drag-and-drop gateway ordering and portal fee checkout.
+* Fixed: Timetable Print Layout: Polished timetable print layout, typography, and single-page landscape constraints.
+* Fixed: Feedback Telemetry Routing: Modernized in-app bug reporting and diagnostics endpoints to REST namespace.
+
+= 1.0.15 =
+* Added: Licensing Architecture: Integrated Ed25519 cryptographic token verification, license heartbeat scheduling, and decentralized feature gates.
+* Added: Internationalization (i18n): Comprehensive text domain migration to `codeclove-school-management` and RTL layout support.
+* Fixed: WordPress.org Directory Compliance: Resolved all plugin check notices, isolated Pro-only code, and unified packaging pipeline.
+* Fixed: Command Palette Permissions: Scoped global command search actions to active user role permissions.
+
+= 1.0.14 =
+* Added: Ed25519 License Token Verification: Cryptographically signed license keys and decentralized offline validation.
+* Fixed: Release Packaging: Standardized distribution scripts for lockstep Free and Pro archive builds.
+
+= 1.0.13 =
+* Added: License Management: Transient caching for license verification, daily heartbeat, and admin notices.
+
+= 1.0.12 =
+* Added: Automatic Updater Integration: Integrated EDD Software Licensing updater and license activation admin screen.
 
 = 1.0.11 =
-* Tweak: Streamlined navigation menu by removing locked submenu links for a clean, 100% operational interface.
-* Security: Hardened database queries with strict placeholder parameterization.
-* I18n: Added translation descriptors and ordered placeholders across string formatting.
-* UI: Refined date pickers, popovers, and student document preview modals.
+* Fixed: Student Cascade Deletion: Safely validates database table existence before running student cleanup queries.
+* Fixed: Navigation Menu Hygiene: Removed locked submenu links for a clean, 100% operational sidebar interface.
+* Fixed: Security Hardening: Enforced strict placeholder parameterization across database queries.
+* Fixed: Date Pickers & Modals: Refined date pickers, popovers, and student document preview modals.
 
 = 1.0.10 =
-* Feature: WordPress login screen branding with school logo and custom styling.
-* Feature: Link WordPress user accounts to students with portal access and password reset.
-* Feature: Student & parent portal theme toggle (light/dark mode) and notification bell.
-* Feature: Noticeboard announcement scheduling, pinning, and portal feed display.
-* Fix: Admission application timeline event tracking and walk-in source attribution.
-* Tweak: Streamlined table row actions, command palette elevation, and print layout polish.
+* Added: WordPress Login Customizer: School logo and custom styling presets on the standard WordPress login page.
+* Added: Student Portal User Accounts: Link WordPress user accounts to student records with self-service login and password reset.
+* Added: Noticeboard Scheduling: Announcement scheduling, pinning, and portal feed display.
+* Fixed: Admission Application Timeline: Event tracking and walk-in source attribution.
 
 = 1.0.9 =
-* Fix: Public admissions submitted via shortcode now properly associate with the active academic session and display in the admin applications list.
-* Feature: Public staff application shortcode and status tracking support.
-* Feature: Staff applications review list and detail review workflow.
-* Tweak: Cleaner confirmation dialogs and improved accessibility across data tables.
-* Tweak: Refined session promotion workflow step layout.
+* Added: Public Staff Application Form: Embeddable shortcode for staff recruitment with admin review list and status workflow.
+* Fixed: Public Admissions Session Scoping: Admissions submitted via shortcode now properly associate with the active academic session.
+* Fixed: Session Promotion Layout: Refined promotion workflow step navigation.
 
 = 1.0.8 =
-* Fix: Duplicate Timetable item in sidebar navigation.
-* Fix: Pro settings tabs now show an upgrade panel in-tab rather than leaving Settings.
-* Fix: Promotion & Rollover correctly marked as Pro-only instead of "coming soon".
-* Fix: Defaulters Report preview replaced fake figures with neutral placeholders.
-* Compliance: Review prompt no longer solicits a specific star rating.
-* Compliance: Removed Donate link header (was pointing to a sales page).
-* Compliance: Deactivation modal now discloses what data is submitted and links to Privacy Policy.
-* Compliance: Added Privacy Policy section to readme.
+* Fixed: Navigation Polish: Removed duplicate Timetable entry from admin sidebar.
+* Fixed: Pro Settings Tabs: In-tab upgrade panels instead of redirecting away from Settings.
+* Fixed: Promotion & Rollover: Correctly tagged Pro-only features.
+* Fixed: Defaulters Report: Replaced mock figures with realistic placeholders.
+* Fixed: Directory Compliance: Added Privacy Policy disclosures and removed external feedback calls from free distribution.
 
 = 1.0.7 =
-* Security: Staff profile endpoints no longer create or reset WordPress user accounts.
-* Security: Role hierarchy enforced on staff role assignments.
-* Fix: Dev-server probe scoped to development mode only.
+* Security: Account Creation Guard: Staff profile endpoints no longer create or reset WordPress user accounts without explicit administrator privileges.
+* Security: Role Hierarchy: Enforced role hierarchy on staff role assignments.
+* Fixed: Dev-Server Probes: Dev-server health probes scoped strictly to local development environments.
 
 = 1.0.6 =
-* Feature: Voluntary deactivation feedback survey.
-* Fix: Feedback telemetry routed to correct endpoint.
+* Added: Voluntary Deactivation Feedback: Optional survey when an administrator chooses to deactivate the plugin, with full privacy disclosures.
 
 = 1.0.5 =
-* Feature: Improved student admissions and portal workflow.
-* Fix: Initial staff attendance submission now allowed with default statuses.
-* Tweak: Fee statement and letterhead layout refresh.
+* Added: Online Payment Gateways: Stripe and PayPal integration for fee invoicing and student portal checkout.
+* Added: Staff Attendance Defaults: Default status submission support for initial daily registers.
+* Fixed: Fee Statement Letterhead: Cleaned up letterhead typography and invoice statement layout.
 
 = 1.0.3 =
-* Tweak: Readme description trimmed to WP.org 150-character limit.
-* Tweak: Plugin tags updated for better discoverability.
+* Updated: Directory Discoverability: Refined readme description and tags for WordPress.org search guidelines.
 
 = 1.0.2 =
-* Fix: Date picker selection and keyboard handling inside modal dialogs.
-* Fix: Modal dismissal no longer triggered by portaled overlay interaction.
+* Fixed: Modal Date Picker: Keyboard handling and selection inside modal dialogs.
+* Fixed: Overlay Interaction: Prevented modal dismissal during portaled select interactions.
 
 = 1.0.1 =
-* Fix: Input sanitization at REST API boundaries.
-* Fix: Deprecated print_emoji_styles hook removed from SPA shell.
-* Fix: Timetable queries in attendance and portal services.
+* Fixed: REST API Boundaries: Input sanitization and parameter validation at all API endpoints.
+* Fixed: SPA Shell: Removed deprecated `print_emoji_styles` action hook before rendering the admin shell.
 
 = 1.0.0 =
-* Initial release.
+* Added: Initial Release: Complete self-hosted school management system for WordPress.
+* Added: Core Modules: Unlimited students, guardians, staff directory, academic sessions, terms, classes, subjects, daily attendance registers, fee invoicing, and student/parent self-service portal (`[codeclove_portal]`).
+* Added: Country Presets: Built-in localization presets for India (IN), United States (US), and United Kingdom (GB).
