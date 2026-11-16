@@ -4,7 +4,7 @@ Tags: school management, student management, attendance, school, education
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.3
+Stable tag: 1.1.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -220,6 +220,10 @@ The voluntary deactivation survey (shown only when an administrator deactivates 
 For full details see: https://codeclove.com/privacy-policy/
 
 == Changelog ==
+
+= 1.1.4 =
+* Improved: Academic Structure: Academic presets now clearly describe school organization models like Class & Section, Grade & Section, and Year & Form.
+* Improved: Fee Overdue Reports: Modernized overdue fee tracking and reports with clearer, more respectful terminology across finance and receipts.
 
 = 1.1.3 =
 * Improved: Plugin Information: Completely removed donation links across the plugin.

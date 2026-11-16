@@ -16,7 +16,6 @@ import { useForm } from 'react-hook-form'
 import { useSearchParams } from 'react-router-dom'
 import {
   School,
-  Globe,
   GraduationCap,
   ClipboardList,
   Briefcase,
@@ -27,7 +26,6 @@ import {
   Server,
   Save,
   Check,
-  Info,
   AlertTriangle,
   Mail,
   Smartphone,
@@ -37,6 +35,9 @@ import {
   History,
   CreditCard,
   Lock,
+  Sparkles,
+  GitMerge,
+  RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button, Card, PageHeader, Spinner, Modal, ModalFooter, Skeleton } from '@/components/ui'
@@ -215,7 +216,38 @@ export default function SettingsPage() {
     if (!previewData?.current || !previewData?.preset) return []
     const items: DiffItem[] = []
 
+    const FIELD_LABELS: Record<string, string> = {
+      academic_unit: __( 'Student Level (Class / Grade)', 'codeclove-school-management' ),
+      academic_group: __( 'Classroom Group (Section / Form)', 'codeclove-school-management' ),
+      academic_year: __( 'Academic Session / Year', 'codeclove-school-management' ),
+      assessment: __( 'Assessment / Examination', 'codeclove-school-management' ),
+      admission_application: __( 'Admission Application', 'codeclove-school-management' ),
+      admission_status: __( 'Admission Status', 'codeclove-school-management' ),
+      fee_invoice: __( 'Fee Invoice', 'codeclove-school-management' ),
+      fee_receipt: __( 'Fee Receipt', 'codeclove-school-management' ),
+      student: __( 'Student Label', 'codeclove-school-management' ),
+      staff: __( 'Staff Member Label', 'codeclove-school-management' ),
+      weekend_days: __( 'Weekend Days', 'codeclove-school-management' ),
+      timezone: __( 'Timezone', 'codeclove-school-management' ),
+      currency: __( 'Currency Code', 'codeclove-school-management' ),
+      currency_symbol: __( 'Currency Symbol', 'codeclove-school-management' ),
+      currency_position: __( 'Currency Position', 'codeclove-school-management' ),
+      date_format: __( 'Date Format', 'codeclove-school-management' ),
+      time_format: __( 'Time Format', 'codeclove-school-management' ),
+      academic_year_start_month: __( 'Session Start Month', 'codeclove-school-management' ),
+      academic_year_end_month: __( 'Session End Month', 'codeclove-school-management' ),
+      default_grading_scheme: __( 'Grading Scheme', 'codeclove-school-management' ),
+      terms_per_session: __( 'Terms Per Session', 'codeclove-school-management' ),
+      class_seeding_strategy: __( 'Class Seeding Strategy', 'codeclove-school-management' ),
+      student_id_prefix: __( 'Student ID Prefix', 'codeclove-school-management' ),
+      staff_id_prefix: __( 'Staff ID Prefix', 'codeclove-school-management' ),
+      receipt_number_prefix: __( 'Receipt Prefix', 'codeclove-school-management' ),
+      invoice_number_prefix: __( 'Invoice Prefix', 'codeclove-school-management' ),
+      admission_number_prefix: __( 'Admission Number Prefix', 'codeclove-school-management' ),
+    }
+
     const formatKeyName = (key: string): string => {
+      if (FIELD_LABELS[key]) return FIELD_LABELS[key]
       return key
         .split('_')
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -227,13 +259,39 @@ export default function SettingsPage() {
       'July', 'August', 'September', 'October', 'November', 'December',
     ]
 
+    const WEEKEND_LABELS: Record<string, string> = {
+      sunday_only: __( 'Sunday only', 'codeclove-school-management' ),
+      saturday_sunday: __( 'Saturday & Sunday', 'codeclove-school-management' ),
+      friday_saturday: __( 'Friday & Saturday', 'codeclove-school-management' ),
+    }
+
+    const GRADING_LABELS: Record<string, string> = {
+      marks_percentage: __( 'Marks + Percentage (0–100)', 'codeclove-school-management' ),
+      letter_grade: __( 'Letter Grade (A–F)', 'codeclove-school-management' ),
+      gpa: __( 'GPA Scale (4.0)', 'codeclove-school-management' ),
+      key_stages: __( 'Key Stages Assessment Levels', 'codeclove-school-management' ),
+    }
+
     const formatPresetValue = (val: unknown, key?: string): string => {
       if (val == null) return '—'
       if (key && (key === 'academic_year_start_month' || key === 'academic_year_end_month')) {
         const m = Number(val)
         if (m >= 1 && m <= 12) {
-          return `${MONTH_NAMES[m]} (${m})`
+          return `${MONTH_NAMES[m]}`
         }
+      }
+      if (key === 'weekend_days' && typeof val === 'string' && WEEKEND_LABELS[val]) {
+        return WEEKEND_LABELS[val]
+      }
+      if (key === 'default_grading_scheme' && typeof val === 'string' && GRADING_LABELS[val]) {
+        return GRADING_LABELS[val]
+      }
+      if (key === 'terms_per_session') {
+        const t = Number(val)
+        if (t === 3) return __( '3 Terms (Trimesters)', 'codeclove-school-management' )
+        if (t === 2) return __( '2 Semesters', 'codeclove-school-management' )
+        if (t === 4) return __( '4 Quarters', 'codeclove-school-management' )
+        return `${t} Terms`
       }
       if (typeof val === 'boolean') {
         return val ? __( 'Yes', 'codeclove-school-management' ) : __( 'No', 'codeclove-school-management' )
@@ -267,23 +325,23 @@ export default function SettingsPage() {
       ignore?: Record<string, boolean>
     }> = [
       {
-        category: __( 'Terminology', 'codeclove-school-management' ),
+        category: __( 'Academic Terminology', 'codeclove-school-management' ),
         cur: currentLabels as Record<string, unknown>,
         pre: presetLabels as Record<string, unknown>,
       },
       {
-        category: __( 'Localization', 'codeclove-school-management' ),
+        category: __( 'Regional & Localization', 'codeclove-school-management' ),
         cur: currentLoc as Record<string, unknown>,
         pre: presetLoc as Record<string, unknown>,
       },
       {
-        category: __( 'Academic Cycle', 'codeclove-school-management' ),
+        category: __( 'Academic Cycle Defaults', 'codeclove-school-management' ),
         cur: currentEdu as unknown as Record<string, unknown>,
         pre: presetEdu as unknown as Record<string, unknown>,
         ignore: { preset: true, preset_name: true, preset_version: true, customized: true },
       },
       {
-        category: __( 'ID Formats', 'codeclove-school-management' ),
+        category: __( 'Identifier Prefixes', 'codeclove-school-management' ),
         cur: currentIds,
         pre: presetIds,
       },
@@ -518,6 +576,7 @@ export default function SettingsPage() {
         onClose={() => setShowPresetModal(false)}
         loading={loadingPreview}
         diffItems={diffItems}
+        presetName={presets.find((p) => p.code === selectedPreset)?.name}
         isPending={applyPresetMutation.isPending}
         onApply={handleApplyPreset}
       />
@@ -532,6 +591,7 @@ function PresetModal({
   onClose,
   loading,
   diffItems,
+  presetName,
   isPending,
   onApply,
 }: {
@@ -539,99 +599,162 @@ function PresetModal({
   onClose: () => void
   loading: boolean
   diffItems: DiffItem[]
+  presetName?: string
   isPending: boolean
   onApply: (mode: 'replace_defaults' | 'missing_only') => void
 }) {
+  const groupedItems = useMemo(() => {
+    const groups: Record<string, DiffItem[]> = {}
+    for (const item of diffItems) {
+      const cat = item.category || __( 'General', 'codeclove-school-management' )
+      if (!groups[cat]) groups[cat] = []
+      groups[cat].push(item)
+    }
+    return groups
+  }, [diffItems])
+
   return (
     <Modal
       open={open}
       onOpenChange={(o) => { if (!o) onClose() }}
+      size="lg"
       title={
-        <span className="flex items-center gap-2">
-          <Globe size={16} className="text-brand" />
-          {__( 'Apply Preset', 'codeclove-school-management' )}
-        </span>
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand shrink-0">
+            <Sparkles size={16} />
+          </div>
+          <div>
+            <div className="text-base font-semibold text-text leading-tight">
+              {__( 'Switch Academic Structure', 'codeclove-school-management' )}
+            </div>
+            {presetName && (
+              <div className="text-xs font-normal text-text-muted mt-0.5">
+                {presetName}
+              </div>
+            )}
+          </div>
+        </div>
       }
-      description={__( 'Compare and review the differences before switching default cycles and terminologies.', 'codeclove-school-management' )}
+      description={__( 'Review configuration differences before updating your school’s academic structure defaults.', 'codeclove-school-management' )}
     >
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12 gap-2.5">
           <Spinner size="md" />
-          <p className="text-xs text-text-muted">{__( 'Fetching preset comparison differences…', 'codeclove-school-management' )}</p>
+          <p className="text-xs text-text-muted">{__( 'Fetching structure comparison differences…', 'codeclove-school-management' )}</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Diff table */}
-          <div className="border border-border rounded-xl divide-y divide-border bg-bg-surface max-h-[35vh] overflow-y-auto">
-            {diffItems.length > 0 ? (
-              diffItems.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-3 gap-4 p-3 text-xs items-center">
-                  <div>
-                    {item.category && (
-                      <span className="text-[10px] uppercase font-bold text-text-subtle tracking-wider block mb-0.5">
-                        {item.category}
-                      </span>
-                    )}
-                    <span className="font-semibold text-text-muted">{item.label}</span>
-                  </div>
-                  <span className="text-danger bg-danger-dim px-2 py-1 rounded truncate line-through" title={item.current}>
-                    {item.current}
-                  </span>
-                  <span className="text-success bg-success-dim px-2 py-1 rounded truncate font-medium" title={item.preset}>
-                    {item.preset}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center px-4">
-                <Check size={20} className="text-success mb-1.5" />
-                <p className="text-xs font-semibold text-text">{__( 'No Configuration Differences', 'codeclove-school-management' )}</p>
-                <p className="text-2xs text-text-muted mt-0.5">
-                  {__( 'The selected preset matches your current settings exactly.', 'codeclove-school-management' )}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Mode Explanation & Info banner */}
-          <div className="bg-bg-surface border border-border rounded-lg p-3.5 space-y-2 text-xs">
-            <div className="flex gap-2 text-text font-semibold">
-              <Info size={14} className="text-brand flex-shrink-0 mt-0.5" />
-              <span>{__( 'Choosing an Apply Mode:', 'codeclove-school-management' )}</span>
+          {/* Diff comparison table */}
+          <div className="border border-border rounded-xl bg-bg-surface overflow-hidden shadow-xs">
+            {/* Fixed Table Header */}
+            <div className="grid grid-cols-12 gap-3 px-4 py-2.5 bg-bg-base/70 border-b border-border text-xs font-semibold text-text-muted select-none">
+              <div className="col-span-4">{__( 'Configuration Field', 'codeclove-school-management' )}</div>
+              <div className="col-span-4">{__( 'Current Value', 'codeclove-school-management' )}</div>
+              <div className="col-span-4">{__( 'New Structure Default', 'codeclove-school-management' )}</div>
             </div>
-            <ul className="list-disc list-inside pl-1 space-y-1 text-text-muted leading-relaxed text-xs">
-              <li>
-                <strong className="text-text font-medium">{__( 'Merge Missing Only', 'codeclove-school-management' )}</strong>: {__( 'Fills in new or unset terminology labels while preserving any manual overrides you have already saved.', 'codeclove-school-management' )}
-              </li>
-              <li>
-                <strong className="text-text font-medium">{__( 'Overwrite All Defaults', 'codeclove-school-management' )}</strong>: {__( 'Resets all terminology singular and plural values back to the regional defaults.', 'codeclove-school-management' )}
-              </li>
-            </ul>
+
+            {/* Scrollable Rows */}
+            <div className="max-h-[260px] overflow-y-auto overscroll-contain divide-y divide-border/60">
+              {diffItems.length > 0 ? (
+                Object.entries(groupedItems).map(([category, items]) => (
+                  <div key={category} className="divide-y divide-border/40">
+                    <div className="bg-bg-base/40 px-4 py-1.5 text-[10px] font-bold text-text-subtle uppercase tracking-wider">
+                      {category}
+                    </div>
+                    {items.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="grid grid-cols-12 gap-3 px-4 py-2.5 text-xs items-center hover:bg-hover-bg/30 transition-colors"
+                      >
+                        <div className="col-span-4 font-medium text-text pr-2 leading-snug">
+                          {item.label}
+                        </div>
+                        <div className="col-span-4 min-w-0 pr-2">
+                          <span
+                            className="inline-block max-w-full px-2.5 py-1 rounded-md text-xs font-normal text-text-muted bg-bg-base/80 border border-border/80 break-words leading-normal"
+                            title={item.current}
+                          >
+                            {item.current}
+                          </span>
+                        </div>
+                        <div className="col-span-4 min-w-0">
+                          <span
+                            className="inline-block max-w-full px-2.5 py-1 rounded-md text-xs font-medium text-brand-text bg-brand-subtle/40 border border-brand/20 break-words leading-normal"
+                            title={item.preset}
+                          >
+                            {item.preset}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 text-center px-4 space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-success-dim/40 border border-success/20 flex items-center justify-center text-success">
+                    <Check size={20} />
+                  </div>
+                  <p className="text-sm font-semibold text-text">
+                    {__( 'No Differences Found', 'codeclove-school-management' )}
+                  </p>
+                  <p className="text-xs text-text-muted max-w-sm">
+                    {__( 'Your current configuration already matches this academic structure default settings.', 'codeclove-school-management' )}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
-          <ModalFooter className="flex-col sm:flex-row gap-2 pt-4">
+          {/* Mode Explanation */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-bg-surface border border-border text-xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 font-semibold text-text">
+                <GitMerge size={14} className="text-text-muted shrink-0" />
+                <span>{__( 'Merge Missing Only', 'codeclove-school-management' )}</span>
+              </div>
+              <p className="text-text-muted text-[11px] leading-relaxed">
+                {__( 'Fills in unset fields while safely preserving any customized labels and settings you already edited.', 'codeclove-school-management' )}
+              </p>
+            </div>
+            <div className="space-y-1 sm:border-l sm:border-border sm:pl-3">
+              <div className="flex items-center gap-1.5 font-semibold text-text">
+                <RefreshCw size={14} className="text-brand shrink-0" />
+                <span>{__( 'Overwrite All Defaults', 'codeclove-school-management' )}</span>
+              </div>
+              <p className="text-text-muted text-[11px] leading-relaxed">
+                {__( 'Replaces all current labels and academic cycle defaults with this structure’s preset standards.', 'codeclove-school-management' )}
+              </p>
+            </div>
+          </div>
+
+          {/* Action Footer */}
+          <ModalFooter className="sticky bottom-0 -mx-6 -mb-5 px-6 py-3.5 bg-bg-overlay/95 backdrop-blur-xs border-t border-border mt-4 z-10 flex-col sm:flex-row gap-2 justify-end">
             <Button
               variant="ghost"
+              size="sm"
               onClick={onClose}
               disabled={isPending}
-              className="w-full sm:w-auto order-last sm:order-first"
+              className="w-full sm:w-auto order-last sm:order-first text-xs"
             >
               {__( 'Cancel', 'codeclove-school-management' )}
             </Button>
             <Button
               variant="secondary"
+              size="sm"
               onClick={() => onApply('missing_only')}
               disabled={isPending}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto text-xs font-medium gap-1.5"
             >
+              <GitMerge size={13} className="text-text-muted shrink-0" />
               {__( 'Merge Missing Only', 'codeclove-school-management' )}
             </Button>
             <Button
+              size="sm"
               onClick={() => onApply('replace_defaults')}
               disabled={isPending}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto text-xs font-semibold gap-1.5"
             >
-              {isPending && <Spinner size="xs" />}
+              {isPending ? <Spinner size="xs" /> : <RefreshCw size={13} className="shrink-0" />}
               {__( 'Overwrite All Defaults', 'codeclove-school-management' )}
             </Button>
           </ModalFooter>

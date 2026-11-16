@@ -7,6 +7,7 @@ interface PrintPaymentReceiptProps {
   payment: Payment
   invoice: Invoice
   school?: SchoolSettings
+  unitLabel?: string
 }
 
 const getMethodLabels = (): Record<string, string> => ({
@@ -23,8 +24,16 @@ const getMethodLabels = (): Record<string, string> => ({
  * Built with high-contrast, print-safe colors, balanced typography,
  * symmetric information hierarchy, and zero boxy clutter.
  */
-export default function PrintPaymentReceipt({ payment, invoice, school }: PrintPaymentReceiptProps) {
+export default function PrintPaymentReceipt({ payment, invoice, school, unitLabel }: PrintPaymentReceiptProps) {
   const { formatCurrency, formatDate } = useFormatter()
+  const configPreset = typeof window !== 'undefined' ? window.CodeCloveConfig?.preset : undefined
+  const resolvedUnitLabel =
+    unitLabel ||
+    (configPreset === 'US'
+      ? __( 'Grade', 'codeclove-school-management' )
+      : configPreset === 'GB'
+      ? __( 'Year', 'codeclove-school-management' )
+      : __( 'Class', 'codeclove-school-management' ))
   const methodLabels = getMethodLabels()
   const studentClass =
     [invoice.academic_unit_name, invoice.academic_group_name].filter(Boolean).join(' — ') ||
@@ -85,7 +94,7 @@ export default function PrintPaymentReceipt({ payment, invoice, school }: PrintP
             </div>
             {studentClass && (
               <div>
-                <span style={{ color: '#6b7280' }}>{__( 'Class / Grade:', 'codeclove-school-management' )} </span>
+                <span style={{ color: '#6b7280' }}>{sprintf( __( '%s:', 'codeclove-school-management' ), resolvedUnitLabel )} </span>
                 <span style={{ fontWeight: 600, color: '#111827' }}>{studentClass}</span>
               </div>
             )}

@@ -497,25 +497,45 @@ final class Plugin {
 		// Seed all default sections on fresh installs (education_system is the
 		// canonical marker — if it's missing, the install is new or corrupted).
 		if ( empty( $settings['education_system'] ) ) {
-			$settings['education_system'] = [
-				'preset'                    => null,
-				'preset_name'               => null,
-				'customized'                => false,
-				'academic_year_start_month' => 1,
-				'academic_year_end_month'   => 12,
-				'date_format'               => 'd/m/Y',
-				'time_format'               => 'H:i',
-				'timezone'                  => function_exists( 'wp_timezone_string' ) ? wp_timezone_string() : 'UTC',
-				'currency'                  => 'USD',
-				'language'                  => 'site_default',
-				'rtl'                       => is_rtl(),
-			];
-			$settings['labels']           = [
-				'academic_session' => [ 'singular' => 'Academic Session', 'plural' => 'Academic Sessions' ],
-				'academic_term'    => [ 'singular' => 'Academic Term',    'plural' => 'Academic Terms'    ],
-				'academic_unit'    => [ 'singular' => 'Academic Unit',    'plural' => 'Academic Units'    ],
-				'academic_group'   => [ 'singular' => 'Academic Group',   'plural' => 'Academic Groups'   ],
-			];
+			$default_preset_code = \CodeClove\Modules\Settings\PresetsService::detect_default_preset();
+			$presets_service     = new \CodeClove\Modules\Settings\PresetsService();
+			$preset_data         = $presets_service->get_preset_data( $default_preset_code );
+
+			if ( $preset_data ) {
+				$settings['education_system'] = array_merge(
+					[
+						'preset'                       => $default_preset_code,
+						'preset_name'                  => $preset_data['name'] ?? $default_preset_code,
+						'preset_version'               => $preset_data['version'] ?? '1.0.0',
+						'customized'                   => false,
+						'new_session_classes_creation' => 'defaults',
+					],
+					$preset_data['education_system'] ?? []
+				);
+				$settings['labels']           = $preset_data['labels'] ?? [];
+				$settings['localization']     = $preset_data['localization'] ?? [];
+				$settings['identifiers']      = $preset_data['identifiers'] ?? [];
+			} else {
+				$settings['education_system'] = [
+					'preset'                    => 'US',
+					'preset_name'               => 'Grade & Section (K-12)',
+					'customized'                => false,
+					'academic_year_start_month' => 8,
+					'academic_year_end_month'   => 6,
+					'date_format'               => 'm/d/Y',
+					'time_format'               => 'g:i A',
+					'timezone'                  => function_exists( 'wp_timezone_string' ) ? wp_timezone_string() : 'UTC',
+					'currency'                  => 'USD',
+					'language'                  => 'site_default',
+					'rtl'                       => is_rtl(),
+				];
+				$settings['labels']           = [
+					'academic_session' => [ 'singular' => 'School Year', 'plural' => 'School Years' ],
+					'academic_term'    => [ 'singular' => 'Semester',    'plural' => 'Semesters'    ],
+					'academic_unit'    => [ 'singular' => 'Grade',       'plural' => 'Grades'       ],
+					'academic_group'   => [ 'singular' => 'Section',     'plural' => 'Sections'     ],
+				];
+			}
 			$settings['school']           = [
 				'name'  => get_bloginfo( 'name' ),
 				'email' => get_bloginfo( 'admin_email' ),

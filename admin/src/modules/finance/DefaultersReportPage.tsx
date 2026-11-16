@@ -35,11 +35,11 @@ export default function DefaultersReportPage() {
   const { formatCurrency, formatDate } = useFormatter()
   const { session } = useSession()
   const { getLabel } = useLabels()
-  const unitLabelSingular = getLabel('academic_unit', false, __('Class / Grade', 'codeclove-school-management'))
+  const unitLabelSingular = getLabel('academic_unit', false, __('Class', 'codeclove-school-management'))
   const unitLabelPlural = getLabel('academic_unit', true, __('Classes', 'codeclove-school-management'))
   const invoiceLabel = getLabel('invoice', false, __('Invoice', 'codeclove-school-management'))
-  const pageTitle = sprintf(__('%s Defaulters Report', 'codeclove-school-management'), invoiceLabel)
-  const pageBreadcrumb = __('Defaulters Report', 'codeclove-school-management')
+  const pageTitle = sprintf(__('%s Overdue Fees Report', 'codeclove-school-management'), invoiceLabel)
+  const pageBreadcrumb = __('Overdue Fees Report', 'codeclove-school-management')
   const [unitId, setUnitId] = useState('all')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 350)
@@ -239,7 +239,7 @@ export default function DefaultersReportPage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title={__('Fee Defaulters Report', 'codeclove-school-management')}
+          title={__('Fee Overdue Report', 'codeclove-school-management')}
           description={__('Identify overdue student balances, aging receivables, and collection arrears across classes.', 'codeclove-school-management')}
           breadcrumbs={[
             { label: __('Finance', 'codeclove-school-management'), href: '/finance' },
@@ -260,7 +260,7 @@ export default function DefaultersReportPage() {
             { label: __('Total Overdue', 'codeclove-school-management'),    icon: TrendingUp, iconBg: 'bg-danger-dim',      iconColor: 'text-danger' },
             { label: __('30+ Days Arrears', 'codeclove-school-management'), icon: Clock,      iconBg: 'bg-amber-500/15',   iconColor: 'text-amber-500' },
             { label: __('60+ Days Arrears', 'codeclove-school-management'), icon: Calendar,   iconBg: 'bg-danger-dim',      iconColor: 'text-danger' },
-            { label: __('Defaulters Count', 'codeclove-school-management'), icon: Users,      iconBg: 'bg-brand-dim',      iconColor: 'text-brand' },
+            { label: __('Overdue Accounts', 'codeclove-school-management'), icon: Users,      iconBg: 'bg-brand-dim',      iconColor: 'text-brand' },
           ].map(({ label, icon: Icon, iconBg, iconColor }) => (
             <div key={label} className="rounded-xl border border-border bg-bg-elevated p-4 flex items-center gap-3 opacity-40 select-none pointer-events-none">
               <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
@@ -306,7 +306,7 @@ export default function DefaultersReportPage() {
               <Lock className="w-6 h-6" />
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-text mb-2 tracking-tight">
-              {__('Fee Defaulters & Overdue Auditing is a Pro Feature', 'codeclove-school-management')}
+              {__('Fee Overdue Auditing is a Pro Feature', 'codeclove-school-management')}
             </h2>
             <p className="text-sm text-text-muted max-w-md mx-auto mb-6 leading-relaxed">
               {__(

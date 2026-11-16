@@ -329,10 +329,10 @@ final class SettingsRepository {
 	 */
 	public function get_default_labels(): array {
 		return [
-			'academic_session'         => [ 'singular' => 'Academic Session', 'plural' => 'Academic Sessions' ],
-			'academic_term'            => [ 'singular' => 'Academic Term', 'plural' => 'Academic Terms' ],
-			'academic_unit'            => [ 'singular' => 'Academic Unit', 'plural' => 'Academic Units' ],
-			'academic_group'           => [ 'singular' => 'Academic Group', 'plural' => 'Academic Groups' ],
+			'academic_session'         => [ 'singular' => 'Academic Year', 'plural' => 'Academic Years' ],
+			'academic_term'            => [ 'singular' => 'Term', 'plural' => 'Terms' ],
+			'academic_unit'            => [ 'singular' => 'Class', 'plural' => 'Classes' ],
+			'academic_group'           => [ 'singular' => 'Section', 'plural' => 'Sections' ],
 			'subject'                  => [ 'singular' => 'Subject', 'plural' => 'Subjects' ],
 			'assessment'               => [ 'singular' => 'Assessment', 'plural' => 'Assessments' ],
 			'guardian'                 => [ 'singular' => 'Guardian', 'plural' => 'Guardians' ],

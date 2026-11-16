@@ -247,6 +247,9 @@ final class Assets {
 		$is_rtl      = is_rtl() || ! empty( $settings['localization']['rtl'] ?? false );
 		$plugin_url  = defined( 'CODECLOVE_URL' ) ? CODECLOVE_URL : '';
 		$version     = defined( 'CODECLOVE_VERSION' ) ? CODECLOVE_VERSION : '1.0.0';
+		$preset_code = strtoupper( (string) ( $settings['education_system']['preset'] ?? \CodeClove\Modules\Settings\PresetsService::detect_default_preset() ) );
+		$stored_name = (string) ( $settings['education_system']['preset_name'] ?? '' );
+		$preset_name = \CodeClove\Modules\Settings\PresetsService::normalize_preset_name( $stored_name, $preset_code );
 
 		return [
 			'restUrl'     => rest_url( 'codeclove/v1/' ),
@@ -261,8 +264,8 @@ final class Assets {
 			'isPro'       => (bool) $is_pro,
 			'isPaid'      => codeclove_is_paid(),
 			'isDemo'      => codeclove_is_demo(),
-			'preset'      => strtoupper( (string) ( $settings['education_system']['preset'] ?? 'IN' ) ),
-			'presetName'  => (string) ( $settings['education_system']['preset_name'] ?? 'India' ),
+			'preset'      => $preset_code,
+			'presetName'  => $preset_name,
 			'license'     => \CodeClove\Modules\Settings\SystemReportService::get_sanitized_license_info(),
 			'proUrl'         => $pro_url,
 			'currentSession' => $current_session,

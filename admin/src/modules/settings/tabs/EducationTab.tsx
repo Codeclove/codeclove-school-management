@@ -5,9 +5,22 @@ import type { UseFormRegister, UseFormWatch, Control, Path } from 'react-hook-fo
 import type { CodeCloveSettings } from '@/api/settings'
 import { FormGroup, FormInput, FormSelect, StringListEditor } from '../components/SettingsFormPrimitives'
 import { Badge, Button } from '@/components/ui'
-import { BookOpen, Globe, Languages, Check, Sparkles, Scale } from 'lucide-react'
+import {
+  BookOpen,
+  Globe,
+  Languages,
+  Check,
+  CheckCircle2,
+  Sparkles,
+  Scale,
+  GraduationCap,
+  School,
+  Landmark,
+  type LucideIcon,
+} from 'lucide-react'
 import { ROUTES } from '@/lib/constants'
 import { __, sprintf } from '@/lib/i18n'
+import { cn } from '@/lib/utils'
 
 type Register = UseFormRegister<CodeCloveSettings>
 
@@ -31,6 +44,7 @@ export function EducationTab({
   control,
 }: EducationTabProps) {
   const activePresetName = watch('education_system.preset_name')
+  const activePresetCode = watch('education_system.preset')
   const isCustomized = watch('education_system.customized')
 
   const months = useMemo(() => [
@@ -72,33 +86,63 @@ export function EducationTab({
     { key: 'attendance_record',     label: __( 'Attendance Record', 'codeclove-school-management' )     },
   ], [])
 
-  const presetMetadata = useMemo<Record<string, { flag: string; country: string; subtitle: string; features: string }>>(() => ({
-    IN: {
-      flag: '🇮🇳',
-      country: __( 'India (CBSE / ICSE / State)', 'codeclove-school-management' ),
-      subtitle: __( 'Class & Section structure with Marks & Percentage grading', 'codeclove-school-management' ),
-      features: __( 'Cycle: Apr – Mar • Units: Class 1-12 • Groups: Section A-D', 'codeclove-school-management' ),
-    },
+  const displayActiveName = useMemo(() => {
+    if (!activePresetName && !activePresetCode) return __( 'None Selected', 'codeclove-school-management' )
+    if (activePresetName === 'India' || activePresetName === 'IN' || activePresetCode === 'IN') return __( 'Class & Section (Standard)', 'codeclove-school-management' )
+    if (activePresetName === 'United States' || activePresetName === 'US' || activePresetCode === 'US') return __( 'Grade & Section (K-12)', 'codeclove-school-management' )
+    if (activePresetName === 'United Kingdom' || activePresetName === 'GB' || activePresetCode === 'GB') return __( 'Year & Form (British / Commonwealth)', 'codeclove-school-management' )
+    return activePresetName || __( 'None Selected', 'codeclove-school-management' )
+  }, [activePresetName, activePresetCode])
+
+  const presetMetadata = useMemo<
+    Record<
+      string,
+      {
+        icon: LucideIcon
+        iconBg: string
+        iconColor: string
+        title: string
+        subtitle: string
+        cycle: string
+        units: string
+      }
+    >
+  >(() => ({
     US: {
-      flag: '🇺🇸',
-      country: __( 'United States (K-12)', 'codeclove-school-management' ),
-      subtitle: __( 'Grade & Section structure with Letter Grade & GPA system', 'codeclove-school-management' ),
-      features: __( 'Cycle: Aug – Jun • Units: Grade 1-12 • Groups: Period / Section', 'codeclove-school-management' ),
+      icon: GraduationCap,
+      iconBg: 'bg-indigo-500/10 dark:bg-indigo-500/20',
+      iconColor: 'text-indigo-600 dark:text-indigo-400',
+      title: __( 'Grade & Section (K-12)', 'codeclove-school-management' ),
+      subtitle: __( 'Grade & Section structure with GPA / Letter Grade system', 'codeclove-school-management' ),
+      cycle: __( 'Aug – Jun', 'codeclove-school-management' ),
+      units: __( 'Grades 1–12 • Homerooms', 'codeclove-school-management' ),
+    },
+    IN: {
+      icon: School,
+      iconBg: 'bg-emerald-500/10 dark:bg-emerald-500/20',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      title: __( 'Class & Section (Standard)', 'codeclove-school-management' ),
+      subtitle: __( 'Class & Section structure with Marks & Percentage grading', 'codeclove-school-management' ),
+      cycle: __( 'Apr – Mar', 'codeclove-school-management' ),
+      units: __( 'Classes 1–12 • Sections A–D', 'codeclove-school-management' ),
     },
     GB: {
-      flag: '🇬🇧',
-      country: __( 'United Kingdom (UK National Curriculum)', 'codeclove-school-management' ),
+      icon: Landmark,
+      iconBg: 'bg-purple-500/10 dark:bg-purple-500/20',
+      iconColor: 'text-purple-600 dark:text-purple-400',
+      title: __( 'Year & Form (British / Commonwealth)', 'codeclove-school-management' ),
       subtitle: __( 'Year Group & Form structure with Key Stage assessment levels', 'codeclove-school-management' ),
-      features: __( 'Cycle: Sep – Jul • Units: Year 1-13 • Groups: Form A-C', 'codeclove-school-management' ),
+      cycle: __( 'Sep – Jul', 'codeclove-school-management' ),
+      units: __( 'Years 1–13 • Forms A–C', 'codeclove-school-management' ),
     },
   }), [])
 
   return (
     <div className="space-y-6">
-      {/* Country / Curriculum Preset */}
+      {/* Cohort & Academic Structure */}
       <FormGroup
-        title={__( 'Country & Curriculum Presets', 'codeclove-school-management' )}
-        description={__( 'Select a regional curriculum preset to automatically configure localized academic terms, grading systems, and session cycles.', 'codeclove-school-management' )}
+        title={__( 'Cohort & Academic Structure', 'codeclove-school-management' )}
+        description={__( 'Choose how your institution names student levels and groups. Selecting a structure automatically configures localized terms, grading defaults, and session cycles.', 'codeclove-school-management' )}
         icon={Globe}
         cols={1}
       >
@@ -107,30 +151,37 @@ export function EducationTab({
             <div className="flex items-center gap-2.5">
               <Sparkles size={16} className="text-brand" />
               <div>
-                <span className="text-xs font-semibold text-text">{__( 'Current Active System', 'codeclove-school-management' )}</span>
-                <p className="text-2xs text-text-subtle">{__( 'The active localized configuration driving your platform.', 'codeclove-school-management' )}</p>
+                <span className="text-xs font-semibold text-text">{__( 'Current Active Structure', 'codeclove-school-management' )}</span>
+                <p className="text-2xs text-text-subtle">{__( 'The active academic model driving your platform terminology.', 'codeclove-school-management' )}</p>
               </div>
             </div>
             <Badge variant={isCustomized ? 'warning' : 'default'} className="shrink-0 font-semibold px-3 py-1 text-xs">
-              {activePresetName
-                ? isCustomized
-                  ? sprintf( __( '%s (Customized)', 'codeclove-school-management' ), activePresetName )
-                  : activePresetName
-                : __( 'None Selected', 'codeclove-school-management' )}
+              {isCustomized
+                ? sprintf( __( '%s (Customized)', 'codeclove-school-management' ), displayActiveName )
+                : displayActiveName}
             </Badge>
           </div>
 
           {/* Visual Preset Cards Grid */}
-          <div role="radiogroup" aria-label={__( 'Country & Curriculum Presets', 'codeclove-school-management' )} className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+          <div role="radiogroup" aria-label={__( 'Cohort & Academic Structure', 'codeclove-school-management' )} className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
             {presets.map((p) => {
               const meta = presetMetadata[p.code.toUpperCase()] || {
-                flag: '🌐',
-                country: p.name,
+                icon: Globe,
+                iconBg: 'bg-brand/10',
+                iconColor: 'text-brand',
+                title: p.name,
                 subtitle: __( 'Custom regional preset configuration template', 'codeclove-school-management' ),
-                features: __( 'Standard academic cycle & term structure', 'codeclove-school-management' ),
+                cycle: __( 'Annual', 'codeclove-school-management' ),
+                units: __( 'Units • Groups', 'codeclove-school-management' ),
               }
+              const Icon = meta.icon
               const isSelected = selectedPreset === p.code
-              const isActive = activePresetName?.toLowerCase().includes(p.code.toLowerCase()) || activePresetName === p.name
+              const isActive =
+                activePresetCode?.toUpperCase() === p.code ||
+                activePresetName === p.name ||
+                (p.code === 'IN' && (activePresetName === 'India' || activePresetName === 'Class & Section (Standard)')) ||
+                (p.code === 'US' && (activePresetName === 'United States' || activePresetName === 'Grade & Section (K-12)')) ||
+                (p.code === 'GB' && (activePresetName === 'United Kingdom' || activePresetName === 'Year & Form (British / Commonwealth)'))
 
               const handleKeyDown = (e: React.KeyboardEvent) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -147,35 +198,45 @@ export function EducationTab({
                   tabIndex={0}
                   onClick={() => setSelectedPreset(p.code)}
                   onKeyDown={handleKeyDown}
-                  className={`relative flex flex-col justify-between p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:border-brand ${
+                  className={cn(
+                    "group relative flex flex-col justify-between p-4 rounded-xl border-2 cursor-pointer select-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-bg-base",
                     isSelected
-                      ? 'border-brand bg-brand-dim/15 shadow-md shadow-brand/10'
+                      ? "border-brand bg-brand-dim/15 shadow-sm"
                       : isActive
-                      ? 'border-emerald-500/50 bg-emerald-500/5'
-                      : 'border-border bg-bg-surface hover:border-border-strong hover:bg-hover-bg'
-                  }`}
+                      ? "border-emerald-500/50 bg-emerald-500/5 shadow-2xs"
+                      : "border-border bg-bg-surface hover:border-border-strong hover:bg-hover-bg"
+                  )}
                 >
-                  <div className="space-y-2.5">
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-2xl leading-none">{meta.flag}</span>
+                      <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-150 group-hover:scale-105", meta.iconBg, meta.iconColor)}>
+                        <Icon size={18} strokeWidth={2} />
+                      </div>
                       {isActive ? (
-                        <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-2xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                          <CheckCircle2 size={11} className="shrink-0" />
                           {__( 'Active', 'codeclove-school-management' )}
                         </span>
                       ) : isSelected ? (
-                        <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-brand text-white dark:text-text-inverted shadow-xs">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-2xs font-semibold bg-brand text-white dark:text-text-inverted shadow-xs">
+                          <Check size={11} className="shrink-0" />
                           {__( 'Selected', 'codeclove-school-management' )}
                         </span>
                       ) : null}
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-text leading-tight">{meta.country}</h4>
-                      <p className="text-3xs text-text-subtle mt-1 leading-relaxed">{meta.subtitle}</p>
+                      <h4 className="text-sm font-semibold text-text tracking-tight group-hover:text-brand transition-colors duration-150">
+                        {meta.title}
+                      </h4>
+                      <p className="text-xs text-text-muted mt-1 leading-relaxed">
+                        {meta.subtitle}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="pt-3 mt-3 border-t border-border-subtle flex items-center justify-between text-3xs text-text-muted">
-                    <span className="font-mono">{meta.features}</span>
+                  <div className="pt-3 mt-3 border-t border-border/70 flex items-center justify-between text-2xs text-text-subtle font-medium">
+                    <span>{meta.units}</span>
+                    <span className="text-text-muted font-medium">{meta.cycle}</span>
                   </div>
                 </div>
               )
@@ -189,14 +250,14 @@ export function EducationTab({
                 <Check size={16} className="text-brand" />
                 <span className="text-xs font-semibold text-brand">
                   {sprintf(
-                    __( 'Preset "%s" ready for preview & apply.', 'codeclove-school-management' ),
-                    presets.find((p) => p.code === selectedPreset)?.name ?? ''
+                    __( 'Structure "%s" ready to preview & apply.', 'codeclove-school-management' ),
+                    presetMetadata[selectedPreset.toUpperCase()]?.title || presets.find((p) => p.code === selectedPreset)?.name || ''
                   )}
                 </span>
               </div>
-              <Button type="button" variant="default" size="sm" onClick={onApplyPresetClick} className="gap-1.5 font-semibold text-xs animate-glow">
+              <Button type="button" variant="default" size="sm" onClick={onApplyPresetClick} className="gap-1.5 font-semibold text-xs">
                 <Globe size={14} />
-                {__( 'Preview & Apply Preset', 'codeclove-school-management' )}
+                {__( 'Preview & Apply Structure', 'codeclove-school-management' )}
               </Button>
             </div>
           )}
@@ -292,8 +353,8 @@ export function EducationTab({
       </FormGroup>
       {/* Dynamic Terminology Term Map */}
       <FormGroup
-        title={__( 'Dynamic Terminology', 'codeclove-school-management' )}
-        description={__( 'Customise the singular and plural labels used throughout the platform.', 'codeclove-school-management' )}
+        title={__( 'Custom Terminology Overrides', 'codeclove-school-management' )}
+        description={__( 'Fine-tune individual singular and plural labels if your school uses specialized custom naming.', 'codeclove-school-management' )}
         icon={Languages}
         cols={1}
       >

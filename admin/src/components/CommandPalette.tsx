@@ -138,11 +138,11 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
       ...(!isPro ? [{
         id: 'pro-upgrade',
         title: __('Upgrade to CodeClove Pro', 'codeclove-school-management'),
-        subtitle: __('Unlock Timetable Matrix, SMS Alerts, Defaulters Report, and Student Promotion', 'codeclove-school-management'),
+        subtitle: __('Unlock Timetable Matrix, SMS Alerts, Overdue Fees Report, and Student Promotion', 'codeclove-school-management'),
         category: 'Navigation' as const,
         to: '/pro-upgrade',
         icon: Sparkles,
-        keywords: 'upgrade pro premium license buy purchase pricing features timetable sms defaulters unlock',
+        keywords: 'upgrade pro premium license buy purchase pricing features timetable sms defaulters overdue fees unlock',
       }] : []),
       // Navigation Category
       {
@@ -402,8 +402,8 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
       },
       {
         id: 'defaulters-report',
-        title: 'Defaulters Report',
-        subtitle: 'Track students with unpaid overdue fees and outstanding balances',
+        title: __('Overdue Fees Report', 'codeclove-school-management'),
+        subtitle: __('Track students with unpaid overdue fees and outstanding balances', 'codeclove-school-management'),
         category: 'Navigation',
         to: ROUTES.DEFAULTERS_REPORT,
         icon: ClockAlert,

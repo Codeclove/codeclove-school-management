@@ -183,9 +183,9 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
         </MemoryRouter>
       )
 
-      expect(html).toContain('Defaulters')
+      expect(html).toContain('Overdue Fees')
       expect(html).toContain('/finance/reports/defaulters')
-      expect(html).not.toMatch(/Defaulters[\s\S]*?bg-amber-500\/15 text-amber-500 border border-amber-500\/25[\s\S]*?PRO/)
+      expect(html).not.toMatch(/Overdue Fees[\s\S]*?bg-amber-500\/15 text-amber-500 border border-amber-500\/25[\s\S]*?PRO/)
     })
   })
 
@@ -205,17 +205,17 @@ describe('Feature 2: Contextual Pro Locks inside Finance', () => {
       )
 
       // 1. Page Header & Pro Feature badge
-      expect(html).toContain('Fee Defaulters Report')
+      expect(html).toContain('Fee Overdue Report')
       expect(html).toContain('Pro Feature')
 
       // 2. Metric preview cards
       expect(html).toContain('Total Overdue')
       expect(html).toContain('30+ Days Arrears')
       expect(html).toContain('60+ Days Arrears')
-      expect(html).toContain('Defaulters Count')
+      expect(html).toContain('Overdue Accounts')
 
       // 3. Glassmorphic Lock Card
-      expect(html).toContain('Fee Defaulters &amp; Overdue Auditing is a Pro Feature')
+      expect(html).toContain('Fee Overdue Auditing is a Pro Feature')
       expect(html).toContain('Track overdue student tuition fees')
 
       // 4. Feature list

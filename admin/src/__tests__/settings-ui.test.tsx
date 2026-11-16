@@ -141,6 +141,47 @@ describe('Settings & Letterhead UI Components', () => {
       expect(html).toContain('6 Terms (Bimesters)')
     })
 
+    it('renders structural preset cards and displays active status', () => {
+      function MultiPresetForm() {
+        const { register, control, watch } = useForm<CodeCloveSettings>({
+          defaultValues: {
+            education_system: {
+              preset: 'IN',
+              preset_name: 'Class & Section (Standard)',
+              customized: false,
+            } as any,
+          },
+        })
+
+        return (
+          <EducationTab
+            register={register}
+            control={control}
+            watch={watch}
+            presets={[
+              { code: 'IN', name: 'Class & Section (Standard)' },
+              { code: 'US', name: 'Grade & Section (K-12)' },
+              { code: 'GB', name: 'Year & Form (British / Commonwealth)' },
+            ]}
+            selectedPreset="IN"
+            setSelectedPreset={vi.fn()}
+            onApplyPresetClick={vi.fn()}
+          />
+        )
+      }
+
+      const html = renderToString(<MultiPresetForm />)
+
+      // Section header and active badge
+      expect(html).toContain('Cohort &amp; Academic Structure')
+      expect(html).toContain('Class &amp; Section (Standard)')
+      expect(html).toContain('Active')
+
+      // Structural cards
+      expect(html).toContain('Grade &amp; Section (K-12)')
+      expect(html).toContain('Year &amp; Form (British / Commonwealth)')
+    })
+
     it('renders terminology configuration fields for fee_type, admission_application, and staff_application', () => {
       const html = renderToString(<TestForm />)
 

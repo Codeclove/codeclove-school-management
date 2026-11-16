@@ -194,7 +194,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
         { label: getLabel('invoice',  true, __( 'Invoices', 'codeclove-school-management' )),          to: ROUTES.INVOICES,          icon: Receipt,         permission: PERMISSIONS.INVOICES_VIEW },
         { label: getLabel('payment',  true, __( 'Payments', 'codeclove-school-management' )),          to: ROUTES.PAYMENTS,          icon: CreditCard,      permission: PERMISSIONS.PAYMENTS_VIEW },
         ...(isPro ? [
-          { label: __( 'Defaulters', 'codeclove-school-management' ), to: ROUTES.DEFAULTERS_REPORT, icon: ClockAlert, permission: PERMISSIONS.FINANCE_VIEW, pro: true },
+          { label: __( 'Overdue Fees', 'codeclove-school-management' ), to: ROUTES.DEFAULTERS_REPORT, icon: ClockAlert, permission: PERMISSIONS.FINANCE_VIEW, pro: true },
         ] : []),
       ],
     },

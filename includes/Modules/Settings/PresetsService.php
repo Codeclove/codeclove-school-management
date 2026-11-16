@@ -23,6 +23,58 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class PresetsService {
 
 	/**
+	 * Detects the most appropriate preset code based on site locale and timezone.
+	 *
+	 * @return string Preset code ('IN', 'GB', or 'US').
+	 */
+	public static function detect_default_preset(): string {
+		$locale   = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+		$timezone = function_exists( 'wp_timezone_string' ) ? wp_timezone_string() : '';
+
+		if ( 'hi_IN' === $locale || 'en_IN' === $locale || str_contains( $timezone, 'Kolkata' ) || str_contains( $timezone, 'Calcutta' ) ) {
+			return 'IN';
+		}
+
+		if ( 'en_GB' === $locale || str_contains( $timezone, 'London' ) ) {
+			return 'GB';
+		}
+
+		return 'US';
+	}
+
+	/**
+	 * Returns the human-readable structural name for a preset code.
+	 *
+	 * @param string $code Preset code ('IN', 'GB', or 'US').
+	 * @return string Structural academic model name.
+	 */
+	public static function get_preset_name( string $code ): string {
+		return match ( strtoupper( sanitize_key( $code ) ) ) {
+			'IN'    => 'Class & Section (Standard)',
+			'GB'    => 'Year & Form (British / Commonwealth)',
+			default => 'Grade & Section (K-12)',
+		};
+	}
+
+	/**
+	 * Normalizes a stored preset name to the new structural name,
+	 * migrating legacy country names ('India', 'United States', etc.).
+	 *
+	 * @param string|null $stored_name Value stored in settings.
+	 * @param string      $preset_code Active preset code.
+	 * @return string Normalized structural model name.
+	 */
+	public static function normalize_preset_name( ?string $stored_name, string $preset_code ): string {
+		$legacy_country_names = [ 'India', 'United States', 'United Kingdom', 'IN', 'US', 'GB' ];
+
+		if ( empty( $stored_name ) || in_array( $stored_name, $legacy_country_names, true ) ) {
+			return self::get_preset_name( $preset_code );
+		}
+
+		return $stored_name;
+	}
+
+	/**
 	 * Returns the list of supported presets.
 	 *
 	 * @return array
@@ -31,15 +83,15 @@ final class PresetsService {
 		return [
 			[
 				'code' => 'IN',
-				'name' => 'India',
+				'name' => 'Class & Section (Standard)',
 			],
 			[
 				'code' => 'US',
-				'name' => 'United States',
+				'name' => 'Grade & Section (K-12)',
 			],
 			[
 				'code' => 'GB',
-				'name' => 'United Kingdom',
+				'name' => 'Year & Form (British / Commonwealth)',
 			],
 		];
 	}

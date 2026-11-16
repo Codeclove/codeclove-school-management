@@ -5,6 +5,7 @@ import { __, sprintf } from '@/lib/i18n'
 interface PrintInvoiceSheetProps {
   invoice: Invoice
   school?: SchoolSettings
+  unitLabel?: string
 }
 
 /**
@@ -12,8 +13,16 @@ interface PrintInvoiceSheetProps {
  * High-contrast typography, perfect alignment and symmetry, generous whitespace,
  * and zero boxy clutter.
  */
-export default function PrintInvoiceSheet({ invoice, school }: PrintInvoiceSheetProps) {
+export default function PrintInvoiceSheet({ invoice, school, unitLabel }: PrintInvoiceSheetProps) {
   const { formatCurrency, formatDate } = useFormatter()
+  const configPreset = typeof window !== 'undefined' ? window.CodeCloveConfig?.preset : undefined
+  const resolvedUnitLabel =
+    unitLabel ||
+    (configPreset === 'US'
+      ? __( 'Grade', 'codeclove-school-management' )
+      : configPreset === 'GB'
+      ? __( 'Year', 'codeclove-school-management' )
+      : __( 'Class', 'codeclove-school-management' ))
   const isCancelled = invoice.status === 'cancelled' || invoice.status === 'void'
 
   // Format academic class & section cleanly
@@ -115,7 +124,7 @@ export default function PrintInvoiceSheet({ invoice, school }: PrintInvoiceSheet
             </p>
             {studentClass && (
               <p style={{ margin: 0 }}>
-                <span style={{ color: '#6b7280' }}>{__( 'Class / Grade:', 'codeclove-school-management' )} </span>
+                <span style={{ color: '#6b7280' }}>{sprintf( __( '%s:', 'codeclove-school-management' ), resolvedUnitLabel )} </span>
                 <span style={{ fontWeight: 600, color: '#111827' }}>{studentClass}</span>
               </p>
             )}

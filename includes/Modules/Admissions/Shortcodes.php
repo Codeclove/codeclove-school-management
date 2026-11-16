@@ -197,6 +197,7 @@ final class Shortcodes {
 
 		$is_inquiry = ! empty( $atts['inquiry'] );
 		$units      = self::get_academic_units();
+		$unit_label = (string) ( $settings['labels']['academic_unit']['singular'] ?? __( 'Grade', 'codeclove-school-management' ) );
 		$post_url   = esc_url( rest_url( 'codeclove/v1/public/admissions' ) );
 		$form_id    = $is_inquiry ? 'codeclove-inquiry-form' : 'codeclove-admission-form';
 		$btn_id     = $is_inquiry ? 'codeclove-inquiry-btn' : 'codeclove-admission-btn';
@@ -244,9 +245,9 @@ final class Shortcodes {
 						</div>
 					<?php endif; ?>
 					<div class="codeclove-field<?php echo $is_inquiry ? '' : ' full'; ?>">
-						<label for="<?php echo esc_attr( $form_id ); ?>_unit"><?php esc_html_e( 'Class / Grade Applying For', 'codeclove-school-management' ); ?> <span class="req">*</span></label>
+						<label for="<?php echo esc_attr( $form_id ); ?>_unit"><?php echo esc_html( sprintf( __( '%s Applying For', 'codeclove-school-management' ), $unit_label ) ); ?> <span class="req">*</span></label>
 						<select id="<?php echo esc_attr( $form_id ); ?>_unit" name="academic_unit_id" required>
-							<option value=""><?php esc_html_e( 'Select Grade / Class', 'codeclove-school-management' ); ?></option>
+							<option value=""><?php echo esc_html( sprintf( __( 'Select %s', 'codeclove-school-management' ), $unit_label ) ); ?></option>
 							<?php foreach ( $units as $u ) : ?>
 								<option value="<?php echo esc_attr( (string) $u['id'] ); ?>"><?php echo esc_html( (string) $u['name'] ); ?></option>
 							<?php endforeach; ?>
@@ -258,8 +259,8 @@ final class Shortcodes {
 							<input type="text" id="<?php echo esc_attr( $form_id ); ?>_prev_school" name="previous_school_name" placeholder="<?php esc_attr_e( 'School name', 'codeclove-school-management' ); ?>">
 						</div>
 						<div class="codeclove-field">
-							<label for="<?php echo esc_attr( $form_id ); ?>_prev_grade"><?php esc_html_e( 'Last Grade Completed', 'codeclove-school-management' ); ?></label>
-							<input type="text" id="<?php echo esc_attr( $form_id ); ?>_prev_grade" name="previous_grade_completed" placeholder="<?php esc_attr_e( 'e.g. Grade 4', 'codeclove-school-management' ); ?>">
+							<label for="<?php echo esc_attr( $form_id ); ?>_prev_grade"><?php echo esc_html( sprintf( __( 'Last %s Completed', 'codeclove-school-management' ), $unit_label ) ); ?></label>
+							<input type="text" id="<?php echo esc_attr( $form_id ); ?>_prev_grade" name="previous_grade_completed" placeholder="<?php echo esc_attr( sprintf( __( 'e.g. %s 4', 'codeclove-school-management' ), $unit_label ) ); ?>">
 						</div>
 					<?php endif; ?>
 				</div>

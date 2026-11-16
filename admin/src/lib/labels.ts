@@ -5,10 +5,10 @@ import { __ } from '@/lib/i18n'
 // A skeleton flash on every label mount is worse UX than an instant English fallback
 // during the initial settings fetch. Remove only when SSR or prefetch is available.
 const DEFAULT_LABELS: Record<string, { singular: string; plural: string }> = {
-  academic_session:         { singular: 'Academic Session', plural: 'Academic Sessions' },
-  academic_term:            { singular: 'Academic Term', plural: 'Academic Terms' },
-  academic_unit:            { singular: 'Academic Unit', plural: 'Academic Units' },
-  academic_group:           { singular: 'Academic Group', plural: 'Academic Groups' },
+  academic_session:         { singular: 'Academic Year', plural: 'Academic Years' },
+  academic_term:            { singular: 'Term', plural: 'Terms' },
+  academic_unit:            { singular: 'Class', plural: 'Classes' },
+  academic_group:           { singular: 'Section', plural: 'Sections' },
   subject:                  { singular: 'Subject', plural: 'Subjects' },
   assessment:               { singular: 'Assessment', plural: 'Assessments' },
   guardian:                 { singular: 'Guardian', plural: 'Guardians' },
